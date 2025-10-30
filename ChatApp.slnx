@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/Modules/" />
+  <Folder Name="/src/Modules/Identity/">
+    <Project Path="ChatApp.Modules.Identity.Application/ChatApp.Modules.Identity.Application.csproj" />
+    <Project Path="ChatApp.Modules.Identity.Domain/ChatApp.Modules.Identity.Domain.csproj" />
+    <Project Path="ChatApp.Modules.Identity.Infrastructure/ChatApp.Modules.Identity.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/Shared/">
+    <Project Path="ChatApp.Shared.Infrastructure/ChatApp.Shared.Infrastructure.csproj" />
+    <Project Path="ChatApp.Shared.Kernel/ChatApp.Shared.Kernel.csproj" />
+  </Folder>
+</Solution>
