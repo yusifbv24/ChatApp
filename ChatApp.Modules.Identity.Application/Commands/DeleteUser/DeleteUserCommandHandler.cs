@@ -3,11 +3,12 @@ using ChatApp.Modules.Identity.Domain.Repositories;
 using ChatApp.Shared.Kernel.Common;
 using ChatApp.Shared.Kernel.Exceptions;
 using ChatApp.Shared.Kernel.Interfaces;
+using MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace ChatApp.Modules.Identity.Application.Commands.DeleteUser
 {
-    public class DeleteUserCommandHandler
+    public class DeleteUserCommandHandler:IRequestHandler<DeleteUserCommand,Result>
     {
         private readonly IUserRepository _userRepository;
         private readonly IEventBus _eventBus;
@@ -23,7 +24,9 @@ namespace ChatApp.Modules.Identity.Application.Commands.DeleteUser
         }
 
 
-        public async Task<Result> HandleAsync(DeleteUserCommand request,CancellationToken cancellationToken)
+        public async Task<Result> Handle(
+            DeleteUserCommand request,
+            CancellationToken cancellationToken)
         {
             try
             {

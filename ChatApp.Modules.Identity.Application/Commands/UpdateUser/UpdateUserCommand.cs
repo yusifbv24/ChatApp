@@ -1,9 +1,11 @@
-﻿namespace ChatApp.Modules.Identity.Application.Commands.UpdateUser
+﻿using ChatApp.Shared.Kernel.Common;
+using MediatR;
+
+namespace ChatApp.Modules.Identity.Application.Commands.UpdateUser
 {
-    public class UpdateUserCommand
-    {
-        public Guid UserId { get; set;  }
-        public string? Email { get; set; }
-        public bool? IsActive { get; set; }
-    }
+    public record UpdateUserCommand(
+        Guid UserId,
+        string? Email,
+        bool? IsActive
+    ):IRequest<Result>;
 }

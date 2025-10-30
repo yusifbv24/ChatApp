@@ -2,6 +2,7 @@
   <Folder Name="/src/" />
   <Folder Name="/src/Modules/" />
   <Folder Name="/src/Modules/Identity/">
+    <Project Path="ChatApp.Modules.Identity.Api/ChatApp.Modules.Identity.Api.csproj" Id="b6885fcc-1a24-43c5-a83e-1c13a776f60a" />
     <Project Path="ChatApp.Modules.Identity.Application/ChatApp.Modules.Identity.Application.csproj" />
     <Project Path="ChatApp.Modules.Identity.Domain/ChatApp.Modules.Identity.Domain.csproj" />
     <Project Path="ChatApp.Modules.Identity.Infrastructure/ChatApp.Modules.Identity.Infrastructure.csproj" />

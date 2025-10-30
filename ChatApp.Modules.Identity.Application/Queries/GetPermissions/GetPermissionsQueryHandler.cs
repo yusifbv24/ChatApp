@@ -1,10 +1,12 @@
-﻿using ChatApp.Modules.Identity.Domain.Repositories;
+﻿using ChatApp.Modules.Identity.Application.DTOs;
+using ChatApp.Modules.Identity.Domain.Repositories;
 using ChatApp.Shared.Kernel.Common;
+using MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace ChatApp.Modules.Identity.Application.Queries.GetPermissions
 {
-    public class GetPermissionsQueryHandler
+    public class GetPermissionsQueryHandler:IRequestHandler<GetPermissionsQuery,Result<List<PermissionDto>>>
     {
         private readonly IPermissionRepository _permissionRepository;
         private readonly ILogger<GetPermissionsQueryHandler> _logger;
@@ -17,7 +19,9 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetPermissions
             _logger= logger;
         }
 
-        public async Task<Result<List<PermissionDto>>> HandleAsync(GetPermissionsQuery request,CancellationToken cancellationToken = default)
+        public async Task<Result<List<PermissionDto>>> Handle(
+            GetPermissionsQuery request,
+            CancellationToken cancellationToken = default)
         {
             try
             {
@@ -26,12 +30,12 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetPermissions
                     : await _permissionRepository.GetByModuleAsync(request.Module);
 
                 var permissionDtos=permissions.Select(p=>new PermissionDto
-                {
-                    Id=p.Id,
-                    Name=p.Name,
-                    Description=p.Description,
-                    Module=p.Module
-                }).ToList();
+                (
+                    p.Id,
+                    p.Name,
+                    p.Description,
+                    p.Module
+                )).ToList();
 
                 return Result.Success(permissionDtos);
             }

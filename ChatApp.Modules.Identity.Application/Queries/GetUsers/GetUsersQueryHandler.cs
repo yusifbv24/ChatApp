@@ -1,10 +1,12 @@
-﻿using ChatApp.Modules.Identity.Domain.Repositories;
+﻿using ChatApp.Modules.Identity.Application.DTOs;
+using ChatApp.Modules.Identity.Domain.Repositories;
 using ChatApp.Shared.Kernel.Common;
+using MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace ChatApp.Modules.Identity.Application.Queries.GetUsers
 {
-    public class GetUsersQueryHandler
+    public class GetUsersQueryHandler:IRequestHandler<GetUsersQuery, Result<List<UserDto>>>
     {
         private readonly IUserRepository _userRepository;
         private readonly ILogger<GetUsersQueryHandler> _logger;
@@ -17,7 +19,9 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetUsers
             _logger= logger;
         }
 
-        public async Task<Result<List<UserDto>>> HandleAsync(GetUsersQuery query, CancellationToken cancellationToken = default)
+        public async Task<Result<List<UserDto>>> Handle(
+            GetUsersQuery query, 
+            CancellationToken cancellationToken = default)
         {
             try
             {
@@ -27,14 +31,14 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetUsers
                     .Skip((query.PageNumber - 1) * query.PageSize)
                     .Take(query.PageSize)
                     .Select(u => new UserDto
-                    {
-                        Id = u.Id,
-                        Username = u.Username,
-                        Email = u.Email,
-                        IsActive = u.IsActive,
-                        IsAdmin = u.IsAdmin,
-                        CreatedAtUtc = u.CreatedAtUtc
-                    })
+                    (
+                        u.Id,
+                        u.Username,
+                        u.Email,
+                        u.IsActive,
+                        u.IsAdmin,
+                        u.CreatedAtUtc
+                    ))
                     .ToList();
 
                 return Result.Success(userDtos);

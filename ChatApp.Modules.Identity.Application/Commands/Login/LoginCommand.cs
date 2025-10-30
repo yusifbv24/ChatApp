@@ -1,8 +1,11 @@
-﻿namespace ChatApp.Modules.Identity.Application.Commands.Login
+﻿using ChatApp.Modules.Identity.Application.DTOs;
+using ChatApp.Shared.Kernel.Common;
+using MediatR;
+
+namespace ChatApp.Modules.Identity.Application.Commands.Login
 {
-    public record LoginCommand
-    {
-        public string Username { get; set; } = string.Empty;
-        public string Password { get; set; }= string.Empty;
-    }
+    public record LoginCommand(
+        string Username,
+        string Password
+    ):IRequest<Result<LoginResponse>>;
 }

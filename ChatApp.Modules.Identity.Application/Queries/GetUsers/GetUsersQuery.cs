@@ -1,8 +1,11 @@
-﻿namespace ChatApp.Modules.Identity.Application.Queries.GetUsers
+﻿using ChatApp.Modules.Identity.Application.DTOs;
+using ChatApp.Shared.Kernel.Common;
+using MediatR;
+
+namespace ChatApp.Modules.Identity.Application.Queries.GetUsers
 {
-    public class GetUsersQuery
-    {
-        public int PageNumber { get; set; } = 1;
-        public int PageSize { get; set; } = 20;
-    }
+    public record GetUsersQuery(
+        int PageNumber,
+        int PageSize
+    ):IRequest<Result<List<UserDto>>>;
 }

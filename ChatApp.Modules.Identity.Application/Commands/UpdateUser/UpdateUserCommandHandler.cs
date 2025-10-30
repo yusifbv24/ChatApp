@@ -1,11 +1,12 @@
 ﻿using ChatApp.Modules.Identity.Domain.Repositories;
 using ChatApp.Shared.Kernel.Common;
 using ChatApp.Shared.Kernel.Exceptions;
+using MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace ChatApp.Modules.Identity.Application.Commands.UpdateUser
 {
-    public class UpdateUserCommandHandler
+    public class UpdateUserCommandHandler:IRequestHandler<UpdateUserCommand,Result>
     {
         private readonly IUserRepository _userRepository;
         private readonly ILogger<UpdateUserCommandHandler> _logger;
@@ -18,7 +19,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.UpdateUser
             _logger = logger;
         }
 
-        public async Task<Result> HandleAsync(
+        public async Task<Result> Handle(
             UpdateUserCommand request,
             CancellationToken cancellationToken = default)
         {

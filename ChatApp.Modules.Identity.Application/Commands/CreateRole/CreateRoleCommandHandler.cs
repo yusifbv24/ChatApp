@@ -1,11 +1,12 @@
 ﻿using ChatApp.Modules.Identity.Domain.Entities;
 using ChatApp.Modules.Identity.Domain.Repositories;
 using ChatApp.Shared.Kernel.Common;
+using MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace ChatApp.Modules.Identity.Application.Commands.CreateRole
 {
-    public class CreateRoleCommandHandler
+    public class CreateRoleCommandHandler:IRequestHandler<CreateRoleCommand,Result<Guid>>
     {
         private readonly IRoleRepository _roleRepository;
         private readonly ILogger<CreateRoleCommandHandler> _logger;
@@ -18,7 +19,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.CreateRole
             _logger= logger;
         }
 
-        public async Task<Result<Guid>> HandleAsync(
+        public async Task<Result<Guid>> Handle(
             CreateRoleCommand request,
             CancellationToken cancellationToken = default)
         {

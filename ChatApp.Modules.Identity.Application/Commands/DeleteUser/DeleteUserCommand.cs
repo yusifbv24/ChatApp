@@ -1,7 +1,9 @@
-﻿namespace ChatApp.Modules.Identity.Application.Commands.DeleteUser
+﻿using ChatApp.Shared.Kernel.Common;
+using MediatR;
+
+namespace ChatApp.Modules.Identity.Application.Commands.DeleteUser
 {
-    public class DeleteUserCommand
-    {
-        public Guid UserId { get; set; }
-    }
+    public record DeleteUserCommand(
+        Guid UserId
+    ):IRequest<Result>;
 }

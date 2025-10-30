@@ -1,11 +1,13 @@
-﻿using ChatApp.Modules.Identity.Domain.Repositories;
+﻿using ChatApp.Modules.Identity.Application.DTOs;
+using ChatApp.Modules.Identity.Domain.Repositories;
 using ChatApp.Modules.Identity.Domain.Services;
 using ChatApp.Shared.Kernel.Common;
+using MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace ChatApp.Modules.Identity.Application.Commands.RefreshToken
 {
-    public class RefreshTokenCommandHandler
+    public class RefreshTokenCommandHandler:IRequestHandler<RefreshTokenCommand,Result<RefreshTokenResponse>>
     {
         private readonly IRefreshTokenRepository _refreshTokenRepository;
         private readonly IUserRepository _userRepository;
@@ -27,7 +29,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.RefreshToken
             _logger= logger;
         }
 
-        public async Task<Result<RefreshTokenResponse>> HandleAsync(
+        public async Task<Result<RefreshTokenResponse>> Handle(
             RefreshTokenCommand request,
             CancellationToken cancellationToken = default)
         {
@@ -72,11 +74,11 @@ namespace ChatApp.Modules.Identity.Application.Commands.RefreshToken
                 _logger?.LogInformation("Tokens refreshed succesfully for user {UserId}", user.Id);
 
                 return Result.Success(new RefreshTokenResponse
-                {
-                    AccessToken = newAccessToken,
-                    RefreshToken = newRefreshToken,
-                    ExpiresIn = 28800
-                });
+                (
+                    newAccessToken,
+                    newRefreshToken,
+                    28800
+               ));
             }
             catch (Exception ex)
             {

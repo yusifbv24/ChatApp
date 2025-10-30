@@ -1,7 +1,10 @@
-﻿namespace ChatApp.Modules.Identity.Application.Queries.GetUser
+﻿using ChatApp.Modules.Identity.Application.DTOs;
+using ChatApp.Shared.Kernel.Common;
+using MediatR;
+
+namespace ChatApp.Modules.Identity.Application.Queries.GetUser
 {
-    public class GetUserQuery
-    {
-        public Guid UserId { get; set; }
-    }
+    public record GetUserQuery(
+        Guid UserId
+    ):IRequest<Result<UserDto?>>;
 }

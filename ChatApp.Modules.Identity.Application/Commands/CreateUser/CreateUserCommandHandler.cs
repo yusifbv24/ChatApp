@@ -4,11 +4,12 @@ using ChatApp.Modules.Identity.Domain.Repositories;
 using ChatApp.Modules.Identity.Domain.Services;
 using ChatApp.Shared.Kernel.Common;
 using ChatApp.Shared.Kernel.Interfaces;
+using MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace ChatApp.Modules.Identity.Application.Commands.CreateUser
 {
-    public class CreateUserCommandHandler
+    public class CreateUserCommandHandler:IRequestHandler<CreateUserCommand, Result<Guid>>
     {
         private readonly IUserRepository _userRepository;
         private readonly IPasswordHasher _passwordHasher;
@@ -27,7 +28,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.CreateUser
             _logger= logger;
         }
 
-        public async Task<Result<Guid>> HandleAsync(
+        public async Task<Result<Guid>> Handle(
             CreateUserCommand command,
             CancellationToken cancellationToken = default)
         {

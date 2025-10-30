@@ -1,12 +1,13 @@
-﻿using ChatApp.Modules.Identity.Domain.Entities;
+﻿using ChatApp.Modules.Identity.Application.DTOs;
 using ChatApp.Modules.Identity.Domain.Repositories;
 using ChatApp.Modules.Identity.Domain.Services;
 using ChatApp.Shared.Kernel.Common;
+using MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace ChatApp.Modules.Identity.Application.Commands.Login
 {
-    public class LoginCommandHandler
+    public class LoginCommandHandler:IRequestHandler<LoginCommand,Result<LoginResponse>>
     {
         private readonly IUserRepository _userRepository;
         private readonly IPasswordHasher _passwordHasher;
@@ -32,7 +33,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.Login
         }
 
 
-        public async Task<Result<LoginResponse>> HandleAsync(
+        public async Task<Result<LoginResponse>> Handle(
             LoginCommand command,
             CancellationToken cancellationToken = default)
         {
@@ -69,7 +70,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.Login
                 var refreshToken = _tokenGenerator.GenerateRefreshToken();
 
                 // Save refresh token
-                var refreshTokenEntity = new RefreshToken(
+                var refreshTokenEntity = new Domain.Entities.RefreshToken(
                     user.Id,
                     refreshToken,
                     DateTime.UtcNow.AddDays(30));
@@ -79,11 +80,11 @@ namespace ChatApp.Modules.Identity.Application.Commands.Login
                 _logger?.LogInformation("Login successful for user {Username}", command.Username);
 
                 return Result.Success(new LoginResponse
-                {
-                    AccessToken = accessToken,
-                    RefreshToken = refreshToken,
-                    ExpiresIn = 28800 //8 hours in seconds
-                });
+                (
+                    accessToken,
+                    refreshToken,
+                    28800 //8 hours in seconds
+                ));
             }
             catch (Exception ex)
             {

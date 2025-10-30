@@ -1,9 +1,11 @@
-﻿namespace ChatApp.Modules.Identity.Application.Commands.AssignRole
+﻿using ChatApp.Shared.Kernel.Common;
+using MediatR;
+
+namespace ChatApp.Modules.Identity.Application.Commands.AssignRole
 {
-    public class AssignRoleCommand
-    {
-        public Guid UserId { get; set; }
-        public Guid RoleId { get; set; }
-        public Guid? AssignedBy { get; set; }
-    }
+    public record AssignRoleCommand(
+        Guid UserId,
+        Guid RoleId,
+        Guid? AssignedBy
+    ):IRequest<Result>;
 }

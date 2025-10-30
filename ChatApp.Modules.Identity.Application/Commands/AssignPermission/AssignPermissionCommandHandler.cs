@@ -2,11 +2,12 @@
 using ChatApp.Modules.Identity.Domain.Repositories;
 using ChatApp.Shared.Kernel.Common;
 using ChatApp.Shared.Kernel.Exceptions;
+using MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace ChatApp.Modules.Identity.Application.Commands.AssignPermission
 {
-    public class AssignPermissionCommandHandler
+    public class AssignPermissionCommandHandler:IRequestHandler<AssignPermissionCommand,Result>
     {
         private readonly IRoleRepository _roleRepository;
         private readonly IPermissionRepository _permissionRepository;
@@ -23,7 +24,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.AssignPermission
         }
 
 
-        public async Task<Result> HandleAsync(AssignPermissionCommand request, CancellationToken cancellationToken = default)
+        public async Task<Result> Handle(AssignPermissionCommand request, CancellationToken cancellationToken = default)
         {
             try
             {

@@ -4,11 +4,12 @@ using ChatApp.Modules.Identity.Domain.Repositories;
 using ChatApp.Shared.Kernel.Common;
 using ChatApp.Shared.Kernel.Exceptions;
 using ChatApp.Shared.Kernel.Interfaces;
+using MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace ChatApp.Modules.Identity.Application.Commands.AssignRole
 {
-    public class AssignRoleCommandHandler
+    public class AssignRoleCommandHandler:IRequestHandler<AssignRoleCommand,Result>
     {
         private readonly IUserRepository _userRepository;
         private readonly IRoleRepository _roleRepository;
@@ -27,7 +28,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.AssignRole
             _logger= logger;
         }
 
-        public async Task<Result> HandleAsync(
+        public async Task<Result> Handle(
             AssignRoleCommand request,
             CancellationToken cancellationToken = default)
         {

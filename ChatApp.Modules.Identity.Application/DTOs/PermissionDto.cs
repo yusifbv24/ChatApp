@@ -2,7 +2,7 @@
 {
     public record PermissionDto(
         Guid Id,
-        string Name,
-        string Description,
-        string Module);
+        string? Name,
+        string? Description,
+        string? Module);
 }

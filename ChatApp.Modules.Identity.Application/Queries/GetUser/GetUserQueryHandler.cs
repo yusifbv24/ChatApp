@@ -1,10 +1,12 @@
-﻿using ChatApp.Modules.Identity.Domain.Repositories;
+﻿using ChatApp.Modules.Identity.Application.DTOs;
+using ChatApp.Modules.Identity.Domain.Repositories;
 using ChatApp.Shared.Kernel.Common;
+using MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace ChatApp.Modules.Identity.Application.Queries.GetUser
 {
-    public class GetUserQueryHandler
+    public class GetUserQueryHandler:IRequestHandler<GetUserQuery, Result<UserDto?>>
     {
         private readonly IUserRepository _userRepository;
         private readonly ILogger<GetUserQueryHandler> _logger;
@@ -17,7 +19,9 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetUser
             _logger= logger;
         }
 
-        public async Task<Result<UserDto?>> HandleAsync(GetUserQuery query,CancellationToken cancellationToken = default)
+        public async Task<Result<UserDto?>> Handle(
+            GetUserQuery query,
+            CancellationToken cancellationToken = default)
         {
             try
             {
@@ -26,14 +30,14 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetUser
                     return Result.Success<UserDto?>(null);
 
                 var userDto = new UserDto
-                {
-                    Id = user.Id,
-                    Username = user.Username,
-                    Email = user.Email,
-                    IsActive = user.IsActive,
-                    IsAdmin = user.IsAdmin,
-                    CreatedAtUtc = user.CreatedAtUtc
-                };
+                (
+                    user.Id,
+                    user.Username,
+                    user.Email,
+                    user.IsActive,
+                    user.IsAdmin,
+                    user.CreatedAtUtc
+                );
 
                 return Result.Success<UserDto?>(userDto);
             }
