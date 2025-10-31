@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ChatApp.Modules.Identity.Infrastructure.Persistence.Repositories
 {
-    public class UserRepository:IUserRepository
+    public class UserRepository:IUnitOfWork
     {
         private readonly IdentityDbContext _context;
 
@@ -78,12 +78,22 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence.Repositories
 
 
 
-        public async Task<List<User>> GetUsersWithRolesAsync(string username, CancellationToken cancellationToken = default)
+        public async Task<List<User>> GetUsersWithRolesAsync(CancellationToken cancellationToken = default)
         {
             return await _context.Users
                 .Include(u => u.UserRoles)
                 .ThenInclude(r=>r.Role)
                 .ToListAsync(cancellationToken);
+        }
+
+
+        public async Task<UserRole?> GetUserWithRoleAsync(Guid userId,Guid roleId,CancellationToken cancellationToken = default)
+        {
+            return await _context.UserRoles
+                .FirstOrDefaultAsync(
+                r=>r.UserId==userId && 
+                r.RoleId==roleId,
+                cancellationToken);
         }
 
 
@@ -99,6 +109,15 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence.Repositories
             CancellationToken cancellationToken = default)
         {
             return await _context.Users.AnyAsync(u=>u.Email == email,cancellationToken);
+        }
+
+
+
+        public async Task<bool> DisplayNameExistsAsync(
+            string displayName,
+            CancellationToken cancellationToken= default)
+        {
+            return await _context.Users.AnyAsync(x=>x.DisplayName == displayName,cancellationToken);
         }
     }
 }

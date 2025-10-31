@@ -30,15 +30,31 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence.Configurations
                 .HasColumnName("password")
                 .HasMaxLength(255);
 
+            builder.Property(u => u.DisplayName)
+                .IsRequired()
+                .HasColumnName("display_name")
+                .HasMaxLength(100);
+
             builder.Property(u => u.IsActive)
                 .IsRequired()
                 .HasColumnName("is_active")
                 .HasDefaultValue(true);
 
-            builder.Property(u=>u.IsAdmin)
+            builder.Property(u => u.IsAdmin)
                 .IsRequired()
                 .HasColumnName("is_admin")
                 .HasDefaultValue(false);
+
+            builder.Property(u => u.AvatarUrl)
+                .HasColumnName("avatar_url")
+                .HasMaxLength(500);
+
+            builder.Property(u=>u.Notes)
+                .HasColumnName("notes")
+                .HasMaxLength(1000);
+
+            builder.Property(u => u.CreatedBy)
+                .HasColumnName("created_by");
 
             builder.Property(u => u.CreatedAtUtc)
                 .IsRequired()
@@ -50,8 +66,13 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence.Configurations
                 .HasColumnName("updated_at_utc")
                 .HasColumnType("timestamp with time zone");
 
-            builder.HasIndex(u => u.Username)
-                .IsUnique();
+            builder.HasIndex(u => u.Id)
+                .IsUnique()
+                .HasDatabaseName("ix_users_id");
+
+            builder.HasIndex(u => u.DisplayName)
+                .IsUnique()
+                .HasDatabaseName("ix_users_display_name");
 
             builder.HasIndex(u => u.Email)
                 .IsUnique();

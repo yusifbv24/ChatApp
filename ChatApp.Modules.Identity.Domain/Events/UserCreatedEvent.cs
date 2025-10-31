@@ -6,13 +6,15 @@ namespace ChatApp.Modules.Identity.Domain.Events
     {
         public Guid UserId { get; }
         public string UserName { get; }
-        public string Email { get; }
+        public string DisplayName { get; }
+        public Guid CreatedBy { get; }
 
-        public UserCreatedEvent(Guid userId,string userName,string email)
+        public UserCreatedEvent(Guid userId,string userName,string displayName,Guid createdBy)
         {
             UserId = userId;
             UserName = userName;
-            Email = email;
+            DisplayName = displayName;
+            CreatedBy = createdBy;
         }
     }
 }

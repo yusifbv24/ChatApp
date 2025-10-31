@@ -9,6 +9,10 @@ namespace ChatApp.Modules.Identity.Domain.Entities
         public string PasswordHash { get; private set; } = null!;
         public bool IsActive { get; private set;  }
         public bool IsAdmin { get; private set;  }
+        public string DisplayName { get; private set; } = null!;
+        public Guid CreatedBy { get;private set;  }
+        public string? AvatarUrl { get; private set; } = string.Empty;
+        public string? Notes { get; private set; } = string.Empty;
 
         // Navigation properties
         private readonly List<UserRole> _userRoles = new();
@@ -17,7 +21,15 @@ namespace ChatApp.Modules.Identity.Domain.Entities
 
         private User() :base() { }
 
-        public User(string username,string email,string passwordHash,bool isAdmin = false):base()
+        public User(
+            string username,
+            string email,
+            string passwordHash,
+            string displayName,
+            Guid createdBy,
+            string? avatarUrl,
+            string? notes,
+            bool isAdmin = false) :base()
         {
             if (string.IsNullOrWhiteSpace(username))
                 throw new ArgumentNullException("Usename cannot be empty", nameof(username));
@@ -28,12 +40,47 @@ namespace ChatApp.Modules.Identity.Domain.Entities
             if (string.IsNullOrWhiteSpace(passwordHash))
                 throw new ArgumentException("Password hash cannot be empty", nameof(passwordHash));
 
+            if(string.IsNullOrWhiteSpace(displayName))
+                throw new ArgumentException("Display name cannot be empty",nameof(displayName));
+
+            if (createdBy == Guid.Empty)
+                throw new ArgumentException("CreatedBy cannot be null", nameof(createdBy));
+
             Username = username;
             Email = email;
             PasswordHash = passwordHash;
+            DisplayName = displayName;
+            CreatedBy = createdBy;
+            AvatarUrl = avatarUrl ?? string.Empty;
+            Notes= notes ?? string.Empty;
             IsActive = true;
             IsAdmin = isAdmin;
         }
+
+
+        public void ChangeDisplayName(string newDisplayName)
+        {
+            if (string.IsNullOrWhiteSpace(newDisplayName))
+                throw new ArgumentException("Display name cannot be empty", nameof(newDisplayName));
+
+            DisplayName= newDisplayName;
+            UpdateTimestamp();
+        }
+
+
+        public void ChangeAvatar(string? newAvatarUrl)
+        {
+            AvatarUrl= newAvatarUrl ?? string.Empty;
+            UpdateTimestamp();
+        }
+
+
+        public void UpdateNotes(string? notes)
+        {
+            Notes=notes ?? string.Empty;
+            UpdateTimestamp();
+        }
+
 
         public void ChangePassword(string newPasswordHash)
         {
@@ -85,6 +132,7 @@ namespace ChatApp.Modules.Identity.Domain.Entities
             IsAdmin = true;
             UpdateTimestamp();
         }
+
 
 
         public void RevokeAdmin()

@@ -55,23 +55,5 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence.Repositories
             return await _context.Permissions
                 .FirstOrDefaultAsync(p=>p.Name==name, cancellationToken);
         }
-
-
-        public async Task<List<Permission>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
-        {
-            return await _context.UserRoles
-                .Where(ur => ur.UserId == userId)
-                .SelectMany(ur => ur.Role.RolePermissions)
-                .Select(rp => rp.Permission)
-                .Distinct()
-                .ToListAsync(cancellationToken);
-        }
-
-
-        public async Task UpdateAsync(Permission entity, CancellationToken cancellationToken = default)
-        {
-            _context.Permissions.Update(entity);
-            await _context.SaveChangesAsync(cancellationToken);
-        }
     }
 }

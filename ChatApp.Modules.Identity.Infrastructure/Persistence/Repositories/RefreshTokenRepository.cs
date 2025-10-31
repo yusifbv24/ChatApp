@@ -1,6 +1,7 @@
 ﻿using ChatApp.Modules.Identity.Domain.Entities;
 using ChatApp.Modules.Identity.Domain.Repositories;
 using Microsoft.EntityFrameworkCore;
+using System.Linq.Expressions;
 
 namespace ChatApp.Modules.Identity.Infrastructure.Persistence.Repositories
 {
@@ -32,10 +33,23 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence.Repositories
         }
 
 
-        public async Task<RefreshToken?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+        public async Task<RefreshToken?> GetByIdAsync(
+            Guid id, 
+            CancellationToken cancellationToken = default)
         {
             return await _context.RefreshTokens.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         }
+
+
+        public async Task<IEnumerable<RefreshToken>> FindAsync(
+            Expression<Func<RefreshToken,bool>> predicate,
+            CancellationToken cancellationToken = default)
+        {
+            return await _context.RefreshTokens
+                .Where(predicate)
+                .ToListAsync(cancellationToken);
+        }
+
 
         public async Task<RefreshToken?> GetByTokenAsync(string token, CancellationToken cancellationToken = default)
         {

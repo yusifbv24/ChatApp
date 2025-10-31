@@ -20,7 +20,7 @@ namespace ChatApp.Modules.Identity.Infrastructure
                     b => b.MigrationsAssembly(typeof(IdentityDbContext).Assembly.FullName)));
 
             // Repositories
-            services.AddScoped<IUserRepository, UserRepository>();
+            services.AddScoped<IUnitOfWork, UserRepository>();
             services.AddScoped<IPermissionRepository, PermissionRepository>();
             services.AddScoped<IRoleRepository, RoleRepository>();
             services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();

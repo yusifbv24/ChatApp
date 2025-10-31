@@ -1,11 +1,8 @@
-﻿using ChatApp.Modules.Identity.Application.Commands.AssignPermission;
-using ChatApp.Modules.Identity.Application.Commands.AssignRole;
-using ChatApp.Modules.Identity.Application.Commands.CreateRole;
-using ChatApp.Modules.Identity.Application.Commands.CreateUser;
-using ChatApp.Modules.Identity.Application.Commands.DeleteUser;
-using ChatApp.Modules.Identity.Application.Commands.Login;
+﻿using ChatApp.Modules.Identity.Application.Commands.Login;
+using ChatApp.Modules.Identity.Application.Commands.Permisisons;
 using ChatApp.Modules.Identity.Application.Commands.RefreshToken;
-using ChatApp.Modules.Identity.Application.Commands.UpdateUser;
+using ChatApp.Modules.Identity.Application.Commands.Roles;
+using ChatApp.Modules.Identity.Application.Commands.Users;
 using ChatApp.Modules.Identity.Application.Queries.GetPermissions;
 using ChatApp.Modules.Identity.Application.Queries.GetRoles;
 using ChatApp.Modules.Identity.Application.Queries.GetUser;
@@ -19,20 +16,20 @@ namespace ChatApp.Modules.Identity.Application
         public static IServiceCollection AddIdentityApplication(this IServiceCollection services)
         {
             // Register command handlers
-            services.AddScoped<LoginCommandHandler>();
-            services.AddScoped<RefreshTokenCommandHandler>();
-            services.AddScoped<CreateUserCommandHandler>();
-            services.AddScoped<UpdateUserCommandHandler>();
-            services.AddScoped<DeleteUserCommandHandler>();
-            services.AddScoped<AssignRoleCommandHandler>();
-            services.AddScoped<CreateRoleCommandHandler>();
+            services.AddScoped<LoginCommand>();
+            services.AddScoped<RefreshTokenCommand>();
+            services.AddScoped<CreateUserCommand>();
+            services.AddScoped<UpdateUserCommand>();
+            services.AddScoped<DeleteUserCommand>();
+            services.AddScoped<AssignRoleCommand>();
+            services.AddScoped<CreateRoleCommand>();
             services.AddScoped<AssignPermissionCommandHandler>();
 
             // Register query handlers
             services.AddScoped<GetUserQueryHandler>();
             services.AddScoped<GetUsersQueryHandler>();
             services.AddScoped<GetRolesQueryHandler>();
-            services.AddScoped<GetPermissionsQueryHandler>();
+            services.AddScoped<GetPermissionsQuery>();
 
             return services;
         }

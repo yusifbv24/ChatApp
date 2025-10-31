@@ -1,24 +1,41 @@
-﻿using ChatApp.Modules.Identity.Domain.Events;
-using ChatApp.Modules.Identity.Domain.Repositories;
+﻿using ChatApp.Modules.Identity.Application.Interfaces;
+using ChatApp.Modules.Identity.Domain.Events;
 using ChatApp.Shared.Kernel.Common;
 using ChatApp.Shared.Kernel.Exceptions;
 using ChatApp.Shared.Kernel.Interfaces;
+using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
-namespace ChatApp.Modules.Identity.Application.Commands.DeleteUser
+namespace ChatApp.Modules.Identity.Application.Commands.Users
 {
+    public record DeleteUserCommand(
+        Guid UserId
+    ) : IRequest<Result>;
+
+
+    public class DeleteUserCommandValidator : AbstractValidator<DeleteUserCommand>
+    {
+        public DeleteUserCommandValidator()
+        {
+            RuleFor(x => x.UserId)
+                .NotEmpty().WithMessage("User ID cannot be empty to delete user");
+        }
+    }
+
+
+
     public class DeleteUserCommandHandler:IRequestHandler<DeleteUserCommand,Result>
     {
-        private readonly IUserRepository _userRepository;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly IEventBus _eventBus;
-        private readonly ILogger<DeleteUserCommandHandler> _logger;
+        private readonly ILogger<DeleteUserCommand> _logger;
         public DeleteUserCommandHandler(
-            IUserRepository userRepository,
+            IUnitOfWork unitOfWork,
             IEventBus eventBus,
-            ILogger<DeleteUserCommandHandler> logger)
+            ILogger<DeleteUserCommand> logger)
         {
-            _userRepository=userRepository;
+            _unitOfWork=unitOfWork;
             _eventBus=eventBus;
             _logger=logger;
         }
@@ -32,11 +49,15 @@ namespace ChatApp.Modules.Identity.Application.Commands.DeleteUser
             {
                 _logger?.LogInformation("Deleting user {UserId}", request.UserId);
 
-                var user = await _userRepository.GetByIdAsync(request.UserId, cancellationToken);
+                var user = await _unitOfWork.Users.GetByIdAsync(request.UserId, cancellationToken);
                 if (user == null)
                     throw new NotFoundException($"User with ID {request.UserId} not found");
 
-                await _userRepository.DeleteAsync(user, cancellationToken);
+                // Soft delet - just deactivate user
+                user.Deactivate();
+
+                await _unitOfWork.Users.UpdateAsync(user, cancellationToken);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 await _eventBus.PublishAsync(new UserDeletedEvent(user.Id, user.Username), cancellationToken);
 

@@ -1,32 +1,39 @@
-﻿using ChatApp.Modules.Identity.Domain.Entities;
+﻿using ChatApp.Modules.Identity.Application.Interfaces;
+using ChatApp.Modules.Identity.Domain.Entities;
 using ChatApp.Modules.Identity.Domain.Events;
-using ChatApp.Modules.Identity.Domain.Repositories;
 using ChatApp.Shared.Kernel.Common;
 using ChatApp.Shared.Kernel.Exceptions;
 using ChatApp.Shared.Kernel.Interfaces;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
-namespace ChatApp.Modules.Identity.Application.Commands.AssignRole
+
+namespace ChatApp.Modules.Identity.Application.Commands.Users
 {
+    public record AssignRoleCommand(
+        Guid UserId,
+        Guid RoleId,
+        Guid? AssignedBy
+    ) : IRequest<Result>;
+
+
+
     public class AssignRoleCommandHandler:IRequestHandler<AssignRoleCommand,Result>
     {
-        private readonly IUserRepository _userRepository;
-        private readonly IRoleRepository _roleRepository;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly IEventBus _eventBus;
-        private readonly ILogger<AssignRoleCommandHandler> _logger;
+        private readonly ILogger<AssignRoleCommand> _logger;
 
         public AssignRoleCommandHandler(
-            IUserRepository userRepsitory,
-            IRoleRepository roleRepository,
+            IUnitOfWork unitOfWork,
             IEventBus eventBus,
-            ILogger<AssignRoleCommandHandler> logger)
+            ILogger<AssignRoleCommand> logger)
         {
-            _userRepository= userRepsitory;
-            _roleRepository= roleRepository;
+            _unitOfWork=unitOfWork;
             _eventBus= eventBus;
             _logger= logger;
         }
+
 
         public async Task<Result> Handle(
             AssignRoleCommand request,
@@ -36,11 +43,11 @@ namespace ChatApp.Modules.Identity.Application.Commands.AssignRole
             {
                 _logger?.LogInformation("Assigning role {RoleId} to user {UserId}", request.RoleId, request.UserId);
 
-                var user = await _userRepository.GetByIdAsync(request.UserId, cancellationToken);
+                var user = await _unitOfWork.Users.GetByIdAsync(request.UserId, cancellationToken);
                 if (user == null)
                     throw new NotFoundException($"User with ID {request.UserId} not found");
 
-                var role=await _roleRepository.GetByIdAsync(request.RoleId, cancellationToken);
+                var role = await _unitOfWork.Roles.GetByIdAsync(request.RoleId, cancellationToken);
                 if (role == null)
                     throw new NotFoundException($"Role with ID {request.RoleId} not found");
 
@@ -51,7 +58,8 @@ namespace ChatApp.Modules.Identity.Application.Commands.AssignRole
 
                 user.AssignRole(userRole);
 
-                await _userRepository.UpdateAsync(user, cancellationToken);
+                await _unitOfWork.Users.UpdateAsync(user, cancellationToken);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 await _eventBus.PublishAsync(new RoleAssignedEvent(request.UserId,request.RoleId),cancellationToken);
                 _logger?.LogInformation("Role {RoleId} assigned to user {UserId} successfully", request.RoleId, request.UserId);
@@ -59,7 +67,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.AssignRole
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error assigning role {RoleId} to user {UserId}", request.RoleId, request.UserId);
+                _logger?.LogError(ex, "Error assigning role {RoleId} to user {UserId}", request.RoleId, request.UserId);
                 return Result.Failure(ex.Message);
             }
         }

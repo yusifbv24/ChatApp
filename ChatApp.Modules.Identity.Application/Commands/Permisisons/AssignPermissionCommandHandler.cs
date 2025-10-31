@@ -1,27 +1,47 @@
-﻿using ChatApp.Modules.Identity.Domain.Entities;
-using ChatApp.Modules.Identity.Domain.Repositories;
+﻿using ChatApp.Modules.Identity.Application.Interfaces;
+using ChatApp.Modules.Identity.Domain.Entities;
 using ChatApp.Shared.Kernel.Common;
 using ChatApp.Shared.Kernel.Exceptions;
+using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
-namespace ChatApp.Modules.Identity.Application.Commands.AssignPermission
+namespace ChatApp.Modules.Identity.Application.Commands.Permisisons
 {
+    public record AssignPermissionCommand(
+        Guid RoleId,
+        Guid PermissionId
+    ) : IRequest<Result>;
+
+
+
+    public class AssignPermissionCommandValidator : AbstractValidator<AssignPermissionCommand>
+    {
+        public AssignPermissionCommandValidator()
+        {
+            RuleFor(x => x.RoleId)
+                .NotEmpty().WithMessage("Role ID is required");
+
+            RuleFor(x => x.PermissionId)
+                .NotEmpty().WithMessage("Permission ID is required");
+        }
+    }
+
+
+
     public class AssignPermissionCommandHandler:IRequestHandler<AssignPermissionCommand,Result>
     {
-        private readonly IRoleRepository _roleRepository;
-        private readonly IPermissionRepository _permissionRepository;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<AssignPermissionCommandHandler> _logger;
 
         public AssignPermissionCommandHandler(
-            IRoleRepository roleRepository,
-            IPermissionRepository permissionRepository,
+            IUnitOfWork unitOfWork,
             ILogger<AssignPermissionCommandHandler> logger)
         {
-            _roleRepository=roleRepository;
-            _permissionRepository=permissionRepository;
+            _unitOfWork = unitOfWork;
             _logger=logger;
         }
+
 
 
         public async Task<Result> Handle(AssignPermissionCommand request, CancellationToken cancellationToken = default)
@@ -30,27 +50,27 @@ namespace ChatApp.Modules.Identity.Application.Commands.AssignPermission
             {
                 _logger?.LogInformation("Assigning permission {PermissionId} to role {RoleId}", request.PermissionId, request.RoleId);
 
-                var role = await _roleRepository.GetByIdAsync(request.RoleId, cancellationToken);
+                var role = await _unitOfWork.Roles.GetByIdAsync(request.RoleId, cancellationToken);
                 if (role == null)
                     throw new NotFoundException($"Role with ID {request.RoleId} not found");
 
-                var permission=await _permissionRepository.GetByIdAsync(request.PermissionId, cancellationToken);
+                var permission=await _unitOfWork.Permissions.GetByIdAsync(request.PermissionId, cancellationToken);
                 if (permission == null)
                     throw new NotFoundException($"Permission with ID {request.PermissionId} not found");
 
                 var rolePermission = new RolePermission(
                     request.RoleId,
                     request.PermissionId);
-                role.AddPermission(rolePermission);
 
-                await _roleRepository.UpdateAsync(role, cancellationToken);
+                await _unitOfWork.RolePermissions.AddAsync(rolePermission, cancellationToken);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 _logger?.LogInformation("Permission {PermissionId} assigned to role {RoleId} successfully", request.PermissionId, request.RoleId);
                 return Result.Success();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error assigning permission {PermissionId} to role {RoleId}", request.PermissionId, request.RoleId);
+                _logger?.LogError(ex, "Error assigning permission {PermissionId} to role {RoleId}", request.PermissionId, request.RoleId);
                 return Result.Failure(ex.Message);
             }
         }
