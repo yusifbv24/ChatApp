@@ -23,9 +23,25 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence.Repositories
         }
 
 
-        public async Task<T?> GetByNameAsync(string name, CancellationToken cancellationToken = default)
+        public async Task<T?> GetByNameAsync(
+            string name, 
+            CancellationToken cancellationToken = default)
         {
-            return await _dbSet.FindAsync([name], cancellationToken);
+            // Check if entity type has a Name property using reflection
+            var nameProperty=typeof(T).GetProperty("Name");
+            if(nameProperty == null)
+            {
+                throw new InvalidOperationException($"Entity type {typeof(T).Name} does not have a Name property");
+            }
+
+            // Build the expression dynamically : entity=>entity.Name==name
+            var paramter = Expression.Parameter(typeof(T), "entity");
+            var property= Expression.Property(paramter, nameProperty);
+            var constant= Expression.Constant(name);
+            var equality= Expression.Equal(constant, paramter);
+            var lambda =  Expression.Lambda<Func<T, bool>>(equality, paramter);
+
+            return await _dbSet.FirstOrDefaultAsync(lambda, cancellationToken);
         }
 
 
@@ -38,11 +54,19 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence.Repositories
         }
 
 
+
+        /// <summary>
+        /// Optimized method to retrieve user permissions with eager loading
+        /// This prevents N+1 query problems by loading all related data in a single query
+        /// </summary>
         public async Task<List<Permission>> GetPermissionsByUserIdAsync(
             Guid userId, 
             CancellationToken cancellationToken = default)
         {
             return await _context.UserRoles
+                .Include(ur => ur.Role)
+                    .ThenInclude(r => r.RolePermissions)
+                        .ThenInclude(rp => rp.Permission)
                 .Where(ur => ur.UserId == userId)
                 .SelectMany(ur => ur.Role.RolePermissions)
                 .Select(rp => rp.Permission)

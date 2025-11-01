@@ -55,7 +55,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.RefreshToken
                 }
 
                 // Get user permissions
-                var permissions = await _unitOfWork.RolePermissions.GetPermissionsByUserIdAsync(user.Id, cancellationToken);
+                var permissions = await _unitOfWork.UserRoles.GetPermissionsByUserIdAsync(user.Id, cancellationToken);
                 var permissionNames=permissions.Select(p=>p.Name).ToList();
 
                 // Generate new tokens

@@ -1,7 +1,6 @@
 ﻿using ChatApp.Modules.Identity.Application.Commands.Login;
 using ChatApp.Modules.Identity.Application.Commands.RefreshToken;
 using ChatApp.Modules.Identity.Application.DTOs;
-using ChatApp.Shared.Kernel.Common;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -70,12 +69,7 @@ namespace ChatApp.Modules.Identity.Api.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> Logout(CancellationToken cancellationToken)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
-            {
-                return Unauthorized(Result<bool>.Failure("Invalid token"));
-            }
+            var userId = GetCurrentUserId();
 
             var result = await _mediator.Send(new LogoutCommand(userId));
 
@@ -86,6 +80,18 @@ namespace ChatApp.Modules.Identity.Api.Controllers
 
             _logger.LogInformation("User {UserId} logged out succesfully", userId);
             return Ok(result);
+        }
+
+        private Guid GetCurrentUserId()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+            {
+                return Guid.Empty;
+            }
+
+            return userId;
         }
     }
 }
