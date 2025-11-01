@@ -1,5 +1,5 @@
-﻿using ChatApp.Modules.Identity.Domain.Entities;
-using ChatApp.Shared.Kernel.Interfaces;
+﻿using ChatApp.Modules.Identity.Application.Interfaces;
+using ChatApp.Modules.Identity.Domain.Entities;
 using Microsoft.EntityFrameworkCore.Storage;
 
 namespace ChatApp.Modules.Identity.Infrastructure.Persistence.Repositories

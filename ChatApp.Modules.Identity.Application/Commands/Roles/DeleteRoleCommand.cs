@@ -1,5 +1,4 @@
 ﻿using ChatApp.Modules.Identity.Application.Interfaces;
-using ChatApp.Modules.Identity.Domain.Repositories;
 using ChatApp.Shared.Kernel.Common;
 using FluentValidation;
 using MediatR;
@@ -22,11 +21,11 @@ namespace ChatApp.Modules.Identity.Application.Commands.Roles
 
     public class DeleteRoleCommandHandler:IRequestHandler<DeleteRoleCommand, Result>
     {
-        private readonly Interfaces.IUnitOfWork _unitOfWork;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<DeleteRoleCommandHandler> _logger;
 
         public DeleteRoleCommandHandler(
-            Interfaces.IUnitOfWork unitOfWork,
+            IUnitOfWork unitOfWork,
             ILogger<DeleteRoleCommandHandler> logger)
         {
             _unitOfWork = unitOfWork;

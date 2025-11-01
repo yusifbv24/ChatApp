@@ -1,4 +1,4 @@
-﻿using ChatApp.Modules.Identity.Domain.Repositories;
+﻿using ChatApp.Modules.Identity.Application.Interfaces;
 using ChatApp.Shared.Kernel.Common;
 using ChatApp.Shared.Kernel.Exceptions;
 using FluentValidation;
@@ -61,14 +61,14 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
 
     public class UpdateUserCommandHandler:IRequestHandler<UpdateUserCommand,Result>
     {
-        private readonly IUnitOfWork _userRepository;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<UpdateUserCommand> _logger;
 
         public UpdateUserCommandHandler(
-            IUnitOfWork userRepository,
+            IUnitOfWork unitOfWork,
             ILogger<UpdateUserCommand> logger)
         {
-            _userRepository = userRepository;
+            _unitOfWork = unitOfWork;
             _logger = logger;
         }
 
@@ -80,7 +80,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
             {
                 _logger?.LogInformation("Updating user {UserId}", request.UserId);
 
-                var user = await _userRepository.GetByIdAsync(request.UserId, cancellationToken);
+                var user = await _unitOfWork.Users.GetByIdAsync(request.UserId, cancellationToken);
 
                 if (user == null)
                     throw new NotFoundException($"User with ID {request.UserId} not found");
@@ -90,7 +90,10 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
 
                 if(!string.IsNullOrWhiteSpace(request.DisplayName))
                 {
-                    var existingDisplayName=await _userRepository.DisplayNameExistsAsync(request.DisplayName, cancellationToken);
+                    var existingDisplayName=await _unitOfWork.Users.ExistsAsync(
+                        c=>c.DisplayName==request.DisplayName,
+                        cancellationToken);
+
                     if (existingDisplayName)
                     {
                         return Result.Failure($"Display name already exists");
@@ -130,7 +133,8 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
                 }
 
 
-                await _userRepository.UpdateAsync(user, cancellationToken);
+                await _unitOfWork.Users.UpdateAsync(user, cancellationToken);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 _logger?.LogInformation("User {UserId} updated successfully", request.UserId);
                 return Result.Success();

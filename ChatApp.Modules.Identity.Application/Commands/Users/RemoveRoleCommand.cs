@@ -1,5 +1,5 @@
-﻿using ChatApp.Modules.Identity.Domain.Events;
-using ChatApp.Modules.Identity.Domain.Repositories;
+﻿using ChatApp.Modules.Identity.Application.Interfaces;
+using ChatApp.Modules.Identity.Domain.Events;
 using ChatApp.Shared.Kernel.Common;
 using ChatApp.Shared.Kernel.Exceptions;
 using ChatApp.Shared.Kernel.Interfaces;
@@ -30,19 +30,16 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
 
     public class RemoveRoleCommandHandler : IRequestHandler<RemoveRoleCommand, Result>
     {
-        private readonly IUnitOfWork _userRepository;
-        private readonly IRoleRepository _roleRepository;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly IEventBus _eventBus;
         private readonly ILogger<RemoveRoleCommandHandler> _logger;
 
         public RemoveRoleCommandHandler(
-            IUnitOfWork userRepository,
-            IRoleRepository roleRepository,
+            IUnitOfWork unitOfWork,
             IEventBus eventBus,
             ILogger<RemoveRoleCommandHandler> logger)
         {
-            _userRepository = userRepository;
-            _roleRepository = roleRepository;
+            _unitOfWork = unitOfWork;
             _eventBus = eventBus;
             _logger = logger;
         }
@@ -54,22 +51,27 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
         {
             _logger?.LogInformation("Removing role {RoleId} from user {UserId}", request.RoleId, request.UserId);
 
-            var user = await _userRepository.GetByIdAsync(request.UserId, cancellationToken);
+            var user = await _unitOfWork.Users.GetByIdAsync(request.UserId, cancellationToken);
             if (user == null)
                 throw new NotFoundException($"User with ID {request.UserId} not found");
 
-            var role=await _roleRepository.GetByIdAsync(request.RoleId, cancellationToken);
+            var role=await _unitOfWork.Roles.GetByIdAsync(request.RoleId, cancellationToken);
             if (role == null)
                 throw new NotFoundException($"Role with ID {request.RoleId} not found");
 
-            var userRole = await _userRepository.GetUserWithRoleAsync(request.UserId, request.RoleId,cancellationToken);
+            var userRole = await _unitOfWork.UserRoles.GetFirstOrDefaultAsync(
+                u=>u.UserId==request.UserId &&
+                u.RoleId==request.RoleId,
+                cancellationToken);
+
             if(userRole == null)
             {
                 return Result.Failure("User has not role yet");
             }
 
             user.RemoveRole(userRole.RoleId);
-            await _userRepository.UpdateAsync(user, cancellationToken);
+            await _unitOfWork.Users.UpdateAsync(user, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             await _eventBus.PublishAsync(new RoleRemovedEvent(request.UserId, request.RoleId),cancellationToken);
             _logger?.LogInformation("Role {RoleId} removed from user {UserId} successfully", request.RoleId, request.UserId);

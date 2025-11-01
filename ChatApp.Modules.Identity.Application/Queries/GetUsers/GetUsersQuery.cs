@@ -1,5 +1,5 @@
 ﻿using ChatApp.Modules.Identity.Application.DTOs;
-using ChatApp.Modules.Identity.Domain.Repositories;
+using ChatApp.Modules.Identity.Application.Interfaces;
 using ChatApp.Shared.Kernel.Common;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -14,14 +14,14 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetUsers
 
     public class GetUsersQueryHandler : IRequestHandler<GetUsersQuery, Result<List<UserDto>>>
     {
-        private readonly IUnitOfWork _userRepository;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<GetUsersQueryHandler> _logger;
 
         public GetUsersQueryHandler(
-            IUnitOfWork userRepository,
+            IUnitOfWork unitOfWork,
             ILogger<GetUsersQueryHandler> logger)
         {
-            _userRepository = userRepository;
+            _unitOfWork = unitOfWork;
             _logger = logger;
         }
 
@@ -31,7 +31,7 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetUsers
         {
             try
             {
-                var users = await _userRepository.GetAllAsync(cancellationToken);
+                var users = await _unitOfWork.Users.GetAllAsync(cancellationToken);
 
                 var userDtos = users
                     .Skip((query.PageNumber - 1) * query.PageSize)

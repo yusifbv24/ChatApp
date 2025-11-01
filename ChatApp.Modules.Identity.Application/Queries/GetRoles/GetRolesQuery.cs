@@ -1,5 +1,5 @@
 ﻿using ChatApp.Modules.Identity.Application.DTOs;
-using ChatApp.Modules.Identity.Domain.Repositories;
+using ChatApp.Modules.Identity.Application.Interfaces;
 using ChatApp.Shared.Kernel.Common;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -12,14 +12,14 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetRoles
 
     public class GetRolesQueryHandler : IRequestHandler<GetRolesQuery, Result<List<RoleDto>>>
     {
-        private readonly IRoleRepository _roleRepository;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<GetRolesQueryHandler> _logger;
 
         public GetRolesQueryHandler(
-            IRoleRepository roleRepository,
+            IUnitOfWork unitOfWork,
             ILogger<GetRolesQueryHandler> logger)
         {
-            _roleRepository = roleRepository;
+            _unitOfWork = unitOfWork;
             _logger = logger;
         }
 
@@ -30,7 +30,7 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetRoles
         {
             try
             {
-                var roles = await _roleRepository.GetAllAsync(cancellationToken);
+                var roles = await _unitOfWork.Roles.GetAllAsync(cancellationToken);
 
                 var roleDtos = roles.Select(r => new RoleDto
                 (

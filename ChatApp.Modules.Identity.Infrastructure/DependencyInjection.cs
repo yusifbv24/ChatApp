@@ -1,4 +1,4 @@
-﻿using ChatApp.Modules.Identity.Domain.Repositories;
+﻿using ChatApp.Modules.Identity.Application.Interfaces;
 using ChatApp.Modules.Identity.Domain.Services;
 using ChatApp.Modules.Identity.Infrastructure.Persistence;
 using ChatApp.Modules.Identity.Infrastructure.Persistence.Repositories;
@@ -20,10 +20,7 @@ namespace ChatApp.Modules.Identity.Infrastructure
                     b => b.MigrationsAssembly(typeof(IdentityDbContext).Assembly.FullName)));
 
             // Repositories
-            services.AddScoped<IUnitOfWork, UserRepository>();
-            services.AddScoped<IPermissionRepository, PermissionRepository>();
-            services.AddScoped<IRoleRepository, RoleRepository>();
-            services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+            services.AddScoped<IUnitOfWork, UnitOfWork>();
 
             // Services
             services.AddScoped<IPasswordHasher, PasswordHasher>();

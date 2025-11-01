@@ -1,4 +1,5 @@
 ﻿using ChatApp.Modules.Identity.Domain.Entities;
+using ChatApp.Modules.Identity.Infrastructure.Persistence.Configurations;
 using Microsoft.EntityFrameworkCore;
 
 namespace ChatApp.Modules.Identity.Infrastructure.Persistence
