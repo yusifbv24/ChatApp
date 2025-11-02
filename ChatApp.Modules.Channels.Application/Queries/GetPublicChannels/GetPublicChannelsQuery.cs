@@ -1,0 +1,57 @@
+﻿using ChatApp.Modules.Channels.Application.DTOs.Responses;
+using ChatApp.Modules.Channels.Application.Interfaces;
+using ChatApp.Shared.Kernel.Common;
+using MediatR;
+using Microsoft.Extensions.Logging;
+
+namespace ChatApp.Modules.Channels.Application.Queries.GetPublicChannels
+{
+    public record GetPublicChannelsQuery() : IRequest<Result<List<ChannelDto>>>;
+
+    public class GetPublicChannelsQueryHandler : IRequestHandler<GetPublicChannelsQuery, Result<List<ChannelDto>>>
+    {
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly ILogger<GetPublicChannelsQueryHandler> _logger;
+
+        public GetPublicChannelsQueryHandler(
+            IUnitOfWork unitOfWork,
+            ILogger<GetPublicChannelsQueryHandler> logger)
+        {
+            _unitOfWork = unitOfWork;
+            _logger = logger;
+        }
+
+        public async Task<Result<List<ChannelDto>>> Handle(
+            GetPublicChannelsQuery request,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                var channels = await _unitOfWork.Channels.GetPublicChannelsAsync(cancellationToken);
+
+                var channelDtos = channels
+                    .Where(c => !c.IsArchived)
+                    .Select(c => new ChannelDto(
+                        c.Id,
+                        c.Name,
+                        c.Description,
+                        c.Type,
+                        c.CreatedBy,
+                        c.Members.Count(m => m.IsActive),
+                        c.IsArchived,
+                        c.CreatedAtUtc,
+                        c.ArchivedAtUtc
+                    ))
+                    .OrderByDescending(c => c.CreatedAtUtc)
+                    .ToList();
+
+                return Result.Success(channelDtos);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving public channels");
+                return Result.Failure<List<ChannelDto>>("An error occurred while retrieving public channels");
+            }
+        }
+    }
+}

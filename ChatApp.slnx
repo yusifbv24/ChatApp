@@ -1,6 +1,14 @@
 <Solution>
-  <Folder Name="/src/" />
+  <Folder Name="/src/">
+    <Project Path="ChatApp.Api/ChatApp.Api.csproj" Id="6cbedc78-e811-4631-a224-7712ad18de2f" />
+  </Folder>
   <Folder Name="/src/Modules/" />
+  <Folder Name="/src/Modules/Channels/">
+    <Project Path="ChatApp.Modules.Channels.Api/ChatApp.Modules.Channels.Api.csproj" Id="1176f111-d1fd-485f-8004-b7cd23f534a8" />
+    <Project Path="ChatApp.Modules.Channels.Application/ChatApp.Modules.Channels.Application.csproj" Id="f41a305a-23a0-40c7-a578-d1132df953b9" />
+    <Project Path="ChatApp.Modules.Channels.Domain/ChatApp.Modules.Channels.Domain.csproj" Id="92eb49a3-13e2-4f33-a45f-89f915e720c1" />
+    <Project Path="ChatApp.Modules.Channels.Infrastructure/ChatApp.Modules.Channels.Infrastructure.csproj" Id="d06bf5e8-cac5-4629-bb8d-5d440a263ddb" />
+  </Folder>
   <Folder Name="/src/Modules/Identity/">
     <Project Path="ChatApp.Modules.Identity.Api/ChatApp.Modules.Identity.Api.csproj" Id="b6885fcc-1a24-43c5-a83e-1c13a776f60a" />
     <Project Path="ChatApp.Modules.Identity.Application/ChatApp.Modules.Identity.Application.csproj" />

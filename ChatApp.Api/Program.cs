@@ -1,13 +1,11 @@
-using ChatApp.Modules.Identity.Application.Behaviors;
-using ChatApp.Modules.Identity.Application.Commands.Login;
 using ChatApp.Modules.Identity.Infrastructure;
+using ChatApp.Modules.Channels.Infrastructure;
 using ChatApp.Modules.Identity.Infrastructure.Persistence;
+using ChatApp.Modules.Channels.Infrastructure.Persistence;
 using ChatApp.Shared.Infrastructure.EventBus;
 using ChatApp.Shared.Infrastructure.Logging;
 using ChatApp.Shared.Infrastructure.Middleware;
 using ChatApp.Shared.Kernel.Interfaces;
-using FluentValidation;
-using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -24,9 +22,11 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Host.UseSerilog();
 
 // Add services to the container
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddApplicationPart(typeof(ChatApp.Modules.Identity.Api.Controllers.AuthController).Assembly)
+    .AddApplicationPart(typeof(ChatApp.Modules.Channels.Api.Controllers.ChannelsController).Assembly);
 
-// Add CORS policy for local development and production
+// Add CORS policy
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -37,19 +37,14 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Register MediatR for CQRS pattern
-builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(
-    typeof(LoginCommand).Assembly));
-
-// Register FluentValidation
-builder.Services.AddValidatorsFromAssembly(
-    typeof(LoginCommand).Assembly);
-
-// Add validation behavior to MediatR pipeline
-builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
-
-// Register infrastructure layers
+// Register all modules
+// Identity Module
+builder.Services.AddIdentityApplication();
 builder.Services.AddIdentityInfrastructure(builder.Configuration);
+
+// Channels Module
+builder.Services.AddChannelsApplication();
+builder.Services.AddChannelsInfrastructure(builder.Configuration);
 
 // Register event bus for inter-module communication
 builder.Services.AddSingleton<IEventBus, InMemoryEventBus>();
@@ -74,21 +69,21 @@ builder.Services.AddAuthentication(options =>
         ValidIssuer = jwtSettings["Issuer"],
         ValidAudience = jwtSettings["Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)),
-        ClockSkew = TimeSpan.Zero // Remove default 5 minute tolerance
+        ClockSkew = TimeSpan.Zero
     };
 });
 
 builder.Services.AddAuthorization();
 
-// Configure Swagger/OpenAPI with JWT support
+// Configure Swagger/OpenAPI
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo
     {
-        Title = "ChatApp Identity API",
+        Title = "ChatApp API",
         Version = "v1",
-        Description = "Identity and Authentication module for ChatApp"
+        Description = "Modular Monolith Chat Application API"
     });
 
     // Add JWT authentication to Swagger
@@ -120,6 +115,7 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
+// Database initialization and seeding
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
@@ -129,36 +125,32 @@ using (var scope = app.Services.CreateScope())
     {
         logger.LogInformation("Starting database initialization...");
 
-        // Get the DbContext from the service provider
-        var context = services.GetRequiredService<IdentityDbContext>();
-        await context.Database.MigrateAsync();
+        // Identity Module
+        var identityContext = services.GetRequiredService<IdentityDbContext>();
+        await identityContext.Database.MigrateAsync();
+        await ChatApp.Modules.Identity.Infrastructure.Persistence.DatabaseSeeder.SeedAsync(
+            identityContext,
+            logger);
 
-        logger.LogInformation("All pending migrations applied successfully");
-
-        // Now seed the database with initial data if needed
-        // We only seed if the database is empty (no users exist)
-        await DatabaseSeeder.SeedAsync(context, logger);
+        // Channels Module
+        var channelsContext = services.GetRequiredService<ChannelsDbContext>();
+        await channelsContext.Database.MigrateAsync();
+        await ChannelDatabaseSeeder.SeedAsync(channelsContext,logger);
 
         logger.LogInformation("Database initialization completed successfully");
     }
     catch (Exception ex)
     {
-        // In production, you might want to prevent the application from starting if this fails
         logger.LogError(ex, "An error occurred while initializing the database");
-
         if (app.Environment.IsDevelopment())
         {
-            throw; // Re-throw in development to make the error obvious
+            throw;
         }
     }
 }
 
 // Configure the HTTP request pipeline
-
-// Global exception handling middleware
 app.UseMiddleware<Globalexceptionhandlermiddleware>();
-
-// Request logging middleware
 app.UseMiddleware<RequestLoggingMiddleware>();
 
 if (app.Environment.IsDevelopment())
@@ -166,22 +158,18 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI(c =>
     {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "ChatApp Identity API v1");
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "ChatApp API v1");
     });
 }
 
 app.UseHttpsRedirection();
-
-// Enable CORS
 app.UseCors("AllowAll");
-
-// Authentication must come before Authorization
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
 
-Log.Information("ChatApp Identity API starting...");
+Log.Information("ChatApp API starting...");
 
 try
 {

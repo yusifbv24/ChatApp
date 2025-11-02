@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MediatR" Version="13.1.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.21" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.10">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.6" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Controllers\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ChatApp.Modules.Channels.Api\ChatApp.Modules.Channels.Api.csproj" />
+    <ProjectReference Include="..\ChatApp.Modules.Channels.Infrastructure\ChatApp.Modules.Channels.Infrastructure.csproj" />
+    <ProjectReference Include="..\ChatApp.Modules.Identity.Api\ChatApp.Modules.Identity.Api.csproj" />
+    <ProjectReference Include="..\ChatApp.Modules.Identity.Infrastructure\ChatApp.Modules.Identity.Infrastructure.csproj" />
+    <ProjectReference Include="..\ChatApp.Shared.Infrastructure\ChatApp.Shared.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

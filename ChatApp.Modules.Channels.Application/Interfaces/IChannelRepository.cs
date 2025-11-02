@@ -1,0 +1,22 @@
+﻿using ChatApp.Modules.Channels.Application.DTOs.Responses;
+using ChatApp.Modules.Channels.Domain.Entities;
+using ChatApp.Modules.Channels.Domain.Enums;
+using System.Linq.Expressions;
+
+namespace ChatApp.Modules.Channels.Application.Interfaces
+{
+    public interface IChannelRepository
+    {
+        Task<Channel?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+        Task<Channel?> GetByIdWithMembersAsync(Guid id, CancellationToken cancellationToken = default);
+        Task<ChannelDetailsDto?> GetChannelDetailsByIdAsync(Guid id, CancellationToken cancellationToken = default);
+        Task<Channel?> GetByNameAsync(string name, CancellationToken cancellationToken = default);
+        Task<List<Channel>> GetUserChannelsAsync(Guid userId, CancellationToken cancellationToken = default);
+        Task<List<Channel>> GetPublicChannelsAsync(CancellationToken cancellationToken = default);
+        Task<bool> IsUserMemberAsync(Guid channelId, Guid userId, CancellationToken cancellationToken = default);
+        Task<bool> ExistsAsync(Expression<Func<Channel, bool>> predicate, CancellationToken cancellationToken = default);
+        Task AddAsync(Channel channel, CancellationToken cancellationToken = default);
+        Task UpdateAsync(Channel channel, CancellationToken cancellationToken = default);
+        Task DeleteAsync(Channel channel, CancellationToken cancellationToken = default);
+    }
+}
