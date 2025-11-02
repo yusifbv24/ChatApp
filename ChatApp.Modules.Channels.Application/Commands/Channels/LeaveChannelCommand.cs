@@ -53,7 +53,7 @@ namespace ChatApp.Modules.Channels.Application.Commands.Channels
         {
             try
             {
-                _logger.LogInformation(
+                _logger?.LogInformation(
                     "User {UserId} leaving channel {ChannelId}",
                     request.UserId,
                     request.ChannelId);
@@ -90,7 +90,7 @@ namespace ChatApp.Modules.Channels.Application.Commands.Channels
                     new MemberRemovedEvent(request.ChannelId, request.UserId, request.UserId),
                     cancellationToken);
 
-                _logger.LogInformation(
+                _logger?.LogInformation(
                     "User {UserId} left channel {ChannelId} successfully",
                     request.UserId,
                     request.ChannelId);
@@ -99,7 +99,7 @@ namespace ChatApp.Modules.Channels.Application.Commands.Channels
             }
             catch (Exception ex)
             {
-                _logger.LogError(
+                _logger?.LogError(
                     ex,
                     "Error while user {UserId} leaving channel {ChannelId}",
                     request.UserId,

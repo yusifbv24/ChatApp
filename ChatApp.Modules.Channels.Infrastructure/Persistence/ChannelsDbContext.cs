@@ -35,6 +35,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence
             {
                 entity.ToTable("users"); // Identity module's table
                 entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("id");
                 entity.Property(e => e.Username).HasColumnName("username");
                 entity.Property(e => e.DisplayName).HasColumnName("display_name");
                 entity.Property(e => e.AvatarUrl).HasColumnName("avatar_url");

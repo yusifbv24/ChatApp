@@ -3,12 +3,10 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-#pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
-
 namespace ChatApp.Modules.Identity.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class InitialIdentitySchema : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -33,23 +31,23 @@ namespace ChatApp.Modules.Identity.Infrastructure.Migrations
                 name: "roles",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "id", nullable: false),
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
                     name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     description = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
                     is_system_role = table.Column<bool>(type: "boolean", nullable: false),
                     created_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    updated_at_utc = table.Column<DateTime>(type: "timestampt with time zone", nullable: false)
+                    updated_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_roles", x => x.Id);
+                    table.PrimaryKey("PK_roles", x => x.id);
                 });
 
             migrationBuilder.CreateTable(
                 name: "users",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "id", nullable: false),
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
                     username = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     email = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
                     password = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
@@ -64,7 +62,7 @@ namespace ChatApp.Modules.Identity.Infrastructure.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_users", x => x.Id);
+                    table.PrimaryKey("PK_users", x => x.id);
                 });
 
             migrationBuilder.CreateTable(
@@ -72,7 +70,7 @@ namespace ChatApp.Modules.Identity.Infrastructure.Migrations
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
-                    role_id = table.Column<Guid>(type: "id", nullable: false),
+                    role_id = table.Column<Guid>(type: "uuid", nullable: false),
                     permission_id = table.Column<Guid>(type: "uuid", nullable: false),
                     created_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     updated_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
@@ -90,7 +88,7 @@ namespace ChatApp.Modules.Identity.Infrastructure.Migrations
                         name: "FK_role_permissions_roles_role_id",
                         column: x => x.role_id,
                         principalTable: "roles",
-                        principalColumn: "Id",
+                        principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
@@ -99,7 +97,7 @@ namespace ChatApp.Modules.Identity.Infrastructure.Migrations
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
-                    user_id = table.Column<Guid>(type: "id", nullable: false),
+                    user_id = table.Column<Guid>(type: "uuid", nullable: false),
                     token = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
                     expires_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     is_revoked = table.Column<bool>(type: "boolean", nullable: false),
@@ -114,7 +112,7 @@ namespace ChatApp.Modules.Identity.Infrastructure.Migrations
                         name: "FK_refresh_tokens_users_user_id",
                         column: x => x.user_id,
                         principalTable: "users",
-                        principalColumn: "Id",
+                        principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
@@ -123,8 +121,8 @@ namespace ChatApp.Modules.Identity.Infrastructure.Migrations
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
-                    user_id = table.Column<Guid>(type: "id", nullable: false),
-                    role_id = table.Column<Guid>(type: "id", nullable: false),
+                    user_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    role_id = table.Column<Guid>(type: "uuid", nullable: false),
                     assigned_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     AssignedBy = table.Column<Guid>(type: "uuid", nullable: true),
                     created_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
@@ -137,58 +135,14 @@ namespace ChatApp.Modules.Identity.Infrastructure.Migrations
                         name: "FK_user_roles_roles_role_id",
                         column: x => x.role_id,
                         principalTable: "roles",
-                        principalColumn: "Id",
+                        principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_user_roles_users_user_id",
                         column: x => x.user_id,
                         principalTable: "users",
-                        principalColumn: "Id",
+                        principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.InsertData(
-                table: "permissions",
-                columns: new[] { "Id", "created_at_utc", "description", "module", "name", "updated_at_utc" },
-                values: new object[,]
-                {
-                    { new Guid("11111111-1111-1111-1111-111111111111"), new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(729), "Create users", "Identity", "Users.Create", new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(864) },
-                    { new Guid("11111111-1111-1111-1111-111111111112"), new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1332), "Read users", "Identity", "Users.Read", new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1332) },
-                    { new Guid("11111111-1111-1111-1111-111111111113"), new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1336), "Update users", "Identity", "Users.Update", new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1336) },
-                    { new Guid("11111111-1111-1111-1111-111111111114"), new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1338), "Delete users", "Identity", "Users.Delete", new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1339) },
-                    { new Guid("11111111-1111-1111-1111-111111111115"), new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1340), "Create roles", "Identity", "Roles.Create", new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1341) },
-                    { new Guid("11111111-1111-1111-1111-111111111116"), new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1342), "Read roles", "Identity", "Roles.Read", new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1343) },
-                    { new Guid("11111111-1111-1111-1111-111111111117"), new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1344), "Update roles", "Identity", "Roles.Update", new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1345) },
-                    { new Guid("11111111-1111-1111-1111-111111111118"), new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1347), "Delete roles", "Identity", "Roles.Delete", new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1347) },
-                    { new Guid("11111111-1111-1111-1111-111111111119"), new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1352), "Send messages", "Messaging", "Messages.Send", new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1352) },
-                    { new Guid("11111111-1111-1111-1111-11111111111a"), new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1354), "Read messages", "Messaging", "Messages.Read", new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1354) },
-                    { new Guid("11111111-1111-1111-1111-11111111111b"), new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1356), "Edit messages", "Messaging", "Messages.Edit", new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1356) },
-                    { new Guid("11111111-1111-1111-1111-11111111111c"), new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1358), "Delete messages", "Messaging", "Messages.Delete", new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1358) },
-                    { new Guid("11111111-1111-1111-1111-11111111111d"), new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1360), "Upload files", "Files", "Files.Upload", new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1360) },
-                    { new Guid("11111111-1111-1111-1111-11111111111e"), new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1362), "Download files", "Files", "Files.Download", new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1362) },
-                    { new Guid("11111111-1111-1111-1111-11111111111f"), new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1364), "Delete files", "Files", "Files.Delete", new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1364) },
-                    { new Guid("11111111-1111-1111-1111-111111111120"), new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1365), "Create groups", "Messaging", "Groups.Create", new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1366) },
-                    { new Guid("11111111-1111-1111-1111-111111111121"), new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1369), "Manage groups", "Messaging", "Groups.Manage", new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1369) }
-                });
-
-            migrationBuilder.InsertData(
-                table: "roles",
-                columns: new[] { "Id", "created_at_utc", "description", "is_system_role", "name", "updated_at_utc" },
-                values: new object[,]
-                {
-                    { new Guid("22222222-2222-2222-2222-222222222221"), new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(5782), "Basic user role", true, "User", new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(5783) },
-                    { new Guid("22222222-2222-2222-2222-222222222222"), new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(6138), "Operator role with extended permissions", true, "Operator", new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(6139) }
-                });
-
-            migrationBuilder.InsertData(
-                table: "role_permissions",
-                columns: new[] { "id", "created_at_utc", "permission_id", "role_id", "updated_at_utc" },
-                values: new object[,]
-                {
-                    { new Guid("104a375d-1b29-465d-95db-75e4eaa7995c"), new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(7078), new Guid("11111111-1111-1111-1111-11111111111e"), new Guid("22222222-2222-2222-2222-222222222221"), new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(7078) },
-                    { new Guid("463ce3b7-0c45-4ed5-853d-f9eb64f12efa"), new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(7070), new Guid("11111111-1111-1111-1111-11111111111d"), new Guid("22222222-2222-2222-2222-222222222221"), new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(7070) },
-                    { new Guid("9ad6ac5a-7772-4a77-8667-464e13f11f80"), new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(6805), new Guid("11111111-1111-1111-1111-111111111119"), new Guid("22222222-2222-2222-2222-222222222221"), new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(6806) },
-                    { new Guid("ae398ecf-82cd-48ef-82a3-535506c96142"), new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(7067), new Guid("11111111-1111-1111-1111-11111111111a"), new Guid("22222222-2222-2222-2222-222222222221"), new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(7068) }
                 });
 
             migrationBuilder.CreateIndex(
@@ -256,7 +210,7 @@ namespace ChatApp.Modules.Identity.Infrastructure.Migrations
             migrationBuilder.CreateIndex(
                 name: "ix_users_id",
                 table: "users",
-                column: "Id",
+                column: "id",
                 unique: true);
         }
 

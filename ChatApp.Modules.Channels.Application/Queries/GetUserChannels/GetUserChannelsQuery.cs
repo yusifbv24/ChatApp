@@ -53,7 +53,7 @@ namespace ChatApp.Modules.Channels.Application.Queries.GetUserChannels
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving channels for user {UserId}", request.UserId);
+                _logger?.LogError(ex, "Error retrieving channels for user {UserId}", request.UserId);
                 return Result.Failure<List<ChannelDto>>("An error occurred while retrieving channels");
             }
         }

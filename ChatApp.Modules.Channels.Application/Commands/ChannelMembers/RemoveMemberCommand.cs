@@ -57,7 +57,7 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMembers
         {
             try
             {
-                _logger.LogInformation(
+                _logger?.LogInformation(
                     "Removing user {UserId} from channel {ChannelId}",
                     request.UserId,
                     request.ChannelId);
@@ -107,7 +107,7 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMembers
                     new MemberRemovedEvent(request.ChannelId, request.UserId, request.RemovedBy),
                     cancellationToken);
 
-                _logger.LogInformation(
+                _logger?.LogInformation(
                     "User {UserId} removed from channel {ChannelId} successfully",
                     request.UserId,
                     request.ChannelId);
@@ -116,7 +116,7 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMembers
             }
             catch (Exception ex)
             {
-                _logger.LogError(
+                _logger?.LogError(
                     ex,
                     "Error removing user {UserId} from channel {ChannelId}",
                     request.UserId,

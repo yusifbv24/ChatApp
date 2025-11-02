@@ -13,7 +13,7 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence.Configurations
             builder.HasKey(r => r.Id);
 
             builder.Property(r => r.Id)
-                .HasColumnType("id");
+                .HasColumnName("id");
 
             builder.Property(r => r.Name)
                 .HasColumnName("name")
@@ -35,7 +35,7 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence.Configurations
 
             builder.Property(r => r.UpdatedAtUtc)
                 .HasColumnName("updated_at_utc")
-                .HasColumnType("timestampt with time zone")
+                .HasColumnType("timestamp with time zone")
                 .IsRequired();
 
             builder.HasIndex(r => r.Name).IsUnique();

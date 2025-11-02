@@ -49,7 +49,7 @@ namespace ChatApp.Modules.Channels.Application.Queries.GetPublicChannels
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving public channels");
+                _logger?.LogError(ex, "Error retrieving public channels");
                 return Result.Failure<List<ChannelDto>>("An error occurred while retrieving public channels");
             }
         }

@@ -61,7 +61,7 @@ namespace ChatApp.Modules.Channels.Application.Queries.GetChannel
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving channel {ChannelId}", request.ChannelId);
+                _logger?.LogError(ex, "Error retrieving channel {ChannelId}", request.ChannelId);
                 return Result.Failure<ChannelDetailsDto?>("An error occurred while retrieving the channel");
             }
         }

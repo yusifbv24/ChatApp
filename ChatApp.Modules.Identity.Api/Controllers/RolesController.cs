@@ -3,7 +3,9 @@ using ChatApp.Modules.Identity.Application.DTOs;
 using ChatApp.Modules.Identity.Application.Queries.GetRoles;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace ChatApp.Modules.Identity.Api.Controllers
 {
@@ -37,7 +39,7 @@ namespace ChatApp.Modules.Identity.Api.Controllers
             [FromBody] CreateRoleCommand command,
             CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Creating role: {RoleName}", command.Name);
+            _logger?.LogInformation("Creating role: {RoleName}", command.Name);
 
             var result = await _mediator.Send(command, cancellationToken);
 
@@ -59,7 +61,7 @@ namespace ChatApp.Modules.Identity.Api.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> GetRoles(CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Retrieving all roles");
+            _logger?.LogInformation("Retrieving all roles");
 
             var result = await _mediator.Send(new GetRolesQuery(), cancellationToken);
 
@@ -82,7 +84,7 @@ namespace ChatApp.Modules.Identity.Api.Controllers
             [FromBody] UpdateRoleCommand command,
             CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Updating role: {RoleId}", roleId);
+            _logger?.LogInformation("Updating role: {RoleId}", roleId);
 
             // Ensure the route parameter matches the command
             var commandWithRoleId = command with { RoleId = roleId };
@@ -107,7 +109,7 @@ namespace ChatApp.Modules.Identity.Api.Controllers
             [FromRoute] Guid roleId,
             CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Deleting role: {RoleId}", roleId);
+            _logger?.LogInformation("Deleting role: {RoleId}", roleId);
 
             var result = await _mediator.Send(new DeleteRoleCommand(roleId), cancellationToken);
 

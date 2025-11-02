@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ChatApp.Modules.Identity.Infrastructure.Migrations
 {
     [DbContext(typeof(IdentityDbContext))]
-    [Migration("20251101084129_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20251102123426_InitialIdentitySchema")]
+    partial class InitialIdentitySchema
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -64,161 +64,6 @@ namespace ChatApp.Modules.Identity.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("permissions", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-111111111111"),
-                            CreatedAtUtc = new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(729),
-                            Description = "Create users",
-                            Module = "Identity",
-                            Name = "Users.Create",
-                            UpdatedAtUtc = new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(864)
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-111111111112"),
-                            CreatedAtUtc = new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1332),
-                            Description = "Read users",
-                            Module = "Identity",
-                            Name = "Users.Read",
-                            UpdatedAtUtc = new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1332)
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-111111111113"),
-                            CreatedAtUtc = new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1336),
-                            Description = "Update users",
-                            Module = "Identity",
-                            Name = "Users.Update",
-                            UpdatedAtUtc = new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1336)
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-111111111114"),
-                            CreatedAtUtc = new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1338),
-                            Description = "Delete users",
-                            Module = "Identity",
-                            Name = "Users.Delete",
-                            UpdatedAtUtc = new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1339)
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-111111111115"),
-                            CreatedAtUtc = new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1340),
-                            Description = "Create roles",
-                            Module = "Identity",
-                            Name = "Roles.Create",
-                            UpdatedAtUtc = new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1341)
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-111111111116"),
-                            CreatedAtUtc = new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1342),
-                            Description = "Read roles",
-                            Module = "Identity",
-                            Name = "Roles.Read",
-                            UpdatedAtUtc = new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1343)
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-111111111117"),
-                            CreatedAtUtc = new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1344),
-                            Description = "Update roles",
-                            Module = "Identity",
-                            Name = "Roles.Update",
-                            UpdatedAtUtc = new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1345)
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-111111111118"),
-                            CreatedAtUtc = new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1347),
-                            Description = "Delete roles",
-                            Module = "Identity",
-                            Name = "Roles.Delete",
-                            UpdatedAtUtc = new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1347)
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-111111111119"),
-                            CreatedAtUtc = new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1352),
-                            Description = "Send messages",
-                            Module = "Messaging",
-                            Name = "Messages.Send",
-                            UpdatedAtUtc = new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1352)
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-11111111111a"),
-                            CreatedAtUtc = new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1354),
-                            Description = "Read messages",
-                            Module = "Messaging",
-                            Name = "Messages.Read",
-                            UpdatedAtUtc = new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1354)
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-11111111111b"),
-                            CreatedAtUtc = new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1356),
-                            Description = "Edit messages",
-                            Module = "Messaging",
-                            Name = "Messages.Edit",
-                            UpdatedAtUtc = new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1356)
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-11111111111c"),
-                            CreatedAtUtc = new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1358),
-                            Description = "Delete messages",
-                            Module = "Messaging",
-                            Name = "Messages.Delete",
-                            UpdatedAtUtc = new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1358)
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-11111111111d"),
-                            CreatedAtUtc = new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1360),
-                            Description = "Upload files",
-                            Module = "Files",
-                            Name = "Files.Upload",
-                            UpdatedAtUtc = new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1360)
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-11111111111e"),
-                            CreatedAtUtc = new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1362),
-                            Description = "Download files",
-                            Module = "Files",
-                            Name = "Files.Download",
-                            UpdatedAtUtc = new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1362)
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-11111111111f"),
-                            CreatedAtUtc = new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1364),
-                            Description = "Delete files",
-                            Module = "Files",
-                            Name = "Files.Delete",
-                            UpdatedAtUtc = new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1364)
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-111111111120"),
-                            CreatedAtUtc = new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1365),
-                            Description = "Create groups",
-                            Module = "Messaging",
-                            Name = "Groups.Create",
-                            UpdatedAtUtc = new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1366)
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-111111111121"),
-                            CreatedAtUtc = new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1369),
-                            Description = "Manage groups",
-                            Module = "Messaging",
-                            Name = "Groups.Manage",
-                            UpdatedAtUtc = new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(1369)
-                        });
                 });
 
             modelBuilder.Entity("ChatApp.Modules.Identity.Domain.Entities.RefreshToken", b =>
@@ -254,7 +99,7 @@ namespace ChatApp.Modules.Identity.Infrastructure.Migrations
                         .HasColumnName("updated_at_utc");
 
                     b.Property<Guid>("UserId")
-                        .HasColumnType("id")
+                        .HasColumnType("uuid")
                         .HasColumnName("user_id");
 
                     b.HasKey("Id");
@@ -271,7 +116,8 @@ namespace ChatApp.Modules.Identity.Infrastructure.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("id");
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
 
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone")
@@ -293,7 +139,7 @@ namespace ChatApp.Modules.Identity.Infrastructure.Migrations
                         .HasColumnName("name");
 
                     b.Property<DateTime>("UpdatedAtUtc")
-                        .HasColumnType("timestampt with time zone")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at_utc");
 
                     b.HasKey("Id");
@@ -302,26 +148,6 @@ namespace ChatApp.Modules.Identity.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("roles", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("22222222-2222-2222-2222-222222222221"),
-                            CreatedAtUtc = new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(5782),
-                            Description = "Basic user role",
-                            IsSystemRole = true,
-                            Name = "User",
-                            UpdatedAtUtc = new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(5783)
-                        },
-                        new
-                        {
-                            Id = new Guid("22222222-2222-2222-2222-222222222222"),
-                            CreatedAtUtc = new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(6138),
-                            Description = "Operator role with extended permissions",
-                            IsSystemRole = true,
-                            Name = "Operator",
-                            UpdatedAtUtc = new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(6139)
-                        });
                 });
 
             modelBuilder.Entity("ChatApp.Modules.Identity.Domain.Entities.RolePermission", b =>
@@ -340,7 +166,7 @@ namespace ChatApp.Modules.Identity.Infrastructure.Migrations
                         .HasColumnName("permission_id");
 
                     b.Property<Guid>("RoleId")
-                        .HasColumnType("id")
+                        .HasColumnType("uuid")
                         .HasColumnName("role_id");
 
                     b.Property<DateTime>("UpdatedAtUtc")
@@ -355,47 +181,14 @@ namespace ChatApp.Modules.Identity.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("role_permissions", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("9ad6ac5a-7772-4a77-8667-464e13f11f80"),
-                            CreatedAtUtc = new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(6805),
-                            PermissionId = new Guid("11111111-1111-1111-1111-111111111119"),
-                            RoleId = new Guid("22222222-2222-2222-2222-222222222221"),
-                            UpdatedAtUtc = new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(6806)
-                        },
-                        new
-                        {
-                            Id = new Guid("ae398ecf-82cd-48ef-82a3-535506c96142"),
-                            CreatedAtUtc = new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(7067),
-                            PermissionId = new Guid("11111111-1111-1111-1111-11111111111a"),
-                            RoleId = new Guid("22222222-2222-2222-2222-222222222221"),
-                            UpdatedAtUtc = new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(7068)
-                        },
-                        new
-                        {
-                            Id = new Guid("463ce3b7-0c45-4ed5-853d-f9eb64f12efa"),
-                            CreatedAtUtc = new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(7070),
-                            PermissionId = new Guid("11111111-1111-1111-1111-11111111111d"),
-                            RoleId = new Guid("22222222-2222-2222-2222-222222222221"),
-                            UpdatedAtUtc = new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(7070)
-                        },
-                        new
-                        {
-                            Id = new Guid("104a375d-1b29-465d-95db-75e4eaa7995c"),
-                            CreatedAtUtc = new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(7078),
-                            PermissionId = new Guid("11111111-1111-1111-1111-11111111111e"),
-                            RoleId = new Guid("22222222-2222-2222-2222-222222222221"),
-                            UpdatedAtUtc = new DateTime(2025, 11, 1, 8, 41, 28, 817, DateTimeKind.Utc).AddTicks(7078)
-                        });
                 });
 
             modelBuilder.Entity("ChatApp.Modules.Identity.Domain.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("id");
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
 
                     b.Property<string>("AvatarUrl")
                         .HasMaxLength(500)
@@ -490,7 +283,7 @@ namespace ChatApp.Modules.Identity.Infrastructure.Migrations
                         .HasColumnName("created_at_utc");
 
                     b.Property<Guid>("RoleId")
-                        .HasColumnType("id")
+                        .HasColumnType("uuid")
                         .HasColumnName("role_id");
 
                     b.Property<DateTime>("UpdatedAtUtc")
@@ -498,7 +291,7 @@ namespace ChatApp.Modules.Identity.Infrastructure.Migrations
                         .HasColumnName("updated_at_utc");
 
                     b.Property<Guid>("UserId")
-                        .HasColumnType("id")
+                        .HasColumnType("uuid")
                         .HasColumnName("user_id");
 
                     b.HasKey("Id");

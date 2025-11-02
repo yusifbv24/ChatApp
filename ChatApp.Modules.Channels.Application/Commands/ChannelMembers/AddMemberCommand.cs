@@ -58,7 +58,7 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMembers
         {
             try
             {
-                _logger.LogInformation(
+                _logger?.LogInformation(
                     "Adding user {UserId} to channel {ChannelId}",
                     request.UserId,
                     request.ChannelId);
@@ -116,7 +116,7 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMembers
                     new MemberAddedEvent(request.ChannelId, request.UserId, request.AddedBy),
                     cancellationToken);
 
-                _logger.LogInformation(
+                _logger?.LogInformation(
                     "User {UserId} added to channel {ChannelId} successfully",
                     request.UserId,
                     request.ChannelId);
@@ -125,7 +125,7 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMembers
             }
             catch (Exception ex)
             {
-                _logger.LogError(
+                _logger?.LogError(
                     ex,
                     "Error adding user {UserId} to channel {ChannelId}",
                     request.UserId,

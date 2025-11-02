@@ -67,7 +67,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error deleting user {UserId}", request.UserId);
+                _logger?.LogError(ex, "Error deleting user {UserId}", request.UserId);
                 return Result.Failure(ex.Message);
             }
         }

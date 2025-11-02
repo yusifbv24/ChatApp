@@ -44,7 +44,7 @@ namespace ChatApp.Modules.Channels.Application.Commands.MessageConditions
         {
             try
             {
-                _logger.LogInformation("Pinning message {MessageId}", request.MessageId);
+                _logger?.LogInformation("Pinning message {MessageId}", request.MessageId);
 
                 var message = await _unitOfWork.ChannelMessages.GetByIdAsync(
                     request.MessageId,
@@ -74,13 +74,13 @@ namespace ChatApp.Modules.Channels.Application.Commands.MessageConditions
                 await _unitOfWork.ChannelMessages.UpdateAsync(message, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                _logger.LogInformation("Message {MessageId} pinned successfully", request.MessageId);
+                _logger?.LogInformation("Message {MessageId} pinned successfully", request.MessageId);
 
                 return Result.Success();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error pinning message {MessageId}", request.MessageId);
+                _logger?.LogError(ex, "Error pinning message {MessageId}", request.MessageId);
                 return Result.Failure(ex.Message);
             }
         }

@@ -8,7 +8,9 @@ using ChatApp.Modules.Channels.Application.Queries.SearchChannels;
 using ChatApp.Modules.Channels.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using System.Security.Claims;
 
 namespace ChatApp.Modules.Channels.Api.Controllers
@@ -47,7 +49,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         {
             var userId = GetCurrentUserId();
             if (userId == Guid.Empty)
-                return Unauthorized(new { error = "Invalid user token" });
+                return Unauthorized();
 
             var commandWithUser = command with { CreatedBy = userId };
 
@@ -78,7 +80,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         {
             var userId = GetCurrentUserId();
             if (userId == Guid.Empty)
-                return Unauthorized(new { error = "Invalid user token" });
+                return Unauthorized();
 
             var result = await _mediator.Send(
                 new GetChannelQuery(channelId, userId),
@@ -105,7 +107,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         {
             var userId = GetCurrentUserId();
             if (userId == Guid.Empty)
-                return Unauthorized(new { error = "Invalid user token" });
+                return Unauthorized();
 
             var result = await _mediator.Send(
                 new GetUserChannelsQuery(userId),
@@ -152,7 +154,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
 
             var userId = GetCurrentUserId();
             if (userId == Guid.Empty)
-                return Unauthorized(new { error = "Invalid user token" });
+                return Unauthorized();
 
             var result = await _mediator.Send(
                 new SearchChannelsQuery(query, userId),
@@ -182,7 +184,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         {
             var userId = GetCurrentUserId();
             if (userId == Guid.Empty)
-                return Unauthorized(new { error = "Invalid user token" });
+                return Unauthorized();
 
             var command = new UpdateChannelCommand(
                 channelId,
@@ -216,7 +218,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         {
             var userId = GetCurrentUserId();
             if (userId == Guid.Empty)
-                return Unauthorized(new { error = "Invalid user token" });
+                return Unauthorized();
 
             var result = await _mediator.Send(
                 new DeleteChannelCommand(channelId, userId),

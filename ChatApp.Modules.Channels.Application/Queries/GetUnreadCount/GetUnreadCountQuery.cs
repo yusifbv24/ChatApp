@@ -49,7 +49,7 @@ namespace ChatApp.Modules.Channels.Application.Queries.GetUnreadCount
             }
             catch (Exception ex)
             {
-                _logger.LogError(
+                _logger?.LogError(
                     ex,
                     "Error retrieving unread count for channel {ChannelId} and user {UserId}",
                     request.ChannelId,

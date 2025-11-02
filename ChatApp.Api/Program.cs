@@ -12,6 +12,9 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Serilog;
 using System.Text;
+using ChatApp.Modules.Identity.Api.Controllers;
+using ChatApp.Modules.Channels.Api.Controllers;
+using ChatApp.Modules.Identity.Domain.Services;
 
 // Configure Serilog logging
 LoggingConfiguration.ConfigureLogging();
@@ -23,8 +26,8 @@ builder.Host.UseSerilog();
 
 // Add services to the container
 builder.Services.AddControllers()
-    .AddApplicationPart(typeof(ChatApp.Modules.Identity.Api.Controllers.AuthController).Assembly)
-    .AddApplicationPart(typeof(ChatApp.Modules.Channels.Api.Controllers.ChannelsController).Assembly);
+    .AddApplicationPart(typeof(AuthController).Assembly)
+    .AddApplicationPart(typeof(ChannelsController).Assembly);
 
 // Add CORS policy
 builder.Services.AddCors(options =>
@@ -120,6 +123,7 @@ using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
     var logger = services.GetRequiredService<ILogger<Program>>();
+    var passwordHasher = services.GetRequiredService<IPasswordHasher>();
 
     try
     {
@@ -128,9 +132,7 @@ using (var scope = app.Services.CreateScope())
         // Identity Module
         var identityContext = services.GetRequiredService<IdentityDbContext>();
         await identityContext.Database.MigrateAsync();
-        await ChatApp.Modules.Identity.Infrastructure.Persistence.DatabaseSeeder.SeedAsync(
-            identityContext,
-            logger);
+        await DatabaseSeeder.SeedAsync(identityContext,passwordHasher,logger);
 
         // Channels Module
         var channelsContext = services.GetRequiredService<ChannelsDbContext>();

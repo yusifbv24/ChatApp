@@ -3,7 +3,9 @@ using ChatApp.Modules.Identity.Application.Commands.RefreshToken;
 using ChatApp.Modules.Identity.Application.DTOs;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using System.Security.Claims;
 
 namespace ChatApp.Modules.Identity.Api.Controllers
@@ -33,7 +35,7 @@ namespace ChatApp.Modules.Identity.Api.Controllers
             [FromBody] LoginCommand command,
             CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Login request for username: {Username}", command.Username);
+            _logger?.LogInformation("Login request for username: {Username}", command.Username);
 
             var result = await _mediator.Send(new LoginCommand(command.Username,command.Password), cancellationToken);
 
@@ -63,7 +65,7 @@ namespace ChatApp.Modules.Identity.Api.Controllers
 
 
 
-        [HttpPost]
+        [HttpPost("logout")]
         [Authorize]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -78,7 +80,7 @@ namespace ChatApp.Modules.Identity.Api.Controllers
                 return BadRequest(result);
             }
 
-            _logger.LogInformation("User {UserId} logged out succesfully", userId);
+            _logger?.LogInformation("User {UserId} logged out succesfully", userId);
             return Ok(result);
         }
 

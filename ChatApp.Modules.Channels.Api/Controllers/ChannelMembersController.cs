@@ -5,7 +5,9 @@ using ChatApp.Modules.Channels.Application.DTOs.Responses;
 using ChatApp.Modules.Channels.Application.Queries.GetChannelMembers;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using System.Security.Claims;
 
 namespace ChatApp.Modules.Channels.Api.Controllers
@@ -45,7 +47,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         {
             var userId = GetCurrentUserId();
             if (userId == Guid.Empty)
-                return Unauthorized(new { error = "Invalid user token" });
+                return Unauthorized();
 
             var result = await _mediator.Send(
                 new GetChannelMembersQuery(channelId, userId),
@@ -74,7 +76,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         {
             var currentUserId = GetCurrentUserId();
             if (currentUserId == Guid.Empty)
-                return Unauthorized(new { error = "Invalid user token" });
+                return Unauthorized();
 
             var result = await _mediator.Send(
                 new AddMemberCommand(channelId, request.UserId, currentUserId),
@@ -103,7 +105,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         {
             var currentUserId = GetCurrentUserId();
             if (currentUserId == Guid.Empty)
-                return Unauthorized(new { error = "Invalid user token" });
+                return Unauthorized();
 
             var result = await _mediator.Send(
                 new RemoveMemberCommand(channelId, userId, currentUserId),
@@ -133,7 +135,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         {
             var currentUserId = GetCurrentUserId();
             if (currentUserId == Guid.Empty)
-                return Unauthorized(new { error = "Invalid user token" });
+                return Unauthorized();
 
             var result = await _mediator.Send(
                 new UpdateMemberRoleCommand(channelId, userId, request.NewRole, currentUserId),
@@ -160,7 +162,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         {
             var userId = GetCurrentUserId();
             if (userId == Guid.Empty)
-                return Unauthorized(new { error = "Invalid user token" });
+                return Unauthorized();
 
             var result = await _mediator.Send(
                 new LeaveChannelCommand(channelId, userId),

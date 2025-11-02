@@ -1,4 +1,5 @@
 ﻿using ChatApp.Modules.Identity.Domain.Entities;
+using ChatApp.Modules.Identity.Domain.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -14,7 +15,7 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence
         /// Seeds the database with initial data if it's empty
         /// This is idempotent - it checks before adding data so it's safe to run multiple times
         /// </summary>
-        public static async Task SeedAsync(IdentityDbContext context, ILogger logger)
+        public static async Task SeedAsync(IdentityDbContext context,IPasswordHasher passwordHasher, ILogger logger)
         {
             try
             {
@@ -46,7 +47,7 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence
                     await SeedPermissionsAsync(context, logger);
                     await SeedRolesAsync(context, logger);
                     await SeedRolePermissionsAsync(context, logger);
-                    await SeedAdminUserAsync(context, logger);
+                    await SeedAdminUserAsync(context,passwordHasher, logger);
 
                     // Save all changes to the database
                     await context.SaveChangesAsync();
@@ -343,7 +344,7 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence
         /// Creates the initial administrator user
         /// This is essential so you can log in and manage the system
         /// </summary>
-        private static async Task SeedAdminUserAsync(IdentityDbContext context, ILogger logger)
+        private static async Task SeedAdminUserAsync(IdentityDbContext context, IPasswordHasher passwordHasher, ILogger logger)
         {
             logger.LogInformation("Seeding admin user...");
 
@@ -355,7 +356,7 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence
             var adminUser = new User(
                 username: "admin",
                 email: "admin@chatapp.com",
-                passwordHash: "$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5GyYIeWMKHYxS", // Admin@123!
+                passwordHash: passwordHasher.Hash("Yusif2000+"),
                 displayName: "System Administrator",
                 createdBy: adminUserId, // Self-created
                 avatarUrl: null,

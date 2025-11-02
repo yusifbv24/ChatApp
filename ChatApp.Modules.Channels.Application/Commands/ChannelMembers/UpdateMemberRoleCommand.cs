@@ -56,7 +56,7 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMembers
         {
             try
             {
-                _logger.LogInformation(
+                _logger?.LogInformation(
                     "Updating role for user {UserId} in channel {ChannelId} to {NewRole}",
                     request.UserId,
                     request.ChannelId,
@@ -107,7 +107,7 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMembers
                 await _unitOfWork.ChannelMembers.UpdateAsync(member, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                _logger.LogInformation(
+                _logger?.LogInformation(
                     "Role updated successfully for user {UserId} in channel {ChannelId}",
                     request.UserId,
                     request.ChannelId);
@@ -116,7 +116,7 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMembers
             }
             catch (Exception ex)
             {
-                _logger.LogError(
+                _logger?.LogError(
                     ex,
                     "Error updating role for user {UserId} in channel {ChannelId}",
                     request.UserId,

@@ -13,7 +13,7 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence.Configurations
             builder.HasKey(u => u.Id);
 
             builder.Property(u => u.Id)
-                .HasColumnType("id");
+                .HasColumnName("id");
 
             builder.Property(u => u.Username)
                 .IsRequired()

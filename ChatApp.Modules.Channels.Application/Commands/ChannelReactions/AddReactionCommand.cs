@@ -49,7 +49,7 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelReactions
         {
             try
             {
-                _logger.LogInformation(
+                _logger?.LogInformation(
                     "Adding reaction {Reaction} to message {MessageId}",
                     request.Reaction,
                     request.MessageId);
@@ -82,7 +82,7 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelReactions
                 await _unitOfWork.ChannelMessages.UpdateAsync(message, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                _logger.LogInformation(
+                _logger?.LogInformation(
                     "Reaction {Reaction} added to message {MessageId} successfully",
                     request.Reaction,
                     request.MessageId);
@@ -95,7 +95,7 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelReactions
             }
             catch (Exception ex)
             {
-                _logger.LogError(
+                _logger?.LogError(
                     ex,
                     "Error adding reaction to message {MessageId}",
                     request.MessageId);

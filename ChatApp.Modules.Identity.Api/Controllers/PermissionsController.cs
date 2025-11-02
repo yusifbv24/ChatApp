@@ -3,7 +3,9 @@ using ChatApp.Modules.Identity.Application.DTOs;
 using ChatApp.Modules.Identity.Application.Queries.GetPermissions;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace ChatApp.Modules.Identity.Api.Controllers
 {
@@ -37,7 +39,7 @@ namespace ChatApp.Modules.Identity.Api.Controllers
             [FromQuery] string? module = null,
             CancellationToken cancellationToken = default)
         {
-            _logger.LogInformation("Retrieving permissions for module: {Module}", module ?? "all");
+            _logger?.LogInformation("Retrieving permissions for module: {Module}", module ?? "all");
 
             var result = await _mediator.Send(new GetPermissionsQuery(module), cancellationToken);
 
@@ -60,7 +62,7 @@ namespace ChatApp.Modules.Identity.Api.Controllers
             [FromRoute] Guid permissionId,
             CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Assigning permission {PermissionId} to role {RoleId}", permissionId, roleId);
+            _logger?.LogInformation("Assigning permission {PermissionId} to role {RoleId}", permissionId, roleId);
 
             var result = await _mediator.Send(
                 new AssignPermissionCommand(roleId, permissionId),
@@ -85,7 +87,7 @@ namespace ChatApp.Modules.Identity.Api.Controllers
             [FromRoute] Guid permissionId,
             CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Removing permission {PermissionId} from role {RoleId}", permissionId, roleId);
+            _logger?.LogInformation("Removing permission {PermissionId} from role {RoleId}", permissionId, roleId);
 
             var result = await _mediator.Send(
                 new RemovePermissionCommand(roleId, permissionId),

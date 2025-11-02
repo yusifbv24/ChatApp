@@ -127,7 +127,7 @@ namespace ChatApp.Modules.Channels.Application.Commands.Channels
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating channel {ChannelId}", request.ChannelId);
+                _logger?.LogError(ex, "Error updating channel {ChannelId}", request.ChannelId);
                 return Result.Failure(ex.Message);
             }
         }

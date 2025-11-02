@@ -59,7 +59,7 @@ namespace ChatApp.Modules.Channels.Application.Queries.GetPinnedMessages
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving pinned messages for channel {ChannelId}", request.ChannelId);
+                _logger?.LogError(ex, "Error retrieving pinned messages for channel {ChannelId}", request.ChannelId);
                 return Result.Failure<List<ChannelMessageDto>>("An error occurred while retrieving pinned messages");
             }
         }

@@ -62,7 +62,7 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMessages
         {
             try
             {
-                _logger.LogInformation(
+                _logger?.LogInformation(
                     "Sending message to channel {ChannelId} from user {SenderId}",
                     request.ChannelId,
                     request.SenderId);
@@ -105,7 +105,7 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMessages
                         request.Content),
                     cancellationToken);
 
-                _logger.LogInformation(
+                _logger?.LogInformation(
                     "Message {MessageId} sent to channel {ChannelId} successfully",
                     message.Id,
                     request.ChannelId);
@@ -114,7 +114,7 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMessages
             }
             catch (Exception ex)
             {
-                _logger.LogError(
+                _logger?.LogError(
                     ex,
                     "Error sending message to channel {ChannelId}",
                     request.ChannelId);

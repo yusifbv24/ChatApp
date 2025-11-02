@@ -63,7 +63,7 @@ namespace ChatApp.Modules.Channels.Application.Queries.GetChannelMessages
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving messages for channel {ChannelId}", request.ChannelId);
+                _logger?.LogError(ex, "Error retrieving messages for channel {ChannelId}", request.ChannelId);
                 return Result.Failure<List<ChannelMessageDto>>("An error occurred while retrieving messages");
             }
         }

@@ -62,7 +62,7 @@ namespace ChatApp.Modules.Channels.Application.Queries.GetChannelMembers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving members for channel {ChannelId}", request.ChannelId);
+                _logger?.LogError(ex, "Error retrieving members for channel {ChannelId}", request.ChannelId);
                 return Result.Failure<List<ChannelMemberDto>>("An error occurred while retrieving channel members");
             }
         }

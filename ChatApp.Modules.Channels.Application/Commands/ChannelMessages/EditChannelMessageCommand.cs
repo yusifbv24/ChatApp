@@ -50,7 +50,7 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMessages
         {
             try
             {
-                _logger.LogInformation("Editing message {MessageId}", request.MessageId);
+                _logger?.LogInformation("Editing message {MessageId}", request.MessageId);
 
                 var message = await _unitOfWork.ChannelMessages.GetByIdAsync(
                     request.MessageId,
@@ -75,13 +75,13 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMessages
                 await _unitOfWork.ChannelMessages.UpdateAsync(message, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                _logger.LogInformation("Message {MessageId} edited successfully", request.MessageId);
+                _logger?.LogInformation("Message {MessageId} edited successfully", request.MessageId);
 
                 return Result.Success();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error editing message {MessageId}", request.MessageId);
+                _logger?.LogError(ex, "Error editing message {MessageId}", request.MessageId);
                 return Result.Failure(ex.Message);
             }
         }

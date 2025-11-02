@@ -69,7 +69,7 @@ namespace ChatApp.Modules.Channels.Application.Queries.SearchChannels
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error searching channels with term {SearchTerm}", request.SearchTerm);
+                _logger?.LogError(ex, "Error searching channels with term {SearchTerm}", request.SearchTerm);
                 return Result.Failure<List<ChannelDto>>("An error occurred while searching channels");
             }
         }

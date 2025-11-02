@@ -5,7 +5,9 @@ using ChatApp.Modules.Identity.Application.Queries.GetUsers;
 using ChatApp.Shared.Kernel.Common;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using System.Security.Claims;
 
 namespace ChatApp.Modules.Identity.Api.Controllers
@@ -41,12 +43,12 @@ namespace ChatApp.Modules.Identity.Api.Controllers
             [FromBody] CreateUserCommand command,
             CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Creating user: {Username}", command.Username);
+            _logger?.LogInformation("Creating user: {Username}", command.Username);
 
             // Get the ID of the user making the request
             var creatorId = GetCurrentUserId();
             if (creatorId == Guid.Empty)
-                return Unauthorized(Result.Failure("Invalid user token"));
+                return Unauthorized();
 
             // Create a new command with the creator's ID
             var commandWithCreator = command with { CreatedBy = creatorId };
@@ -145,7 +147,7 @@ namespace ChatApp.Modules.Identity.Api.Controllers
             [FromRoute] Guid userId,
             CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Deleting user: {UserId}", userId);
+            _logger?.LogInformation("Deleting user: {UserId}", userId);
 
             var result = await _mediator.Send(new DeleteUserCommand(userId), cancellationToken);
 
@@ -168,11 +170,11 @@ namespace ChatApp.Modules.Identity.Api.Controllers
             [FromRoute] Guid roleId,
             CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Assigning role {RoleId} to user {UserId}", roleId, userId);
+            _logger?.LogInformation("Assigning role {RoleId} to user {UserId}", roleId, userId);
 
             var assignedBy = GetCurrentUserId();
             if (assignedBy == Guid.Empty)
-                return Unauthorized(Result.Failure("Invalid user token"));
+                return Unauthorized();
 
             var result = await _mediator.Send(
                 new AssignRoleCommand(userId, roleId, assignedBy),
@@ -197,7 +199,7 @@ namespace ChatApp.Modules.Identity.Api.Controllers
             [FromRoute] Guid roleId,
             CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Removing role {RoleId} from user {UserId}", roleId, userId);
+            _logger?.LogInformation("Removing role {RoleId} from user {UserId}", roleId, userId);
 
             var result = await _mediator.Send(
                 new RemoveRoleCommand(userId, roleId),
