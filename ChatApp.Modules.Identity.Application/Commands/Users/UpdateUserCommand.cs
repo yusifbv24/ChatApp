@@ -13,8 +13,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
         string? DisplayName,
         string? AvatarUrl,
         string? Notes,
-        bool? IsActive,
-        bool? IsAdmin = false
+        bool? IsActive
     ) : IRequest<Result>;
 
 
@@ -122,16 +121,6 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
                     else
                         user.Deactivate();
                 }
-
-
-                if (request.IsAdmin.HasValue)
-                {
-                    if (request.IsAdmin.Value)
-                        user.MakeAdmin();
-                    else
-                        user.RevokeAdmin();
-                }
-
 
                 await _unitOfWork.Users.UpdateAsync(user, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);

@@ -97,12 +97,6 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMembers
                     return Result.Failure("Only channel owner can change member roles");
                 }
 
-                // Cannot promote to owner (use TransferOwnership instead)
-                if (request.NewRole == MemberRole.Owner)
-                {
-                    return Result.Failure("Cannot promote to owner. Use transfer ownership instead.");
-                }
-
                 member.UpdateRole(request.NewRole);
                 await _unitOfWork.ChannelMembers.UpdateAsync(member, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);

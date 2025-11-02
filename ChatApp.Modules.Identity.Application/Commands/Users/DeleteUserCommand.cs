@@ -53,10 +53,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
                 if (user == null)
                     throw new NotFoundException($"User with ID {request.UserId} not found");
 
-                // Soft delet - just deactivate user
-                user.Deactivate();
-
-                await _unitOfWork.Users.UpdateAsync(user, cancellationToken);
+                await _unitOfWork.Users.DeleteAsync(user, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 await _eventBus.PublishAsync(new UserDeletedEvent(user.Id, user.Username), cancellationToken);

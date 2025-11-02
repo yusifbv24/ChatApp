@@ -2,7 +2,6 @@
 using ChatApp.Modules.Identity.Application.DTOs;
 using ChatApp.Modules.Identity.Application.Queries.GetUser;
 using ChatApp.Modules.Identity.Application.Queries.GetUsers;
-using ChatApp.Shared.Kernel.Common;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -60,8 +59,11 @@ namespace ChatApp.Modules.Identity.Api.Controllers
 
             return CreatedAtAction(
                 nameof(GetUserById),
-                new { userId = result.Value });
+                new { userId = result.Value },
+                new { userId=result.Value, message="User created succesfully"});
         }
+
+
 
         /// <summary>
         /// Retrieves a specific user by their unique identifier
@@ -84,6 +86,8 @@ namespace ChatApp.Modules.Identity.Api.Controllers
 
             return Ok(result.Value);
         }
+
+
 
         /// <summary>
         /// Retrieves a paginated list of all users
@@ -111,6 +115,8 @@ namespace ChatApp.Modules.Identity.Api.Controllers
             return Ok(result.Value);
         }
 
+
+
         /// <summary>
         /// Updates an existing user's information
         /// </summary>
@@ -121,19 +127,26 @@ namespace ChatApp.Modules.Identity.Api.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> UpdateUser(
             [FromRoute] Guid userId,
-            [FromBody] UpdateUserCommand command,
+            [FromBody] UpdateUserRequest request,
             CancellationToken cancellationToken)
         {
-            // Ensure the route parameter matches the command
-            var commandWithUserId = command with { UserId = userId };
+            var command = new UpdateUserCommand(
+                userId,
+                request.Email,
+                request.DisplayName,
+                request.AvatarUrl,
+                request.Notes,
+                request.IsActive);
 
-            var result = await _mediator.Send(commandWithUserId, cancellationToken);
+            var result = await _mediator.Send(command, cancellationToken);
 
             if (result.IsFailure)
                 return BadRequest(new { error = result.Error });
 
             return Ok(new { message = "User updated successfully" });
         }
+
+
 
         /// <summary>
         /// Soft deletes a user by deactivating their account
@@ -156,6 +169,8 @@ namespace ChatApp.Modules.Identity.Api.Controllers
 
             return Ok(new { message = "User deleted successfully" });
         }
+
+
 
         /// <summary>
         /// Assigns a role to a user

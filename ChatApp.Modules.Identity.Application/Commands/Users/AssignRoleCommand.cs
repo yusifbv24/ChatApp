@@ -58,7 +58,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
 
                 user.AssignRole(userRole);
 
-                await _unitOfWork.Users.UpdateAsync(user, cancellationToken);
+                await _unitOfWork.UserRoles.AddAsync(userRole, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 await _eventBus.PublishAsync(new RoleAssignedEvent(request.UserId,request.RoleId),cancellationToken);
