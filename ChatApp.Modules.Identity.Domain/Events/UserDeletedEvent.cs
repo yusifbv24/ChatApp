@@ -2,7 +2,7 @@
 
 namespace ChatApp.Modules.Identity.Domain.Events
 {
-    public class UserDeletedEvent:DomainEvent
+    public record UserDeletedEvent:DomainEvent
     {
         public Guid UserId { get; }
         public string UserName { get; }

@@ -2,7 +2,7 @@
 
 namespace ChatApp.Modules.Identity.Domain.Events
 {
-    public class RoleAssignedEvent:DomainEvent
+    public record RoleAssignedEvent:DomainEvent
     {
         public Guid UserId { get; }
         public Guid RoleId { get; }

@@ -1,6 +1,6 @@
 ﻿namespace ChatApp.Shared.Kernel.Common
 {
-    public abstract class DomainEvent
+    public abstract record DomainEvent
     {
         public Guid EventId { get; }
         public DateTime OccuredAtUtc { get; }

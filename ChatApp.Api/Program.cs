@@ -1,7 +1,13 @@
-using ChatApp.Modules.Identity.Infrastructure;
+using ChatApp.Modules.Channels.Api.Controllers;
 using ChatApp.Modules.Channels.Infrastructure;
-using ChatApp.Modules.Identity.Infrastructure.Persistence;
 using ChatApp.Modules.Channels.Infrastructure.Persistence;
+using ChatApp.Modules.DirectMessages.Api.Controllers;
+using ChatApp.Modules.DirectMessages.Infrastructure;
+using ChatApp.Modules.DirectMessages.Infrastructure.Persistence;
+using ChatApp.Modules.Identity.Api.Controllers;
+using ChatApp.Modules.Identity.Domain.Services;
+using ChatApp.Modules.Identity.Infrastructure;
+using ChatApp.Modules.Identity.Infrastructure.Persistence;
 using ChatApp.Shared.Infrastructure.EventBus;
 using ChatApp.Shared.Infrastructure.Logging;
 using ChatApp.Shared.Infrastructure.Middleware;
@@ -12,9 +18,6 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Serilog;
 using System.Text;
-using ChatApp.Modules.Identity.Api.Controllers;
-using ChatApp.Modules.Channels.Api.Controllers;
-using ChatApp.Modules.Identity.Domain.Services;
 
 // Configure Serilog logging
 LoggingConfiguration.ConfigureLogging();
@@ -27,7 +30,8 @@ builder.Host.UseSerilog();
 // Add services to the container
 builder.Services.AddControllers()
     .AddApplicationPart(typeof(AuthController).Assembly)
-    .AddApplicationPart(typeof(ChannelsController).Assembly);
+    .AddApplicationPart(typeof(ChannelsController).Assembly)
+    .AddApplicationPart(typeof(DirectConversationsController).Assembly);
 
 // Add CORS policy
 builder.Services.AddCors(options =>
@@ -48,6 +52,10 @@ builder.Services.AddIdentityInfrastructure(builder.Configuration);
 // Channels Module
 builder.Services.AddChannelsApplication();
 builder.Services.AddChannelsInfrastructure(builder.Configuration);
+
+// DirectMessages Module
+builder.Services.AddDirectMessagesApplication();
+builder.Services.AddDirectMessagesInfrastructure(builder.Configuration);
 
 // Register event bus for inter-module communication
 builder.Services.AddSingleton<IEventBus, InMemoryEventBus>();
@@ -138,6 +146,12 @@ using (var scope = app.Services.CreateScope())
         var channelsContext = services.GetRequiredService<ChannelsDbContext>();
         await channelsContext.Database.MigrateAsync();
         await ChannelDatabaseSeeder.SeedAsync(channelsContext,logger);
+
+
+        // DirectMessages Module - ADD THESE LINES
+        var directMessagesContext = services.GetRequiredService<DirectMessagesDbContext>();
+        await directMessagesContext.Database.MigrateAsync();
+        await DirectMessagesDatabaseSeeder.SeedAsync(directMessagesContext,logger);
 
         logger.LogInformation("Database initialization completed successfully");
     }

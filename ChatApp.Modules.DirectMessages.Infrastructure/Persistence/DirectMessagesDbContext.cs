@@ -1,0 +1,43 @@
+﻿using ChatApp.Modules.DirectMessages.Application.DTOs.Request;
+using ChatApp.Modules.DirectMessages.Domain.Entities;
+using ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Configurations;
+using Microsoft.EntityFrameworkCore;
+
+namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence
+{
+    public class DirectMessagesDbContext : DbContext
+    {
+        public DirectMessagesDbContext(DbContextOptions<DirectMessagesDbContext> options) : base(options)
+        {
+        }
+
+        public DbSet<DirectConversation> DirectConversations => Set<DirectConversation>();
+        public DbSet<DirectMessage> DirectMessages => Set<DirectMessage>();
+        public DbSet<DirectMessageReaction> DirectMessageReactions => Set<DirectMessageReaction>();
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+
+            // Apply DirectMessages module configurations
+            modelBuilder.ApplyConfiguration(new DirectConversationConfiguration());
+            modelBuilder.ApplyConfiguration(new DirectMessageConfiguration());
+            modelBuilder.ApplyConfiguration(new DirectMessageReactionConfiguration());
+
+            // Map Identity module's users table (read-only for queries)
+            modelBuilder.Entity<UserReadModel>(entity =>
+            {
+                entity.ToTable("users");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("id");
+                entity.Property(e => e.Username).HasColumnName("username");
+                entity.Property(e => e.DisplayName).HasColumnName("display_name");
+                entity.Property(e => e.AvatarUrl).HasColumnName("avatar_url");
+                entity.Property(e => e.IsOnline).HasColumnName("is_online");
+
+                // Mark as query-only (no tracking, no inserts/updates)
+                entity.ToTable(tb => tb.ExcludeFromMigrations());
+            });
+        }
+    }
+}

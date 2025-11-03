@@ -2,7 +2,7 @@
 
 namespace ChatApp.Modules.Channels.Domain.Events
 {
-    public class MemberRemovedEvent : DomainEvent
+    public record MemberRemovedEvent : DomainEvent
     {
         public Guid ChannelId { get; }
         public Guid UserId { get; }

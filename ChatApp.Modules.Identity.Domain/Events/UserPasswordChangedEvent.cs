@@ -2,7 +2,7 @@
 
 namespace ChatApp.Modules.Identity.Domain.Events
 {
-    public class UserPasswordChangedEvent:DomainEvent
+    public record UserPasswordChangedEvent:DomainEvent
     {
         public Guid UserId { get; }
         public UserPasswordChangedEvent(Guid userId)

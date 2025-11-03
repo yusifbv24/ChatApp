@@ -9,6 +9,12 @@
     <Project Path="ChatApp.Modules.Channels.Domain/ChatApp.Modules.Channels.Domain.csproj" Id="92eb49a3-13e2-4f33-a45f-89f915e720c1" />
     <Project Path="ChatApp.Modules.Channels.Infrastructure/ChatApp.Modules.Channels.Infrastructure.csproj" Id="d06bf5e8-cac5-4629-bb8d-5d440a263ddb" />
   </Folder>
+  <Folder Name="/src/Modules/DirectMessages/">
+    <Project Path="ChatApp.Modules.DirectMessages.Api/ChatApp.Modules.DirectMessages.Api.csproj" Id="5f3cb0c0-c529-4258-a38c-b03ea995794f" />
+    <Project Path="ChatApp.Modules.DirectMessages.Application/ChatApp.Modules.DirectMessages.Application.csproj" Id="7be914ce-560c-4786-922a-52f2cf569edb" />
+    <Project Path="ChatApp.Modules.DirectMessages.Domain/ChatApp.Modules.DirectMessages.Domain.csproj" Id="72131613-37c7-4966-b0b4-3f98baf25d88" />
+    <Project Path="ChatApp.Modules.DirectMessages.Infrastructure/ChatApp.Modules.DirectMessages.Infrastructure.csproj" Id="61f0e5c4-6714-4403-8ef5-ba876edaef20" />
+  </Folder>
   <Folder Name="/src/Modules/Identity/">
     <Project Path="ChatApp.Modules.Identity.Api/ChatApp.Modules.Identity.Api.csproj" Id="b6885fcc-1a24-43c5-a83e-1c13a776f60a" />
     <Project Path="ChatApp.Modules.Identity.Application/ChatApp.Modules.Identity.Application.csproj" />
