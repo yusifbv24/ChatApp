@@ -1,4 +1,5 @@
 ﻿using ChatApp.Modules.Channels.Application.Interfaces;
+using ChatApp.Shared.Infrastructure.SignalR.Services;
 using ChatApp.Shared.Kernel.Common;
 using ChatApp.Shared.Kernel.Exceptions;
 using FluentValidation;
@@ -34,13 +35,16 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMessages
     public class EditChannelMessageCommandHandler : IRequestHandler<EditChannelMessageCommand, Result>
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ISignalRNotificationService _signalRNotificationService;
         private readonly ILogger<EditChannelMessageCommandHandler> _logger;
 
         public EditChannelMessageCommandHandler(
             IUnitOfWork unitOfWork,
+            ISignalRNotificationService signalRNotificationService,
             ILogger<EditChannelMessageCommandHandler> logger)
         {
             _unitOfWork = unitOfWork;
+            _signalRNotificationService= signalRNotificationService;
             _logger = logger;
         }
 
@@ -70,10 +74,15 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMessages
                     return Result.Failure("Cannot edit deleted message");
                 }
 
+                var channelId=message.ChannelId;
+
                 message.Edit(request.NewContent);
 
                 await _unitOfWork.ChannelMessages.UpdateAsync(message, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                // Send real-time notification
+                await _signalRNotificationService.NotifyMessageEditedAsync(channelId, request.MessageId);
 
                 _logger?.LogInformation("Message {MessageId} edited successfully", request.MessageId);
 

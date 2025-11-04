@@ -1,4 +1,5 @@
 ﻿using ChatApp.Modules.DirectMessages.Application.Interfaces;
+using ChatApp.Shared.Infrastructure.SignalR.Services;
 using ChatApp.Shared.Kernel.Common;
 using ChatApp.Shared.Kernel.Exceptions;
 using FluentValidation;
@@ -34,13 +35,16 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectMessages
     public class EditDirectMessageCommandHandler: IRequestHandler<EditDirectMessageCommand, Result>
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ISignalRNotificationService _signalRNotificationService;
         private readonly ILogger<EditDirectMessageCommandHandler> _logger;
 
         public EditDirectMessageCommandHandler(
             IUnitOfWork unitOfWork,
+            ISignalRNotificationService signalRNotificationService,
             ILogger<EditDirectMessageCommandHandler> logger)
         {
             _unitOfWork = unitOfWork;
+            _signalRNotificationService= signalRNotificationService;
             _logger = logger;
         }
 
@@ -71,10 +75,31 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectMessages
                     return Result.Failure("Cannot edit deleted message");
                 }
 
+                var conversationId=message.ConversationId;
+                var receiverId=message.ReceiverId;
+
                 message.Edit(request.NewContent);
 
                 await _unitOfWork.Messages.UpdateAsync(message, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                // Get updated message DTO
+                var messages = await _unitOfWork.Messages.GetConversationMessagesAsync(
+                    conversationId,
+                    pageSize: 1,
+                    beforeUtc: null,
+                    cancellationToken);
+
+                var messageDto=messages.FirstOrDefault(m=>m.Id==request.MessageId);
+
+                if (messageDto != null)
+                {
+                    // Send real-time notification to receiver
+                    await _signalRNotificationService.NotifyDirectMessageAsync(
+                        conversationId,
+                        receiverId,
+                        messageDto);
+                }
 
                 _logger?.LogInformation("Message {MessageId} edited succesfully", request.MessageId);
                 return Result.Success();

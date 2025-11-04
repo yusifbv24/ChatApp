@@ -1,5 +1,6 @@
 ﻿using ChatApp.Modules.Channels.Application.Interfaces;
 using ChatApp.Modules.Channels.Domain.Enums;
+using ChatApp.Shared.Infrastructure.SignalR.Services;
 using ChatApp.Shared.Kernel.Common;
 using ChatApp.Shared.Kernel.Exceptions;
 using FluentValidation;
@@ -32,13 +33,16 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMessages
     public class DeleteChannelMessageCommandHandler : IRequestHandler<DeleteChannelMessageCommand, Result>
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ISignalRNotificationService _signalRNotificationService;
         private readonly ILogger<DeleteChannelMessageCommandHandler> _logger;
 
         public DeleteChannelMessageCommandHandler(
             IUnitOfWork unitOfWork,
+            ISignalRNotificationService signalRNotificationService,
             ILogger<DeleteChannelMessageCommandHandler> logger)
         {
             _unitOfWork = unitOfWork;
+            _signalRNotificationService= signalRNotificationService;
             _logger = logger;
         }
 
@@ -75,10 +79,15 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMessages
                     return Result.Failure("You don't have permission to delete this message");
                 }
 
+                var channelId = message.ChannelId;
+
                 message.Delete();
 
                 await _unitOfWork.ChannelMessages.UpdateAsync(message, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                // Send real-time notification
+                await _signalRNotificationService.NotifyMessageDeletedAsync(channelId, request.MessageId);
 
                 _logger?.LogInformation("Message {MessageId} deleted successfully", request.MessageId);
 

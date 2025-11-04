@@ -1,5 +1,6 @@
 ﻿using ChatApp.Modules.DirectMessages.Application.Interfaces;
 using ChatApp.Modules.DirectMessages.Domain.Events;
+using ChatApp.Shared.Infrastructure.SignalR.Services;
 using ChatApp.Shared.Kernel.Common;
 using ChatApp.Shared.Kernel.Exceptions;
 using ChatApp.Shared.Kernel.Interfaces;
@@ -31,15 +32,18 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectMessages
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IEventBus _eventBus;
+        private readonly ISignalRNotificationService _signalRNotificationService;
         private readonly ILogger<MarkMessageAsReadCommandHandler> _logger;
 
         public MarkMessageAsReadCommandHandler(
             IUnitOfWork unitOfWork,
             IEventBus eventBus,
+            ISignalRNotificationService signalRNotificationService,
             ILogger<MarkMessageAsReadCommandHandler> logger)
         {
             _unitOfWork = unitOfWork;
             _eventBus=eventBus;
+            _signalRNotificationService=signalRNotificationService;
             _logger=logger;
         }
 
@@ -72,6 +76,15 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectMessages
                     await _unitOfWork.Messages.UpdateAsync(message, cancellationToken);
                     await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+
+                    // Send real-time read receipt to sender
+                    await _signalRNotificationService.NotifyMessageReadAsync(
+                        message.ConversationId,
+                        message.Id,
+                        request.UserId);
+
+
+                    // Publish domain event for internal processing
                     await _eventBus.PublishAsync(
                         new MessageReadEvent(
                             message.Id,

@@ -1,4 +1,5 @@
 ﻿using ChatApp.Modules.DirectMessages.Application.Interfaces;
+using ChatApp.Shared.Infrastructure.SignalR.Services;
 using ChatApp.Shared.Kernel.Common;
 using ChatApp.Shared.Kernel.Exceptions;
 using FluentValidation;
@@ -28,13 +29,16 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectMessages
     public class DeleteDirectMessageCommandHandler : IRequestHandler<DeleteDirectMessageCommand, Result>
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ISignalRNotificationService _signalRNotificationService;
         private readonly ILogger<DeleteDirectMessageCommandHandler> _logger;
 
         public DeleteDirectMessageCommandHandler(
             IUnitOfWork unitOfWork,
+            ISignalRNotificationService signalRNotificationService,
             ILogger<DeleteDirectMessageCommandHandler> logger)
         {
             _unitOfWork = unitOfWork;
+            _signalRNotificationService= signalRNotificationService;
             _logger = logger;
         }
 
@@ -59,9 +63,18 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectMessages
                     return Result.Failure("You can delete your own messages");
                 }
 
+                var conversationId=message.ConversationId;
+                var receiverId = message.ReceiverId;
+
                 message.Delete();
                 await _unitOfWork.Messages.UpdateAsync(message, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                // Send real-time notification to receiver
+                await _signalRNotificationService.NotifyUserAsync(
+                    receiverId,
+                    "DirectMessageDeleted",
+                    new { conversationId, messageId = request.MessageId });
 
                 _logger.LogInformation("Message {MessageId} deleted successfully", request.MessageId);
                 return Result.Success();

@@ -1,6 +1,7 @@
 ﻿using ChatApp.Modules.Channels.Application.Interfaces;
 using ChatApp.Modules.Channels.Domain.Entities;
 using ChatApp.Modules.Channels.Domain.Events;
+using ChatApp.Shared.Infrastructure.SignalR.Services;
 using ChatApp.Shared.Kernel.Common;
 using ChatApp.Shared.Kernel.Exceptions;
 using ChatApp.Shared.Kernel.Interfaces;
@@ -44,15 +45,18 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMessages
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IEventBus _eventBus;
+        private readonly ISignalRNotificationService _signalRNotificationService;
         private readonly ILogger<SendChannelMessageCommandHandler> _logger;
 
         public SendChannelMessageCommandHandler(
             IUnitOfWork unitOfWork,
             IEventBus eventBus,
+            ISignalRNotificationService signalRNotificationService,
             ILogger<SendChannelMessageCommandHandler> logger)
         {
             _unitOfWork = unitOfWork;
             _eventBus = eventBus;
+            _signalRNotificationService = signalRNotificationService;
             _logger = logger;
         }
 
@@ -96,7 +100,24 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMessages
                 await _unitOfWork.ChannelMessages.AddAsync(message, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                // Publish event (for real-time notifications)
+                // Get the full message DTO with user details for real-time broadcast
+                var messages = await _unitOfWork.ChannelMessages.GetChannelMessagesAsync(
+                    request.ChannelId,
+                    pageSize: 1,
+                    beforeUtc: null,
+                    cancellationToken);
+
+                var messageDto = messages.FirstOrDefault();
+
+                if(messageDto != null)
+                {
+                    // Send real-time notification to all users in the channel
+                    await _signalRNotificationService.NotifyChannelMessageAsync(
+                        request.ChannelId,
+                        messageDto);
+                }
+
+                // Publish domain event (for other modules/event handlers)
                 await _eventBus.PublishAsync(
                     new ChannelMessageSentEvent(
                         message.Id,

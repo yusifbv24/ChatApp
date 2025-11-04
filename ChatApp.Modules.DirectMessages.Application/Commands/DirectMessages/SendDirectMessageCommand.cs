@@ -1,6 +1,7 @@
 ﻿using ChatApp.Modules.DirectMessages.Application.Interfaces;
 using ChatApp.Modules.DirectMessages.Domain.Entities;
 using ChatApp.Modules.DirectMessages.Domain.Events;
+using ChatApp.Shared.Infrastructure.SignalR.Services;
 using ChatApp.Shared.Kernel.Common;
 using ChatApp.Shared.Kernel.Exceptions;
 using ChatApp.Shared.Kernel.Interfaces;
@@ -43,15 +44,18 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectMessages
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IEventBus _eventBus;
+        private readonly ISignalRNotificationService _signalRNotificationService;
         private readonly ILogger<SendDirectMessageCommandHandler> _logger;
 
         public SendDirectMessageCommandHandler(
             IUnitOfWork unitOfWork,
             IEventBus eventBus,
+            ISignalRNotificationService signalRNotificationService,
             ILogger<SendDirectMessageCommandHandler> logger)
         {
             _unitOfWork = unitOfWork;
             _eventBus = eventBus;
+            _signalRNotificationService= signalRNotificationService;
             _logger = logger;
         }
 
@@ -99,7 +103,26 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectMessages
 
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                // Publish event 
+                // Get the full message DTO with user details for real-time broadcast
+                var messages = await _unitOfWork.Messages.GetConversationMessagesAsync(
+                    request.ConversationId,
+                    pageSize: 1,
+                    beforeUtc: null,
+                    cancellationToken);
+
+                var messageDto = messages.FirstOrDefault();
+
+                if (messageDto != null)
+                {
+                    // Send real-time notification to receiver
+                    await _signalRNotificationService.NotifyDirectMessageAsync(
+                        request.ConversationId,
+                        receiverId,
+                        messageDto);
+                }
+
+
+                // Publish domain event for internal backend processing (email notifications, etc.)
                 await _eventBus.PublishAsync(
                     new MessageSentEvent(
                         message.Id,

@@ -1,4 +1,5 @@
 ﻿using ChatApp.Modules.Channels.Application.Interfaces;
+using ChatApp.Shared.Infrastructure.SignalR.Services;
 using ChatApp.Shared.Kernel.Common;
 using ChatApp.Shared.Kernel.Exceptions;
 using FluentValidation;
@@ -31,13 +32,16 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelReactions
     public class RemoveReactionCommandHandler : IRequestHandler<RemoveReactionCommand, Result>
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ISignalRNotificationService _signalRNotificationService;
         private readonly ILogger<RemoveReactionCommandHandler> _logger;
 
         public RemoveReactionCommandHandler(
             IUnitOfWork unitOfWork,
+            ISignalRNotificationService signalRNotificationService,
             ILogger<RemoveReactionCommandHandler> logger)
         {
             _unitOfWork = unitOfWork;
+            _signalRNotificationService= signalRNotificationService;
             _logger = logger;
         }
 
@@ -63,6 +67,13 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelReactions
 
                 await _unitOfWork.ChannelMessages.UpdateAsync(message, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                // Send real-time notification
+                await _signalRNotificationService.NotifyReactionRemovedAsync(
+                    message.ChannelId,
+                    request.MessageId,
+                    request.UserId,
+                    request.Reaction);
 
                 _logger?.LogInformation(
                     "Reaction {Reaction} removed from message {MessageId} successfully",

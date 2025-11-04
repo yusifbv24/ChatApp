@@ -1,5 +1,6 @@
 ﻿using ChatApp.Modules.DirectMessages.Application.Interfaces;
 using ChatApp.Modules.DirectMessages.Domain.Entities;
+using ChatApp.Shared.Infrastructure.SignalR.Services;
 using ChatApp.Shared.Kernel.Common;
 using ChatApp.Shared.Kernel.Exceptions;
 using FluentValidation;
@@ -34,13 +35,16 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectMessageReact
     public class AddReactionCommandHandler : IRequestHandler<AddReactionCommand, Result>
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ISignalRNotificationService _signalRNotificationService;
         private readonly ILogger<AddReactionCommandHandler> _logger;
 
         public AddReactionCommandHandler(
             IUnitOfWork unitOfWork,
+            ISignalRNotificationService signalRNotificationService,
             ILogger<AddReactionCommandHandler> logger)
         {
             _unitOfWork = unitOfWork;
+            _signalRNotificationService=signalRNotificationService;
             _logger = logger;
         }
 
@@ -81,6 +85,19 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectMessageReact
 
                 await _unitOfWork.Messages.UpdateAsync(message, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                // Send real-time notification to other participant
+                var otherUserId = conversation.GetOtherUserId(request.UserId);
+                await _signalRNotificationService.NotifyUserAsync(
+                    otherUserId,
+                    "DirectMessageReactionAdded",
+                    new
+                    {
+                        conversationId = message.ConversationId,
+                        messageId = request.MessageId,
+                        userId = request.UserId,
+                        reaction = request.Reaction
+                    });
 
                 _logger?.LogInformation(
                     "Reaction {Reaction} added to message {MessageId} succesfully",

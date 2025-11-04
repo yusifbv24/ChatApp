@@ -11,6 +11,8 @@ using ChatApp.Modules.Identity.Infrastructure.Persistence;
 using ChatApp.Shared.Infrastructure.EventBus;
 using ChatApp.Shared.Infrastructure.Logging;
 using ChatApp.Shared.Infrastructure.Middleware;
+using ChatApp.Shared.Infrastructure.SignalR.Hubs;
+using ChatApp.Shared.Infrastructure.SignalR.Services;
 using ChatApp.Shared.Kernel.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -38,9 +40,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
     {
-        policy.AllowAnyOrigin()
+        policy.WithOrigins("http://localhost:3000", "http://localhost:5173") // Add your frontend URLs
               .AllowAnyMethod()
-              .AllowAnyHeader();
+              .AllowAnyHeader()
+              .AllowCredentials(); // Required for SignalR
     });
 });
 
@@ -59,6 +62,22 @@ builder.Services.AddDirectMessagesInfrastructure(builder.Configuration);
 
 // Register event bus for inter-module communication
 builder.Services.AddSingleton<IEventBus, InMemoryEventBus>();
+
+// Register SignalR services
+builder.Services.AddSingleton<IConnectionManager,ConnectionManager>();
+builder.Services.AddScoped<IPresenceService,PresenceService>();
+builder.Services.AddScoped<ISignalRNotificationService, SignalRNotificationService>();
+
+
+// Add SignalR
+builder.Services.AddSignalR(options =>
+{
+    options.EnableDetailedErrors = builder.Environment.IsDevelopment();
+    options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+    options.ClientTimeoutInterval = TimeSpan.FromSeconds(30);
+    options.HandshakeTimeout = TimeSpan.FromSeconds(15);
+    options.MaximumReceiveMessageSize = 1024 * 1024; // 1MB
+});
 
 // Configure JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
@@ -81,6 +100,24 @@ builder.Services.AddAuthentication(options =>
         ValidAudience = jwtSettings["Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)),
         ClockSkew = TimeSpan.Zero
+    };
+
+    // Configure JWT for SignalR
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+
+            // If the request is for SignalR hub
+            var path = context.HttpContext.Request.Path;
+            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs/chat"))
+            {
+                context.Token = accessToken;
+            }
+
+            return Task.CompletedTask;
+        }
     };
 });
 
@@ -179,11 +216,19 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// IMPORTANT: CORS must be before routing for SignalR
 app.UseCors("AllowAll");
+
+app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Map controllers
 app.MapControllers();
+
+// Map SignalR hub
+app.MapHub<ChatHub>("/hubs/chat");
 
 Log.Information("ChatApp API starting...");
 
