@@ -132,7 +132,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> SendMessage(
             [FromRoute] Guid channelId,
-            [FromBody] SendMessageRequest request,
+            [FromBody] SendMessageRequestToChannel request,
             CancellationToken cancellationToken)
         {
             var userId = GetCurrentUserId();
@@ -165,7 +165,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         public async Task<IActionResult> EditMessage(
             [FromRoute] Guid channelId,
             [FromRoute] Guid messageId,
-            [FromBody] EditMessageRequest request,
+            [FromBody] EditMessageRequestToChannel request,
             CancellationToken cancellationToken)
         {
             var userId = GetCurrentUserId();
@@ -281,7 +281,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         public async Task<IActionResult> AddReaction(
             [FromRoute] Guid channelId,
             [FromRoute] Guid messageId,
-            [FromBody] AddReactionRequest request,
+            [FromBody] AddReactionRequestToChannel request,
             CancellationToken cancellationToken)
         {
             var userId = GetCurrentUserId();
@@ -310,7 +310,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         public async Task<IActionResult> RemoveReaction(
             [FromRoute] Guid channelId,
             [FromRoute] Guid messageId,
-            [FromBody] RemoveReactionRequest request,
+            [FromBody] RemoveReactionRequestToChannel request,
             CancellationToken cancellationToken)
         {
             var userId = GetCurrentUserId();

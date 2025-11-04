@@ -1,5 +1,4 @@
-﻿
-using ChatApp.Shared.Infrastructure.SignalR.Hubs;
+﻿using ChatApp.Shared.Infrastructure.SignalR.Hubs;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 
@@ -12,7 +11,7 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Services
         private readonly ILogger<PresenceService> _logger;
 
         public PresenceService(
-            ConnectionManager connectionManager,
+            IConnectionManager connectionManager,
             IHubContext<ChatHub> hubContext,
             ILogger<PresenceService> logger)
         {

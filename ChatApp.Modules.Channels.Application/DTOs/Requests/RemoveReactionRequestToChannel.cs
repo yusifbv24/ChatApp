@@ -1,4 +1,4 @@
 ﻿namespace ChatApp.Modules.Channels.Application.DTOs.Requests
 {
-    public record AddReactionRequest(string Reaction);
+    public record RemoveReactionRequestToChannel(string Reaction);
 }
