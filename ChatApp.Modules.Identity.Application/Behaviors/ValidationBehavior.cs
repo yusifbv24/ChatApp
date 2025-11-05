@@ -20,7 +20,7 @@ namespace ChatApp.Modules.Identity.Application.Behaviors
         {
             if (!_validators.Any())
             {
-                return await next();
+                return await next(cancellationToken);
             }
 
             var context = new ValidationContext<TRequest>(request);
@@ -44,7 +44,7 @@ namespace ChatApp.Modules.Identity.Application.Behaviors
                 throw new Shared.Kernel.Exceptions.ValidationException(errors);
             }
 
-            return await next();
+            return await next(cancellationToken);
         }
     }
 }

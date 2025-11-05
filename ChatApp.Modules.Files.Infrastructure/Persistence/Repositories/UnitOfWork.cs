@@ -1,22 +1,18 @@
-﻿using ChatApp.Modules.DirectMessages.Application.Interfaces;
-using ChatApp.Shared.Infrastructure.SignalR.Services;
+﻿using ChatApp.Modules.Files.Application.Interfaces;
 using Microsoft.EntityFrameworkCore.Storage;
 
-namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
+namespace ChatApp.Modules.Files.Infrastructure.Persistence.Repositories
 {
-    public class UnitOfWork : IUnitOfWork
+    public class UnitOfWork:IUnitOfWork
     {
-        private readonly DirectMessagesDbContext _context;
+        private readonly FilesDbContext _context;
         private IDbContextTransaction? _transaction;
 
-        public IDirectConversationRepository Conversations { get; }
-        public IDirectMessageRepository Messages { get; }
-
-        public UnitOfWork(DirectMessagesDbContext context,IConnectionManager connectionManager)
+        public IFileRepository Files { get; }
+        public UnitOfWork(FilesDbContext context)
         {
             _context = context;
-            Conversations = new DirectConversationRepository(context,connectionManager);
-            Messages = new DirectMessageRepository(context);
+            Files = new FileRepository(context);
         }
 
         public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
@@ -24,10 +20,12 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
             return await _context.SaveChangesAsync(cancellationToken);
         }
 
+
         public async Task BeginTransactionAsync(CancellationToken cancellationToken = default)
         {
-            _transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+            _transaction= await _context.Database.BeginTransactionAsync(cancellationToken);
         }
+
 
         public async Task CommitTransactionAsync(CancellationToken cancellationToken = default)
         {
@@ -39,9 +37,10 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
             }
         }
 
+
         public async Task RollbackTransactionAsync(CancellationToken cancellationToken = default)
         {
-            if (_transaction != null)
+            if(_transaction != null)
             {
                 await _transaction.RollbackAsync(cancellationToken);
                 await _transaction.DisposeAsync();
@@ -49,10 +48,11 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
             }
         }
 
+
         public void Dispose()
         {
             _transaction?.Dispose();
-            _context.Dispose();
+            _transaction = null;
         }
     }
 }

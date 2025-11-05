@@ -33,7 +33,6 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence
                 entity.Property(e => e.Username).HasColumnName("username");
                 entity.Property(e => e.DisplayName).HasColumnName("display_name");
                 entity.Property(e => e.AvatarUrl).HasColumnName("avatar_url");
-                entity.Property(e => e.IsOnline).HasColumnName("is_online");
 
                 // Mark as query-only (no tracking, no inserts/updates)
                 entity.ToTable(tb => tb.ExcludeFromMigrations());

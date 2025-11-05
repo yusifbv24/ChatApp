@@ -29,6 +29,8 @@
     <ProjectReference Include="..\ChatApp.Modules.Channels.Infrastructure\ChatApp.Modules.Channels.Infrastructure.csproj" />
     <ProjectReference Include="..\ChatApp.Modules.DirectMessages.Api\ChatApp.Modules.DirectMessages.Api.csproj" />
     <ProjectReference Include="..\ChatApp.Modules.DirectMessages.Infrastructure\ChatApp.Modules.DirectMessages.Infrastructure.csproj" />
+    <ProjectReference Include="..\ChatApp.Modules.Files.Api\ChatApp.Modules.Files.Api.csproj" />
+    <ProjectReference Include="..\ChatApp.Modules.Files.Infrastructure\ChatApp.Modules.Files.Infrastructure.csproj" />
     <ProjectReference Include="..\ChatApp.Modules.Identity.Api\ChatApp.Modules.Identity.Api.csproj" />
     <ProjectReference Include="..\ChatApp.Modules.Identity.Infrastructure\ChatApp.Modules.Identity.Infrastructure.csproj" />
     <ProjectReference Include="..\ChatApp.Shared.Infrastructure\ChatApp.Shared.Infrastructure.csproj" />

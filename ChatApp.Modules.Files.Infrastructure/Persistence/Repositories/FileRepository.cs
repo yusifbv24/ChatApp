@@ -1,0 +1,158 @@
+﻿using ChatApp.Modules.Files.Application.DTOs.Requests;
+using ChatApp.Modules.Files.Application.DTOs.Responses;
+using ChatApp.Modules.Files.Application.Interfaces;
+using ChatApp.Modules.Files.Domain.Entities;
+using Microsoft.EntityFrameworkCore;
+
+namespace ChatApp.Modules.Files.Infrastructure.Persistence.Repositories
+{
+    public class FileRepository:IFileRepository
+    {
+        private readonly FilesDbContext _context;
+
+        public FileRepository(FilesDbContext context)
+        {
+            _context = context;
+        }
+
+        public async Task AddAsync(FileMetadata file, CancellationToken cancellationToken = default)
+        {
+            await _context.FileMetadata.AddAsync(file, cancellationToken);
+        }
+
+
+        public Task DeleteAsync(FileMetadata file, CancellationToken cancellationToken = default)
+        {
+            _context.FileMetadata.Remove(file);
+            return Task.CompletedTask;
+        }
+
+
+        public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            return await _context.FileMetadata
+                .AnyAsync(f => f.Id == id && !f.IsDeleted, cancellationToken);
+        }
+
+
+        public async Task<FileMetadata?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            return await _context.FileMetadata
+                .FirstOrDefaultAsync(f=>f.Id==id && !f.IsDeleted,cancellationToken);
+        }
+
+
+        public async Task<FileDto?> GetFileDtoByIdAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            var result = await (from file in _context.FileMetadata
+                                join user in _context.Set<UserReadModel>() on file.UploadedBy equals user.Id
+                                where file.Id == id && !file.IsDeleted
+                                select new FileDto(
+                                    file.Id,
+                                    file.FileName,
+                                    file.OriginalFileName,
+                                    file.ContentType,
+                                    file.FileSizeInBytes,
+                                    file.FileType,
+                                    file.UploadedBy,
+                                    user.Username,
+                                    user.DisplayName,
+                                    file.Width,
+                                    file.Height,
+                                    !string.IsNullOrEmpty(file.ThumbnailPath),
+                                    file.CreatedAtUtc
+                                ))
+                              .FirstOrDefaultAsync(cancellationToken);
+            return result;
+        }
+
+
+        public async Task<List<FileDto>> GetUserFilesAsync(
+            Guid userId, 
+            int pageSize = 50, 
+            int skip = 0, 
+            CancellationToken cancellationToken = default)
+        {
+            var results=await (from file in _context.FileMetadata
+                               join user in _context.Set<UserReadModel>() on file.UploadedBy equals user.Id
+                               where file.UploadedBy==user.Id && !file.IsDeleted
+                               orderby file.CreatedAtUtc descending
+                               select new FileDto(
+                                   file.Id,
+                                   file.FileName,
+                                   file.OriginalFileName,
+                                   file.ContentType,
+                                   file.FileSizeInBytes,
+                                   file.FileType,
+                                   file.UploadedBy,
+                                   user.Username,
+                                   user.DisplayName,
+                                   file.Width,
+                                   file.Height,
+                                   !string.IsNullOrEmpty(file.ThumbnailPath),
+                                   file.CreatedAtUtc
+                               ))
+                               .Skip(skip)
+                               .Take(pageSize)
+                               .ToListAsync(cancellationToken);
+
+            return results;
+        }
+
+
+        public async Task<bool> IsFileUsedInUserChannelsAsync(
+            Guid fileId, 
+            Guid userId, 
+            CancellationToken cancellationToken = default)
+        {
+            // Check if file is referenced in any channel message where user is a member
+            var query = @"
+                SELECT COUNT(*)
+                FROM channel_messages cm
+                INNER JOIN channel_members cmem ON cm.channel_id==cmem.channel_id
+                WHERE cm.file_id=@fileId
+                  AND cmem.user_id=@userId
+                  AND cmem.left_at_utc IS NULL
+                  AND cm.is_deleted=false";
+
+            var count = await _context.Database
+                .SqlQueryRaw<int>(query,
+                    new Npgsql.NpgsqlParameter("@fileId", fileId.ToString()),
+                    new Npgsql.NpgsqlParameter("@userId", userId))
+                .FirstOrDefaultAsync(cancellationToken);
+
+            return count > 0;
+        }
+
+
+        public async Task<bool> IsFileUsedInUserConversationsAsync(
+            Guid fileId, 
+            Guid userId, 
+            CancellationToken cancellationToken = default)
+        {
+            // Check if file is referenced in any direct message where user is participant
+            var query = @"
+                SELECT COUNT(*)
+                FROM direct_messages dm
+                INNER JOIN direct_conversations dc ON dm.conversation_id = dc.id
+                WHERE dm.file_id = @fileId
+                  AND (dc.user1_id = @userId OR dc.user2_id = @userId)
+                  AND dm.is_deleted = false";
+
+            var count = await _context.Database
+                .SqlQueryRaw<int>(query,
+                    new Npgsql.NpgsqlParameter("@fileId", fileId.ToString()),
+                    new Npgsql.NpgsqlParameter("@userId", userId))
+                .FirstOrDefaultAsync(cancellationToken);
+
+            return count > 0;
+        }
+
+
+        public Task UpdateAsync(FileMetadata file, CancellationToken cancellationToken = default)
+        {
+            _context.FileMetadata.Update(file);
+            return Task.CompletedTask;
+        }
+    }
+}

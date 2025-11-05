@@ -20,7 +20,7 @@ namespace ChatApp.Modules.DirectMessages.Application.Behaviors
         {
             if (!_validators.Any())
             {
-                return await next();
+                return await next(cancellationToken);
             }
 
             var context = new ValidationContext<TRequest>(request);
@@ -41,10 +41,10 @@ namespace ChatApp.Modules.DirectMessages.Application.Behaviors
                         g => g.Key,
                         g => g.Select(e => e.ErrorMessage).ToArray());
 
-                throw new ChatApp.Shared.Kernel.Exceptions.ValidationException(errors);
+                throw new Shared.Kernel.Exceptions.ValidationException(errors);
             }
 
-            return await next();
+            return await next(cancellationToken);
         }
     }
 }

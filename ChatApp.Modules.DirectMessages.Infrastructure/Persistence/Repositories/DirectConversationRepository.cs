@@ -2,6 +2,7 @@
 using ChatApp.Modules.DirectMessages.Application.DTOs.Response;
 using ChatApp.Modules.DirectMessages.Application.Interfaces;
 using ChatApp.Modules.DirectMessages.Domain.Entities;
+using ChatApp.Shared.Infrastructure.SignalR.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
@@ -9,9 +10,13 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
     public class DirectConversationRepository : IDirectConversationRepository
     {
         private readonly DirectMessagesDbContext _context;
-        public DirectConversationRepository(DirectMessagesDbContext context)
+        private readonly IConnectionManager _connectionManager;
+        public DirectConversationRepository(
+            DirectMessagesDbContext context,
+            IConnectionManager connectionManager)
         {
             _context = context;
+            _connectionManager = connectionManager;
         }
 
         public async Task AddAsync(DirectConversation conversation, CancellationToken cancellationToken = default)
@@ -69,7 +74,7 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
             CancellationToken cancellationToken = default)
         {
             // Get conversations with other user details and last message
-            var conversations = await (from conv in _context.DirectConversations
+            var conversationsQuery = await (from conv in _context.DirectConversations
                                        where (conv.User1Id == userId && conv.IsUser1Active) ||
                                               (conv.User2Id == userId && conv.IsUser2Active)
                                        let otherUserId = conv.User1Id == userId ? conv.User2Id : conv.User1Id
@@ -85,18 +90,42 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                                                     !m.IsRead &&
                                                     !m.IsDeleted)
                                        orderby conv.LastMessageAtUtc descending
-                                       select new DirectConversationDto(
+                                       select new
+                                       {
                                            conv.Id,
-                                           otherUserId,
+                                           OtherUserId=otherUserId,
                                            user.Username,
                                            user.DisplayName,
                                            user.AvatarUrl,
-                                           lastMessage,
+                                           LastMessage=lastMessage,
                                            conv.LastMessageAtUtc,
-                                           unreadCount,
-                                           user.IsOnline
-                                       ))
-                                       .ToListAsync();
+                                           UnreadCount=unreadCount
+                                       })
+                                       .ToListAsync(cancellationToken);
+
+            // Get online status for all other users
+            var otherUserIds = conversationsQuery.Select(c => c.OtherUserId).ToList();
+            var onlineStatuses = new Dictionary<Guid, bool>();
+
+            foreach(var otherUserId in otherUserIds)
+            {
+                onlineStatuses[otherUserId] = await _connectionManager.IsUserOnlineAsync(otherUserId);
+            }
+
+            // Map to DTOs with actual online status
+            var conversations = conversationsQuery.Select(c => new DirectConversationDto(
+                c.Id,
+                c.OtherUserId,
+                c.Username,
+                c.DisplayName,
+                c.AvatarUrl,
+                c.LastMessage,
+                c.LastMessageAtUtc,
+                c.UnreadCount,
+                onlineStatuses.GetValueOrDefault(c.OtherUserId, false)
+            )).ToList();
+
+
             return conversations;
         }
 

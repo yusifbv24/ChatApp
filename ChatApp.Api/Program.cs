@@ -4,6 +4,9 @@ using ChatApp.Modules.Channels.Infrastructure.Persistence;
 using ChatApp.Modules.DirectMessages.Api.Controllers;
 using ChatApp.Modules.DirectMessages.Infrastructure;
 using ChatApp.Modules.DirectMessages.Infrastructure.Persistence;
+using ChatApp.Modules.Files.Api.Controllers;
+using ChatApp.Modules.Files.Infrastructure;
+using ChatApp.Modules.Files.Infrastructure.Persistence;
 using ChatApp.Modules.Identity.Api.Controllers;
 using ChatApp.Modules.Identity.Domain.Services;
 using ChatApp.Modules.Identity.Infrastructure;
@@ -33,7 +36,8 @@ builder.Host.UseSerilog();
 builder.Services.AddControllers()
     .AddApplicationPart(typeof(AuthController).Assembly)
     .AddApplicationPart(typeof(ChannelsController).Assembly)
-    .AddApplicationPart(typeof(DirectConversationsController).Assembly);
+    .AddApplicationPart(typeof(DirectConversationsController).Assembly)
+    .AddApplicationPart(typeof(FilesController).Assembly);
 
 // Add CORS policy
 builder.Services.AddCors(options =>
@@ -59,6 +63,10 @@ builder.Services.AddChannelsInfrastructure(builder.Configuration);
 // DirectMessages Module
 builder.Services.AddDirectMessagesApplication();
 builder.Services.AddDirectMessagesInfrastructure(builder.Configuration);
+
+// Files Module
+builder.Services.AddFilesApplication();
+builder.Services.AddFilesInfrastructure(builder.Configuration);
 
 // Register event bus for inter-module communication
 builder.Services.AddSingleton<IEventBus, InMemoryEventBus>();
@@ -189,6 +197,12 @@ using (var scope = app.Services.CreateScope())
         var directMessagesContext = services.GetRequiredService<DirectMessagesDbContext>();
         await directMessagesContext.Database.MigrateAsync();
         await DirectMessagesDatabaseSeeder.SeedAsync(directMessagesContext,logger);
+
+
+        // Add Files module seeding in database initialization
+        var filesContext = services.GetRequiredService<FilesDbContext>();
+        await filesContext.Database.MigrateAsync();
+        await FileDatabaseSeeder.SeedAsync(filesContext,logger);
 
         logger.LogInformation("Database initialization completed successfully");
     }
