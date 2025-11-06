@@ -27,6 +27,12 @@
     <Project Path="ChatApp.Modules.Identity.Domain/ChatApp.Modules.Identity.Domain.csproj" />
     <Project Path="ChatApp.Modules.Identity.Infrastructure/ChatApp.Modules.Identity.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/src/Modules/Search/">
+    <Project Path="ChatApp.Modules.Search.Api/ChatApp.Modules.Search.Api.csproj" Id="6c32c71d-bcec-4b44-a37d-e02d0582d9ab" />
+    <Project Path="ChatApp.Modules.Search.Application/ChatApp.Modules.Search.Application.csproj" Id="6890d3f7-c153-41d9-88e4-970e865353f0" />
+    <Project Path="ChatApp.Modules.Search.Domain/ChatApp.Modules.Search.Domain.csproj" Id="d8d3eeb3-fcc9-44bf-b873-9cc21bdea26c" />
+    <Project Path="ChatApp.Modules.Search.Infrastructure/ChatApp.Modules.Search.Infrastructure.csproj" Id="f44d7958-8101-4baf-b8db-d05e8cd88334" />
+  </Folder>
   <Folder Name="/src/Shared/">
     <Project Path="ChatApp.Shared.Infrastructure/ChatApp.Shared.Infrastructure.csproj" />
     <Project Path="ChatApp.Shared.Kernel/ChatApp.Shared.Kernel.csproj" />
