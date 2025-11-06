@@ -11,6 +11,8 @@ using ChatApp.Modules.Identity.Api.Controllers;
 using ChatApp.Modules.Identity.Domain.Services;
 using ChatApp.Modules.Identity.Infrastructure;
 using ChatApp.Modules.Identity.Infrastructure.Persistence;
+using ChatApp.Modules.Search.Api.Controllers;
+using ChatApp.Modules.Search.Infrastructure;
 using ChatApp.Shared.Infrastructure.EventBus;
 using ChatApp.Shared.Infrastructure.Logging;
 using ChatApp.Shared.Infrastructure.Middleware;
@@ -37,7 +39,8 @@ builder.Services.AddControllers()
     .AddApplicationPart(typeof(AuthController).Assembly)
     .AddApplicationPart(typeof(ChannelsController).Assembly)
     .AddApplicationPart(typeof(DirectConversationsController).Assembly)
-    .AddApplicationPart(typeof(FilesController).Assembly);
+    .AddApplicationPart(typeof(FilesController).Assembly)
+    .AddApplicationPart(typeof(SearchController).Assembly);
 
 // Add CORS policy
 builder.Services.AddCors(options =>
@@ -67,6 +70,11 @@ builder.Services.AddDirectMessagesInfrastructure(builder.Configuration);
 // Files Module
 builder.Services.AddFilesApplication();
 builder.Services.AddFilesInfrastructure(builder.Configuration);
+
+
+// Search Module
+builder.Services.AddSearchApplication();
+builder.Services.AddSearchInfrastructure(builder.Configuration);
 
 // Register event bus for inter-module communication
 builder.Services.AddSingleton<IEventBus, InMemoryEventBus>();
