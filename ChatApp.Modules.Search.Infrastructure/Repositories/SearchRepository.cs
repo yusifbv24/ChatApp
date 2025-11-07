@@ -5,6 +5,7 @@ using ChatApp.Modules.Search.Domain.Enums;
 using ChatApp.Modules.Search.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace ChatApp.Modules.Search.Infrastructure.Repositories
 {
@@ -29,6 +30,7 @@ namespace ChatApp.Modules.Search.Infrastructure.Repositories
             int pageSize, 
             CancellationToken cancellationToken = default)
         {
+            // Build the database query (this will be translated to SQL)
             var query = from message in _context.Set<ChannelMessageReadModel>()
                         join channel in _context.Set<ChannelReadModel>()
                             on message.ChannelId equals channel.Id
@@ -40,37 +42,56 @@ namespace ChatApp.Modules.Search.Infrastructure.Repositories
                         where !message.IsDeleted
                               && member.LeftAtUtc == null // User is still a member
                               && EF.Functions.ILike(message.Content, $"%{searchTerm}%") // Case-insensitive search
-                        select new SearchResultDto(
-                            message.Id,
-                            SearchResultType.ChannelMessage,
-                            message.Content,
-                            HighlightSearchTerm(message.Content, searchTerm),
-                            sender.Id,
-                            sender.Username,
-                            sender.DisplayName,
-                            sender.AvatarUrl,
-                            message.CreatedAtUtc,
-                            message.ChannelId,
-                            channel.Name,
-                            null,
-                            null,
-                            null,
-                            null
-                        );
+                        select new
+                        {
+                            // Select only the raw data from the database
+                            MessageId = message.Id,
+                            MessageContent = message.Content,
+                            MessageCreatedAtUtc = message.CreatedAtUtc,
+                            MessageChannelId = message.ChannelId,
+                            SenderId = sender.Id,
+                            SenderUsername = sender.Username,
+                            SenderDisplayName = sender.DisplayName,
+                            SenderAvatarUrl = sender.AvatarUrl,
+                            ChannelName = channel.Name
+                        };
 
             // Filter by specific channel if provided
             if (specificChannelId.HasValue)
             {
-                query=query.Where(r=>r.ChannelId== specificChannelId.Value);
+                query=query.Where(r=>r.MessageChannelId== specificChannelId.Value);
             }
 
+            // Get the total count (this executes a COUNT query in SQL)
             var totalCount = await query.CountAsync(cancellationToken);
 
-            var results = await query
-                .OrderByDescending(r => r.CreatedAtUtc)
+
+            // Order and paginate in the database, then retrieve the data
+            var rawResults = await query
+                .OrderByDescending(r => r.MessageCreatedAtUtc)
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync(cancellationToken);
+
+
+            // Now that we have the data in memory, transform it to DTOs and apply the highlighting (client-side operation)
+            var results = rawResults.Select(r => new SearchResultDto(
+                r.MessageId,
+                SearchResultType.ChannelMessage,
+                r.MessageContent,
+                HighlightSearchTerm(r.MessageContent, searchTerm),
+                r.SenderId,
+                r.SenderUsername,
+                r.SenderDisplayName,
+                r.SenderAvatarUrl,
+                r.MessageCreatedAtUtc,
+                r.MessageChannelId,
+                r.ChannelName,
+                null,
+                null,
+                null,
+                null
+            )).ToList();
 
             var hasNextPage = totalCount > (pageNumber * pageSize);
 
@@ -91,6 +112,7 @@ namespace ChatApp.Modules.Search.Infrastructure.Repositories
             int pageSize,
             CancellationToken cancellationToken = default)
         {
+            // Build the database query
             var query = from message in _context.Set<DirectMessageReadModel>()
                         join conversation in _context.Set<ConversationReadModel>()
                            on message.ConversationId equals conversation.Id
@@ -112,18 +134,20 @@ namespace ChatApp.Modules.Search.Infrastructure.Repositories
                 query = query.Where(x => x.Conversation.Id == specificConversationId.Value);
             }
 
+            // Get total count
             var totalCount = await query.CountAsync(cancellationToken);
 
-            var data = await query
+            // Order, paginate and retrieve from database
+            var rawData = await query
                 .OrderByDescending(x => x.Message.CreatedAtUtc)
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync(cancellationToken);
 
-            // Get other user details
+            // Build DTOs in memory with the other user details
             var results = new List<SearchResultDto>();
 
-            foreach(var item in data)
+            foreach(var item in rawData)
             {
                 var otherUserId=item.Conversation.User1Id==userId
                     ? item.Conversation.User2Id
