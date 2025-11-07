@@ -2,6 +2,7 @@
 using ChatApp.Modules.Identity.Application.DTOs;
 using ChatApp.Modules.Identity.Application.Queries.GetUser;
 using ChatApp.Modules.Identity.Application.Queries.GetUsers;
+using ChatApp.Shared.Infrastructure.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -35,15 +36,15 @@ namespace ChatApp.Modules.Identity.Api.Controllers
         /// Creates a new user in the system
         /// </summary>
         [HttpPost]
+        [RequirePermission("Users.Create")]
         [ProducesResponseType(typeof(Guid), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> CreateUser(
             [FromBody] CreateUserCommand command,
             CancellationToken cancellationToken)
         {
-            _logger?.LogInformation("Creating user: {Username}", command.Username);
-
             // Get the ID of the user making the request
             var creatorId = GetCurrentUserId();
             if (creatorId == Guid.Empty)
@@ -69,9 +70,11 @@ namespace ChatApp.Modules.Identity.Api.Controllers
         /// Retrieves a specific user by their unique identifier
         /// </summary>
         [HttpGet("{userId:guid}")]
+        [RequirePermission("Users.Read")]
         [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> GetUserById(
             [FromRoute] Guid userId,
             CancellationToken cancellationToken)
@@ -93,9 +96,11 @@ namespace ChatApp.Modules.Identity.Api.Controllers
         /// Retrieves a paginated list of all users
         /// </summary>
         [HttpGet]
+        [RequirePermission("Users.Read")]
         [ProducesResponseType(typeof(List<UserDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> GetUsers(
             [FromQuery] int pageNumber = 1,
             [FromQuery] int pageSize = 10,
@@ -121,10 +126,12 @@ namespace ChatApp.Modules.Identity.Api.Controllers
         /// Updates an existing user's information
         /// </summary>
         [HttpPut("{userId:guid}")]
+        [RequirePermission("Users.Update")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> UpdateUser(
             [FromRoute] Guid userId,
             [FromBody] UpdateUserRequest request,
@@ -135,8 +142,7 @@ namespace ChatApp.Modules.Identity.Api.Controllers
                 request.Email,
                 request.DisplayName,
                 request.AvatarUrl,
-                request.Notes,
-                request.IsActive);
+                request.Notes);
 
             var result = await _mediator.Send(command, cancellationToken);
 
@@ -148,14 +154,67 @@ namespace ChatApp.Modules.Identity.Api.Controllers
 
 
 
-        /// <summary>
-        /// Soft deletes a user by deactivating their account
-        /// </summary>
-        [HttpDelete("{userId:guid}")]
+
+        [HttpPut("{userId:guid}/activate")]
+        [RequirePermission("Users.Update")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<IActionResult> ActivateUser(
+            [FromRoute] Guid userId,
+            CancellationToken cancellationToken)
+        {
+            var command = new ActivateUserCommand(
+                userId);
+
+            var result = await _mediator.Send(command, cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return Ok(new { message = "User activated successfully" });
+        }
+
+
+
+
+        [HttpPut("{userId:guid}/deactivate")]
+        [RequirePermission("Users.Update")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<IActionResult> DeactivateUser(
+            [FromRoute] Guid userId,
+            CancellationToken cancellationToken)
+        {
+            var command = new DeactivateUserCommand(
+                userId);
+
+            var result = await _mediator.Send(command, cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return Ok(new { message = "User deactivated successfully" });
+        }
+
+
+
+
+        /// <summary>
+        /// Soft deletes a user by deactivating their account
+        /// </summary>
+        [HttpDelete("{userId:guid}")]
+        [RequirePermission("Users.Delete")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> DeleteUser(
             [FromRoute] Guid userId,
             CancellationToken cancellationToken)
@@ -172,14 +231,17 @@ namespace ChatApp.Modules.Identity.Api.Controllers
 
 
 
+
         /// <summary>
         /// Assigns a role to a user
         /// </summary>
         [HttpPost("{userId:guid}/roles/{roleId:guid}")]
+        [RequirePermission("Users.Update")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> AssignRole(
             [FromRoute] Guid userId,
             [FromRoute] Guid roleId,
@@ -201,14 +263,18 @@ namespace ChatApp.Modules.Identity.Api.Controllers
             return Ok(new { message = "Role assigned successfully" });
         }
 
+
+
         /// <summary>
         /// Removes a role from a user
         /// </summary>
         [HttpDelete("{userId:guid}/roles/{roleId:guid}")]
+        [RequirePermission("Users.Update")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> RemoveRole(
             [FromRoute] Guid userId,
             [FromRoute] Guid roleId,
@@ -225,6 +291,8 @@ namespace ChatApp.Modules.Identity.Api.Controllers
 
             return Ok(new { message = "Role removed successfully" });
         }
+
+
 
         /// <summary>
         /// Helper method to extract the current user's ID from the JWT token claims

@@ -4,7 +4,6 @@
         string? Email,
         string? DisplayName,
         string? AvatarUrl,
-        string? Notes,
-        bool? IsActive
+        string? Notes
     );
 }

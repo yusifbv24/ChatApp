@@ -12,8 +12,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
         string? Email,
         string? DisplayName,
         string? AvatarUrl,
-        string? Notes,
-        bool? IsActive
+        string? Notes
     ) : IRequest<Result>;
 
 
@@ -111,15 +110,6 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
                 if (!string.IsNullOrWhiteSpace(request.Notes))
                 {
                     user.UpdateNotes(request.Notes);
-                }
-
-
-                if (request.IsActive.HasValue)
-                {
-                    if (request.IsActive.Value)
-                        user.Activate();
-                    else
-                        user.Deactivate();
                 }
 
                 await _unitOfWork.Users.UpdateAsync(user, cancellationToken);

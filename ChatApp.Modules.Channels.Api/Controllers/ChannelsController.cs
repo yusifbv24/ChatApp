@@ -6,6 +6,7 @@ using ChatApp.Modules.Channels.Application.Queries.GetPublicChannels;
 using ChatApp.Modules.Channels.Application.Queries.GetUserChannels;
 using ChatApp.Modules.Channels.Application.Queries.SearchChannels;
 using ChatApp.Modules.Channels.Domain.Enums;
+using ChatApp.Shared.Infrastructure.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -40,9 +41,11 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         /// Creates a new channel
         /// </summary>
         [HttpPost]
+        [RequirePermission("Groups.Create")]
         [ProducesResponseType(typeof(Guid), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> CreateChannel(
             [FromBody] CreateChannelCommand command,
             CancellationToken cancellationToken)
@@ -70,6 +73,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         /// Gets a specific channel by ID with full details
         /// </summary>
         [HttpGet("{channelId:guid}")]
+        [RequirePermission("Groups.Read")]
         [ProducesResponseType(typeof(ChannelDetailsDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -101,8 +105,10 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         /// Gets all channels the current user is a member of
         /// </summary>
         [HttpGet("my-channels")]
+        [RequirePermission("Groups.Read")]
         [ProducesResponseType(typeof(List<ChannelDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> GetMyChannels(CancellationToken cancellationToken)
         {
             var userId = GetCurrentUserId();
@@ -125,8 +131,10 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         /// Gets all public channels
         /// </summary>
         [HttpGet("public")]
+        [RequirePermission("Groups.Read")]
         [ProducesResponseType(typeof(List<ChannelDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> GetPublicChannels(CancellationToken cancellationToken)
         {
             var result = await _mediator.Send(new GetPublicChannelsQuery(), cancellationToken);
@@ -143,8 +151,10 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         /// Searches channels by name or description
         /// </summary>
         [HttpGet("search")]
+        [RequirePermission("Groups.Read")]
         [ProducesResponseType(typeof(List<ChannelDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> SearchChannels(
             [FromQuery] string query,
             CancellationToken cancellationToken)
@@ -172,6 +182,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         /// Updates channel information (name, description, type)
         /// </summary>
         [HttpPut("{channelId:guid}")]
+        [RequirePermission("Groups.Manage")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -207,6 +218,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         /// Deletes (archives) a channel - only owner can delete
         /// </summary>
         [HttpDelete("{channelId:guid}")]
+        [RequirePermission("Groups.Manage")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]

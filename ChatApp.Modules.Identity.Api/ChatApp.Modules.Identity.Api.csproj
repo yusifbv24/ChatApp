@@ -14,6 +14,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\ChatApp.Modules.Identity.Application\ChatApp.Modules.Identity.Application.csproj" />
+		<ProjectReference Include="..\ChatApp.Shared.Infrastructure\ChatApp.Shared.Infrastructure.csproj" />
 	</ItemGroup>
 
 </Project>

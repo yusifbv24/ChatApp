@@ -1,6 +1,7 @@
 ﻿using ChatApp.Modules.Identity.Application.Commands.Roles;
 using ChatApp.Modules.Identity.Application.DTOs;
 using ChatApp.Modules.Identity.Application.Queries.GetRoles;
+using ChatApp.Shared.Infrastructure.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -32,15 +33,15 @@ namespace ChatApp.Modules.Identity.Api.Controllers
         /// Creates a new role in the system
         /// </summary>
         [HttpPost]
+        [RequirePermission("Roles.Create")]
         [ProducesResponseType(typeof(Guid), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> CreateRole(
             [FromBody] CreateRoleCommand command,
             CancellationToken cancellationToken)
         {
-            _logger?.LogInformation("Creating role: {RoleName}", command.Name);
-
             var result = await _mediator.Send(command, cancellationToken);
 
             if (result.IsFailure)
@@ -52,17 +53,19 @@ namespace ChatApp.Modules.Identity.Api.Controllers
                 new { roleId = result.Value, message = "Role created successfully" });
         }
 
+
+
         /// <summary>
         /// Retrieves all roles in the system
         /// </summary>
         [HttpGet]
+        [RequirePermission("Roles.Read")]
         [ProducesResponseType(typeof(List<RoleDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> GetRoles(CancellationToken cancellationToken)
         {
-            _logger?.LogInformation("Retrieving all roles");
-
             var result = await _mediator.Send(new GetRolesQuery(), cancellationToken);
 
             if (result.IsFailure)
@@ -71,21 +74,24 @@ namespace ChatApp.Modules.Identity.Api.Controllers
             return Ok(result.Value);
         }
 
+
+
+
         /// <summary>
         /// Updates an existing role's information
         /// </summary>
         [HttpPut("{roleId:guid}")]
+        [RequirePermission("Roles.Update")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> UpdateRole(
             [FromRoute] Guid roleId,
             [FromBody] UpdateRoleCommand command,
             CancellationToken cancellationToken)
         {
-            _logger?.LogInformation("Updating role: {RoleId}", roleId);
-
             // Ensure the route parameter matches the command
             var commandWithRoleId = command with { RoleId = roleId };
 
@@ -97,14 +103,18 @@ namespace ChatApp.Modules.Identity.Api.Controllers
             return Ok(new { message = "Role updated successfully" });
         }
 
+
+
         /// <summary>
         /// Deletes a role from the system
         /// </summary>
         [HttpDelete("{roleId:guid}")]
+        [RequirePermission("Roles.Delete")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> DeleteRole(
             [FromRoute] Guid roleId,
             CancellationToken cancellationToken)

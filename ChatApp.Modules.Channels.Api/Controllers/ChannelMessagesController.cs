@@ -6,6 +6,7 @@ using ChatApp.Modules.Channels.Application.DTOs.Responses;
 using ChatApp.Modules.Channels.Application.Queries.GetChannelMessages;
 using ChatApp.Modules.Channels.Application.Queries.GetPinnedMessages;
 using ChatApp.Modules.Channels.Application.Queries.GetUnreadCount;
+using ChatApp.Shared.Infrastructure.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -40,6 +41,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         /// Gets messages in a channel with pagination (newest first by default)
         /// </summary>
         [HttpGet]
+        [RequirePermission("Messages.Read")]
         [ProducesResponseType(typeof(List<ChannelMessageDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -69,10 +71,12 @@ namespace ChatApp.Modules.Channels.Api.Controllers
 
 
 
+
         /// <summary>
         /// Gets pinned messages in a channel
         /// </summary>
         [HttpGet("pinned")]
+        [RequirePermission("Messages.Read")]
         [ProducesResponseType(typeof(List<ChannelMessageDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -100,6 +104,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         /// Gets unread message count for the current user in this channel
         /// </summary>
         [HttpGet("unread-count")]
+        [RequirePermission("Messages.Read")]
         [ProducesResponseType(typeof(int), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> GetUnreadCount(
@@ -126,6 +131,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         /// Sends a message to the channel
         /// </summary>
         [HttpPost]
+        [RequirePermission("Messages.Send")]
         [ProducesResponseType(typeof(Guid), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -158,6 +164,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         /// Edits a message (only sender can edit)
         /// </summary>
         [HttpPut("{messageId:guid}")]
+        [RequirePermission("Messages.Edit")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -188,6 +195,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         /// Deletes a message (sender, admin, or owner can delete)
         /// </summary>
         [HttpDelete("{messageId:guid}")]
+        [RequirePermission("Messages.Delete")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -213,10 +221,12 @@ namespace ChatApp.Modules.Channels.Api.Controllers
 
 
 
+
         /// <summary>
         /// Pins a message (admin/owner only)
         /// </summary>
         [HttpPost("{messageId:guid}/pin")]
+        [RequirePermission("Groups.Manage")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -246,6 +256,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         /// Unpins a message (admin/owner only)
         /// </summary>
         [HttpDelete("{messageId:guid}/pin")]
+        [RequirePermission("Groups.Manage")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -275,9 +286,11 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         /// Adds a reaction to a message
         /// </summary>
         [HttpPost("{messageId:guid}/reactions")]
+        [RequirePermission("Messages.Read")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> AddReaction(
             [FromRoute] Guid channelId,
             [FromRoute] Guid messageId,
@@ -304,9 +317,11 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         /// Removes a reaction from a message
         /// </summary>
         [HttpDelete("{messageId:guid}/reactions")]
+        [RequirePermission("Messages.Read")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> RemoveReaction(
             [FromRoute] Guid channelId,
             [FromRoute] Guid messageId,

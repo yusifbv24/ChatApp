@@ -3,6 +3,7 @@ using ChatApp.Modules.Channels.Application.Commands.Channels;
 using ChatApp.Modules.Channels.Application.DTOs.Requests;
 using ChatApp.Modules.Channels.Application.DTOs.Responses;
 using ChatApp.Modules.Channels.Application.Queries.GetChannelMembers;
+using ChatApp.Shared.Infrastructure.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -37,6 +38,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         /// Gets all members of a channel
         /// </summary>
         [HttpGet]
+        [RequirePermission("Groups.Read")]
         [ProducesResponseType(typeof(List<ChannelMemberDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -65,6 +67,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         /// Adds a member to the channel
         /// </summary>
         [HttpPost]
+        [RequirePermission("Groups.Manage")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -94,6 +97,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         /// Removes a member from the channel
         /// </summary>
         [HttpDelete("{userId:guid}")]
+        [RequirePermission("Groups.Manage")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -123,6 +127,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         /// Updates a member's role (Owner only)
         /// </summary>
         [HttpPut("{userId:guid}/role")]
+        [RequirePermission("Groups.Manage")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -153,6 +158,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         /// Leave a channel (current user)
         /// </summary>
         [HttpPost("leave")]
+        [RequirePermission("Groups.Manage")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]

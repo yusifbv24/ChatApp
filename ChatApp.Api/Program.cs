@@ -20,6 +20,7 @@ using ChatApp.Modules.Search.Infrastructure.Persistence;
 using ChatApp.Modules.Settings.Api.Controllers;
 using ChatApp.Modules.Settings.Infrastructure;
 using ChatApp.Modules.Settings.Infrastructure.Persistence;
+using ChatApp.Shared.Infrastructure.Authorization;
 using ChatApp.Shared.Infrastructure.EventBus;
 using ChatApp.Shared.Infrastructure.Logging;
 using ChatApp.Shared.Infrastructure.Middleware;
@@ -27,6 +28,7 @@ using ChatApp.Shared.Infrastructure.SignalR.Hubs;
 using ChatApp.Shared.Infrastructure.SignalR.Services;
 using ChatApp.Shared.Kernel.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -156,7 +158,24 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-builder.Services.AddAuthorization();
+// This is where we register our custom authorization components that check permissions
+builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionAuthorizationPolicyProvider>();
+builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
+
+builder.Services.AddAuthorization(options =>
+{
+    // Configure default policy to require authentication
+    // This means any endpoint without [AllowAnonymous] requires a valid JWT token
+    options.DefaultPolicy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+
+    // Fallback policy ensures all endpoints require authentication unless explicitly marked [AllowAnonymous]
+    // This is an additional safety net - even if you forget [Authorize] on a controller, authentication is still required
+    options.FallbackPolicy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+});
 
 // Configure Swagger/OpenAPI
 builder.Services.AddEndpointsApiExplorer();

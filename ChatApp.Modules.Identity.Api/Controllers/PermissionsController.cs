@@ -1,6 +1,7 @@
 ﻿using ChatApp.Modules.Identity.Application.Commands.Permisisons;
 using ChatApp.Modules.Identity.Application.DTOs;
 using ChatApp.Modules.Identity.Application.Queries.GetPermissions;
+using ChatApp.Shared.Infrastructure.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -28,19 +29,20 @@ namespace ChatApp.Modules.Identity.Api.Controllers
             _logger = logger;
         }
 
+
         /// <summary>
         /// Retrieves all permissions in the system, optionally filtered by module
         /// </summary>
         [HttpGet]
+        [RequirePermission("Roles.Read")]
         [ProducesResponseType(typeof(List<PermissionDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> GetPermissions(
             [FromQuery] string? module = null,
             CancellationToken cancellationToken = default)
         {
-            _logger?.LogInformation("Retrieving permissions for module: {Module}", module ?? "all");
-
             var result = await _mediator.Send(new GetPermissionsQuery(module), cancellationToken);
 
             if (result.IsFailure)
@@ -49,21 +51,23 @@ namespace ChatApp.Modules.Identity.Api.Controllers
             return Ok(result.Value);
         }
 
+
+
         /// <summary>
         /// Assigns a permission to a role
         /// </summary>
         [HttpPost("roles/{roleId:guid}/permissions/{permissionId:guid}")]
+        [RequirePermission("Roles.Create")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> AssignPermissionToRole(
             [FromRoute] Guid roleId,
             [FromRoute] Guid permissionId,
             CancellationToken cancellationToken)
         {
-            _logger?.LogInformation("Assigning permission {PermissionId} to role {RoleId}", permissionId, roleId);
-
             var result = await _mediator.Send(
                 new AssignPermissionCommand(roleId, permissionId),
                 cancellationToken);
@@ -74,21 +78,23 @@ namespace ChatApp.Modules.Identity.Api.Controllers
             return Ok(new { message = "Permission assigned to role successfully" });
         }
 
+
+
         /// <summary>
         /// Removes a permission from a role
         /// </summary>
         [HttpDelete("roles/{roleId:guid}/permissions/{permissionId:guid}")]
+        [RequirePermission("Roles.Delete")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> RemovePermissionFromRole(
             [FromRoute] Guid roleId,
             [FromRoute] Guid permissionId,
             CancellationToken cancellationToken)
         {
-            _logger?.LogInformation("Removing permission {PermissionId} from role {RoleId}", permissionId, roleId);
-
             var result = await _mediator.Send(
                 new RemovePermissionCommand(roleId, permissionId),
                 cancellationToken);

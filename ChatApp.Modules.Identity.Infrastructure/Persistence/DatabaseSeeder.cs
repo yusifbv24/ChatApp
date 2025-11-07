@@ -125,6 +125,8 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence
                 // Group/Channel Management Permissions
                 new Permission("Groups.Create", "Create groups or channels", "Messaging")
                     { Id = Guid.Parse("11111111-1111-1111-1111-111111111120") },
+                new Permission("Groups.Read","Get groups and it's informations","Messaging")
+                    { Id = Guid.Parse("11111111-1111-1111-1111-111111111123") },
                 new Permission("Groups.Manage", "Manage group settings and members", "Messaging")
                     { Id = Guid.Parse("11111111-1111-1111-1111-111111111121") },
                 new Permission("Groups.Delete", "Delete groups or channels", "Messaging")
