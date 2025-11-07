@@ -27,11 +27,23 @@
     <Project Path="ChatApp.Modules.Identity.Domain/ChatApp.Modules.Identity.Domain.csproj" />
     <Project Path="ChatApp.Modules.Identity.Infrastructure/ChatApp.Modules.Identity.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/src/Modules/Notifications/">
+    <Project Path="ChatApp.Modules.Notifications.Api/ChatApp.Modules.Notifications.Api.csproj" Id="d36de333-56bb-4ef7-99ca-5fd4b1874e59" />
+    <Project Path="ChatApp.Modules.Notifications.Application/ChatApp.Modules.Notifications.Application.csproj" Id="ee8633c3-6d8b-4835-b2bb-b2ba9fd1180b" />
+    <Project Path="ChatApp.Modules.Notifications.Domain/ChatApp.Modules.Notifications.Domain.csproj" Id="6acdfcf6-7315-4e79-b678-1ebf1b52eba4" />
+    <Project Path="ChatApp.Modules.Notifications.Infrastructure/ChatApp.Modules.Notifications.Infrastructure.csproj" Id="d5665890-0963-4d17-bc3b-c99207a57b70" />
+  </Folder>
   <Folder Name="/src/Modules/Search/">
     <Project Path="ChatApp.Modules.Search.Api/ChatApp.Modules.Search.Api.csproj" Id="6c32c71d-bcec-4b44-a37d-e02d0582d9ab" />
     <Project Path="ChatApp.Modules.Search.Application/ChatApp.Modules.Search.Application.csproj" Id="6890d3f7-c153-41d9-88e4-970e865353f0" />
     <Project Path="ChatApp.Modules.Search.Domain/ChatApp.Modules.Search.Domain.csproj" Id="d8d3eeb3-fcc9-44bf-b873-9cc21bdea26c" />
     <Project Path="ChatApp.Modules.Search.Infrastructure/ChatApp.Modules.Search.Infrastructure.csproj" Id="f44d7958-8101-4baf-b8db-d05e8cd88334" />
+  </Folder>
+  <Folder Name="/src/Modules/Settings/">
+    <Project Path="ChatApp.Modules.Settings.Api/ChatApp.Modules.Settings.Api.csproj" Id="e3688279-f74b-4a5e-a969-414ac82f2b4d" />
+    <Project Path="ChatApp.Modules.Settings.Application/ChatApp.Modules.Settings.Application.csproj" Id="c783048a-0fbc-4778-aeca-01938ce92d85" />
+    <Project Path="ChatApp.Modules.Settings.Domain/ChatApp.Modules.Settings.Domain.csproj" Id="0beeabbf-534e-4a14-9b66-3c7b5cb1a7ff" />
+    <Project Path="ChatApp.Modules.Settings.Infrastructure/ChatApp.Modules.Settings.Infrastructure.csproj" Id="95a44093-1f25-489a-b274-dcb53deafc31" />
   </Folder>
   <Folder Name="/src/Shared/">
     <Project Path="ChatApp.Shared.Infrastructure/ChatApp.Shared.Infrastructure.csproj" />

@@ -11,8 +11,15 @@ using ChatApp.Modules.Identity.Api.Controllers;
 using ChatApp.Modules.Identity.Domain.Services;
 using ChatApp.Modules.Identity.Infrastructure;
 using ChatApp.Modules.Identity.Infrastructure.Persistence;
+using ChatApp.Modules.Notifications.Api.Controllers;
+using ChatApp.Modules.Notifications.Infrastructure;
+using ChatApp.Modules.Notifications.Infrastructure.Persistence;
 using ChatApp.Modules.Search.Api.Controllers;
 using ChatApp.Modules.Search.Infrastructure;
+using ChatApp.Modules.Search.Infrastructure.Persistence;
+using ChatApp.Modules.Settings.Api.Controllers;
+using ChatApp.Modules.Settings.Infrastructure;
+using ChatApp.Modules.Settings.Infrastructure.Persistence;
 using ChatApp.Shared.Infrastructure.EventBus;
 using ChatApp.Shared.Infrastructure.Logging;
 using ChatApp.Shared.Infrastructure.Middleware;
@@ -40,7 +47,9 @@ builder.Services.AddControllers()
     .AddApplicationPart(typeof(ChannelsController).Assembly)
     .AddApplicationPart(typeof(DirectConversationsController).Assembly)
     .AddApplicationPart(typeof(FilesController).Assembly)
-    .AddApplicationPart(typeof(SearchController).Assembly);
+    .AddApplicationPart(typeof(SearchController).Assembly)
+    .AddApplicationPart(typeof(NotificationsController).Assembly)
+    .AddApplicationPart(typeof(SettingsController).Assembly);
 
 // Add CORS policy
 builder.Services.AddCors(options =>
@@ -75,6 +84,16 @@ builder.Services.AddFilesInfrastructure(builder.Configuration);
 // Search Module
 builder.Services.AddSearchApplication();
 builder.Services.AddSearchInfrastructure(builder.Configuration);
+
+
+// Notification Module
+builder.Services.AddNotificationsApplication();
+builder.Services.AddNotificationsInfrastructure(builder.Configuration);
+
+// Settings Module
+builder.Services.AddSettingsApplication();
+builder.Services.AddSettingsInfrastructure(builder.Configuration);
+
 
 // Register event bus for inter-module communication
 builder.Services.AddSingleton<IEventBus, InMemoryEventBus>();
@@ -211,6 +230,20 @@ using (var scope = app.Services.CreateScope())
         var filesContext = services.GetRequiredService<FilesDbContext>();
         await filesContext.Database.MigrateAsync();
         await FileDatabaseSeeder.SeedAsync(filesContext,logger);
+
+        // Search Module (no migrations - read-only)
+        var searchContext = services.GetRequiredService<SearchDbContext>();
+        // Search module doesn't need migrations as it only reads from other modules
+
+        // Notifications Module
+        var notificationsContext = services.GetRequiredService<NotificationsDbContext>();
+        await notificationsContext.Database.MigrateAsync();
+        await NotificationsDatabaseSeeder.SeedAsync(notificationsContext,logger);
+
+        // Settings Module
+        var settingsContext = services.GetRequiredService<SettingsDbContext>();
+        await settingsContext.Database.MigrateAsync();
+        await UserSettingsDatabaseSeeder.SeedAsync(settingsContext,logger);
 
         logger.LogInformation("Database initialization completed successfully");
     }

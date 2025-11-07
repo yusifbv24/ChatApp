@@ -33,8 +33,12 @@
     <ProjectReference Include="..\ChatApp.Modules.Files.Infrastructure\ChatApp.Modules.Files.Infrastructure.csproj" />
     <ProjectReference Include="..\ChatApp.Modules.Identity.Api\ChatApp.Modules.Identity.Api.csproj" />
     <ProjectReference Include="..\ChatApp.Modules.Identity.Infrastructure\ChatApp.Modules.Identity.Infrastructure.csproj" />
+    <ProjectReference Include="..\ChatApp.Modules.Notifications.Api\ChatApp.Modules.Notifications.Api.csproj" />
+    <ProjectReference Include="..\ChatApp.Modules.Notifications.Infrastructure\ChatApp.Modules.Notifications.Infrastructure.csproj" />
     <ProjectReference Include="..\ChatApp.Modules.Search.Api\ChatApp.Modules.Search.Api.csproj" />
     <ProjectReference Include="..\ChatApp.Modules.Search.Infrastructure\ChatApp.Modules.Search.Infrastructure.csproj" />
+    <ProjectReference Include="..\ChatApp.Modules.Settings.Api\ChatApp.Modules.Settings.Api.csproj" />
+    <ProjectReference Include="..\ChatApp.Modules.Settings.Infrastructure\ChatApp.Modules.Settings.Infrastructure.csproj" />
     <ProjectReference Include="..\ChatApp.Shared.Infrastructure\ChatApp.Shared.Infrastructure.csproj" />
   </ItemGroup>
 
