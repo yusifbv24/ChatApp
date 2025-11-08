@@ -83,21 +83,39 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
                 if (user == null)
                     throw new NotFoundException($"User with ID {request.UserId} not found");
 
-                if(!string.IsNullOrWhiteSpace(request.Email))
-                    user.UpdateEmail(request.Email);
 
-                if(!string.IsNullOrWhiteSpace(request.DisplayName))
+                // Check if user is trying to update email and if it's already taken by another user
+                if(!string.IsNullOrWhiteSpace(request.Email) && request.Email != user.Email)
                 {
-                    var existingDisplayName=await _unitOfWork.Users.ExistsAsync(
-                        c=>c.DisplayName==request.DisplayName,
+                    var emailExists= await _unitOfWork.Users.ExistsAsync(
+                        u => u.Email == request.Email && u.Id != request.UserId,
                         cancellationToken);
 
-                    if (existingDisplayName)
+                    if (emailExists)
                     {
-                        return Result.Failure($"Display name already exists");
+                        _logger?.LogWarning("Email {Email} is already taken by another user ", request.Email);
+                        return Result.Failure("Email is already in use by another user");
+                    }
+
+                    user.UpdateEmail(request.Email);
+                    _logger?.LogInformation("User {UserId} updated email to {Email}", request.UserId, request.Email);
+                }
+
+                // Check if display name is already taken by another user
+                if (!string.IsNullOrWhiteSpace(request.DisplayName) && request.DisplayName != user.DisplayName)
+                {
+                    var displayNameExists = await _unitOfWork.Users.ExistsAsync(
+                        u => u.DisplayName == request.DisplayName && u.Id != request.UserId,
+                        cancellationToken);
+
+                    if (displayNameExists)
+                    {
+                        _logger?.LogWarning("Display name {DisplayName} is already taken by another user", request.DisplayName);
+                        return Result.Failure("Display name is already in use by another user");
                     }
 
                     user.ChangeDisplayName(request.DisplayName);
+                    _logger?.LogInformation("User {UserId} updated display name to {DisplayName}", request.UserId, request.DisplayName);
                 }
 
 
@@ -117,6 +135,11 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
 
                 _logger?.LogInformation("User {UserId} updated successfully", request.UserId);
                 return Result.Success();
+            }
+            catch (NotFoundException ex)
+            {
+                _logger?.LogError(ex, "User {UserId} not found", request.UserId);
+                return Result.Failure(ex.Message);
             }
             catch (Exception ex)
             {

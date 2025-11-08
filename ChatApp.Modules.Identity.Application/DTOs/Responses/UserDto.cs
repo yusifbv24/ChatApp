@@ -1,4 +1,4 @@
-﻿namespace ChatApp.Modules.Identity.Application.DTOs
+﻿namespace ChatApp.Modules.Identity.Application.DTOs.Responses
 {
     public record UserDto(
         Guid Id,

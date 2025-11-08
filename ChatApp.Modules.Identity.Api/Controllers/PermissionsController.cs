@@ -1,5 +1,5 @@
 ﻿using ChatApp.Modules.Identity.Application.Commands.Permisisons;
-using ChatApp.Modules.Identity.Application.DTOs;
+using ChatApp.Modules.Identity.Application.DTOs.Responses;
 using ChatApp.Modules.Identity.Application.Queries.GetPermissions;
 using ChatApp.Shared.Infrastructure.Authorization;
 using MediatR;

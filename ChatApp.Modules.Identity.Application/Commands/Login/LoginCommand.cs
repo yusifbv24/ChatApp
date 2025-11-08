@@ -1,4 +1,4 @@
-﻿using ChatApp.Modules.Identity.Application.DTOs;
+﻿using ChatApp.Modules.Identity.Application.DTOs.Responses;
 using ChatApp.Modules.Identity.Application.Interfaces;
 using ChatApp.Modules.Identity.Domain.Services;
 using ChatApp.Shared.Kernel.Common;

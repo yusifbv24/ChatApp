@@ -1,6 +1,6 @@
 ﻿using ChatApp.Modules.Identity.Application.Commands.Login;
 using ChatApp.Modules.Identity.Application.Commands.RefreshToken;
-using ChatApp.Modules.Identity.Application.DTOs;
+using ChatApp.Modules.Identity.Application.DTOs.Responses;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;

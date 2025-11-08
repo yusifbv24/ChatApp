@@ -58,7 +58,7 @@ namespace ChatApp.Modules.Identity.Domain.Entities
         }
 
 
-        public void ChangeDisplayName(string newDisplayName)
+        public void ChangeDisplayName(string? newDisplayName)
         {
             if (string.IsNullOrWhiteSpace(newDisplayName))
                 throw new ArgumentException("Display name cannot be empty", nameof(newDisplayName));

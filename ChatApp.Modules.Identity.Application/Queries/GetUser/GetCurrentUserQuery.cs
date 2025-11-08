@@ -6,34 +6,36 @@ using Microsoft.Extensions.Logging;
 
 namespace ChatApp.Modules.Identity.Application.Queries.GetUser
 {
-    public record GetUserQuery(
+    public record GetCurrentUserQuery(
         Guid UserId
     ):IRequest<Result<UserDto?>>;
 
 
-    public class GetUserQueryHandler : IRequestHandler<GetUserQuery, Result<UserDto?>>
+    public class GetCurrentUserQueryHandler:IRequestHandler<GetCurrentUserQuery, Result<UserDto?>>
     {
         private readonly IUnitOfWork _unitOfWork;
-        private readonly ILogger<GetUserQueryHandler> _logger;
-
-        public GetUserQueryHandler(
+        private readonly ILogger<GetCurrentUserQueryHandler> _logger;
+        public GetCurrentUserQueryHandler(
             IUnitOfWork unitOfWork,
-            ILogger<GetUserQueryHandler> logger)
+            ILogger<GetCurrentUserQueryHandler> logger)
         {
-            _unitOfWork = unitOfWork;
-            _logger = logger;
+            _unitOfWork=unitOfWork;
+            _logger=logger;
         }
 
-
         public async Task<Result<UserDto?>> Handle(
-            GetUserQuery query,
-            CancellationToken cancellationToken = default)
+            GetCurrentUserQuery request,
+            CancellationToken cancellationToken)
         {
             try
             {
-                var user = await _unitOfWork.Users.GetByIdAsync(query.UserId, cancellationToken);
-                if (user == null)
+                var user = await _unitOfWork.Users.GetByIdAsync(request.UserId, cancellationToken);
+
+                if(user is null)
+                {
+                    _logger?.LogWarning("User {UserId} not found", request.UserId);
                     return Result.Success<UserDto?>(null);
+                }
 
                 var userDto = new UserDto(
                     user.Id,
@@ -45,15 +47,14 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetUser
                     user.CreatedBy,
                     user.IsActive,
                     user.IsAdmin,
-                    user.CreatedAtUtc
-                );
+                    user.CreatedAtUtc);
 
                 return Result.Success<UserDto?>(userDto);
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Error retrieving user {UserId}", query.UserId);
-                return Result.Failure<UserDto?>("An error occurred while retrieving the user");
+                _logger?.LogError(ex, "Error retrieving current user information for user {UserId}", request.UserId);
+                return Result.Failure<UserDto?>("An error occurred while retrieving your profile information");
             }
         }
     }

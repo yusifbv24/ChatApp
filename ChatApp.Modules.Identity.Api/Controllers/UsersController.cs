@@ -1,5 +1,6 @@
 ﻿using ChatApp.Modules.Identity.Application.Commands.Users;
-using ChatApp.Modules.Identity.Application.DTOs;
+using ChatApp.Modules.Identity.Application.DTOs.Requests;
+using ChatApp.Modules.Identity.Application.DTOs.Responses;
 using ChatApp.Modules.Identity.Application.Queries.GetUser;
 using ChatApp.Modules.Identity.Application.Queries.GetUsers;
 using ChatApp.Shared.Infrastructure.Authorization;
@@ -12,12 +13,9 @@ using System.Security.Claims;
 
 namespace ChatApp.Modules.Identity.Api.Controllers
 {
-    /// <summary>
-    /// Controller for managing user operations including creation, updates, role assignment, and retrieval
-    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize] // All endpoints require authentication by default
+    [Authorize]
     public class UsersController : ControllerBase
     {
         private readonly IMediator _mediator;
@@ -42,7 +40,7 @@ namespace ChatApp.Modules.Identity.Api.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> CreateUser(
-            [FromBody] CreateUserCommand command,
+            [FromBody] CreateUserRequest request,
             CancellationToken cancellationToken)
         {
             // Get the ID of the user making the request
@@ -50,10 +48,18 @@ namespace ChatApp.Modules.Identity.Api.Controllers
             if (creatorId == Guid.Empty)
                 return Unauthorized();
 
-            // Create a new command with the creator's ID
-            var commandWithCreator = command with { CreatedBy = creatorId };
+            // Create a new command
+            var command = new CreateUserCommand(
+                request.Username,
+                request.Email,
+                request.Password,
+                request.DisplayName,
+                request.CreatedBy,
+                request.IsAdmin,
+                request.AvatarUrl,
+                request.Notes);
 
-            var result = await _mediator.Send(commandWithCreator, cancellationToken);
+            var result = await _mediator.Send(command, cancellationToken);
 
             if (result.IsFailure)
                 return BadRequest(new { error = result.Error });
@@ -63,6 +69,142 @@ namespace ChatApp.Modules.Identity.Api.Controllers
                 new { userId = result.Value },
                 new { userId=result.Value, message="User created succesfully"});
         }
+
+
+
+
+        /// <summary>
+        /// Gets the current authenticated user's profile information
+        /// This endpoint does not require any permissions - any authenticated user can view their own profile
+        /// </summary>
+        [HttpGet("me")]
+        [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> GetCurrentUser(CancellationToken cancellationToken)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == Guid.Empty)
+                return Unauthorized();
+
+            _logger?.LogInformation("User {UserId} retrieving their own profile", userId);
+
+            var result = await _mediator.Send(new GetCurrentUserQuery(userId), cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            if (result.Value == null)
+                return NotFound(new { error = "Your profile was not found" });
+
+            return Ok(result.Value);
+        }
+
+
+
+
+        /// <summary>
+        /// Updates the current authenticated user's profile information
+        /// Users can update their email, display name, avatar URL, and notes
+        /// This endpoint does not require any permissions - any authenticated user can update their own profile
+        /// </summary>
+        [HttpPut("me")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> UpdateCurrentUser(
+            [FromBody] UpdateUserRequest request,
+            CancellationToken cancellationToken)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == Guid.Empty)
+                return Unauthorized();
+
+            var command = new UpdateUserCommand(
+                userId,
+                request.Email,
+                request.DisplayName,
+                request.AvatarUrl,
+                request.Notes);
+
+            var result = await _mediator.Send(command, cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return Ok(new { message = "Profile updated successfully" });
+        }
+
+
+
+
+        /// <summary>
+        /// Changes the current authenticated user's password
+        /// Requires the current password for security verification
+        /// This endpoint does not require any permissions - any authenticated user can change their own password
+        /// </summary>
+        [HttpPost("me/change-password")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> ChangePassword(
+            [FromBody] ChangePasswordRequest request,
+            CancellationToken cancellationToken)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == Guid.Empty)
+                return Unauthorized();
+
+            var command = new ChangePasswordCommand(
+                userId,
+                request.CurrentPassword,
+                request.NewPassword,
+                request.ConfirmNewPassword);
+
+            var result = await _mediator.Send(command, cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return Ok(new { message = "Password changed successfully" });
+        }
+
+
+
+
+        /// <summary>
+        /// Changes the current authenticated user's password
+        /// Requires the current password for security verification
+        /// This endpoint does not require any permissions - any authenticated user can change their own password
+        /// </summary>
+        [HttpPost("change-password/{id:guid}")]
+        [RequirePermission("Users.Update")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<IActionResult> ChangeUserPassword(
+            [FromBody] ChangePasswordRequest request,
+            CancellationToken cancellationToken)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == Guid.Empty)
+                return Unauthorized();
+
+            var command = new ChangePasswordCommand(
+                request.UserId,
+                request.CurrentPassword,
+                request.NewPassword,
+                request.ConfirmNewPassword);
+
+            var result = await _mediator.Send(command, cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return Ok(new { message = "Password changed successfully" });
+        }
+
 
 
 
