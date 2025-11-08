@@ -3,6 +3,7 @@ using ChatApp.Modules.Notifications.Application.Commands.MarkNotificationAsRead;
 using ChatApp.Modules.Notifications.Application.DTOs;
 using ChatApp.Modules.Notifications.Application.Queries.GetUnreadCount;
 using ChatApp.Modules.Notifications.Application.Queries.GetUserNotifications;
+using ChatApp.Shared.Infrastructure.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -26,8 +27,10 @@ namespace ChatApp.Modules.Notifications.Api.Controllers
         }
 
         [HttpGet]
+        [RequirePermission("Messages.Read")]
         [ProducesResponseType(typeof(List<NotificationDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> GetNotifications(
             [FromQuery] int pageSize = 50,
             [FromQuery] int skip = 0,
@@ -47,9 +50,13 @@ namespace ChatApp.Modules.Notifications.Api.Controllers
             return Ok(result.Value);
         }
 
+
+
         [HttpGet("unread-count")]
+        [RequirePermission("Messages.Read")]
         [ProducesResponseType(typeof(int), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> GetUnreadCount(CancellationToken cancellationToken)
         {
             var userId = GetCurrentUserId();
@@ -65,6 +72,8 @@ namespace ChatApp.Modules.Notifications.Api.Controllers
 
             return Ok(new { unreadCount = result.Value });
         }
+
+
 
         [HttpPost("{notificationId:guid}/read")]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -87,6 +96,8 @@ namespace ChatApp.Modules.Notifications.Api.Controllers
 
             return Ok(new { message = "Notification marked as read" });
         }
+
+
 
         [HttpPost("mark-all-read")]
         [ProducesResponseType(StatusCodes.Status200OK)]

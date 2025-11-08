@@ -9,7 +9,7 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence
     /// Handles seeding of initial data into the database
     /// This runs automatically when the application starts if the database is empty
     /// </summary>
-    public static class DatabaseSeeder
+    public static class IdentityDatabaseSeeder
     {
         /// <summary>
         /// Seeds the database with initial data if it's empty
@@ -163,6 +163,7 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence
             await context.Roles.AddRangeAsync(roles);
             logger.LogInformation("Seeded {Count} roles", roles.Length);
         }
+
 
         /// <summary>
         /// Assigns permissions to roles

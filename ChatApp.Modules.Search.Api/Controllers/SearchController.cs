@@ -1,6 +1,7 @@
 ﻿using ChatApp.Modules.Search.Application.DTOs.Requests;
 using ChatApp.Modules.Search.Application.Queries.SearchMessages;
 using ChatApp.Modules.Search.Domain.Enums;
+using ChatApp.Shared.Infrastructure.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -27,9 +28,11 @@ namespace ChatApp.Modules.Search.Api.Controllers
         }
 
         [HttpGet]
+        [RequirePermission("Messages.Read")]
         [ProducesResponseType(typeof(SearchResultsDto),StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> Search(
             [FromQuery] string q,
             [FromQuery] SearchScope scope=SearchScope.All,
@@ -67,9 +70,11 @@ namespace ChatApp.Modules.Search.Api.Controllers
 
 
         [HttpGet("channels/{channelId:guid}")]
+        [RequirePermission("Messages.Read")]
         [ProducesResponseType(typeof(SearchResultsDto),StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> SearchInChannel(
             [FromRoute] Guid conversationId,
             [FromQuery] string q,

@@ -5,6 +5,7 @@ using ChatApp.Modules.Files.Application.DTOs.Responses;
 using ChatApp.Modules.Files.Application.Interfaces;
 using ChatApp.Modules.Files.Application.Queries.GetFileById;
 using ChatApp.Modules.Files.Application.Queries.GetUserFiles;
+using ChatApp.Shared.Infrastructure.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -45,10 +46,12 @@ namespace ChatApp.Modules.Files.Api.Controllers
         /// Upload a file
         /// </summary>
         [HttpPost("upload")]
+        [RequirePermission("File.Upload")]
         [RequestSizeLimit(100 * 1024 * 1024)] // 100 MB
         [ProducesResponseType(typeof(FileUploadResult), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> UploadFile(
             [FromForm] UploadFileRequest request,
             CancellationToken cancellationToken)
@@ -76,10 +79,12 @@ namespace ChatApp.Modules.Files.Api.Controllers
         /// Upload profile picture (auto-resized to 400x400 thumbnail)
         /// </summary>
         [HttpPost("upload/profile-picture")]
+        [RequirePermission("File.Upload")]
         [RequestSizeLimit(10 * 1024 * 1024)] // 10 MB for profile pictures
         [ProducesResponseType(typeof(FileUploadResult), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> UploadProfilePicture(
             [FromForm] UploadFileRequest request,
             CancellationToken cancellationToken)
@@ -119,6 +124,7 @@ namespace ChatApp.Modules.Files.Api.Controllers
         /// Get file metadata by ID
         /// </summary>
         [HttpGet("{fileId:guid}")]
+        [RequirePermission("Messages.Read")]
         [ProducesResponseType(typeof(FileDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -150,9 +156,11 @@ namespace ChatApp.Modules.Files.Api.Controllers
         /// Download a file
         /// </summary>
         [HttpGet("{fileId:guid}/download")]
+        [RequirePermission("File.Download")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> DownloadFile(
             [FromRoute] Guid fileId,
             CancellationToken cancellationToken)
@@ -204,13 +212,17 @@ namespace ChatApp.Modules.Files.Api.Controllers
         }
 
 
+
         /// <summary>
         /// Download thumbnail (for images only)
         /// </summary>
+        /// 
         [HttpGet("{fileId:guid}/thumbnail")]
+        [RequirePermission("File.Download")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> DownloadThumbnail(
             [FromRoute] Guid fileId,
             CancellationToken cancellationToken)
@@ -248,12 +260,15 @@ namespace ChatApp.Modules.Files.Api.Controllers
         }
 
 
+
         /// <summary>
         /// Get all files uploaded by current user
         /// </summary>
         [HttpGet("my-files")]
+        [RequirePermission("Messages.Read")]
         [ProducesResponseType(typeof(List<FileDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> GetMyFiles(
             [FromQuery] int pageSize = 50,
             [FromQuery] int skip = 0,
@@ -274,10 +289,12 @@ namespace ChatApp.Modules.Files.Api.Controllers
         }
 
 
+
         /// <summary>
         /// Delete a file
         /// </summary>
         [HttpDelete("{fileId:guid}")]
+        [RequirePermission("File.Delete")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
