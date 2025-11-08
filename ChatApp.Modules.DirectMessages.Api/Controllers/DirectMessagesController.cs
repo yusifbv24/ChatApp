@@ -3,6 +3,7 @@ using ChatApp.Modules.DirectMessages.Application.Commands.DirectMessages;
 using ChatApp.Modules.DirectMessages.Application.DTOs.Request;
 using ChatApp.Modules.DirectMessages.Application.DTOs.Response;
 using ChatApp.Modules.DirectMessages.Application.Queries;
+using ChatApp.Shared.Infrastructure.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -21,14 +22,11 @@ namespace ChatApp.Modules.DirectMessages.Api.Controllers
     public class DirectMessagesController:ControllerBase
     {
         private readonly IMediator _mediator;
-        private readonly ILogger<DirectMessagesController> _logger;
 
         public DirectMessagesController(
-            IMediator mediator,
-            ILogger<DirectMessagesController> logger)
+            IMediator mediator)
         {
             _mediator = mediator;
-            _logger = logger;
         }
 
 
@@ -36,6 +34,7 @@ namespace ChatApp.Modules.DirectMessages.Api.Controllers
         /// Gets messages in a conversation with pagination (newest first by default)
         /// </summary>
         [HttpGet]
+        [RequirePermission("Messages.Read")]
         [ProducesResponseType(typeof(List<DirectMessageDto>),StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -70,6 +69,7 @@ namespace ChatApp.Modules.DirectMessages.Api.Controllers
         /// Gets unread message count for the current user in this conversation
         /// </summary>
         [HttpGet("unread-count")]
+        [RequirePermission("Messages.Read")]
         [ProducesResponseType(typeof(int),StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -93,10 +93,12 @@ namespace ChatApp.Modules.DirectMessages.Api.Controllers
 
 
 
+
         /// <summary>
         /// Sends a message in the conversation
         /// </summary>
         [HttpPost]
+        [RequirePermission("Messages.Send")]
         [ProducesResponseType(typeof(Guid),StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -129,6 +131,7 @@ namespace ChatApp.Modules.DirectMessages.Api.Controllers
         /// Edits a message (only sender can edit)
         /// </summary>
         [HttpPut("{messageId:guid}")]
+        [RequirePermission("Messages.Edit")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -159,6 +162,7 @@ namespace ChatApp.Modules.DirectMessages.Api.Controllers
         /// Deletes a message (only sender can delete)
         /// </summary>
         [HttpDelete("{messageId:guid}")]
+        [RequirePermission("Messages.Delete")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -188,6 +192,7 @@ namespace ChatApp.Modules.DirectMessages.Api.Controllers
         /// Marks a message as read (only receiver can mark as read)
         /// </summary>
         [HttpPost("{messageId:guid}/read")]
+        [RequirePermission("Messages.Read")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -218,6 +223,7 @@ namespace ChatApp.Modules.DirectMessages.Api.Controllers
         /// Adds a reaction to a message
         /// </summary>
         [HttpPost("{messageId:guid}/reactions")]
+        [RequirePermission("Messages.Read")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -246,6 +252,7 @@ namespace ChatApp.Modules.DirectMessages.Api.Controllers
         /// Removes a reaction from a message
         /// </summary>
         [HttpDelete("{messageId:guid}/reactions")]
+        [RequirePermission("Messages.Read")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]

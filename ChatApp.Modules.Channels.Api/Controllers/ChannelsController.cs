@@ -5,13 +5,11 @@ using ChatApp.Modules.Channels.Application.Queries.GetChannel;
 using ChatApp.Modules.Channels.Application.Queries.GetPublicChannels;
 using ChatApp.Modules.Channels.Application.Queries.GetUserChannels;
 using ChatApp.Modules.Channels.Application.Queries.SearchChannels;
-using ChatApp.Modules.Channels.Domain.Enums;
 using ChatApp.Shared.Infrastructure.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using System.Security.Claims;
 
 namespace ChatApp.Modules.Channels.Api.Controllers
@@ -25,14 +23,11 @@ namespace ChatApp.Modules.Channels.Api.Controllers
     public class ChannelsController : ControllerBase
     {
         private readonly IMediator _mediator;
-        private readonly ILogger<ChannelsController> _logger;
 
         public ChannelsController(
-            IMediator mediator,
-            ILogger<ChannelsController> logger)
+            IMediator mediator)
         {
             _mediator = mediator;
-            _logger = logger;
         }
 
 

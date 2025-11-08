@@ -2,6 +2,7 @@
 using ChatApp.Modules.DirectMessages.Application.DTOs.Request;
 using ChatApp.Modules.DirectMessages.Application.DTOs.Response;
 using ChatApp.Modules.DirectMessages.Application.Queries;
+using ChatApp.Shared.Infrastructure.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -17,14 +18,10 @@ namespace ChatApp.Modules.DirectMessages.Api.Controllers
     public class DirectConversationsController:ControllerBase
     {
         private readonly IMediator _mediator;
-        private readonly ILogger<DirectConversationsController> _logger;
-
         public DirectConversationsController(
-            IMediator medator,
-            ILogger<DirectConversationsController> logger)
+            IMediator medator)
         {
             _mediator = medator;
-            _logger = logger;
         }
 
 
@@ -33,8 +30,10 @@ namespace ChatApp.Modules.DirectMessages.Api.Controllers
         /// Gets all conversations for the current user
         /// </summary>
         [HttpGet]
+        [RequirePermission("Messages.Read")]
         [ProducesResponseType(typeof(List<DirectConversationDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> GetConversations(CancellationToken cancellationToken)
         {
             var userId = GetCurrentUserId();
@@ -57,9 +56,11 @@ namespace ChatApp.Modules.DirectMessages.Api.Controllers
         /// Starts a new conversation with another user
         /// </summary>
         [HttpPost]
+        [RequirePermission("Messages.Send")]
         [ProducesResponseType(typeof(Guid),StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> StartConversation(
             [FromBody] StartConversationRequest request,
             CancellationToken cancellationToken)
