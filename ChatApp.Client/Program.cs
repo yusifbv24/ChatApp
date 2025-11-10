@@ -118,6 +118,8 @@ builder.Services.AddScoped<ISignalRService, SignalRService>();
 builder.Services.AddScoped<AppState>();
 builder.Services.AddScoped<UserState>();
 builder.Services.AddScoped<OnlineUsersState>();
+builder.Services.AddScoped<PresenceState>();
+builder.Services.AddScoped<ConnectionState>();
 
 // ========================================
 // UTILITY SERVICES

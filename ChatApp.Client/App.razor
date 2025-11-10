@@ -2,26 +2,7 @@
 <CascadingAuthenticationState>
     <Router AppAssembly="@typeof(App).Assembly">
         <Found Context="routeData">
-            <!--
-                AUTHORIZATION VIEW: This is where authentication/authorization happens
-                =================================================================
-                The AuthorizeRouteView component checks if the user is allowed to view the requested page.
-                It looks at [Authorize] and [RequirePermission] attributes on your pages.
-                
-                If the user is authorized, it shows the page with MainLayout as the default layout.
-                If not authorized, it redirects to the login page.
-                
-                The cascading parameter for authentication state means every component in the tree
-                can access the current user's authentication status without prop drilling.
-            -->
             <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
-                <!--
-                    NOT AUTHORIZED: User is logged in but doesn't have permission
-                    ===========================================================
-                    This happens when a user tries to access a page they don't have permission for.
-                    For example, a regular user trying to access the admin user management page.
-                    We show a friendly message instead of a blank page or error.
-                -->
                 <NotAuthorized>
                     @if (context.User.Identity?.IsAuthenticated ?? false)
                     {
@@ -51,21 +32,9 @@
                             Redirect them to login page
                             The RedirectToLogin component handles the redirect logic
                         -->
-                        <@RedirectToLogin />
+                        <RedirectToLogin />
                     }
                 </NotAuthorized>
-
-                <!--
-                    AUTHORIZING: Checking authentication status
-                    ==========================================
-                    This shows while the app is checking if the user is logged in.
-                    This usually happens very quickly (milliseconds) but we show a loading
-                    indicator to prevent a flash of blank content.
-                    
-                    We check localStorage for a JWT token and validate it.
-                    If valid, the user goes to their requested page.
-                    If invalid or missing, they go to login.
-                -->
                 <Authorizing>
                     <div class="d-flex justify-center align-center" style="height: 100vh;">
                         <MudProgressCircular Color="Color.Primary" 
@@ -74,26 +43,14 @@
                     </div>
                 </Authorizing>
             </AuthorizeRouteView>
-
             <!--
                 FOCUS ON NAVIGATION: Accessibility feature
-                ========================================
                 This handles keyboard navigation for accessibility.
                 When a page changes, screen readers announce the navigation.
                 This is important for users who rely on assistive technologies.
             -->
             <FocusOnNavigate RouteData="@routeData" Selector="h1" />
         </Found>
-
-        <!--
-            NOT FOUND: 404 Error Handling
-            =============================
-            This shows when someone navigates to a URL that doesn't exist in your app.
-            For example: /this-page-does-not-exist
-            
-            Instead of showing a browser error, we show a friendly message with
-            a way to get back to the application.
-        -->
         <NotFound>
             <PageTitle>Page Not Found</PageTitle>
             <LayoutView Layout="@typeof(MainLayout)">
@@ -115,25 +72,3 @@
         </NotFound>
     </Router>
 </CascadingAuthenticationState>
-
-<!--
-    WHY THIS STRUCTURE?
-    ===================
-    
-    1. CascadingAuthenticationState: Makes authentication state available to ALL child components
-       without having to pass it as a parameter through every level of the component tree.
-       
-    2. Router: Matches URLs to components. When you navigate to /users, it finds the Users page
-       component and renders it.
-       
-    3. AuthorizeRouteView: Combines routing with authorization. It's not enough to just find the
-       right component - we need to check if the user is allowed to see it.
-       
-    4. Error Handling: We handle three scenarios:
-       - User not authorized (either not logged in or lacking permissions)
-       - Still checking authorization (loading state)
-       - Page doesn't exist (404)
-       
-    This structure ensures that security is enforced at the routing level, so there's no way
-    for an unauthorized user to see a page they shouldn't, even if they guess the URL.
--->

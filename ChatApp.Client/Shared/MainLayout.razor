@@ -2,8 +2,13 @@
 @inject NavigationManager Navigation
 @inject IAuthenticationService AuthService
 @inject AppState AppState
+@inject ISignalRService SignalR
+@inject PresenceState PresenceState
+@inject ConnectionState ConnectionState
+@implements IAsyncDisposable
 
 <MudThemeProvider />
+<MudPopoverProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />
 
@@ -40,7 +45,25 @@
             This is how we create left-aligned and right-aligned sections in the app bar.
         -->
         <MudSpacer />
-        
+        <!-- Connection Status Indicator -->
+        @if (AppState.CurrentUser != null)
+        {
+            <MudTooltip Text="@ConnectionState.Status">
+                @if (ConnectionState.IsReconnecting)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Color="Color.Warning" Class="mr-4" />
+                }
+                else if (ConnectionState.IsConnected)
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.Circle" Color="Color.Success" Size="Size.Small" Class="mr-4" />
+                }
+                else
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.Circle" Color="Color.Error" Size="Size.Small" Class="mr-4" />
+                }
+            </MudTooltip>
+        }
+
         @if (AppState.CurrentUser != null)
         {
             <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
@@ -132,6 +155,81 @@
 @code {
     private bool _drawerOpen = true; // Drawer starts open on desktop
 
+    protected override async Task OnInitializedAsync()
+    {
+        // Start SignalR connection when app loads
+        if (AppState.CurrentUser != null)
+        {
+            try
+            {
+                await SignalR.StartAsync();
+
+                // Subscribe to presence events
+                SignalR.OnUserOnline += HandleUserOnline;
+                SignalR.OnUserOffline += HandleUserOffline;
+                SignalR.OnUserStatusChanged += HandleUserStatusChanged;
+
+                // Subscribe to connection events
+                SignalR.OnConnected += HandleConnected;
+                SignalR.OnDisconnected += HandleDisconnected;
+                SignalR.OnReconnecting += HandleReconnecting;
+                SignalR.OnReconnected += HandleReconnected;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to start SignalR: {ex.Message}");
+            }
+        }
+    }
+
+    private void HandleUserOnline(Guid userId)
+    {
+        PresenceState.SetUserOnline(userId);
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleUserOffline(Guid userId)
+    {
+        PresenceState.SetUserOffline(userId);
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleUserStatusChanged(Guid userId, string status)
+    {
+        PresenceState.UpdateUserStatus(userId, status);
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleConnected()
+    {
+        ConnectionState.IsConnected = true;
+        ConnectionState.Status = "Connected";
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleDisconnected()
+    {
+        ConnectionState.IsConnected = false;
+        ConnectionState.Status = "Disconnected";
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleReconnecting()
+    {
+        ConnectionState.IsReconnecting = true;
+        ConnectionState.Status = "Reconnecting...";
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleReconnected()
+    {
+        ConnectionState.IsConnected = true;
+        ConnectionState.IsReconnecting = false;
+        ConnectionState.Status = "Connected";
+        InvokeAsync(StateHasChanged);
+    }
+
+
     /// <summary>
     /// Toggles the drawer open/closed
     /// Blazor automatically re-renders when _drawerOpen changes
@@ -158,28 +256,21 @@
         Navigation.NavigateTo("/login");
     }
 
-    /*
-        LAYOUT vs REGULAR COMPONENT
-        ===========================
-        
-        Regular Component:
-        - Renders its own content
-        - Can be used anywhere
-        - Example: <UserCard user="@user" />
-        
-        Layout Component:
-        - Wraps other content
-        - Provides structure/chrome
-        - Uses @Body to inject content
-        - Specified in App.razor: DefaultLayout="@typeof(MainLayout)"
-        
-        RESPONSIVE BEHAVIOR
-        ==================
-        MudLayout/MudDrawer handle responsive design automatically:
-        - Desktop: Drawer always visible, wide content area
-        - Tablet: Drawer toggleable, medium content area
-        - Mobile: Drawer overlay (slides over content), hamburger menu visible
-        
-        No media queries needed - MudBlazor handles it!
-    */
+    public async ValueTask DisposeAsync()
+    {
+        // Cleanup SignalR events and connection
+        if (SignalR != null)
+        {
+            SignalR.OnUserOnline -= HandleUserOnline;
+            SignalR.OnUserOffline -= HandleUserOffline;
+            SignalR.OnUserStatusChanged -= HandleUserStatusChanged;
+            SignalR.OnConnected -= HandleConnected;
+            SignalR.OnDisconnected -= HandleDisconnected;
+            SignalR.OnReconnecting -= HandleReconnecting;
+            SignalR.OnReconnected -= HandleReconnected;
+
+            await SignalR.StopAsync();
+            await SignalR.DisposeAsync();
+        }
+    }
 }
