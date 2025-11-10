@@ -1,0 +1,55 @@
+﻿@page "/"
+@attribute [Authorize]
+@inject AppState AppState
+@inject IUserService UserService
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Dashboard - ChatApp</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <MudText Typo="Typo.h3" Class="mb-4">Dashboard</MudText>
+
+    @if (AppState.CurrentUser != null)
+    {
+        <MudGrid>
+            <MudItem xs="12" md="4">
+                <MudPaper Class="pa-4" Elevation="2">
+                    <MudText Typo="Typo.h6">Welcome, @AppState.CurrentUser.DisplayName!</MudText>
+                    <MudText Typo="Typo.body2" Class="mt-2">@AppState.CurrentUser.Email</MudText>
+                    <MudDivider Class="my-4" />
+                    <MudText Typo="Typo.caption">
+                        Member since: @AppState.CurrentUser.CreatedAtUtc.ToLocalTime().ToString("MMMM dd, yyyy")
+                    </MudText>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    }
+    else
+    {
+        <MudProgressCircular Indeterminate="true" />
+    }
+</MudContainer>
+
+@code {
+    /// <summary>
+    /// BLAZOR ATTRIBUTE: [Authorize]
+    /// =============================
+    /// This attribute requires authentication to view this page.
+    /// If user is not logged in, App.razor redirects to login page automatically.
+    ///
+    /// This is enforced by the AuthorizeRouteView in App.razor which checks
+    /// AuthenticationStateProvider before rendering the page.
+    /// </summary>
+    protected override async Task OnInitializedAsync()
+    {
+        // Load current user if not already loaded
+        if (AppState.CurrentUser == null)
+        {
+            var result = await UserService.GetCurrentUserAsync();
+            if (result.IsSuccess)
+            {
+                AppState.CurrentUser = result.Value;
+            }
+        }
+    }
+}
