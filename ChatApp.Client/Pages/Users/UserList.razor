@@ -1,0 +1,324 @@
+﻿@page "/users"
+@attribute [Authorize]
+@inject IUserService UserService
+@inject IRoleService RoleService
+@inject INotificationService Notification
+@inject NavigationManager Navigation
+@inject IDialogService DialogService
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Users - ChatApp</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.False" Class="mt-4">
+    <MudText Typo="Typo.h4" Class="mb-4">User Management</MudText>
+
+    <MudPaper Class="pa-4" Elevation="2">
+        <!-- Toolbar with search and create button -->
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+            <MudTextField @bind-Value="_searchString"
+                          Placeholder="Search users..."
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          IconSize="Size.Medium"
+                          Immediate="true"
+                          Class="mt-0"
+                          Style="max-width: 400px;" />
+
+            @if (_canCreateUsers)
+            {
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="NavigateToCreate">
+                    Create User
+                </MudButton>
+            }
+        </MudStack>
+
+        <!-- Users Table -->
+        @if (_isLoading)
+        {
+            <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mb-4" />
+        }
+
+        @if (!string.IsNullOrWhiteSpace(_errorMessage))
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-4">@_errorMessage</MudAlert>
+        }
+
+        <MudDataGrid T="UserDto"
+                     Items="@_filteredUsers"
+                     Filterable="false"
+                     SortMode="SortMode.Multiple"
+                     Loading="_isLoading"
+                     Hover="true"
+                     Dense="true">
+            <Columns>
+                <!-- Avatar Column -->
+                <PropertyColumn Property="x => x.AvatarUrl" Title="Avatar" Sortable="false" Filterable="false">
+                    <CellTemplate>
+                        @if (!string.IsNullOrWhiteSpace(context.Item.AvatarUrl))
+                        {
+                            <MudAvatar Image="@context.Item.AvatarUrl" Size="Size.Small" />
+                        }
+                        else
+                        {
+                            <MudAvatar Color="Color.Primary" Size="Size.Small">
+                                @context.Item.Initials
+                            </MudAvatar>
+                        }
+                    </CellTemplate>
+                </PropertyColumn>
+
+                <!-- Username Column -->
+                <PropertyColumn Property="x => x.Username" Title="Username" />
+
+                <!-- Display Name Column -->
+                <PropertyColumn Property="x => x.DisplayName" Title="Display Name" />
+
+                <!-- Email Column -->
+                <PropertyColumn Property="x => x.Email" Title="Email" />
+
+                <!-- Status Column -->
+                <PropertyColumn Property="x => x.IsActive" Title="Status">
+                    <CellTemplate>
+                        @if (context.Item.IsActive)
+                        {
+                            <MudChip Size="Size.Small" Color="Color.Success">Active</MudChip>
+                        }
+                        else
+                        {
+                            <MudChip Size="Size.Small" Color="Color.Default">Inactive</MudChip>
+                        }
+                    </CellTemplate>
+                </PropertyColumn>
+
+                <!-- Admin Badge Column -->
+                <PropertyColumn Property="x => x.IsAdmin" Title="Role">
+                    <CellTemplate>
+                        @if (context.Item.IsAdmin)
+                        {
+                            <MudChip Size="Size.Small" Color="Color.Error">Admin</MudChip>
+                        }
+                        else
+                        {
+                            <MudChip Size="Size.Small" Color="Color.Default">User</MudChip>
+                        }
+                    </CellTemplate>
+                </PropertyColumn>
+
+                <!-- Created Date Column -->
+                <PropertyColumn Property="x => x.CreatedAtUtc" Title="Created">
+                    <CellTemplate>
+                        @context.Item.CreatedAtUtc.ToLocalTime().ToString("MM/dd/yyyy")
+                    </CellTemplate>
+                </PropertyColumn>
+
+                <!-- Actions Column -->
+                <TemplateColumn Title="Actions" Sortable="false" Filterable="false">
+                    <CellTemplate>
+                        <MudStack Row="true" Spacing="1">
+                            <MudIconButton Icon="@Icons.Material.Filled.Visibility"
+                                           Size="Size.Small"
+                                           Color="Color.Info"
+                                           Title="View Details"
+                                           OnClick="@(() => ViewUser(context.Item.Id))" />
+
+                            @if (_canUpdateUsers)
+                            {
+                                <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                               Size="Size.Small"
+                                               Color="Color.Primary"
+                                               Title="Edit User"
+                                               OnClick="@(() => EditUser(context.Item.Id))" />
+                            }
+
+                            @if (_canDeleteUsers && !context.Item.IsAdmin)
+                            {
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                               Size="Size.Small"
+                                               Color="Color.Error"
+                                               Title="Delete User"
+                                               OnClick="@(() => DeleteUser(context.Item))" />
+                            }
+                        </MudStack>
+                    </CellTemplate>
+                </TemplateColumn>
+            </Columns>
+
+            <PagerContent>
+                <MudDataGridPager T="UserDto" />
+            </PagerContent>
+        </MudDataGrid>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    // State variables
+    private List<UserDto> _users = new();
+    private List<UserDto> _filteredUsers = new();
+    private bool _isLoading = true;
+    private string _errorMessage = string.Empty;
+    private string _searchString = string.Empty;
+
+    // Permission flags
+    private bool _canCreateUsers = false;
+    private bool _canUpdateUsers = false;
+    private bool _canDeleteUsers = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPermissions();
+        await LoadUsers();
+    }
+
+    protected override void OnParametersSet()
+    {
+        // Filter users when search string changes
+        FilterUsers();
+    }
+
+    /// <summary>
+    /// Check user permissions for UI rendering
+    /// </summary>
+    private async Task LoadPermissions()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        _canCreateUsers = user.HasClaim("permissions", Permissions.Users.Create);
+        _canUpdateUsers = user.HasClaim("permissions", Permissions.Users.Update);
+        _canDeleteUsers = user.HasClaim("permissions", Permissions.Users.Delete);
+    }
+
+    /// <summary>
+    /// Load all users from the API
+    /// </summary>
+    private async Task LoadUsers()
+    {
+        _isLoading = true;
+        _errorMessage = string.Empty;
+
+        try
+        {
+            var result = await UserService.GetUsersAsync(1, 100); // Load first 100 users
+
+            if (result.IsSuccess)
+            {
+                _users = result.Value ?? new List<UserDto>();
+                FilterUsers();
+            }
+            else
+            {
+                _errorMessage = result.Error;
+                Notification.ShowError($"Failed to load users: {result.Error}");
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Unexpected error: {ex.Message}";
+            Notification.ShowError(_errorMessage);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    /// <summary>
+    /// Filter users based on search string
+    /// Searches in username, display name, and email
+    /// </summary>
+    private void FilterUsers()
+    {
+        if (string.IsNullOrWhiteSpace(_searchString))
+        {
+            _filteredUsers = _users;
+        }
+        else
+        {
+            var search = _searchString.ToLowerInvariant();
+            _filteredUsers = _users.Where(u =>
+                u.Username.ToLowerInvariant().Contains(search) ||
+                u.DisplayName.ToLowerInvariant().Contains(search) ||
+                u.Email.ToLowerInvariant().Contains(search)
+            ).ToList();
+        }
+
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Navigate to create user page
+    /// </summary>
+    private void NavigateToCreate()
+    {
+        Navigation.NavigateTo("/users/create");
+    }
+
+    /// <summary>
+    /// View user details
+    /// </summary>
+    private void ViewUser(Guid userId)
+    {
+        Navigation.NavigateTo($"/users/{userId}");
+    }
+
+    /// <summary>
+    /// Navigate to edit user page
+    /// </summary>
+    private void EditUser(Guid userId)
+    {
+        Navigation.NavigateTo($"/users/{userId}/edit");
+    }
+
+    /// <summary>
+    /// Delete user with confirmation dialog
+    /// </summary>
+    private async Task DeleteUser(UserDto user)
+    {
+        bool? confirmed = await DialogService.ShowMessageBox(
+            "Confirm Delete",
+            $"Are you sure you want to delete user '{user.DisplayName}'? This action cannot be undone.",
+            yesText: "Delete",
+            cancelText: "Cancel"
+        );
+
+        if (confirmed == true)
+        {
+            _isLoading = true;
+
+            var result = await UserService.DeleteUserAsync(user.Id);
+
+            if (result.IsSuccess)
+            {
+                Notification.ShowSuccess($"User '{user.DisplayName}' deleted successfully");
+                _users.Remove(user);
+                FilterUsers();
+            }
+            else
+            {
+                Notification.ShowError($"Failed to delete user: {result.Error}");
+            }
+
+            _isLoading = false;
+        }
+    }
+
+    /// <summary>
+    /// Watch for search string changes and filter
+    /// This is called by Blazor when _searchString changes due to @bind-Value
+    /// </summary>
+    private string SearchString
+    {
+        get => _searchString;
+        set
+        {
+            if (_searchString != value)
+            {
+                _searchString = value;
+                FilterUsers();
+            }
+        }
+    }
+}

@@ -1,0 +1,180 @@
+﻿@page "/login"
+@inject IAuthenticationService AuthService
+@inject NavigationManager Navigation
+@inject INotificationService Notification
+
+<PageTitle>Login - ChatApp</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="d-flex align-center justify-center" Style="min-height: 100vh;">
+    <MudPaper Elevation="4" Class="pa-8" Style="width: 100%;">
+        <MudText Typo="Typo.h4" Align="Align.Center" Class="mb-4">Welcome to ChatApp</MudText>
+        <MudText Typo="Typo.body2" Align="Align.Center" Class="mb-6" Color="Color.Secondary">
+            Sign in to continue
+        </MudText>
+
+        <!--
+            MUDBLAZOR FORM COMPONENT
+            =======================
+            MudForm provides form validation and submission handling.
+            @ref captures a reference to the form so we can call Validate() programmatically.
+            @bind-IsValid two-way binds form validity to our _isFormValid variable.
+        -->
+        <MudForm @ref="_form" @bind-IsValid="_isFormValid">
+            <!--
+                TWO-WAY DATA BINDING IN BLAZOR
+                ==============================
+                @bind-Value="username" creates a two-way binding:
+                - When user types, username variable updates
+                - If code changes username, the input updates
+                
+                This is VERY different from React where you need onChange handlers!
+                Blazor's binding is automatic and bidirectional.
+                
+                Required="true" adds client-side validation
+                RequiredError shows when validation fails
+            -->
+            <MudTextField T="string" 
+                         Label="Username" 
+                         @bind-Value="username"
+                         Required="true"
+                         RequiredError="Username is required"
+                         Variant="Variant.Outlined"
+                         Margin="Margin.Dense"
+                         Class="mb-4" />
+
+            <!--
+                INPUT TYPE FOR PASSWORDS
+                =======================
+                InputType.Password masks the input (shows •••• instead of text)
+                Same two-way binding as above
+            -->
+            <MudTextField T="string"
+                         Label="Password"
+                         @bind-Value="password"
+                         InputType="InputType.Password"
+                         Required="true"
+                         RequiredError="Password is required"
+                         Variant="Variant.Outlined"
+                         Margin="Margin.Dense"
+                         Class="mb-4" />
+
+            @if (!string.IsNullOrWhiteSpace(errorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Class="mb-4">
+                    @errorMessage
+                </MudAlert>
+            }
+
+            <!--
+                EVENT HANDLING IN BLAZOR
+                =======================
+                OnClick="HandleLogin" binds the click event to our C# method
+                Disabled="!_isFormValid || isLoading" disables button when form invalid or loading
+                
+                When clicked, Blazor calls HandleLogin() which is async.
+                Blazor handles the async operation automatically - no need for useEffect!
+            -->
+            <MudButton Variant="Variant.Filled"
+                      Color="Color.Primary"
+                      FullWidth="true"
+                      Size="Size.Large"
+                      OnClick="HandleLogin"
+                      Disabled="!_isFormValid || isLoading">
+                @if (isLoading)
+                {
+                    <MudProgressCircular Class="mr-2" Size="Size.Small" Indeterminate="true" />
+                    <MudText>Signing in...</MudText>
+                }
+                else
+                {
+                    <MudText>Sign In</MudText>
+                }
+            </MudButton>
+        </MudForm>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    // Component state variables (like React useState)
+    private MudForm _form = null!; // Reference to the form component
+    private bool _isFormValid;     // Tracks if form validation passes
+    private string username = string.Empty;
+    private string password = string.Empty;
+    private string errorMessage = string.Empty;
+    private bool isLoading;
+
+    /// <summary>
+    /// BLAZOR LIFECYCLE: OnInitialized
+    /// ==============================
+    /// This runs when the component first loads (like React's useEffect with [] dependencies).
+    /// Perfect place to check if user is already logged in and redirect them.
+    /// 
+    /// Note: We use async version (OnInitializedAsync) because we're calling async services.
+    /// </summary>
+    protected override async Task OnInitializedAsync()
+    {
+        // If user is already logged in, don't show login page
+        var isAuthenticated = await AuthService.IsAuthenticatedAsync();
+        if (isAuthenticated)
+        {
+            // forceLoad: false means client-side navigation (no page reload)
+            Navigation.NavigateTo("/", forceLoad: false);
+        }
+    }
+
+    /// <summary>
+    /// ASYNC EVENT HANDLER
+    /// ==================
+    /// In Blazor, event handlers can be async! No need for promises or callbacks.
+    /// When this completes, Blazor automatically calls StateHasChanged() to re-render.
+    /// 
+    /// This is one of Blazor's biggest advantages - async/await just works naturally.
+    /// </summary>
+    private async Task HandleLogin()
+    {
+        // Clear any previous error
+        errorMessage = string.Empty;
+        
+        // Validate form (checks Required attributes on inputs)
+        await _form.Validate();
+        
+        if (!_isFormValid)
+            return;
+
+        // Show loading state
+        isLoading = true;
+        
+        // Create login request from form data
+        var request = new LoginRequest
+        {
+            Username = username,
+            Password = password
+        };
+
+        // Call authentication service (makes API call to backend)
+        var response = await AuthService.LoginAsync(request);
+
+        if (response != null)
+        {
+            // Login successful!
+            // Check if there's a return URL in query string
+            var uri = new Uri(Navigation.Uri);
+            var returnUrl = System.Web.HttpUtility.ParseQueryString(uri.Query).Get("returnUrl");
+            
+            // Navigate to return URL or dashboard
+            Navigation.NavigateTo(string.IsNullOrWhiteSpace(returnUrl) ? "/" : returnUrl);
+        }
+        else
+        {
+            // Login failed - show error
+            errorMessage = "Invalid username or password. Please try again.";
+            isLoading = false;
+            
+            // Clear password for security (username can stay for retry)
+            password = string.Empty;
+        }
+        
+        // Note: We don't set isLoading = false on success because we're navigating away.
+        // The component will unmount during navigation.
+    }
+}

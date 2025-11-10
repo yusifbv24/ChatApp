@@ -184,16 +184,16 @@ namespace ChatApp.Modules.Identity.Api.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> ChangeUserPassword(
-            [FromBody] ChangePasswordRequest request,
+            [FromRoute] Guid Id,
+            [FromBody] AdminChangePasswordRequest request,
             CancellationToken cancellationToken)
         {
             var userId = GetCurrentUserId();
             if (userId == Guid.Empty)
                 return Unauthorized();
 
-            var command = new ChangePasswordCommand(
-                request.UserId,
-                request.CurrentPassword,
+            var command = new AdminChangePasswordCommand(
+                Id,
                 request.NewPassword,
                 request.ConfirmNewPassword);
 

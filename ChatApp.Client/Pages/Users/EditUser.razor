@@ -1,0 +1,369 @@
+﻿@page "/users/{UserId:guid}/edit"
+@using ChatApp.Client.Shared.Components.Dialogs
+@attribute [Authorize]
+@inject IUserService UserService
+@inject INotificationService Notification
+@inject NavigationManager Navigation
+@inject IDialogService DialogService
+
+<PageTitle>Edit User - ChatApp</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
+    @if (_isLoading)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+    }
+    else if (_user == null)
+    {
+        <MudAlert Severity="Severity.Error">User not found</MudAlert>
+    }
+    else
+    {
+        <MudText Typo="Typo.h4" Class="mb-4">Edit User: @_user.DisplayName</MudText>
+
+        <MudPaper Class="pa-6" Elevation="2">
+            <MudForm @ref="_form" @bind-IsValid="_isFormValid">
+                <MudGrid>
+                    <!-- Username (Read-only) -->
+                    <MudItem xs="12" md="6">
+                        <MudTextField Value="@_user.Username"
+                                     Label="Username"
+                                     ReadOnly="true"
+                                     Variant="Variant.Outlined"
+                                     HelperText="Username cannot be changed" />
+                    </MudItem>
+
+                    <!-- Email -->
+                    <MudItem xs="12" md="6">
+                        <MudTextField @bind-Value="_model.Email"
+                                     Label="Email"
+                                     Validation="@(new Func<string, string?>(ValidateEmail))"
+                                     Variant="Variant.Outlined" />
+                    </MudItem>
+
+                    <!-- Display Name -->
+                    <MudItem xs="12" md="6">
+                        <MudTextField @bind-Value="_model.DisplayName"
+                                     Label="Display Name"
+                                     Validation="@(new Func<string, string?>(ValidateDisplayName))"
+                                     Variant="Variant.Outlined" />
+                    </MudItem>
+
+                    <!-- Avatar URL -->
+                    <MudItem xs="12" md="6">
+                        <MudTextField @bind-Value="_model.AvatarUrl"
+                                     Label="Avatar URL"
+                                     Variant="Variant.Outlined"
+                                     HelperText="URL to profile picture" />
+                    </MudItem>
+
+                    <!-- Notes -->
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="_model.Notes"
+                                     Label="Notes"
+                                     Lines="3"
+                                     Variant="Variant.Outlined"
+                                     HelperText="Optional notes about the user" />
+                    </MudItem>
+
+                    <!-- Active Status -->
+                    <MudItem xs="12">
+                        <MudSwitch T="bool" @bind-Checked="_isActive"
+                                  Color="Color.Success"
+                                  Label="@(_isActive ? "Active" : "Inactive")" />
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            Inactive users cannot log in but their data is preserved
+                        </MudText>
+                    </MudItem>
+
+                    <!-- Password Management Section -->
+                    <MudItem xs="12">
+                        <MudDivider Class="my-4" />
+                        <MudText Typo="Typo.h6" Class="mb-2">Security</MudText>
+                        <MudButton Variant="Variant.Outlined"
+                                  Color="Color.Warning"
+                                  StartIcon="@Icons.Material.Filled.Lock"
+                                  OnClick="OpenResetPasswordDialog">
+                            Reset Password
+                        </MudButton>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-2">
+                            As an administrator, you can reset this user's password
+                        </MudText>
+                    </MudItem>
+
+                    <!-- Error Message -->
+                    @if (!string.IsNullOrWhiteSpace(_errorMessage))
+                    {
+                        <MudItem xs="12">
+                            <MudAlert Severity="Severity.Error">@_errorMessage</MudAlert>
+                        </MudItem>
+                    }
+
+                    <!-- Action Buttons -->
+                    <MudItem xs="12">
+                        <MudStack Row="true" Spacing="3" Class="mt-4">
+                            <MudButton Variant="Variant.Filled"
+                                      Color="Color.Primary"
+                                      Disabled="@(!_isFormValid || _isSaving)"
+                                      OnClick="HandleSubmit">
+                                @if (_isSaving)
+                                {
+                                    <MudProgressCircular Class="mr-2" Size="Size.Small" Indeterminate="true" />
+                                    <MudText>Saving...</MudText>
+                                }
+                                else
+                                {
+                                    <MudText>Save Changes</MudText>
+                                }
+                            </MudButton>
+
+                            <MudButton Variant="Variant.Outlined"
+                                      Color="Color.Default"
+                                      OnClick="Cancel"
+                                      Disabled="_isSaving">
+                                Cancel
+                            </MudButton>
+
+                            @if (!_user.IsAdmin)
+                            {
+                                <MudSpacer />
+                                <MudButton Variant="Variant.Filled"
+                                          Color="Color.Error"
+                                          OnClick="DeleteUser"
+                                          Disabled="_isSaving">
+                                    Delete User
+                                </MudButton>
+                            }
+                        </MudStack>
+                    </MudItem>
+                </MudGrid>
+            </MudForm>
+        </MudPaper>
+    }
+</MudContainer>
+
+@code {
+    [Parameter]
+    public Guid UserId { get; set; }
+
+    // Form references
+    private MudForm _form = null!;
+    private bool _isFormValid;
+
+    // Original user data
+    private UserDto? _user;
+
+    // Edit model
+    private UpdateUserRequestModel _model = new();
+    private bool _isActive = true;
+
+    // UI State
+    private bool _isLoading = true;
+    private bool _isSaving = false;
+    private string _errorMessage = string.Empty;
+
+    /// <summary>
+    /// Internal model for form binding
+    /// </summary>
+    private record UpdateUserRequestModel
+    {
+        public string? Email { get; set; }
+        public string? DisplayName { get; set; }
+        public string? AvatarUrl { get; set; }
+        public string? Notes { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUser();
+    }
+
+    /// <summary>
+    /// Load user data from API
+    /// </summary>
+    private async Task LoadUser()
+    {
+        _isLoading = true;
+        _errorMessage = string.Empty;
+
+        try
+        {
+            var result = await UserService.GetUserByIdAsync(UserId);
+
+            if (result.IsSuccess && result.Value != null)
+            {
+                _user = result.Value;
+
+                // Populate form with current values
+                _model.Email = _user.Email;
+                _model.DisplayName = _user.DisplayName;
+                _model.AvatarUrl = _user.AvatarUrl;
+                _model.Notes = _user.Notes;
+                _isActive = _user.IsActive;
+            }
+            else
+            {
+                _errorMessage = result.Error;
+                Notification.ShowError($"Failed to load user: {result.Error}");
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Unexpected error: {ex.Message}";
+            Notification.ShowError(_errorMessage);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    /// <summary>
+    /// Validate email format
+    /// </summary>
+    private string? ValidateEmail(string? email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+            return null; // Email is optional for update
+
+        if (!email.Contains("@") || !email.Contains("."))
+            return "Invalid email format";
+
+        return null;
+    }
+
+    /// <summary>
+    /// Validate display name
+    /// </summary>
+    private string? ValidateDisplayName(string? displayName)
+    {
+        if (string.IsNullOrWhiteSpace(displayName))
+            return null; // Display name is optional for update
+
+        if (displayName.Length < 2)
+            return "Display name must be at least 2 characters";
+
+        if (displayName.Length > 100)
+            return "Display name must not exceed 100 characters";
+
+        return null;
+    }
+
+    /// <summary>
+    /// Save user changes
+    /// </summary>
+    private async Task HandleSubmit()
+    {
+        _errorMessage = string.Empty;
+
+        await _form.Validate();
+
+        if (!_isFormValid)
+            return;
+
+        _isSaving = true;
+
+        try
+        {
+            // Build update request with only changed fields
+            var request = new UpdateUserRequest
+            {
+                Email = _model.Email != _user!.Email ? _model.Email : null,
+                DisplayName = _model.DisplayName != _user.DisplayName ? _model.DisplayName : null,
+                AvatarUrl = _model.AvatarUrl != _user.AvatarUrl ? _model.AvatarUrl : null,
+                Notes = _model.Notes != _user.Notes ? _model.Notes : null
+            };
+
+            var result = await UserService.UpdateUserAsync(UserId, request);
+
+            if (result.IsSuccess)
+            {
+                Notification.ShowSuccess("User updated successfully");
+                
+                // Reload user data to show updated values
+                await LoadUser();
+            }
+            else
+            {
+                _errorMessage = result.Error;
+                Notification.ShowError($"Failed to update user: {result.Error}");
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Unexpected error: {ex.Message}";
+            Notification.ShowError(_errorMessage);
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    /// <summary>
+    /// Open admin password reset dialog
+    /// THIS USES YOUR NEW ENDPOINT: POST /api/users/change-password/{userId}
+    /// </summary>
+    private async Task OpenResetPasswordDialog()
+    {
+        var parameters = new DialogParameters
+        {
+            ["UserId"] = UserId,
+            ["UserDisplayName"] = _user!.DisplayName
+        };
+
+        var options = new DialogOptions
+        {
+            CloseButton = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+
+        var dialog = await DialogService.ShowAsync<ResetPasswordDialog>("Reset Password", parameters, options);
+        var result = await dialog.Result;
+
+        if (result?.Canceled==false)
+        {
+            Notification.ShowSuccess("Password reset successfully");
+        }
+    }
+
+    /// <summary>
+    /// Delete user with confirmation
+    /// </summary>
+    private async Task DeleteUser()
+    {
+        bool? confirmed = await DialogService.ShowMessageBox(
+            "Confirm Delete",
+            $"Are you sure you want to delete user '{_user!.DisplayName}'? This action cannot be undone.",
+            yesText: "Delete",
+            cancelText: "Cancel"
+        );
+
+        if (confirmed == true)
+        {
+            _isSaving = true;
+
+            var result = await UserService.DeleteUserAsync(UserId);
+
+            if (result.IsSuccess)
+            {
+                Notification.ShowSuccess($"User '{_user.DisplayName}' deleted successfully");
+                Navigation.NavigateTo("/users");
+            }
+            else
+            {
+                Notification.ShowError($"Failed to delete user: {result.Error}");
+                _isSaving = false;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Cancel and return to user list
+    /// </summary>
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/users");
+    }
+}

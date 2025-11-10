@@ -1,0 +1,185 @@
+﻿@inherits LayoutComponentBase
+@inject NavigationManager Navigation
+@inject IAuthenticationService AuthService
+@inject AppState AppState
+
+<MudThemeProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<!--
+    MUDBLAZOR LAYOUT COMPONENT
+    =========================
+    MudLayout provides responsive drawer (sidebar) and app bar (top bar) structure.
+    This is MudBlazor's pre-built responsive layout that handles mobile/desktop automatically.
+-->
+<MudLayout>
+    <!--
+        APP BAR (Top Navigation)
+        =======================
+        MudAppBar is the top bar that stays fixed while scrolling.
+    -->
+    <MudAppBar Elevation="1">
+        <!--
+            DRAWER TOGGLE BUTTON
+            ===================
+            On mobile, the drawer is hidden by default. This button toggles it.
+            @onclick="@(() => DrawerToggle())" is Razor syntax for inline event handler.
+        -->
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" 
+                       Color="Color.Inherit" 
+                       Edge="Edge.Start" 
+                       OnClick="@DrawerToggle" />
+        
+        <MudText Typo="Typo.h6">ChatApp</MudText>
+        
+        <!--
+            MUDBLAZOR SPACER
+            ===============
+            MudSpacer pushes everything after it to the right side.
+            This is how we create left-aligned and right-aligned sections in the app bar.
+        -->
+        <MudSpacer />
+        
+        @if (AppState.CurrentUser != null)
+        {
+            <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
+                <ActivatorContent>
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        @if (!string.IsNullOrWhiteSpace(AppState.CurrentUser.AvatarUrl))
+                        {
+                            <MudAvatar Image="@AppState.CurrentUser.AvatarUrl" Size="Size.Small" />
+                        }
+                        else
+                        {
+                            <MudAvatar Color="Color.Primary" Size="Size.Small">
+                                @AppState.CurrentUser.Initials
+                            </MudAvatar>
+                        }
+                        <MudText Typo="Typo.body2">@AppState.CurrentUser.DisplayName</MudText>
+                        <MudIcon Icon="@Icons.Material.Filled.ArrowDropDown" />
+                    </MudStack>
+                </ActivatorContent>
+                <ChildContent>
+                    <MudMenuItem Icon="@Icons.Material.Filled.Person" Href="/profile">My Profile</MudMenuItem>
+                    <MudDivider />
+                    <MudMenuItem Icon="@Icons.Material.Filled.Logout" OnClick="HandleLogout">Logout</MudMenuItem>
+                </ChildContent>
+            </MudMenu>
+        }
+    </MudAppBar>
+
+    <!--
+        DRAWER (Sidebar Navigation)
+        ==========================
+        MudDrawer is the sidebar that can be toggled on mobile.
+        @bind-Open two-way binds drawer visibility to _drawerOpen variable.
+        ClipMode.Always means drawer goes under the app bar (not over it).
+    -->
+    <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
+        <!--
+            NAVIGATION MENU
+            ==============
+            We'll create a separate NavMenu component for cleaner code.
+            For now, inline navigation links.
+        -->
+        <MudNavMenu>
+            <MudNavLink Href="/" Icon="@Icons.Material.Filled.Dashboard">Dashboard</MudNavLink>
+            
+            <!--
+                AUTHORIZATION IN COMPONENTS
+                ==========================
+                <AuthorizeView> is Blazor's way to conditionally render based on permissions.
+                Only renders content inside if user is authenticated.
+            -->
+            <AuthorizeView>
+                <Authorized>
+                    @if (HasPermission(context.User, Permissions.Users.Read))
+                    {
+                        <MudNavLink Href="/users" Icon="@Icons.Material.Filled.People">Users</MudNavLink>
+                    }
+                    @if (HasPermission(context.User, Permissions.Roles.Read))
+                    {
+                        <MudNavLink Href="/roles" Icon="@Icons.Material.Filled.Security">Roles</MudNavLink>
+                    }
+                </Authorized>
+            </AuthorizeView>
+        </MudNavMenu>
+    </MudDrawer>
+
+    <!--
+        MAIN CONTENT AREA
+        ================
+        MudMainContent is where page content renders.
+        @Body is replaced with the actual page (Dashboard, Users, etc.)
+    -->
+    <MudMainContent>
+        <MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
+            <!--
+                @Body DIRECTIVE
+                ==============
+                This is THE key to Blazor layouts!
+                Whatever page you navigate to appears here.
+                
+                Navigate to /users → @Body becomes <Users /> component
+                Navigate to / → @Body becomes <Index /> component
+            -->
+            @Body
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    private bool _drawerOpen = true; // Drawer starts open on desktop
+
+    /// <summary>
+    /// Toggles the drawer open/closed
+    /// Blazor automatically re-renders when _drawerOpen changes
+    /// </summary>
+    private void DrawerToggle()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+
+    /// <summary>
+    /// Helper method to check if user has a specific permission
+    /// </summary>
+    private bool HasPermission(System.Security.Claims.ClaimsPrincipal user, string permission)
+    {
+        return user.HasClaim("permissions", permission);
+    }
+
+    /// <summary>
+    /// Logs out the user and redirects to login
+    /// </summary>
+    private async Task HandleLogout()
+    {
+        await AuthService.LogoutAsync();
+        Navigation.NavigateTo("/login");
+    }
+
+    /*
+        LAYOUT vs REGULAR COMPONENT
+        ===========================
+        
+        Regular Component:
+        - Renders its own content
+        - Can be used anywhere
+        - Example: <UserCard user="@user" />
+        
+        Layout Component:
+        - Wraps other content
+        - Provides structure/chrome
+        - Uses @Body to inject content
+        - Specified in App.razor: DefaultLayout="@typeof(MainLayout)"
+        
+        RESPONSIVE BEHAVIOR
+        ==================
+        MudLayout/MudDrawer handle responsive design automatically:
+        - Desktop: Drawer always visible, wide content area
+        - Tablet: Drawer toggleable, medium content area
+        - Mobile: Drawer overlay (slides over content), hamburger menu visible
+        
+        No media queries needed - MudBlazor handles it!
+    */
+}
