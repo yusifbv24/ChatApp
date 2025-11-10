@@ -1,7 +1,6 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="ChatApp.Api/ChatApp.Api.csproj" Id="6cbedc78-e811-4631-a224-7712ad18de2f" />
-    <Project Path="ChatApp.Client/ChatApp.Client.csproj" Id="e286e834-b53d-45cb-8954-53338af3361b" />
   </Folder>
   <Folder Name="/src/Modules/" />
   <Folder Name="/src/Modules/Channels/">
