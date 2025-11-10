@@ -1,0 +1,401 @@
+﻿@page "/roles/create"
+@page "/roles/{RoleId:guid}/edit"
+@attribute [Authorize]
+@inject IRoleService RoleService
+@inject IPermissionService PermissionService
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+<PageTitle>@(_isEdit ? "Edit" : "Create") Role - ChatApp</PageTitle>
+
+<div class="page-container">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">@(_isEdit ? "✏️ Edit" : "➕ Create") Role</h1>
+            <p class="page-subtitle">Configure access permissions</p>
+        </div>
+    </div>
+
+    <MudGrid>
+        <!-- Role Info Card -->
+        <MudItem xs="12" md="4">
+            <div class="gradient-card sticky-card">
+                <h3 class="card-title">Role Details</h3>
+
+                <MudTextField @bind-Value="_name"
+                              Label="Role Name"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              Class="mb-3" />
+
+                <MudTextField @bind-Value="_description"
+                              Label="Description"
+                              Variant="Variant.Outlined"
+                              Lines="3"
+                              Margin="Margin.Dense"
+                              Class="mb-3" />
+
+                <div class="permission-summary">
+                    <div class="summary-header">
+                        <MudIcon Icon="@Icons.Material.Filled.Security" />
+                        <span>Selected Permissions</span>
+                    </div>
+                    <div class="summary-count">
+                        @_selectedPermissions.Count / @_allPermissions.Count
+                    </div>
+                </div>
+
+                <MudStack Spacing="2" Class="mt-4">
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               FullWidth="true"
+                               Class="btn-gradient"
+                               OnClick="SaveRole"
+                               Disabled="_isSaving">
+                        @(_isSaving ? "Saving..." : _isEdit ? "Update Role" : "Create Role")
+                    </MudButton>
+
+                    <MudButton Variant="Variant.Outlined"
+                               FullWidth="true"
+                               OnClick="@(() => Navigation.NavigateTo("/roles"))">
+                        Cancel
+                    </MudButton>
+                </MudStack>
+            </div>
+        </MudItem>
+
+        <!-- Permissions Grid -->
+        <MudItem xs="12" md="8">
+            <div class="permissions-container">
+                @if (_isLoadingPermissions)
+                {
+                    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+                }
+                else
+                {
+                    @foreach (var module in _groupedPermissions)
+                    {
+                        <div class="module-section">
+                            <h3 class="module-title">
+                                <MudIcon Icon="@GetModuleIcon(module.Key)" Class="mr-2" />
+                                @module.Key Module
+                            </h3>
+
+                            <div class="permission-grid">
+                                @foreach (var permission in module.Value)
+                                {
+                                    var isSelected = _selectedPermissions.Contains(permission.Id);
+                                    <div class="permission-card @(isSelected ? "selected" : "")"
+                                         @onclick="@(() => TogglePermission(permission.Id))">
+                                        <div class="permission-icon" style="background: @GetPermissionColor(permission.Name)">
+                                            <MudIcon Icon="@GetPermissionIcon(permission.Name)" Color="Color.Surface" />
+                                        </div>
+                                        <div class="permission-content">
+                                            <h4 class="permission-name">@GetPermissionDisplayName(permission.Name)</h4>
+                                            <p class="permission-desc">@permission.Description</p>
+                                        </div>
+                                        <div class="permission-check">
+                                            @if (isSelected)
+                                            {
+                                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" />
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        </MudItem>
+    </MudGrid>
+</div>
+
+<style>
+    .gradient-card {
+        background: white;
+        border-radius: 20px;
+        padding: 24px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    }
+
+    .sticky-card {
+        position: sticky;
+        top: 24px;
+    }
+
+    .card-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin: 0 0 20px 0;
+        color: #1a202c;
+    }
+
+    .permission-summary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 16px;
+        margin-top: 16px;
+    }
+
+    .summary-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 12px;
+        opacity: 0.9;
+    }
+
+    .summary-count {
+        font-size: 2rem;
+        font-weight: 700;
+    }
+
+    .permissions-container {
+        background: white;
+        border-radius: 20px;
+        padding: 24px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    }
+
+    .module-section {
+        margin-bottom: 32px;
+    }
+
+    .module-title {
+        font-size: 1.125rem;
+        font-weight: 700;
+        color: #1a202c;
+        margin: 0 0 16px 0;
+        display: flex;
+        align-items: center;
+    }
+
+    .permission-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 16px;
+    }
+
+    .permission-card {
+        background: white;
+        border: 2px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 16px;
+        display: flex;
+        align-items: start;
+        gap: 12px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+        .permission-card:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+
+        .permission-card.selected {
+            border-color: #10b981;
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+        }
+
+    .permission-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .permission-content {
+        flex: 1;
+    }
+
+    .permission-name {
+        font-size: 0.9375rem;
+        font-weight: 600;
+        margin: 0 0 4px 0;
+        color: #1a202c;
+    }
+
+    .permission-desc {
+        font-size: 0.8125rem;
+        color: #6c757d;
+        margin: 0;
+    }
+
+    .permission-check {
+        flex-shrink: 0;
+    }
+</style>
+
+@code {
+    [Parameter] public Guid? RoleId { get; set; }
+
+    private bool _isEdit => RoleId.HasValue;
+    private string _name = "";
+    private string _description = "";
+    private HashSet<Guid> _selectedPermissions = new();
+    private List<PermissionDto> _allPermissions = new();
+    private Dictionary<string, List<PermissionDto>> _groupedPermissions = new();
+    private bool _isLoadingPermissions = true;
+    private bool _isSaving = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPermissions();
+
+        if (_isEdit && RoleId.HasValue)
+        {
+            await LoadRole();
+        }
+    }
+
+    private async Task LoadPermissions()
+    {
+        var result = await PermissionService.GetPermissionsAsync();
+        if (result.IsSuccess && result.Value != null)
+        {
+            _allPermissions = result.Value;
+            _groupedPermissions = _allPermissions
+                .GroupBy(p => p.Module)
+                .ToDictionary(g => g.Key, g => g.ToList());
+        }
+        _isLoadingPermissions = false;
+    }
+
+    private async Task LoadRole()
+    {
+        var result = await RoleService.GetRoleByIdAsync(RoleId.Value);
+        if (result.IsSuccess && result.Value != null)
+        {
+            _name = result.Value.Name;
+            _description = result.Value.Description ?? "";
+
+            // Load permissions - using PermissionIds from RoleDto
+            if (result.Value.PermissionIds != null)
+            {
+                _selectedPermissions = result.Value.PermissionIds.ToHashSet();
+            }
+        }
+    }
+
+    // Change SaveRole method:
+    private async Task SaveRole()
+    {
+        if (string.IsNullOrWhiteSpace(_name))
+        {
+            Snackbar.Add("Role name is required", Severity.Error);
+            return;
+        }
+
+        _isSaving = true;
+
+        try
+        {
+            if (_isEdit && RoleId.HasValue)
+            {
+                // Update role
+                var updateReq = new UpdateRoleRequest
+                {
+                    Name = _name,
+                    Description = _description,
+                    PermissionIds = _selectedPermissions.ToList()
+                };
+
+                var result = await RoleService.UpdateRoleAsync(RoleId.Value, updateReq);
+
+                if (result.IsSuccess)
+                {
+                    Snackbar.Add("Role updated", Severity.Success);
+                    Navigation.NavigateTo("/roles");
+                }
+                else
+                {
+                    Snackbar.Add($"Failed: {result.Error}", Severity.Error);
+                }
+            }
+            else
+            {
+                // Create role
+                var createReq = new CreateRoleRequest
+                {
+                    Name = _name,
+                    Description = _description,
+                    PermissionIds = _selectedPermissions.ToList()
+                };
+
+                var result = await RoleService.CreateRoleAsync(createReq);
+
+                if (result.IsSuccess)
+                {
+                    Snackbar.Add("Role created", Severity.Success);
+                    Navigation.NavigateTo("/roles");
+                }
+                else
+                {
+                    Snackbar.Add($"Failed: {result.Error}", Severity.Error);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private void TogglePermission(Guid permissionId)
+    {
+        if (_selectedPermissions.Contains(permissionId))
+            _selectedPermissions.Remove(permissionId);
+        else
+            _selectedPermissions.Add(permissionId);
+    }
+
+
+    private string GetModuleIcon(string module)
+    {
+        if (module == "Identity") return Icons.Material.Filled.Person;
+        if (module == "Messaging" || module == "Messages") return Icons.Material.Filled.Message;
+        if (module == "Files") return Icons.Material.Filled.Folder;
+        if (module == "Channels") return Icons.Material.Filled.Tag;
+        return Icons.Material.Filled.Extension;
+    }
+
+    private string GetPermissionIcon(string name)
+    {
+        var lower = name.ToLower();
+        if (lower.Contains("create")) return Icons.Material.Filled.Add;
+        if (lower.Contains("read")) return Icons.Material.Filled.Visibility;
+        if (lower.Contains("update") || lower.Contains("edit")) return Icons.Material.Filled.Edit;
+        if (lower.Contains("delete")) return Icons.Material.Filled.Delete;
+        if (lower.Contains("send")) return Icons.Material.Filled.Send;
+        if (lower.Contains("upload")) return Icons.Material.Filled.Upload;
+        if (lower.Contains("download")) return Icons.Material.Filled.Download;
+        return Icons.Material.Filled.Check;
+    }
+
+    private string GetPermissionColor(string name)
+    {
+        var lower = name.ToLower();
+        if (lower.Contains("create")) return "linear-gradient(135deg, #10b981 0%, #059669 100%)";
+        if (lower.Contains("read")) return "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)";
+        if (lower.Contains("update") || lower.Contains("edit")) return "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)";
+        if (lower.Contains("delete")) return "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)";
+        return "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)";
+    }
+
+    private string GetPermissionDisplayName(string name)
+    {
+        var parts = name.Split('.');
+        return parts.Length > 1 ? parts[1] : name;
+    }
+}
