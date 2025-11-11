@@ -32,6 +32,9 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetRoles
             try
             {
                 var roles = await _unitOfWork.Roles
+                    .Include(r=>r.RolePermissions)
+                        .ThenInclude(rp=>rp.Permission)
+                    .Include(r=>r.UserRoles)
                     .AsNoTracking()
                     .ToListAsync(cancellationToken);
 
@@ -40,7 +43,15 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetRoles
                     r.Id,
                     r.Name,
                     r.Description,
-                    r.IsSystemRole
+                    r.IsSystemRole,
+                    r.RolePermissions.Select(rp=>new PermissionDto(
+                        rp.Permission.Id,
+                        rp.Permission.Name,
+                        rp.Permission.Description,
+                        rp.Permission.Module
+                    )).ToList(),
+                    r.UserRoles.Count,
+                    r.CreatedAtUtc
                 )).ToList();
 
                 return Result.Success(roleDtos);

@@ -18,7 +18,7 @@ namespace ChatApp.Modules.Identity.Infrastructure.Services
             _configuration= configuration;
         }
 
-        public string GenerateAccessToken(User user, List<string?> permissions)
+        public string GenerateAccessToken(User user, List<string>? permissions)
         {
             var jwtSettings = _configuration.GetSection("JwtSettings");
             var secret = jwtSettings["Secret"] ?? throw new InvalidOperationException("JWT Secret not configured");
@@ -38,12 +38,15 @@ namespace ChatApp.Modules.Identity.Infrastructure.Services
                 new("isAdmin",user.IsAdmin.ToString())
             };
 
-            //Add permissions as claims
-            foreach(var permission in permissions)
+            if (permissions is not null)
             {
-                if (permission != null)
+                //Add permissions as claims
+                foreach (var permission in permissions)
                 {
-                    claims.Add(new("permission", permission));
+                    if (permission != null)
+                    {
+                        claims.Add(new("permission", permission));
+                    }
                 }
             }
 

@@ -55,7 +55,10 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetUsers
                             ur.Role.Id,
                             ur.Role.Name,
                             ur.Role.Description,
-                            ur.Role.IsSystemRole
+                            ur.Role.IsSystemRole,
+                            [],
+                            0,
+                            ur.Role.CreatedAtUtc
                         )).ToList()
                     ))
                     .ToList();
