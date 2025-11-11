@@ -3,6 +3,7 @@ using ChatApp.Shared.Kernel.Common;
 using ChatApp.Shared.Kernel.Exceptions;
 using FluentValidation;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace ChatApp.Modules.Identity.Application.Commands.Users
@@ -78,7 +79,8 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
             {
                 _logger?.LogInformation("Updating user {UserId}", request.UserId);
 
-                var user = await _unitOfWork.Users.GetByIdAsync(request.UserId, cancellationToken);
+                var user = await _unitOfWork.Users
+                    .FirstOrDefaultAsync(r=>r.Id==request.UserId, cancellationToken);
 
                 if (user == null)
                     throw new NotFoundException($"User with ID {request.UserId} not found");
@@ -87,7 +89,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
                 // Check if user is trying to update email and if it's already taken by another user
                 if(!string.IsNullOrWhiteSpace(request.Email) && request.Email != user.Email)
                 {
-                    var emailExists= await _unitOfWork.Users.ExistsAsync(
+                    var emailExists= await _unitOfWork.Users.AnyAsync(
                         u => u.Email == request.Email && u.Id != request.UserId,
                         cancellationToken);
 
@@ -104,7 +106,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
                 // Check if display name is already taken by another user
                 if (!string.IsNullOrWhiteSpace(request.DisplayName) && request.DisplayName != user.DisplayName)
                 {
-                    var displayNameExists = await _unitOfWork.Users.ExistsAsync(
+                    var displayNameExists = await _unitOfWork.Users.AnyAsync(
                         u => u.DisplayName == request.DisplayName && u.Id != request.UserId,
                         cancellationToken);
 
@@ -130,7 +132,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
                     user.UpdateNotes(request.Notes);
                 }
 
-                await _unitOfWork.Users.UpdateAsync(user, cancellationToken);
+                _unitOfWork.Users.Update(user);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 _logger?.LogInformation("User {UserId} updated successfully", request.UserId);

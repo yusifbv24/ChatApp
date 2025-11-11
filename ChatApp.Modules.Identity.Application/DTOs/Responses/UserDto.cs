@@ -10,5 +10,6 @@
         Guid CreatedBy,
         bool IsActive,
         bool IsAdmin,
-        DateTime CreatedAtUtc);
+        DateTime CreatedAtUtc,
+        List<RoleDto> Roles);
 }

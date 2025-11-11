@@ -1,6 +1,7 @@
 ﻿using ChatApp.Modules.Identity.Application.Interfaces;
 using ChatApp.Shared.Kernel.Common;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace ChatApp.Modules.Identity.Application.Commands.Login
 {
@@ -25,17 +26,16 @@ namespace ChatApp.Modules.Identity.Application.Commands.Login
             CancellationToken cancellationToken)
         {
             // Find all active refresh token for this User
-            var tokens = await _unitOfWork.RefreshTokens.FindAsync(
-                rt => rt.UserId == request.UserId,
-                cancellationToken);
+            var tokens = await _unitOfWork.RefreshTokens
+                .Where(rt => rt.UserId == request.UserId)
+                .ToListAsync(cancellationToken);
 
             // Revoke each token
             foreach(var token in tokens)
             {
                 token.Revoke();
-                await _unitOfWork.RefreshTokens.UpdateAsync(token, cancellationToken);
+                _unitOfWork.RefreshTokens.Update(token);
             }
-
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             return Result.Success();
         }

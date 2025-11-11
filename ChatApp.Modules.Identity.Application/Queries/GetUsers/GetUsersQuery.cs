@@ -2,6 +2,7 @@
 using ChatApp.Modules.Identity.Application.Interfaces;
 using ChatApp.Shared.Kernel.Common;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace ChatApp.Modules.Identity.Application.Queries.GetUsers
@@ -31,12 +32,15 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetUsers
         {
             try
             {
-                var users = await _unitOfWork.Users.GetAllAsync(cancellationToken);
-
-                var userDtos = users
-                    .Skip((query.PageNumber - 1) * query.PageSize)
+                var users = await _unitOfWork.Users
+                    .Include(u=>u.UserRoles)
+                        .ThenInclude(u=>u.Role)
+                    .Skip((query.PageNumber-1)*query.PageSize)
                     .Take(query.PageSize)
-                    .Select(u => new UserDto(
+                    .AsNoTracking()
+                    .ToListAsync(cancellationToken);
+
+                var userDtos = users.Select(u => new UserDto(
                         u.Id,
                         u.Username,
                         u.Email,
@@ -46,7 +50,13 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetUsers
                         u.CreatedBy,
                         u.IsActive,
                         u.IsAdmin,
-                        u.CreatedAtUtc
+                        u.CreatedAtUtc,
+                        u.UserRoles.Select(ur=>new RoleDto(
+                            ur.Role.Id,
+                            ur.Role.Name,
+                            ur.Role.Description,
+                            ur.Role.IsSystemRole
+                        )).ToList()
                     ))
                     .ToList();
 

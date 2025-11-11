@@ -5,6 +5,7 @@ using ChatApp.Shared.Kernel.Common;
 using ChatApp.Shared.Kernel.Interfaces;
 using FluentValidation;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace ChatApp.Modules.Identity.Application.Commands.Users
@@ -104,13 +105,13 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
             try
             {
                 _logger?.LogInformation("Creating user : {Username} ", command.Username);
-                if(await _unitOfWork.Users.ExistsAsync(u=>u.Username==command.Username, cancellationToken))
+                if(await _unitOfWork.Users.AnyAsync(u=>u.Username==command.Username, cancellationToken))
                 {
                     _logger?.LogWarning("Username {Username} already exists", command.Username);
                     return Result.Failure<Guid>("Username already exists");
                 }
                 
-                if(await _unitOfWork.Users.ExistsAsync(u=>u.Email==command.Email, cancellationToken))
+                if(await _unitOfWork.Users.AnyAsync(u=>u.Email==command.Email, cancellationToken))
                 {
                     _logger?.LogWarning("Email {Email} already exists", command.Email);
                     return Result.Failure<Guid>("Email already exists");

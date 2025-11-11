@@ -5,6 +5,7 @@ using ChatApp.Shared.Kernel.Common;
 using ChatApp.Shared.Kernel.Exceptions;
 using ChatApp.Shared.Kernel.Interfaces;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 
@@ -43,11 +44,15 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
             {
                 _logger?.LogInformation("Assigning role {RoleId} to user {UserId}", request.RoleId, request.UserId);
 
-                var user = await _unitOfWork.Users.GetByIdAsync(request.UserId, cancellationToken);
+                var user = await _unitOfWork.Users
+                    .FirstOrDefaultAsync(r=>r.Id==request.UserId, cancellationToken);
+
                 if (user == null)
                     throw new NotFoundException($"User with ID {request.UserId} not found");
 
-                var role = await _unitOfWork.Roles.GetByIdAsync(request.RoleId, cancellationToken);
+                var role = await _unitOfWork.Roles
+                    .FirstOrDefaultAsync(r=>r.Id==request.RoleId, cancellationToken);
+
                 if (role == null)
                     throw new NotFoundException($"Role with ID {request.RoleId} not found");
 

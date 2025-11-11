@@ -6,6 +6,7 @@ using ChatApp.Shared.Kernel.Exceptions;
 using ChatApp.Shared.Kernel.Interfaces;
 using FluentValidation;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace ChatApp.Modules.Identity.Application.Commands.Users
@@ -66,7 +67,8 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
             try
             {
                 // Get the user
-                var user = await _unitOfWork.Users.GetByIdAsync(request.UserId, cancellationToken);
+                var user = await _unitOfWork.Users
+                    .FirstOrDefaultAsync(r=>r.Id==request.UserId, cancellationToken);
 
                 if (user == null)
                     throw new NotFoundException($"User with ID {request.UserId} not found");
@@ -78,7 +80,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
                 user.ChangePassword(newPasswordHash);
 
                 // Save changes
-                await _unitOfWork.Users.UpdateAsync(user, cancellationToken);
+                _unitOfWork.Users.Update(user);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 // Publish password changed event for potential notifications or security logging

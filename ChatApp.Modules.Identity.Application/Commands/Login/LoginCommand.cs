@@ -4,6 +4,7 @@ using ChatApp.Modules.Identity.Domain.Services;
 using ChatApp.Shared.Kernel.Common;
 using FluentValidation;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace ChatApp.Modules.Identity.Application.Commands.Login
@@ -64,9 +65,8 @@ namespace ChatApp.Modules.Identity.Application.Commands.Login
             {
                 _logger?.LogInformation("Login attempt for username: {Username}", command.Username);
 
-                var user = await _unitOfWork.Users.GetFirstOrDefaultAsync(
-                    u => u.Username == command.Username,
-                    cancellationToken);
+                var user = await _unitOfWork.Users
+                    .FirstOrDefaultAsync(u => u.Username == command.Username,cancellationToken);
 
                 if (user == null)
                 {
@@ -87,12 +87,17 @@ namespace ChatApp.Modules.Identity.Application.Commands.Login
                 }
 
                 // Get user permissions
-                var permissions = await _unitOfWork.UserRoles.GetPermissionsByUserIdAsync(user.Id, cancellationToken);
-
-                var permissionNames = permissions.Select(p => p.Name).ToList();
+                var permissions = await _unitOfWork.UserRoles
+                    .Where(ur => ur.UserId == user.Id)
+                    .Include(ur => ur.Role)
+                        .ThenInclude(r => r.RolePermissions)
+                            .ThenInclude(rp => rp.Permission)
+                    .SelectMany(ur => ur.Role.RolePermissions.Select(rp => rp.Permission.Name))
+                    .Distinct()
+                    .ToListAsync(cancellationToken);
 
                 // Generate tokens
-                var accessToken = _tokenGenerator.GenerateAccessToken(user, permissionNames);
+                var accessToken = _tokenGenerator.GenerateAccessToken(user, permissions);
                 var refreshToken = _tokenGenerator.GenerateRefreshToken();
 
                 // Save refresh token

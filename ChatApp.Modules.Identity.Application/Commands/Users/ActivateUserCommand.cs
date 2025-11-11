@@ -2,6 +2,7 @@
 using ChatApp.Shared.Kernel.Common;
 using FluentValidation;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace ChatApp.Modules.Identity.Application.Commands.Users
@@ -40,9 +41,8 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
         {
             try
             {
-                var existingUser = await _unitOfWork.Users.GetByIdAsync(
-                    request.UserId,
-                    cancellationToken);
+                var existingUser = await _unitOfWork.Users
+                    .FirstOrDefaultAsync(r=>r.Id== request.UserId,cancellationToken);
 
                 if(existingUser == null)
                 {
@@ -55,7 +55,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
                 }
                 existingUser.Activate();
 
-                await _unitOfWork.Users.UpdateAsync(existingUser, cancellationToken);
+                _unitOfWork.Users.Update(existingUser);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 return Result.Success();

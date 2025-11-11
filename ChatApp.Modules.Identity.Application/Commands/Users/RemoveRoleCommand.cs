@@ -5,6 +5,7 @@ using ChatApp.Shared.Kernel.Exceptions;
 using ChatApp.Shared.Kernel.Interfaces;
 using FluentValidation;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace ChatApp.Modules.Identity.Application.Commands.Users
@@ -51,15 +52,19 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
         {
             _logger?.LogInformation("Removing role {RoleId} from user {UserId}", request.RoleId, request.UserId);
 
-            var user = await _unitOfWork.Users.GetByIdAsync(request.UserId, cancellationToken);
+            var user = await _unitOfWork.Users
+                .FirstOrDefaultAsync(r=>r.Id==request.UserId, cancellationToken);
+
             if (user == null)
                 throw new NotFoundException($"User with ID {request.UserId} not found");
 
-            var role=await _unitOfWork.Roles.GetByIdAsync(request.RoleId, cancellationToken);
+            var role=await _unitOfWork.Roles
+                .FirstOrDefaultAsync(r=>r.Id==request.RoleId, cancellationToken);
+
             if (role == null)
                 throw new NotFoundException($"Role with ID {request.RoleId} not found");
 
-            var userRole = await _unitOfWork.UserRoles.GetFirstOrDefaultAsync(
+            var userRole = await _unitOfWork.UserRoles.FirstOrDefaultAsync(
                 u=>u.UserId==request.UserId &&
                 u.RoleId==request.RoleId,
                 cancellationToken);
@@ -70,7 +75,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
             }
 
             user.RemoveRole(userRole.RoleId);
-            await _unitOfWork.Users.UpdateAsync(user, cancellationToken);
+            _unitOfWork.Users.Update(user);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             await _eventBus.PublishAsync(new RoleRemovedEvent(request.UserId, request.RoleId),cancellationToken);

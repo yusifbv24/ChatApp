@@ -2,6 +2,7 @@
 using ChatApp.Shared.Kernel.Common;
 using FluentValidation;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace ChatApp.Modules.Identity.Application.Commands.Roles
@@ -58,7 +59,9 @@ namespace ChatApp.Modules.Identity.Application.Commands.Roles
             {
                 _logger?.LogInformation("Updating role: {RoleName}", request.Name);
 
-                var existingRole=await _unitOfWork.Roles.GetByIdAsync(request.RoleId,cancellationToken);
+                var existingRole=await _unitOfWork.Roles
+                    .FirstOrDefaultAsync(r=>r.Id==request.RoleId,cancellationToken);
+
                 if(existingRole == null)
                 {
                     return Result.Failure("Role was not found");
@@ -66,7 +69,9 @@ namespace ChatApp.Modules.Identity.Application.Commands.Roles
 
                 if (!string.IsNullOrWhiteSpace(request.Name))
                 {
-                    var existingRoleName = await _unitOfWork.Roles.GetByNameAsync(request.Name, cancellationToken);
+                    var existingRoleName = await _unitOfWork.Roles
+                        .Where(r=>r.Name==request.Name)
+                        .ToListAsync(cancellationToken);
 
                     if(existingRoleName != null)
                     {
@@ -79,7 +84,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.Roles
                 if (!string.IsNullOrWhiteSpace(request.Description))
                     existingRole.UpdateDescription(request.Description);
 
-                await _unitOfWork.Roles.UpdateAsync(existingRole,cancellationToken);
+                _unitOfWork.Roles.Update(existingRole);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 _logger?.LogInformation("Role {RoleName} updated succesfully with ID {RoleId}", request.Name, request.RoleId);

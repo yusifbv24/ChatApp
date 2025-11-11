@@ -3,6 +3,7 @@ using ChatApp.Modules.Identity.Domain.Entities;
 using ChatApp.Shared.Kernel.Common;
 using FluentValidation;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 
@@ -54,7 +55,10 @@ namespace ChatApp.Modules.Identity.Application.Commands.Roles
             {
                 _logger?.LogInformation("Creating role: {RoleName}", request.Name);
 
-                var existingRole=await _unitOfWork.Roles.GetByNameAsync(request.Name,cancellationToken);
+                var existingRole=await _unitOfWork.Roles
+                    .Where(r=>r.Name==request.Name)
+                    .ToListAsync(cancellationToken);
+
                 if(existingRole!= null)
                 {
                     _logger?.LogWarning("Role {RoleName} already exists", request.Name);

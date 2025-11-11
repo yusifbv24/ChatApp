@@ -2,6 +2,7 @@
 using ChatApp.Modules.Identity.Application.Interfaces;
 using ChatApp.Shared.Kernel.Common;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace ChatApp.Modules.Identity.Application.Queries.GetPermissions
@@ -32,10 +33,11 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetPermissions
             try
             {
                 var permissions = string.IsNullOrWhiteSpace(request.Module)
-                    ? await _unitOfWork.Permissions.GetAllAsync(cancellationToken)
-                    : await _unitOfWork.Permissions.FindAsync(
-                        p=>p.Module==request.Module,
-                        cancellationToken);
+                    ? await _unitOfWork.Permissions.AsNoTracking().ToListAsync(cancellationToken)
+                    : await _unitOfWork.Permissions
+                        .Where(p=>p.Module==request.Module)
+                        .AsNoTracking()
+                        .ToListAsync(cancellationToken);
 
                 var permissionDtos=permissions.Select(p=>new PermissionDto
                 (

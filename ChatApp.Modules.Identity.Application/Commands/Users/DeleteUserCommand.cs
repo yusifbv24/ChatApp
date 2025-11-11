@@ -5,6 +5,7 @@ using ChatApp.Shared.Kernel.Exceptions;
 using ChatApp.Shared.Kernel.Interfaces;
 using FluentValidation;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace ChatApp.Modules.Identity.Application.Commands.Users
@@ -49,11 +50,13 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
             {
                 _logger?.LogInformation("Deleting user {UserId}", request.UserId);
 
-                var user = await _unitOfWork.Users.GetByIdAsync(request.UserId, cancellationToken);
+                var user = await _unitOfWork.Users
+                    .FirstOrDefaultAsync(r=>r.Id==request.UserId, cancellationToken);
+
                 if (user == null)
                     throw new NotFoundException($"User with ID {request.UserId} not found");
 
-                await _unitOfWork.Users.DeleteAsync(user, cancellationToken);
+                _unitOfWork.Users.Remove(user);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 await _eventBus.PublishAsync(new UserDeletedEvent(user.Id, user.Username), cancellationToken);

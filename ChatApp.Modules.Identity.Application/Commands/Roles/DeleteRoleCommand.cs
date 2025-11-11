@@ -2,6 +2,7 @@
 using ChatApp.Shared.Kernel.Common;
 using FluentValidation;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace ChatApp.Modules.Identity.Application.Commands.Roles
@@ -38,14 +39,16 @@ namespace ChatApp.Modules.Identity.Application.Commands.Roles
         {
             try
             {
-                var existingRole = await _unitOfWork.Roles.GetByIdAsync(request.RoleId, cancellationToken);
+                var existingRole = await _unitOfWork.Roles
+                    .FirstOrDefaultAsync(r => r.Id == request.RoleId, cancellationToken);
+
                 if (existingRole == null)
                 {
                     _logger?.LogWarning("Role was not found to delete");
                     return Result.Failure("Role was not found to delete");
                 }
 
-                await _unitOfWork.Roles.DeleteAsync(existingRole,cancellationToken);
+                _unitOfWork.Roles.Remove(existingRole);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 _logger?.LogInformation("Role was removed succesfully with Name {RoleName}", existingRole.Name);

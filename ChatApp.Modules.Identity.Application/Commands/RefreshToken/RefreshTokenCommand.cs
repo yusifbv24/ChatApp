@@ -3,6 +3,7 @@ using ChatApp.Modules.Identity.Application.Interfaces;
 using ChatApp.Modules.Identity.Domain.Services;
 using ChatApp.Shared.Kernel.Common;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace ChatApp.Modules.Identity.Application.Commands.RefreshToken
@@ -37,7 +38,8 @@ namespace ChatApp.Modules.Identity.Application.Commands.RefreshToken
             {
                 _logger?.LogInformation("Refresh token request received");
 
-                var refreshToken = await _unitOfWork.RefreshTokens.GetFirstOrDefaultAsync(
+                var refreshToken = await _unitOfWork.RefreshTokens
+                   .FirstOrDefaultAsync(
                     x=>x.Token==request.RefreshToken,
                     cancellationToken);
 
@@ -47,7 +49,9 @@ namespace ChatApp.Modules.Identity.Application.Commands.RefreshToken
                     return Result.Failure<RefreshTokenResponse>("Invalid or expired refresh token");
                 }
 
-                var user = await _unitOfWork.Users.GetByIdAsync(refreshToken.UserId, cancellationToken);
+                var user = await _unitOfWork.Users
+                    .FirstOrDefaultAsync(r => r.Id == refreshToken.UserId, cancellationToken);
+
                 if(user==null || !user.IsActive)
                 {
                     _logger?.LogWarning("User not found or inactive for refresh token");
@@ -55,16 +59,22 @@ namespace ChatApp.Modules.Identity.Application.Commands.RefreshToken
                 }
 
                 // Get user permissions
-                var permissions = await _unitOfWork.UserRoles.GetPermissionsByUserIdAsync(user.Id, cancellationToken);
-                var permissionNames=permissions.Select(p=>p.Name).ToList();
+                var permissions = await _unitOfWork.UserRoles
+                    .Where(ur => ur.UserId == user.Id)
+                    .Include(ur => ur.Role)
+                        .ThenInclude(r => r.RolePermissions)
+                            .ThenInclude(rp => rp.Permission)
+                    .SelectMany(ur => ur.Role.RolePermissions.Select(rp => rp.Permission.Name))
+                    .Distinct()
+                    .ToListAsync(cancellationToken);
 
                 // Generate new tokens
-                var newAccessToken = _tokenGenerator.GenerateAccessToken(user, permissionNames);
+                var newAccessToken = _tokenGenerator.GenerateAccessToken(user, permissions);
                 var newRefreshToken = _tokenGenerator.GenerateRefreshToken();
 
                 // Revoke old refresh token
                 refreshToken.Revoke();
-                await _unitOfWork.RefreshTokens.UpdateAsync(refreshToken, cancellationToken);
+                _unitOfWork.RefreshTokens.Update(refreshToken);
 
                 // Save new refresh token
                 var newRefreshTokenEntity = new Domain.Entities.RefreshToken(

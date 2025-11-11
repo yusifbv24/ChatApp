@@ -4,7 +4,7 @@ namespace ChatApp.Modules.Identity.Domain.Entities
 {
     public class Permission:Entity
     {
-        public string? Name { get; private set; }
+        public string Name { get; private set; }=string.Empty;
         public string? Description { get; private set; }
         public string? Module { get; private set;  }
 

@@ -3,6 +3,7 @@ using ChatApp.Shared.Kernel.Common;
 using ChatApp.Shared.Kernel.Exceptions;
 using FluentValidation;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace ChatApp.Modules.Identity.Application.Commands.Permisisons
@@ -48,7 +49,8 @@ namespace ChatApp.Modules.Identity.Application.Commands.Permisisons
         {
             _logger?.LogInformation("Removing permission {PermissionId} from role {RoleId}", request.PermissionId, request.RoleId);
 
-            var rolePermission = await _unitOfWork.RolePermissions.GetFirstOrDefaultAsync(
+            var rolePermission = await _unitOfWork.RolePermissions
+               .FirstOrDefaultAsync(
                 r=>r.RoleId == request.RoleId
                 && r.PermissionId == request.PermissionId,
                 cancellationToken);
@@ -56,7 +58,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.Permisisons
             if(rolePermission==null)
                 throw new NotFoundException($"Permission {request.PermissionId} with this Role {request.RoleId} not found");
 
-            await _unitOfWork.RolePermissions.DeleteAsync(rolePermission,cancellationToken);
+            _unitOfWork.RolePermissions.Remove(rolePermission);
             _logger?.LogInformation("Permission {PermissionId} removed from role {RoleId} successfully", request.PermissionId, request.RoleId);
             return Result.Success();
         }

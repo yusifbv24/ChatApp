@@ -34,6 +34,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Serilog;
 using System.Text;
+using System.Text.Json;
 
 // Configure Serilog logging
 LoggingConfiguration.ConfigureLogging();
@@ -45,6 +46,10 @@ builder.Host.UseSerilog();
 
 // Add services to the container
 builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+    })
     .AddApplicationPart(typeof(AuthController).Assembly)
     .AddApplicationPart(typeof(ChannelsController).Assembly)
     .AddApplicationPart(typeof(DirectConversationsController).Assembly)
@@ -58,7 +63,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
     {
-        policy.WithOrigins("http://localhost:5001", "http://localhost:5002","null") // Add your frontend URLs
+        policy.WithOrigins("http://localhost:3000", "http://localhost:5001","null") // Add your frontend URLs
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials(); // Required for SignalR

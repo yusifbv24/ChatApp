@@ -2,6 +2,7 @@
 using ChatApp.Modules.Identity.Application.Interfaces;
 using ChatApp.Shared.Kernel.Common;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace ChatApp.Modules.Identity.Application.Queries.GetRoles
@@ -30,7 +31,9 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetRoles
         {
             try
             {
-                var roles = await _unitOfWork.Roles.GetAllAsync(cancellationToken);
+                var roles = await _unitOfWork.Roles
+                    .AsNoTracking()
+                    .ToListAsync(cancellationToken);
 
                 var roleDtos = roles.Select(r => new RoleDto
                 (
