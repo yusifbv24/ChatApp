@@ -1,6 +1,7 @@
 using ChatApp.Blazor.Client.Features.Auth.Services;
 using ChatApp.Blazor.Client.Features.Admin.Services;
 using ChatApp.Blazor.Client.Features.Channels.Services;
+using ChatApp.Blazor.Client.Features.DirectMessages.Services;
 using ChatApp.Blazor.Client.State;
 
 namespace ChatApp.Blazor.Client.Extensions;
@@ -28,6 +29,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IChannelMessageService, ChannelMessageService>();
         services.AddScoped<IChannelMemberService, ChannelMemberService>();
 
+        // Direct Message Services
+        services.AddScoped<IDirectConversationService, DirectConversationService>();
+        services.AddScoped<IDirectMessageService, DirectMessageService>();
+
         return services;
     }
 
@@ -39,6 +44,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<AppState>();
         services.AddScoped<UserState>();
         services.AddScoped<ChannelState>();
+        services.AddScoped<DirectMessageState>();
 
         return services;
     }
