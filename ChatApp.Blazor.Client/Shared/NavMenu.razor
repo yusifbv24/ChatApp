@@ -1,0 +1,61 @@
+@inject NavigationManager Navigation
+@inject UserState UserState
+
+<MudNavMenu>
+    <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">
+        Dashboard
+    </MudNavLink>
+
+    <MudNavLink Href="/channels" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Tag">
+        Channels
+    </MudNavLink>
+
+    <MudNavLink Href="/messages" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Message">
+        Direct Messages
+    </MudNavLink>
+
+    <MudNavLink Href="/search" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Search">
+        Search
+    </MudNavLink>
+
+    <MudDivider Class="my-2" />
+
+    <MudNavLink Href="/profile" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Person">
+        My Profile
+    </MudNavLink>
+
+    <MudNavLink Href="/settings" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Settings">
+        Settings
+    </MudNavLink>
+
+    @if (UserState.IsAdmin)
+    {
+        <MudDivider Class="my-2" />
+
+        <MudNavGroup Title="Administration" Icon="@Icons.Material.Filled.AdminPanelSettings" Expanded="false">
+            <MudNavLink Href="/admin/users" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.People">
+                User Management
+            </MudNavLink>
+
+            <MudNavLink Href="/admin/roles" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Security">
+                Role Management
+            </MudNavLink>
+
+            <MudNavLink Href="/admin/permissions" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Lock">
+                Permissions
+            </MudNavLink>
+        </MudNavGroup>
+    }
+</MudNavMenu>
+
+@code {
+    protected override void OnInitialized()
+    {
+        UserState.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        UserState.OnChange -= StateHasChanged;
+    }
+}

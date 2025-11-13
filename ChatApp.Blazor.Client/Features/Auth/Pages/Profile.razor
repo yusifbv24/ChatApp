@@ -1,0 +1,301 @@
+@page "/profile"
+@attribute [Authorize]
+@inject IUserService UserService
+@inject UserState UserState
+@inject ISnackbar Snackbar
+
+<PageTitle>My Profile - ChatApp</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">
+    <MudIcon Icon="@Icons.Material.Filled.Person" Class="mr-2" />
+    My Profile
+</MudText>
+
+<MudGrid>
+    <!-- Profile Information Card -->
+    <MudItem xs="12" md="8">
+        <MudPaper Elevation="2" Class="pa-4 animate-fade-in-up">
+            <MudText Typo="Typo.h6" Class="mb-4">Profile Information</MudText>
+
+            <EditForm Model="@_profileModel" OnValidSubmit="HandleUpdateProfile">
+                <DataAnnotationsValidator />
+
+                <MudGrid>
+                    <MudItem xs="12" md="6">
+                        <MudTextField @bind-Value="_profileModel.DisplayName"
+                                      Label="Display Name"
+                                      Variant="Variant.Outlined"
+                                      Required="true"
+                                      For="@(() => _profileModel.DisplayName)"
+                                      Disabled="@_isUpdating" />
+                    </MudItem>
+
+                    <MudItem xs="12" md="6">
+                        <MudTextField @bind-Value="_profileModel.Email"
+                                      Label="Email"
+                                      Variant="Variant.Outlined"
+                                      Required="true"
+                                      For="@(() => _profileModel.Email)"
+                                      Disabled="@_isUpdating" />
+                    </MudItem>
+
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="_profileModel.AvatarUrl"
+                                      Label="Avatar URL"
+                                      Variant="Variant.Outlined"
+                                      For="@(() => _profileModel.AvatarUrl)"
+                                      Disabled="@_isUpdating" />
+                    </MudItem>
+
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="_profileModel.Notes"
+                                      Label="Notes"
+                                      Variant="Outlined"
+                                      Lines="3"
+                                      For="@(() => _profileModel.Notes)"
+                                      Disabled="@_isUpdating" />
+                    </MudItem>
+
+                    <MudItem xs="12">
+                        <MudButton ButtonType="ButtonType.Submit"
+                                   Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.Save"
+                                   Disabled="@_isUpdating">
+                            @if (_isUpdating)
+                            {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                                <span class="ml-2">Updating...</span>
+                            }
+                            else
+                            {
+                                <span>Update Profile</span>
+                            }
+                        </MudButton>
+                    </MudItem>
+                </MudGrid>
+            </EditForm>
+        </MudPaper>
+
+        <!-- Change Password Card -->
+        <MudPaper Elevation="2" Class="pa-4 mt-4 animate-fade-in-up delay-100">
+            <MudText Typo="Typo.h6" Class="mb-4">Change Password</MudText>
+
+            <EditForm Model="@_passwordModel" OnValidSubmit="HandleChangePassword">
+                <DataAnnotationsValidator />
+
+                <MudGrid>
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="_passwordModel.CurrentPassword"
+                                      Label="Current Password"
+                                      Variant="Variant.Outlined"
+                                      InputType="InputType.Password"
+                                      Required="true"
+                                      For="@(() => _passwordModel.CurrentPassword)"
+                                      Disabled="@_isChangingPassword" />
+                    </MudItem>
+
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="_passwordModel.NewPassword"
+                                      Label="New Password"
+                                      Variant="Variant.Outlined"
+                                      InputType="InputType.Password"
+                                      Required="true"
+                                      For="@(() => _passwordModel.NewPassword)"
+                                      Disabled="@_isChangingPassword" />
+                    </MudItem>
+
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="_passwordModel.ConfirmNewPassword"
+                                      Label="Confirm New Password"
+                                      Variant="Variant.Outlined"
+                                      InputType="InputType.Password"
+                                      Required="true"
+                                      For="@(() => _passwordModel.ConfirmNewPassword)"
+                                      Disabled="@_isChangingPassword" />
+                    </MudItem>
+
+                    <MudItem xs="12">
+                        <MudButton ButtonType="ButtonType.Submit"
+                                   Variant="Variant.Filled"
+                                   Color="Color.Warning"
+                                   StartIcon="@Icons.Material.Filled.Lock"
+                                   Disabled="@_isChangingPassword">
+                            @if (_isChangingPassword)
+                            {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                                <span class="ml-2">Changing...</span>
+                            }
+                            else
+                            {
+                                <span>Change Password</span>
+                            }
+                        </MudButton>
+                    </MudItem>
+                </MudGrid>
+            </EditForm>
+        </MudPaper>
+    </MudItem>
+
+    <!-- Profile Overview Card -->
+    <MudItem xs="12" md="4">
+        <MudPaper Elevation="2" Class="pa-4 animate-fade-in-up delay-200">
+            <MudStack AlignItems="AlignItems.Center" Spacing="3">
+                @if (!string.IsNullOrEmpty(_currentUser?.AvatarUrl))
+                {
+                    <MudAvatar Image="@_currentUser.AvatarUrl" Size="Size.Large" Style="width: 120px; height: 120px;" />
+                }
+                else
+                {
+                    <MudAvatar Color="Color.Primary" Size="Size.Large" Style="width: 120px; height: 120px; font-size: 3rem;">
+                        @GetInitials(_currentUser?.DisplayName)
+                    </MudAvatar>
+                }
+
+                <MudStack AlignItems="AlignItems.Center" Spacing="1">
+                    <MudText Typo="Typo.h5">@_currentUser?.DisplayName</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">@@@_currentUser?.Username</MudText>
+                    @if (_currentUser?.IsAdmin == true)
+                    {
+                        <MudChip Color="Color.Error" Size="Size.Small" Icon="@Icons.Material.Filled.AdminPanelSettings">
+                            Administrator
+                        </MudChip>
+                    }
+                </MudStack>
+
+                <MudDivider />
+
+                <MudStack Spacing="2" Style="width: 100%;">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Email</MudText>
+                        <MudText Typo="Typo.body2">@_currentUser?.Email</MudText>
+                    </MudStack>
+
+                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Status</MudText>
+                        <MudChip Color="@(_currentUser?.IsActive == true ? Color.Success : Color.Default)" Size="Size.Small">
+                            @(_currentUser?.IsActive == true ? "Active" : "Inactive")
+                        </MudChip>
+                    </MudStack>
+
+                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Member Since</MudText>
+                        <MudText Typo="Typo.body2">@_currentUser?.CreatedAtUtc.ToString("MMM dd, yyyy")</MudText>
+                    </MudStack>
+
+                    @if (_currentUser?.Roles?.Any() == true)
+                    {
+                        <MudDivider />
+                        <MudText Typo="Typo.subtitle2">Roles</MudText>
+                        <MudStack Spacing="1">
+                            @foreach (var role in _currentUser.Roles)
+                            {
+                                <MudChip Size="Size.Small" Color="Color.Primary">@role.Name</MudChip>
+                            }
+                        </MudStack>
+                    }
+                </MudStack>
+            </MudStack>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+@code {
+    private UserDto? _currentUser;
+    private UpdateUserRequest _profileModel = new();
+    private ChangePasswordRequest _passwordModel = new();
+    private bool _isUpdating;
+    private bool _isChangingPassword;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUserProfile();
+    }
+
+    private async Task LoadUserProfile()
+    {
+        var result = await UserService.GetCurrentUserAsync();
+
+        if (result.IsSuccess && result.Value != null)
+        {
+            _currentUser = result.Value;
+            UserState.CurrentUser = _currentUser;
+
+            // Populate form
+            _profileModel = new UpdateUserRequest
+            {
+                Email = _currentUser.Email,
+                DisplayName = _currentUser.DisplayName,
+                AvatarUrl = _currentUser.AvatarUrl,
+                Notes = _currentUser.Notes
+            };
+        }
+        else
+        {
+            Snackbar.Add("Failed to load profile", Severity.Error);
+        }
+    }
+
+    private async Task HandleUpdateProfile()
+    {
+        _isUpdating = true;
+
+        try
+        {
+            var result = await UserService.UpdateCurrentUserAsync(_profileModel);
+
+            if (result.IsSuccess)
+            {
+                Snackbar.Add("Profile updated successfully!", Severity.Success);
+                await LoadUserProfile();
+            }
+            else
+            {
+                Snackbar.Add(result.Error ?? "Failed to update profile", Severity.Error);
+            }
+        }
+        finally
+        {
+            _isUpdating = false;
+        }
+    }
+
+    private async Task HandleChangePassword()
+    {
+        _isChangingPassword = true;
+
+        try
+        {
+            _passwordModel.UserId = UserState.UserId ?? Guid.Empty;
+            var result = await UserService.ChangePasswordAsync(_passwordModel);
+
+            if (result.IsSuccess)
+            {
+                Snackbar.Add("Password changed successfully!", Severity.Success);
+
+                // Clear form
+                _passwordModel = new ChangePasswordRequest();
+            }
+            else
+            {
+                Snackbar.Add(result.Error ?? "Failed to change password", Severity.Error);
+            }
+        }
+        finally
+        {
+            _isChangingPassword = false;
+        }
+    }
+
+    private string GetInitials(string? name)
+    {
+        if (string.IsNullOrEmpty(name)) return "U";
+
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length >= 2)
+        {
+            return $"{parts[0][0]}{parts[1][0]}".ToUpper();
+        }
+        return name[0].ToString().ToUpper();
+    }
+}
