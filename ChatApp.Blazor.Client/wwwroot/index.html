@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>ChatApp - Modern Team Communication</title>
+    <base href="/" />
+
+    <!-- MudBlazor CSS -->
+    <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet" />
+    <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
+
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+
+    <!-- Custom CSS -->
+    <link href="css/app.css" rel="stylesheet" />
+    <link href="css/animations.css" rel="stylesheet" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="favicon.png" />
+</head>
+
+<body>
+    <div id="app">
+        <div class="loading-screen">
+            <div class="loading-content">
+                <svg class="loading-logo" width="100" height="100" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="40" stroke="#6366F1" stroke-width="4" fill="none"
+                            stroke-dasharray="251" stroke-dashoffset="0" class="circle-animation" />
+                    <path d="M30 50 Q40 30, 50 50 T70 50" stroke="#6366F1" stroke-width="3" fill="none" class="wave-animation" />
+                </svg>
+                <h1 class="loading-title">ChatApp</h1>
+                <p class="loading-text">Loading your workspace...</p>
+                <div class="loading-spinner"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="blazor-error-ui">
+        <div class="error-content">
+            <span class="error-icon">⚠️</span>
+            <span class="error-text">An error has occurred. This application may no longer respond until reloaded.</span>
+            <a href="" class="reload-link">Reload</a>
+            <span class="dismiss-link">🗙</span>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="_framework/blazor.webassembly.js"></script>
+    <script src="_content/MudBlazor/MudBlazor.min.js"></script>
+    <script src="js/app.js"></script>
+</body>
+
+</html>
