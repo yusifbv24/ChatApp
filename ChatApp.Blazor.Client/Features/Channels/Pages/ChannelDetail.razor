@@ -1,0 +1,315 @@
+@page "/channels/{ChannelId:guid}"
+@inject IChannelService ChannelService
+@inject IChannelMemberService MemberService
+@inject ChannelState ChannelState
+@inject NavigationManager Navigation
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject UserState UserState
+@attribute [Authorize]
+
+<PageTitle>@(_channel?.Name ?? "Channel")</PageTitle>
+
+@if (_isLoading)
+{
+    <div class="d-flex justify-center align-center" style="height: 100vh;">
+        <MudProgressCircular Indeterminate="true" Size="Size.Large" />
+    </div>
+}
+else if (_channel == null)
+{
+    <div class="d-flex flex-column justify-center align-center" style="height: 100vh;">
+        <MudIcon Icon="@Icons.Material.Outlined.Error" Size="Size.Large" Color="Color.Error" Class="mb-4" />
+        <MudText Typo="Typo.H5" Color="Color.Error">Channel not found</MudText>
+        <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => Navigation.NavigateTo("/channels"))" Class="mt-4">
+            Back to Channels
+        </MudButton>
+    </div>
+}
+else
+{
+    <div class="channel-detail-page">
+        <!-- Channel Header -->
+        <MudPaper Elevation="2" Class="channel-header pa-3" Style="animation: slideInDown 0.3s ease-out;">
+            <div class="d-flex align-items-center gap-3">
+                <MudIconButton Icon="@Icons.Material.Filled.ArrowBack"
+                               OnClick="@(() => Navigation.NavigateTo("/channels"))"
+                               Size="Size.Medium" />
+
+                <MudIcon Icon="@(_channel.Type == ChannelType.Public ? Icons.Material.Filled.Public : Icons.Material.Filled.Lock)"
+                         Color="@(_channel.Type == ChannelType.Public ? Color.Success : Color.Warning)" />
+
+                <div class="flex-grow-1">
+                    <MudText Typo="Typo.H6" Class="font-weight-bold">
+                        @_channel.Name
+                    </MudText>
+                    @if (!string.IsNullOrWhiteSpace(_channel.Description))
+                    {
+                        <MudText Typo="Typo.Caption" Color="Color.Secondary">
+                            @_channel.Description
+                        </MudText>
+                    }
+                </div>
+
+                <MudChip Size="Size.Small" Color="Color.Default" Icon="@Icons.Material.Filled.People">
+                    @_channel.Members.Count members
+                </MudChip>
+
+                @if (_canManage)
+                {
+                    <MudMenu Icon="@Icons.Material.Filled.Settings" Size="Size.Medium" Dense="true">
+                        <MudMenuItem Icon="@Icons.Material.Filled.Edit" OnClick="OpenEditDialog">
+                            Edit Channel
+                        </MudMenuItem>
+                        @if (!_channel.IsArchived)
+                        {
+                            <MudMenuItem Icon="@Icons.Material.Filled.Archive" OnClick="ArchiveChannel">
+                                Archive Channel
+                            </MudMenuItem>
+                        }
+                        else
+                        {
+                            <MudMenuItem Icon="@Icons.Material.Filled.Unarchive" OnClick="UnarchiveChannel">
+                                Unarchive Channel
+                            </MudMenuItem>
+                        }
+                        <MudDivider />
+                        <MudMenuItem Icon="@Icons.Material.Filled.Delete"
+                                     OnClick="DeleteChannel"
+                                     Class="text-error">
+                            Delete Channel
+                        </MudMenuItem>
+                    </MudMenu>
+                }
+
+                <MudIconButton Icon="@(_showMemberList ? Icons.Material.Filled.PeopleAlt : Icons.Material.Outlined.PeopleAlt)"
+                               Color="@(_showMemberList ? Color.Primary : Color.Default)"
+                               OnClick="@(() => _showMemberList = !_showMemberList)"
+                               Size="Size.Medium"
+                               Title="Toggle member list" />
+            </div>
+        </MudPaper>
+
+        <!-- Main Content Area -->
+        <div class="channel-content">
+            <!-- Messages Area -->
+            <div class="messages-area">
+                <MessageList @ref="_messageList"
+                            ChannelId="@ChannelId"
+                            CanManageMessages="@_canManage" />
+
+                <!-- Message Composer -->
+                <div class="composer-area">
+                    <MessageComposer ChannelId="@ChannelId"
+                                    OnMessageSent="OnMessageSent" />
+                </div>
+            </div>
+
+            <!-- Member Sidebar -->
+            @if (_showMemberList)
+            {
+                <div class="member-sidebar" style="animation: slideInRight 0.3s ease-out;">
+                    <MudPaper Elevation="2" Class="member-sidebar-content">
+                        <MemberList ChannelId="@ChannelId"
+                                   CanManageMembers="@_canManage"
+                                   IsOwner="@_isOwner" />
+                    </MudPaper>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+<style>
+    .channel-detail-page {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        overflow: hidden;
+    }
+
+    .channel-header {
+        flex-shrink: 0;
+        z-index: 10;
+    }
+
+    .channel-content {
+        flex: 1;
+        display: flex;
+        overflow: hidden;
+    }
+
+    .messages-area {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .composer-area {
+        flex-shrink: 0;
+        padding: 16px;
+        background-color: var(--mud-palette-background);
+        border-top: 1px solid var(--mud-palette-divider);
+    }
+
+    .member-sidebar {
+        width: 300px;
+        flex-shrink: 0;
+        border-left: 1px solid var(--mud-palette-divider);
+    }
+
+    .member-sidebar-content {
+        height: 100%;
+        overflow-y: auto;
+    }
+
+    @@media (max-width: 960px) {
+        .member-sidebar {
+            position: absolute;
+            right: 0;
+            top: 64px;
+            bottom: 0;
+            z-index: 5;
+            box-shadow: -4px 0 8px rgba(0, 0, 0, 0.1);
+        }
+    }
+</style>
+
+@code {
+    [Parameter] public Guid ChannelId { get; set; }
+
+    private ChannelDetailsDto? _channel;
+    private MessageList? _messageList;
+    private bool _isLoading = false;
+    private bool _showMemberList = true;
+    private bool _canManage = false;
+    private bool _isOwner = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadChannel();
+        ChannelState.OnChange += OnChannelStateChanged;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_channel?.Id != ChannelId)
+        {
+            await LoadChannel();
+        }
+    }
+
+    public void Dispose()
+    {
+        ChannelState.OnChange -= OnChannelStateChanged;
+    }
+
+    private async Task LoadChannel()
+    {
+        _isLoading = true;
+
+        var result = await ChannelService.GetChannelAsync(ChannelId);
+
+        _isLoading = false;
+
+        if (result.IsSuccess && result.Data != null)
+        {
+            _channel = result.Data;
+            ChannelState.SetCurrentChannel(_channel);
+
+            // Check permissions
+            var currentMember = _channel.Members.FirstOrDefault(m => m.UserId == UserState.CurrentUser?.Id);
+            if (currentMember != null)
+            {
+                _isOwner = currentMember.Role == MemberRole.Owner;
+                _canManage = _isOwner || currentMember.Role == MemberRole.Admin;
+            }
+        }
+        else
+        {
+            Snackbar.Add(result.Error ?? "Failed to load channel", Severity.Error);
+        }
+    }
+
+    private async Task OnMessageSent()
+    {
+        if (_messageList != null)
+        {
+            await _messageList.RefreshMessages();
+        }
+    }
+
+    private void OnChannelStateChanged()
+    {
+        StateHasChanged();
+    }
+
+    private async Task OpenEditDialog()
+    {
+        if (_channel == null) return;
+
+        var parameters = new DialogParameters<EditChannelDialog>
+        {
+            { x => x.Channel, _channel }
+        };
+
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<EditChannelDialog>("Edit Channel", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadChannel();
+        }
+    }
+
+    private async Task ArchiveChannel()
+    {
+        if (_channel == null) return;
+
+        var confirmed = await DialogService.ShowMessageBox(
+            "Archive Channel",
+            $"Are you sure you want to archive '{_channel.Name}'? Members will no longer be able to send messages.",
+            yesText: "Archive", cancelText: "Cancel");
+
+        if (confirmed == true)
+        {
+            // Note: Archive endpoint would need to be added to the API
+            Snackbar.Add("Archive functionality - coming soon", Severity.Info);
+        }
+    }
+
+    private async Task UnarchiveChannel()
+    {
+        if (_channel == null) return;
+
+        // Note: Unarchive endpoint would need to be added to the API
+        Snackbar.Add("Unarchive functionality - coming soon", Severity.Info);
+    }
+
+    private async Task DeleteChannel()
+    {
+        if (_channel == null) return;
+
+        var confirmed = await DialogService.ShowMessageBox(
+            "Delete Channel",
+            $"Are you sure you want to delete '{_channel.Name}'? This action cannot be undone.",
+            yesText: "Delete", cancelText: "Cancel");
+
+        if (confirmed == true)
+        {
+            var result = await ChannelService.DeleteChannelAsync(ChannelId);
+
+            if (result.IsSuccess)
+            {
+                Snackbar.Add("Channel deleted", Severity.Success);
+                Navigation.NavigateTo("/channels");
+            }
+            else
+            {
+                Snackbar.Add(result.Error ?? "Failed to delete channel", Severity.Error);
+            }
+        }
+    }
+}
