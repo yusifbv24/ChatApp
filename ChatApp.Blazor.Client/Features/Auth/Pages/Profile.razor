@@ -1,0 +1,9 @@
+﻿@page "/profile"
+@attribute [Authorize]
+@inject IUserService UserService
+@inject UserState UserState
+@inject ISnackbar Snackbar
+
+<PageTitle>My Profile - ChatApp</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4"></MudText>

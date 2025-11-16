@@ -1,8 +1,10 @@
 using Blazored.LocalStorage;
 using Blazored.SessionStorage;
 using ChatApp.Blazor.Client;
+using ChatApp.Blazor.Client.Extensions;
 using ChatApp.Blazor.Client.Infrastructure.Auth;
 using ChatApp.Blazor.Client.Infrastructure.Http;
+using ChatApp.Blazor.Client.Infrastructure.SignalR;
 using ChatApp.Blazor.Client.Infrastructure.Storage;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
@@ -66,6 +68,6 @@ builder.Services.AddScoped<ISignalRService, SignalRService>();
 builder.Services.AddFeatureServices();
 
 // State Management
-builder.Services.AddStateManagement();
+builder.Services.AddStateManagementServices();
 
 await builder.Build().RunAsync();
