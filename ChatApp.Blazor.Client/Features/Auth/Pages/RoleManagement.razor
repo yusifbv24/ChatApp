@@ -1,0 +1,291 @@
+﻿@page "/admin/roles"
+@attribute [Authorize]
+@inject IRoleService RoleService
+@inject IPermissionService PermissionService
+@inject UserState UserState
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Role Management - ChatApp</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">
+    <MudIcon Icon="@Icons.Material.Filled.Security" Class="mr-2" />
+    Role Management
+</MudText>
+
+@if (!UserState.HasPermission("Roles.Read"))
+{
+    <MudAlert Severity="Severity.Warning">You don't have permission to view roles. </MudAlert>
+}
+else
+{
+    <MudGrid>
+        <!--Roles List-->
+        <MudItem xs="12" md="6">
+            <MudPaper Elevation="2" Class="pa-4 animate-fade-in-up">
+                <MudStack Raw="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+                    <MudText Typo="Typo.h6">Roles</MudText>
+
+                    @if (UserState.HasPermission("Roles.Create"))
+                    {
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.Add"
+                                   OnClick="OpenCreateRoleDialog"
+                                   Size="Size.Small">
+                               Create Role
+                        </MudButton>
+                    }
+                </MudStack>
+
+                @if (_isLoading)
+                {
+                    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+                }
+                else
+                {
+                    <MudList T="RoleDto" Clickable="true">
+                        @foreach(var role in _roles)
+                        {
+                            <MudListItem OnClick="@(()=>SelectRole(role))"
+                                Class="@(_selectedRole?.Id==role.Id ? "mud-primary-text mud-background-primary" :"")">
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                        <MudStack Spacing="0">
+                                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                                <MudIcon Icon="@Icons.Material.Filled.Security"  Size="Size.Small"/>
+                                                <MudText Typo="Typo.body1"><b>@role.Name</b></MudText>
+                                                @if(role.IsSystemRole)
+                                                {
+                                                    <MudChip Size="Size.Small" Color="Color.Info">System</MudChip>
+                                                }
+                                            </MudStack>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="ml-7">
+                                                @role.Description
+                                            </MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="ml-7">
+                                                @role.Permissions.Count permissions • @role.UserCount users
+                                            </MudText>
+                                        </MudStack>
+
+                                    @if(!role.IsSystemRole && (UserState.HasPermission("Roles.Update") || UserState.HasPermission("Roles.Delete")))
+                                    {
+                                        <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small">
+                                            @if(UserState.HasPermission("Roles.Update"))
+                                            {
+                                                <MudMenuItem Icon="@Icons.Material.Filled.Edit" OnClick="@(()=>OpenEditRoleDialog(role))">
+                                                    Edit
+                                                </MudMenuItem>
+                                            }
+                                            @if(UserState.HasPermission("Roles.Delete"))
+                                            {
+                                                <MudDivider />
+                                                <MudMenuItem Icon="@Icons.Material.Filled.Delete" OnClick="@(()=>DeleteRole(role.Id))" >
+                                                    <MudText Color="Color.Error">Delete</MudText>
+                                                </MudMenuItem>
+                                            }
+                                        </MudMenu>
+                                    }
+                                </MudStack>
+                            </MudListItem>
+                            <MudDivider />
+                        }
+                    </MudList>
+                }
+            </MudPaper>
+        </MudItem>
+
+        <!-- Role details & Permissions-->
+        <MudItem xs="12" md="6">
+            @if (_selectedRole != null)
+            {
+                <MudPaper Elevation="2" Class="pa-4 animate-fade-in-up delay-100">
+                    <MudStack Spacing="3">
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                            <MudText Typo="Typo.h6">Role Details</MudText>
+                            @if(_selectedRole.IsSystemRole)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Info">System Role (Read-Only)</MudChip>
+                            }
+                        </MudStack>
+
+                        <MudStack Spacing="2">
+                            <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Role Name</MudText>
+                                <MudText Typo="Typo.body1"><b>@_selectedRole.Name</b></MudText>
+                            </MudStack> 
+
+                            <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Description</MudText>
+                                <MudText Typo="Typo.body2">@_selectedRole.Description</MudText>
+                            </MudStack>
+
+                            <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Users</MudText>
+                                <MudText Typo="Typo.body2">@_selectedRole.UserCount</MudText>
+                            </MudStack>
+
+                            <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Created</MudText>
+                                <MudText Typo="Typo.body2">@_selectedRole.CreatedAtUtc.ToString("MMM dd, yyyy")</MudText>
+                            </MudStack>
+                        </MudStack>
+
+                        <MudDivider />
+
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                            <MudText Typo="Typo.h6">Permissions (@_selectedRole.Permissions.Count)</MudText>
+                            @if(!_selectedRole.IsSystemRole && UserState.HasPermission("Roles.Create"))
+                            {
+                                <MudButton Variant="Variant.Outlined"
+                                           Color="Color.Primary"
+                                           StartIcon="@Icons.Material.Filled.Add"
+                                           OnClick="OpenAddPermissionDialog"
+                                           Size="Size.Small">
+                                       Add Permission
+                                </MudButton>
+                            }
+                        </MudStack>
+
+                        @if (_selectedRole.Permissions.Any())
+                        {
+                            <!-- Group permissions by module -->
+                            @foreach(var module in _selectedRole.Permissions.GroupBy(p=>p.Module))
+                            {
+                                <MudStack Spacing="1">
+                                    <MudText Typo="Typo.subtitle2" Color="Color.Primary">@module.Key</MudText>
+                                    @foreach(var permission in module)
+                                    {
+                                        <MudChip T="string" Size="Size.Small"
+                                                 Color="Color.Default"
+                                                 OnClose="@(()=>RemovePermission(permission.Id))"
+                                                 CloseIcon="@(_selectedRole.IsSystemRole ? null : Icons.Material.Filled.Close)">
+                                            @permission.Name
+                                        </MudChip>
+                                    }
+                                </MudStack>
+                            }
+                        }
+                        else
+                        {
+                            <MudAlert Severity="Severity.Info">No permissions assigned to this role.</MudAlert>
+                        }
+                    </MudStack>
+                </MudPaper>
+            }
+            else
+            {
+                <MudPaper Elevation="2" Class="pa-4 d-flex align-center justify-center" Style="height: 400px;">
+                    <MudStack AlignItems="AlignItems.Center" Spacing="2">
+                        <MudIcon Icon="@Icons.Material.Filled.Security" Size="Size.Large" Color="Color.Secondary" Style="font-size: 4rem;" />
+                        <MudText Typo="Typo.h6" Color="Color.Secondary">Select a role to view details</MudText>
+                    </MudStack>
+                </MudPaper>
+            }
+        </MudItem>
+    </MudGrid>
+}
+
+@code{
+    private List<RoleDto> _roles = new();
+    private RoleDto? _selectedRole;
+    private bool _isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadRoles();
+    }
+
+    private async Task LoadRoles()
+    {
+        _isLoading = true;
+
+        try
+        {
+            var result = await RoleService.GetRolesAsync();
+
+            if(result.IsSuccess && result.Value != null)
+            {
+                _roles = result.Value;
+
+                // Auto-select first role
+                if(_roles.Any())
+                {
+                    _selectedRole = _roles.First();
+                }
+            }
+            else
+            {
+                Snackbar.Add(result.Error ?? "Failed to load roles.", Severity.Error);
+            }
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void SelectRole(RoleDto role)
+    {
+        _selectedRole = role;
+    }
+
+    private async Task OpenCreateRoleDialog()
+    {
+        Snackbar.Add("Create role dialog - Implementation needed", Severity.Info);
+    }
+
+    private async Task OpenEditRoleDialog(RoleDto role)
+    {
+        Snackbar.Add($"Edit role {role.Name} - Implementation needed", Severity.Info);
+    }
+
+    private async Task DeleteRole(Guid roleId)
+    {
+        bool? confirm = await DialogService.ShowMessageBox(
+            "Confirm Delete",
+            "Are you sure you want to delete this role? Users with this role will lose its permissions.",
+            yesText: "Delete",
+            cancelText: "Cancel");
+
+        if (confirm==true)
+        {
+            var result = await RoleService.DeleteRoleAsync(roleId);
+
+            if (result.IsSuccess)
+            {
+                Snackbar.Add("Role deleted successfully.", Severity.Success);
+                _selectedRole=null;
+                await LoadRoles();
+            }
+            else
+            {
+                Snackbar.Add(result.Error ?? "Failed to delete role.", Severity.Error);
+            }
+        }
+    }
+
+    private async Task OpenAddPermissionDialog()
+    {
+        Snackbar.Add("Add permission dialog - Implementation needed", Severity.Info);
+    }
+
+    private async Task RemovePermission(Guid permissionId)
+    {
+        if (_selectedRole == null || _selectedRole.IsSystemRole) return;
+
+        var result = await PermissionService.RemovePermissionFromRoleAsync(_selectedRole.Id, permissionId);
+
+        if (result.IsSuccess)
+        {
+            Snackbar.Add("Permission removed successfully.", Severity.Success);
+            await LoadRoles();
+
+            // Reselect the role to refresh details
+            _selectedRole = _roles.FirstOrDefault(r => r.Id == _selectedRole.Id);
+        }
+        else
+        {
+            Snackbar.Add(result.Error ?? "Failed to remove permission.", Severity.Error);
+        }
+    }
+}

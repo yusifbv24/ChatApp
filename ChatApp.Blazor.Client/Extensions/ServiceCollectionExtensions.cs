@@ -1,4 +1,8 @@
-﻿namespace ChatApp.Blazor.Client.Extensions
+﻿using ChatApp.Blazor.Client.Features.Admin.Services;
+using ChatApp.Blazor.Client.Features.Auth.Services;
+using ChatApp.Blazor.Client.State;
+
+namespace ChatApp.Blazor.Client.Extensions
 {
     /// <summary>
     /// Extension methods for service registration
