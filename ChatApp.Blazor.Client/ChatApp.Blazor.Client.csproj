@@ -32,7 +32,6 @@
     <PackageReference Include="Blazored.SessionStorage" Version="2.4.0" />
 
     <!-- System.Text.Json -->
-    <PackageReference Include="System.Text.Json" Version="8.0.0" />
 
     <!-- FluentValidation -->
     <PackageReference Include="FluentValidation" Version="11.9.0" />
