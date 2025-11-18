@@ -4,8 +4,17 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="description" content="Modern team collaboration and chat application for seamless communication" />
+    <meta name="theme-color" content="#594AE2" />
     <title>ChatApp - Modern Team Communication</title>
     <base href="/" />
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json" />
+
+    <!-- Apple Touch Icon -->
+    <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
+    <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png" />
 
     <!-- MudBlazor CSS -->
     <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet" />
@@ -48,9 +57,22 @@
     </div>
 
     <!-- Scripts -->
-    <script src="_framework/blazor.webassembly.js"></script>
+    <script src="_framework/blazor.webassembly.js" autostart="false"></script>
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
     <script src="js/app.js"></script>
+
+    <!-- Service Worker Registration -->
+    <script>
+        navigator.serviceWorker.register('service-worker.js', {
+            scope: './'
+        }).then(registration => {
+            console.log('Service Worker registered successfully:', registration.scope);
+        }).catch(error => {
+            console.log('Service Worker registration failed:', error);
+        });
+
+        Blazor.start();
+    </script>
 </body>
 
 </html>
