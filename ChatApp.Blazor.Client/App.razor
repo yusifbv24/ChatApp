@@ -1,4 +1,8 @@
-﻿<CascadingAuthenticationState>
+﻿<MudThemeProvider @ref="@_mudThemeProvider" @bind-IsDarkMode="@_isDarkMode" />
+<MudDialogProvider />
+<MudSnackbarProvider />
+<MudPopoverProvider />
+<CascadingAuthenticationState>
     <Router AppAssembly="@typeof(App).Assembly">
         <Found Context="routeData">
             <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
@@ -50,10 +54,7 @@
     </Router>
 </CascadingAuthenticationState>
 
-<MudThemeProvider @ref="@_mudThemeProvider" @bind-IsDarkMode="@_isDarkMode" />
-<MudDialogProvider />
-<MudSnackbarProvider />
-
+    
 @code{
     private MudThemeProvider? _mudThemeProvider;
     private bool _isDarkMode = false;
@@ -62,7 +63,7 @@
     {
         if(firstRender && _mudThemeProvider != null)
         {
-            _isDarkMode = await _mudThemeProvider.GetSystemPreference();
+            _isDarkMode = await _mudThemeProvider.GetSystemDarkModeAsync();
             StateHasChanged();
         }
     }
