@@ -1,8 +1,10 @@
-﻿namespace ChatApp.Blazor.Client.Models.Auth
-{
-    public record LoginResponse(
-        string AccessToken,
-        string RefreshToken,
-        int ExpiresIn
-    );
-}
+namespace ChatApp.Blazor.Client.Models.Auth;
+
+/// <summary>
+/// Response model for successful login
+/// </summary>
+public record LoginResponse(
+    string AccessToken,
+    string RefreshToken,
+    int ExpiresIn
+);

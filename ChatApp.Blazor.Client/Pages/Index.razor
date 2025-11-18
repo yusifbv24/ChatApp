@@ -1,4 +1,4 @@
-﻿@page "/"
+@page "/"
 @attribute [Authorize]
 @inject UserState UserState
 @inject NavigationManager Navigation
@@ -18,61 +18,70 @@
 
             <MudGrid>
                 <MudItem xs="12" sm="6" md="4">
-                    <MudCard Class="hover-lift transition-all cursor-pointer" @onclick="@(()=> Navigation.NavigateTo("/channels"))">
+                    <MudCard Class="hover-lift transition-all cursor-pointer" @onclick="@(() => Navigation.NavigateTo("/channels"))">
                         <MudCardContent>
                             <MudStack AlignItems="AlignItems.Center" Spacing="2">
                                 <MudIcon Icon="@Icons.Material.Filled.Tag" Color="Color.Primary" Size="Size.Large" />
                                 <MudText Typo="Typo.h6">Channels</MudText>
-                                <MudText Typo="Typo.body2" Align="Align.Center" Color="Color.Secondary">Browse and join channels</MudText>
+                                <MudText Typo="Typo.body2" Align="Align.Center" Color="Color.Secondary">
+                                    Browse and join channels
+                                </MudText>
                             </MudStack>
                         </MudCardContent>
                     </MudCard>
                 </MudItem>
 
                 <MudItem xs="12" sm="6" md="4">
-                    <MudCard Class="hover-lift transition-all cursor-pointer" @onclick="@(()=>Navigation.NavigateTo("/messages"))">
+                    <MudCard Class="hover-lift transition-all cursor-pointer" @onclick="@(() => Navigation.NavigateTo("/messages"))">
                         <MudCardContent>
                             <MudStack AlignItems="AlignItems.Center" Spacing="2">
-                                <MudIcon Icon="@Icons.Material.Filled.Message" Color="Color.Success" Size="Size.Large">
-                                    <MudText Typo="Typo.h6">Direct Messages</MudText>
-                                    <MudText Typo="Typo.body2" Align="Align.Center" Color="Color.Secondary">Chat with team members</MudText>
-                                </MudIcon>
+                                <MudIcon Icon="@Icons.Material.Filled.Message" Color="Color.Success" Size="Size.Large" />
+                                <MudText Typo="Typo.h6">Direct Messages</MudText>
+                                <MudText Typo="Typo.body2" Align="Align.Center" Color="Color.Secondary">
+                                    Chat with team members
+                                </MudText>
                             </MudStack>
                         </MudCardContent>
                     </MudCard>
                 </MudItem>
 
                 <MudItem xs="12" sm="6" md="4">
-                    <MudCard Class="hover-lift transition-all cursor-pointer" @onclick="@(()=>Navigation.NavigateTo("/search"))">
+                    <MudCard Class="hover-lift transition-all cursor-pointer" @onclick="@(() => Navigation.NavigateTo("/search"))">
                         <MudCardContent>
                             <MudStack AlignItems="AlignItems.Center" Spacing="2">
-                                <MudIcon Icon="@Icons.Material.Filled.Search" Color="Color.Info" Size="Size.Large"/>
+                                <MudIcon Icon="@Icons.Material.Filled.Search" Color="Color.Info" Size="Size.Large" />
                                 <MudText Typo="Typo.h6">Search</MudText>
-                                <MudText Typo="Typo.body2" Align="Align.Center" Color="Color.Secondary">Find messages and files</MudText>
+                                <MudText Typo="Typo.body2" Align="Align.Center" Color="Color.Secondary">
+                                    Find messages and files
+                                </MudText>
                             </MudStack>
                         </MudCardContent>
                     </MudCard>
                 </MudItem>
 
                 <MudItem xs="12" sm="6" md="4">
-                    <MudCard Class="hover-lift transition-all cursor-pointer" @onclick="@(()=>Navigation.NavigateTo("/profile"))">
+                    <MudCard Class="hover-lift transition-all cursor-pointer" @onclick="@(() => Navigation.NavigateTo("/profile"))">
                         <MudCardContent>
-                            <MudStack AlignItems="AlignItems.Center" Spacing="2"> 
+                            <MudStack AlignItems="AlignItems.Center" Spacing="2">
                                 <MudIcon Icon="@Icons.Material.Filled.Person" Color="Color.Warning" Size="Size.Large" />
-                                <MudText Typo="Typo.h6">Profile</MudText>
-                                <MudText Typo="Typo.body2" Align="Align.Center" Color="Color.Secondary">Manage your profile</MudText>
+                                <MudText Typo="Typo.h6">My Profile</MudText>
+                                <MudText Typo="Typo.body2" Align="Align.Center" Color="Color.Secondary">
+                                    Manage your profile
+                                </MudText>
                             </MudStack>
                         </MudCardContent>
                     </MudCard>
                 </MudItem>
 
                 <MudItem xs="12" sm="6" md="4">
-                    <MudCard Class="hover-lift transition-all cursor-pointer" @onclick="@(()=>Navigation.NavigateTo("/settings"))">
+                    <MudCard Class="hover-lift transition-all cursor-pointer" @onclick="@(() => Navigation.NavigateTo("/settings"))">
                         <MudCardContent>
                             <MudStack AlignItems="AlignItems.Center" Spacing="2">
                                 <MudIcon Icon="@Icons.Material.Filled.Settings" Color="Color.Secondary" Size="Size.Large" />
                                 <MudText Typo="Typo.h6">Settings</MudText>
-                                <MudText Typo="Typo.body2" Align="Align.Center" Color="Color.Secondary">Configure your preferences</MudText>
+                                <MudText Typo="Typo.body2" Align="Align.Center" Color="Color.Secondary">
+                                    Configure your preferences
+                                </MudText>
                             </MudStack>
                         </MudCardContent>
                     </MudCard>
@@ -81,12 +90,14 @@
                 @if (UserState.IsAdmin)
                 {
                     <MudItem xs="12" sm="6" md="4">
-                        <MudCard Class="hover-lift transition-all cursor-pointer" @onclick="@(()=>Navigation.NavigateTo("/admin/users"))">
+                        <MudCard Class="hover-lift transition-all cursor-pointer" @onclick="@(() => Navigation.NavigateTo("/admin/users"))">
                             <MudCardContent>
                                 <MudStack AlignItems="AlignItems.Center" Spacing="2">
                                     <MudIcon Icon="@Icons.Material.Filled.AdminPanelSettings" Color="Color.Error" Size="Size.Large" />
                                     <MudText Typo="Typo.h6">Admin Panel</MudText>
-                                    <MudText Typo="Typo.body2" Align="Align.Center" Color="Color.Secondary">Manage users and roles</MudText>
+                                    <MudText Typo="Typo.body2" Align="Align.Center" Color="Color.Secondary">
+                                        Manage users and roles
+                                    </MudText>
                                 </MudStack>
                             </MudCardContent>
                         </MudCard>
@@ -96,13 +107,13 @@
         </MudPaper>
     </MudItem>
 
-    <!-- User Info -->
+    <!-- User Info Card -->
     <MudItem xs="12" md="4">
         <MudPaper Elevation="2" Class="pa-4 animate-fade-in-up delay-100">
             <MudStack AlignItems="AlignItems.Center" Spacing="3">
                 @if (!string.IsNullOrEmpty(UserState.AvatarUrl))
                 {
-                    <MudAvatar Image="@UserState.AvatarUrl" Size="Size.Large" Style="width: 100px ; height: 100px;" />
+                    <MudAvatar Image="@UserState.AvatarUrl" Size="Size.Large" Style="width: 100px; height: 100px;" />
                 }
                 else
                 {
@@ -113,11 +124,13 @@
 
                 <MudStack AlignItems="AlignItems.Center" Spacing="1">
                     <MudText Typo="Typo.h5">@UserState.DisplayName</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">@@@UserState.UserName</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">@@@UserState.Username</MudText>
 
                     @if (UserState.IsAdmin)
                     {
-                        <MudChip T="string" Color="Color.Error" Size="Size.Small" Icon="@Icons.Material.Filled.AdminPanelSettings">Administrator</MudChip>
+                        <MudChip Color="Color.Error" Size="Size.Small" Icon="@Icons.Material.Filled.AdminPanelSettings">
+                            Administrator
+                        </MudChip>
                     }
                 </MudStack>
 
@@ -128,9 +141,9 @@
 
                     @if (UserState.CurrentUser?.Roles?.Any() == true)
                     {
-                        @foreach(var role in UserState.CurrentUser.Roles)
+                        @foreach (var role in UserState.CurrentUser.Roles)
                         {
-                            <MudChip T="string" Color="Color.Info" Size="Size.Small">@role.Name</MudChip>
+                            <MudChip Color="Color.Info" Size="Size.Small">@role.Name</MudChip>
                         }
                     }
                     else
@@ -143,15 +156,16 @@
                            Color="Color.Primary"
                            FullWidth="true"
                            StartIcon="@Icons.Material.Filled.Edit"
-                           OnClick="@(()=>Navigation.NavigateTo("/profile"))">
-                       Edit Profile
+                           OnClick="@(() => Navigation.NavigateTo("/profile"))">
+                    Edit Profile
                 </MudButton>
             </MudStack>
         </MudPaper>
 
         <!-- Stats Card -->
         <MudPaper Elevation="2" Class="pa-4 mt-4 animate-fade-in-up delay-200">
-            <MudText Typo="Typo.h6" Class="mb-3" ></MudText>
+            <MudText Typo="Typo.h6" Class="mb-3">Quick Stats</MudText>
+
             <MudStack Spacing="2">
                 <MudStack Row="true" Justify="Justify.SpaceBetween">
                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
@@ -163,7 +177,7 @@
 
                 <MudStack Row="true" Justify="Justify.SpaceBetween">
                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                        <MudIcon Icon="@Icons.Material.Filled.Tag" Size="Size.Small" Color="Color.Success"/>
+                        <MudIcon Icon="@Icons.Material.Filled.Tag" Size="Size.Small" Color="Color.Success" />
                         <MudText Typo="Typo.body2">Channels</MudText>
                     </MudStack>
                     <MudText Typo="Typo.h6" Color="Color.Success">--</MudText>
@@ -171,7 +185,7 @@
 
                 <MudStack Row="true" Justify="Justify.SpaceBetween">
                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                        <MudIcon Icon="@Icons.Material.Filled.AttachFile" Size="Size.Small" Color="Color.Info"/>
+                        <MudIcon Icon="@Icons.Material.Filled.AttachFile" Size="Size.Small" Color="Color.Info" />
                         <MudText Typo="Typo.body2">Files</MudText>
                     </MudStack>
                     <MudText Typo="Typo.h6" Color="Color.Info">--</MudText>
@@ -191,13 +205,12 @@
     </MudItem>
 </MudGrid>
 
-@code{
+@code {
     private string GetInitials(string? name)
     {
-        if(string.IsNullOrEmpty(name)) return "U";
+        if (string.IsNullOrEmpty(name)) return "U";
 
-        var parts=name.Split(' ',StringSplitOptions.RemoveEmptyEntries);
-
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length >= 2)
         {
             return $"{parts[0][0]}{parts[1][0]}".ToUpper();

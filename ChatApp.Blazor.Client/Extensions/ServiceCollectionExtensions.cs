@@ -1,35 +1,51 @@
-﻿using ChatApp.Blazor.Client.Features.Admin.Services;
 using ChatApp.Blazor.Client.Features.Auth.Services;
+using ChatApp.Blazor.Client.Features.Admin.Services;
+using ChatApp.Blazor.Client.Features.Channels.Services;
+using ChatApp.Blazor.Client.Features.DirectMessages.Services;
 using ChatApp.Blazor.Client.State;
 
-namespace ChatApp.Blazor.Client.Extensions
+namespace ChatApp.Blazor.Client.Extensions;
+
+/// <summary>
+/// Extension methods for service registration
+/// </summary>
+public static class ServiceCollectionExtensions
 {
     /// <summary>
-    /// Extension methods for service registration
+    /// Registers all feature services
     /// </summary>
-    public static class ServiceCollectionExtensions
+    public static IServiceCollection AddFeatureServices(this IServiceCollection services)
     {
-        public static IServiceCollection AddFeatureServices(this IServiceCollection services)
-        {
-            // Auth services
-            services.AddScoped<IAuthService, AuthService>();
-            services.AddScoped<IUserService, UserService>();
+        // Auth Services
+        services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IUserService, UserService>();
 
-            // Admin services
-            services.AddScoped<IRoleService, RoleService>();
-            services.AddScoped<IPermissionService, PermissionService>();
+        // Admin Services
+        services.AddScoped<IRoleService, RoleService>();
+        services.AddScoped<IPermissionService, PermissionService>();
 
-            return services;
-        }
+        // Channel Services
+        services.AddScoped<IChannelService, ChannelService>();
+        services.AddScoped<IChannelMessageService, ChannelMessageService>();
+        services.AddScoped<IChannelMemberService, ChannelMemberService>();
 
-        /// <summary>
-        /// Registers state management services
-        /// </summary>
-        public static IServiceCollection AddStateManagementServices(this IServiceCollection services)
-        {
-            services.AddScoped<AppState>();
-            services.AddScoped<UserState>();
-            return services;
-        }
+        // Direct Message Services
+        services.AddScoped<IDirectConversationService, DirectConversationService>();
+        services.AddScoped<IDirectMessageService, DirectMessageService>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers state management services
+    /// </summary>
+    public static IServiceCollection AddStateManagement(this IServiceCollection services)
+    {
+        services.AddScoped<AppState>();
+        services.AddScoped<UserState>();
+        services.AddScoped<ChannelState>();
+        services.AddScoped<DirectMessageState>();
+
+        return services;
     }
 }

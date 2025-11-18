@@ -1,13 +1,16 @@
-﻿window.chatApp = {
+// ChatApp - JavaScript Interop and Utilities
+
+window.chatApp = {
     // Scroll to bottom of element
-    scrollToBottom: function(elementId) {
+    scrollToBottom: function (elementId) {
         const element = document.getElementById(elementId);
         if (element) {
             element.scrollTop = element.scrollHeight;
         }
     },
+
     // Smooth scroll to bottom
-    smoothScrollToBottom: function(elementId) {
+    smoothScrollToBottom: function (elementId) {
         const element = document.getElementById(elementId);
         if (element) {
             element.scrollTo({
@@ -16,9 +19,9 @@
             });
         }
     },
- 
+
     // Focus element
-    focusElement: function(elementId) {
+    focusElement: function (elementId) {
         const element = document.getElementById(elementId);
         if (element) {
             setTimeout(() => element.focus(), 100);
@@ -26,8 +29,7 @@
     },
 
     // Copy to clipboard
-
-    copyToClipboard: async function(text) {
+    copyToClipboard: async function (text) {
         try {
             await navigator.clipboard.writeText(text);
             return true;
@@ -38,7 +40,7 @@
     },
 
     // Download file
-    downloadFile: function(filename, content, contentType) {
+    downloadFile: function (filename, content, contentType) {
         const blob = new Blob([content], { type: contentType });
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -51,18 +53,18 @@
     },
 
     // Get element height
-    getElementHeight: function(elementId) {
+    getElementHeight: function (elementId) {
         const element = document.getElementById(elementId);
         return element ? element.offsetHeight : 0;
     },
 
     // Set page title
-    setPageTitle: function(title) {
+    setPageTitle: function (title) {
         document.title = title;
     },
 
     // Show/hide loading screen
-    hideLoadingScreen: function() {
+    hideLoadingScreen: function () {
         const loadingScreen = document.querySelector('.loading-screen');
         if (loadingScreen) {
             loadingScreen.style.opacity = '0';
@@ -73,12 +75,12 @@
     },
 
     // Detect dark mode preference
-    isDarkMode: function() {
+    isDarkMode: function () {
         return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
     },
 
     // Listen for dark mode changes
-    onDarkModeChange: function(dotNetHelper) {
+    onDarkModeChange: function (dotNetHelper) {
         if (window.matchMedia) {
             const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
             darkModeQuery.addEventListener('change', (e) => {
@@ -88,7 +90,7 @@
     },
 
     // Save to local storage
-    saveToLocalStorage: function(key, value) {
+    saveToLocalStorage: function (key, value) {
         try {
             localStorage.setItem(key, JSON.stringify(value));
             return true;
@@ -99,7 +101,7 @@
     },
 
     // Load from local storage
-    loadFromLocalStorage: function(key) {
+    loadFromLocalStorage: function (key) {
         try {
             const value = localStorage.getItem(key);
             return value ? JSON.parse(value) : null;
@@ -108,9 +110,9 @@
             return null;
         }
     },
- 
+
     // Remove from local storage
-    removeFromLocalStorage: function(key) {
+    removeFromLocalStorage: function (key) {
         try {
             localStorage.removeItem(key);
             return true;
@@ -121,14 +123,13 @@
     },
 
     // Play notification sound
-    playNotificationSound: function() {
+    playNotificationSound: function () {
         const audio = new Audio('/sounds/notification.mp3');
         audio.play().catch(err => console.error('Failed to play sound:', err));
     },
 
-
     // Request notification permission
-    requestNotificationPermission: async function() {
+    requestNotificationPermission: async function () {
         if ('Notification' in window) {
             const permission = await Notification.requestPermission();
             return permission === 'granted';
@@ -136,9 +137,8 @@
         return false;
     },
 
-
     // Show browser notification
-    showBrowserNotification: function(title, body, icon) {
+    showBrowserNotification: function (title, body, icon) {
         if ('Notification' in window && Notification.permission === 'granted') {
             new Notification(title, {
                 body: body,
@@ -148,9 +148,8 @@
         }
     },
 
-
     // Detect online/offline status
-    onConnectionChange: function(dotNetHelper) {
+    onConnectionChange: function (dotNetHelper) {
         window.addEventListener('online', () => {
             dotNetHelper.invokeMethodAsync('OnConnectionChanged', true);
         });
@@ -159,50 +158,43 @@
         });
     },
 
-
     // Get connection status
-    isOnline: function() {
+    isOnline: function () {
         return navigator.onLine;
     },
- 
 
     // Vibrate device (mobile)
-    vibrate: function(duration) {
+    vibrate: function (duration) {
         if ('vibrate' in navigator) {
             navigator.vibrate(duration || 200);
         }
     },
 
     // Prevent default scroll behavior
-    preventScroll: function() {
+    preventScroll: function () {
         document.body.style.overflow = 'hidden';
     },
- 
+
     // Allow scroll
-    allowScroll: function() {
+    allowScroll: function () {
         document.body.style.overflow = '';
     },
 
     // Add CSS class to body
-    addBodyClass: function(className) {
+    addBodyClass: function (className) {
         document.body.classList.add(className);
-
     },
 
     // Remove CSS class from body
-    removeBodyClass: function(className) {
+    removeBodyClass: function (className) {
         document.body.classList.remove(className);
     },
 
     // Initialize tooltips
-
-    initTooltips: function() {
-
+    initTooltips: function () {
         const tooltips = document.querySelectorAll('[data-tooltip]');
-
         tooltips.forEach(element => {
-
-            element.addEventListener('mouseenter', function() {
+            element.addEventListener('mouseenter', function () {
                 const tooltip = document.createElement('div');
                 tooltip.className = 'custom-tooltip';
                 tooltip.textContent = this.getAttribute('data-tooltip');
@@ -211,13 +203,11 @@
                 const rect = this.getBoundingClientRect();
                 tooltip.style.top = `${rect.top - tooltip.offsetHeight - 5}px`;
                 tooltip.style.left = `${rect.left + (rect.width / 2) - (tooltip.offsetWidth / 2)}px`;
- 
+
                 this._tooltip = tooltip;
             });
 
- 
-
-            element.addEventListener('mouseleave', function() {
+            element.addEventListener('mouseleave', function () {
                 if (this._tooltip) {
                     document.body.removeChild(this._tooltip);
                     delete this._tooltip;
@@ -226,11 +216,15 @@
         });
     }
 };
- 
+
 // Initialize on load
 window.addEventListener('load', () => {
-    // Check if the function exists before calling it
-    if (window.chatApp && window.chatApp.hideLoadingScreen) {
-        window.chatApp.hideLoadingScreen();
-    }
+    window.chatApp.hideLoadingScreen();
 });
+
+// Service Worker registration
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/service-worker.js')
+        .then(reg => console.log('Service Worker registered'))
+        .catch(err => console.error('Service Worker registration failed:', err));
+}

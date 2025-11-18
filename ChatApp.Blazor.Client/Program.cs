@@ -12,14 +12,15 @@ using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using MudBlazor.Services;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
+
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
 // Configure base address
-var apiBaseUrl = builder.Configuration["ApiBaseAddress"] ?? "https://localhost:7000";
-builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(apiBaseUrl) });
+var apiBaseAddress = builder.Configuration["ApiBaseAddress"] ?? "https://localhost:7000";
+builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(apiBaseAddress) });
 
-// MudBlazor services
+// MudBlazor Services
 builder.Services.AddMudServices(config =>
 {
     config.SnackbarConfiguration.PositionClass = MudBlazor.Defaults.Classes.Position.BottomRight;
@@ -36,21 +37,20 @@ builder.Services.AddMudServices(config =>
 builder.Services.AddBlazoredLocalStorage();
 builder.Services.AddBlazoredSessionStorage();
 
-// Storage service
+// Storage Service
 builder.Services.AddScoped<IStorageService, StorageService>();
 
 // Authentication & Authorization
 builder.Services.AddAuthorizationCore();
+builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
+builder.Services.AddScoped<CustomAuthStateProvider>(provider =>
+    (CustomAuthStateProvider)provider.GetRequiredService<AuthenticationStateProvider>());
 
-builder.Services.AddScoped<CustomAuthStateProvider>();
-builder.Services.AddScoped<AuthenticationStateProvider>(provider =>
-    provider.GetRequiredService<CustomAuthStateProvider>());
-
-// Http client with Authentication
+// HTTP Client with Authentication
 builder.Services.AddScoped<AuthenticationDelegatingHandler>();
 builder.Services.AddHttpClient("ChatApp.Api", client =>
 {
-    client.BaseAddress = new Uri(apiBaseUrl);
+    client.BaseAddress = new Uri(apiBaseAddress);
     client.Timeout = TimeSpan.FromSeconds(30);
 })
 .AddHttpMessageHandler<AuthenticationDelegatingHandler>();
@@ -58,7 +58,7 @@ builder.Services.AddHttpClient("ChatApp.Api", client =>
 builder.Services.AddScoped(sp =>
     sp.GetRequiredService<IHttpClientFactory>().CreateClient("ChatApp.Api"));
 
-// Api Client
+// API Client
 builder.Services.AddScoped<IApiClient, ApiClient>();
 
 // SignalR
@@ -69,6 +69,6 @@ builder.Services.AddScoped<ISignalRService, SignalRService>();
 builder.Services.AddFeatureServices();
 
 // State Management
-builder.Services.AddStateManagementServices();
+builder.Services.AddStateManagement();
 
 await builder.Build().RunAsync();

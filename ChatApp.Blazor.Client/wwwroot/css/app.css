@@ -1,3 +1,7 @@
+/* ============================================
+   ChatApp - Modern UI Styles
+   ============================================ */
+
 :root {
     --primary-color: #6366F1;
     --secondary-color: #8B5CF6;
@@ -13,7 +17,6 @@
 
 * {
     box-sizing: border-box;
-    font-family: 'Inter', 'Roboto', 'Helvetica', 'Arial', sans-serif;
 }
 
 html, body {
@@ -29,6 +32,10 @@ html, body {
     width: 100vw;
     overflow: hidden;
 }
+
+/* ============================================
+   Loading Screen
+   ============================================ */
 
 .loading-screen {
     position: fixed;
@@ -62,24 +69,13 @@ html, body {
 }
 
 @keyframes rotate {
-    from {
-        transform: rotate(0deg);
-    }
-
-    to {
-        transform: rotate(360deg);
-    }
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }
 
-/* Fixed wave animation - using transform instead of 'd' property */
 @keyframes wave {
-    0%, 100% {
-        transform: translateY(0px);
-    }
-
-    50% {
-        transform: translateY(-10px);
-    }
+    0%, 100% { d: path("M30 50 Q40 30, 50 50 T70 50"); }
+    50% { d: path("M30 50 Q40 70, 50 50 T70 50"); }
 }
 
 .loading-title {
@@ -87,8 +83,9 @@ html, body {
     font-weight: 700;
     margin: 20px 0 10px;
     background: linear-gradient(to right, #ffffff, #e0e7ff);
+    -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    color: transparent; /* Fallback for browsers that don't support background-clip: text */
+    background-clip: text;
 }
 
 .loading-text {
@@ -108,10 +105,12 @@ html, body {
 }
 
 @keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
+    to { transform: rotate(360deg); }
 }
+
+/* ============================================
+   Error UI
+   ============================================ */
 
 #blazor-error-ui {
     background: #ef4444;
@@ -126,31 +125,35 @@ html, body {
     color: white;
 }
 
-    #blazor-error-ui .error-content {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-    }
+#blazor-error-ui .error-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
 
-    #blazor-error-ui .error-icon {
-        font-size: 1.5rem;
-    }
+#blazor-error-ui .error-icon {
+    font-size: 1.5rem;
+}
 
-    #blazor-error-ui .error-text {
-        flex: 1;
-    }
+#blazor-error-ui .error-text {
+    flex: 1;
+}
 
-    #blazor-error-ui .reload-link,
-    #blazor-error-ui .dismiss-link {
-        color: white;
-        text-decoration: underline;
-        cursor: pointer;
-    }
+#blazor-error-ui .reload-link,
+#blazor-error-ui .dismiss-link {
+    color: white;
+    text-decoration: underline;
+    cursor: pointer;
+}
 
-    #blazor-error-ui .dismiss-link {
-        font-size: 1.5rem;
-        text-decoration: none;
-    }
+#blazor-error-ui .dismiss-link {
+    font-size: 1.5rem;
+    text-decoration: none;
+}
+
+/* ============================================
+   Utility Classes
+   ============================================ */
 
 .fade-in {
     animation: fadeIn 0.5s ease-in;
@@ -176,6 +179,10 @@ html, body {
     animation: pulse 2s ease-in-out infinite;
 }
 
+/* ============================================
+   Card Styles
+   ============================================ */
+
 .modern-card {
     background: white;
     border-radius: 16px;
@@ -183,10 +190,14 @@ html, body {
     transition: transform var(--transition-speed), box-shadow var(--transition-speed);
 }
 
-    .modern-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    }
+.modern-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* ============================================
+   Button Styles
+   ============================================ */
 
 .btn-gradient {
     background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
@@ -195,10 +206,14 @@ html, body {
     transition: all var(--transition-speed);
 }
 
-    .btn-gradient:hover {
-        transform: scale(1.05);
-        box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);
-    }
+.btn-gradient:hover {
+    transform: scale(1.05);
+    box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);
+}
+
+/* ============================================
+   Custom Scrollbar
+   ============================================ */
 
 ::-webkit-scrollbar {
     width: 8px;
@@ -215,78 +230,13 @@ html, body {
     border-radius: 10px;
 }
 
-    ::-webkit-scrollbar-thumb:hover {
-        background: var(--primary-color);
-    }
-
-/* Add missing animations */
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-
-    to {
-        opacity: 1;
-    }
+::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-color);
 }
 
-@keyframes slideInLeft {
-    from {
-        transform: translateX(-100%);
-        opacity: 0;
-    }
-
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
-}
-
-@keyframes slideInRight {
-    from {
-        transform: translateX(100%);
-        opacity: 0;
-    }
-
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
-}
-
-@keyframes slideInUp {
-    from {
-        transform: translateY(100%);
-        opacity: 0;
-    }
-
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
-}
-
-@keyframes zoomIn {
-    from {
-        transform: scale(0.8);
-        opacity: 0;
-    }
-
-    to {
-        transform: scale(1);
-        opacity: 1;
-    }
-}
-
-@keyframes pulse {
-    0%, 100% {
-        transform: scale(1);
-    }
-
-    50% {
-        transform: scale(1.05);
-    }
-}
+/* ============================================
+   Responsive
+   ============================================ */
 
 @media (max-width: 768px) {
     .loading-title {
@@ -297,6 +247,10 @@ html, body {
         font-size: 0.875rem;
     }
 }
+
+/* ============================================
+   Dark Mode Support
+   ============================================ */
 
 @media (prefers-color-scheme: dark) {
     .modern-card {

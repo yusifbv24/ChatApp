@@ -1,0 +1,108 @@
+@inject IUserService UserService
+@inject IDirectConversationService ConversationService
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+
+<MudDialog>
+    <DialogContent>
+        <MudAutocomplete T="UserDto"
+                         Label="Search for a user"
+                         @bind-Value="_selectedUser"
+                         SearchFunc="SearchUsers"
+                         ToStringFunc="@(u => u?.DisplayName ?? "")"
+                         Dense="true"
+                         Variant="Variant.Outlined"
+                         Margin="Margin.Dense"
+                         DebounceInterval="300"
+                         MinCharacters="2"
+                         ResetValueOnEmptyText="true"
+                         CoerceText="true"
+                         CoerceValue="false">
+            <ItemTemplate Context="user">
+                <div class="d-flex align-items-center gap-2">
+                    <MudAvatar Color="Color.Primary" Size="Size.Small">
+                        @user.DisplayName.Substring(0, 1).ToUpper()
+                    </MudAvatar>
+                    <div>
+                        <MudText Typo="Typo.Body2">@user.DisplayName</MudText>
+                        <MudText Typo="Typo.Caption" Color="Color.Secondary">@@@user.Username</MudText>
+                    </div>
+                </div>
+            </ItemTemplate>
+            <NoItemsTemplate>
+                <MudText Typo="Typo.Caption" Color="Color.Secondary">
+                    Type to search for users...
+                </MudText>
+            </NoItemsTemplate>
+        </MudAutocomplete>
+
+        @if (_selectedUser != null)
+        {
+            <MudAlert Severity="Severity.Info" Dense="true" Class="mt-3">
+                Start a conversation with <strong>@_selectedUser.DisplayName</strong>
+            </MudAlert>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton OnClick="StartConversation"
+                   Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   Disabled="@(_isStarting || _selectedUser == null)">
+            @if (_isStarting)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+            }
+            else
+            {
+                <span>Start Conversation</span>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; } = null!;
+
+    private UserDto? _selectedUser;
+    private bool _isStarting = false;
+
+    private async Task<IEnumerable<UserDto>> SearchUsers(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value) || value.Length < 2)
+            return Enumerable.Empty<UserDto>();
+
+        var result = await UserService.SearchUsersAsync(value, pageSize: 10);
+
+        if (result.IsSuccess && result.Data != null)
+        {
+            return result.Data.Items;
+        }
+
+        return Enumerable.Empty<UserDto>();
+    }
+
+    private async Task StartConversation()
+    {
+        if (_selectedUser == null) return;
+
+        _isStarting = true;
+
+        var request = new StartConversationRequest { OtherUserId = _selectedUser.Id };
+        var result = await ConversationService.StartConversationAsync(request);
+
+        _isStarting = false;
+
+        if (result.IsSuccess)
+        {
+            Snackbar.Add($"Conversation started with {_selectedUser.DisplayName}", Severity.Success);
+            MudDialog.Close(DialogResult.Ok(result.Data));
+        }
+        else
+        {
+            Snackbar.Add(result.Error ?? "Failed to start conversation", Severity.Error);
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

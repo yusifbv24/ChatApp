@@ -1,0 +1,304 @@
+@page "/messages"
+@inject IDirectConversationService ConversationService
+@inject DirectMessageState DirectMessageState
+@inject IDialogService DialogService
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+@attribute [Authorize]
+
+<PageTitle>Messages</PageTitle>
+
+<div class="messages-page">
+    <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-0" Style="height: 100vh;">
+        <MudPaper Elevation="2" Class="d-flex" Style="height: 100%;">
+            <!-- Conversations Sidebar -->
+            <div class="conversations-sidebar">
+                <div class="sidebar-header pa-3">
+                    <div class="d-flex justify-space-between align-center mb-3">
+                        <MudText Typo="Typo.H5" Class="font-weight-bold">Messages</MudText>
+
+                        <MudIconButton Icon="@Icons.Material.Filled.Add"
+                                       Color="Color.Primary"
+                                       OnClick="OpenStartConversationDialog"
+                                       Title="Start new conversation" />
+                    </div>
+
+                    <MudTextField @bind-Value="_searchQuery"
+                                  Placeholder="Search conversations..."
+                                  Variant="Variant.Outlined"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Search"
+                                  Margin="Margin.Dense"
+                                  Immediate="true"
+                                  DebounceInterval="300"
+                                  Class="search-box" />
+                </div>
+
+                <MudDivider />
+
+                @if (_isLoading)
+                {
+                    <div class="d-flex justify-center pa-8">
+                        <MudProgressCircular Indeterminate="true" />
+                    </div>
+                }
+                else if (!_filteredConversations.Any())
+                {
+                    <div class="empty-conversations pa-4 text-center">
+                        <MudIcon Icon="@Icons.Material.Outlined.ChatBubbleOutline"
+                                 Size="Size.Large"
+                                 Color="Color.Secondary"
+                                 Class="mb-3" />
+                        <MudText Typo="Typo.Body1" Color="Color.Secondary">
+                            No conversations yet
+                        </MudText>
+                        <MudButton Variant="Variant.Text"
+                                   Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.Add"
+                                   OnClick="OpenStartConversationDialog"
+                                   Class="mt-2">
+                            Start a conversation
+                        </MudButton>
+                    </div>
+                }
+                else
+                {
+                    <div class="conversations-list">
+                        @foreach (var conversation in _filteredConversations)
+                        {
+                            <ConversationItem Conversation="@conversation"
+                                            IsSelected="@(_selectedConversationId == conversation.Id)"
+                                            OnConversationClick="SelectConversation" />
+                        }
+                    </div>
+                }
+            </div>
+
+            <!-- Chat Area -->
+            <div class="chat-area">
+                @if (_selectedConversationId == null)
+                {
+                    <div class="no-conversation-selected">
+                        <MudIcon Icon="@Icons.Material.Outlined.Forum"
+                                 Size="Size.Large"
+                                 Color="Color.Secondary"
+                                 Style="font-size: 80px;"
+                                 Class="mb-4" />
+                        <MudText Typo="Typo.H5" Color="Color.Secondary">
+                            Select a conversation to start messaging
+                        </MudText>
+                    </div>
+                }
+                else
+                {
+                    var selectedConversation = _conversations.FirstOrDefault(c => c.Id == _selectedConversationId);
+
+                    @if (selectedConversation != null)
+                    {
+                        <!-- Chat Header -->
+                        <div class="chat-header pa-3" style="animation: slideInDown 0.3s ease-out;">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="avatar-container">
+                                    <MudAvatar Color="Color.Primary" Size="Size.Medium">
+                                        @selectedConversation.OtherUserDisplayName.Substring(0, 1).ToUpper()
+                                    </MudAvatar>
+                                    @if (selectedConversation.IsOtherUserOnline)
+                                    {
+                                        <div class="online-indicator"></div>
+                                    }
+                                </div>
+
+                                <div>
+                                    <MudText Typo="Typo.H6" Class="font-weight-bold">
+                                        @selectedConversation.OtherUserDisplayName
+                                    </MudText>
+                                    <MudText Typo="Typo.Caption" Color="Color.Secondary">
+                                        @(selectedConversation.IsOtherUserOnline ? "Online" : "Offline")
+                                    </MudText>
+                                </div>
+                            </div>
+                        </div>
+
+                        <MudDivider />
+
+                        <!-- Messages -->
+                        <div class="messages-container">
+                            <DirectMessageList @ref="_messageList"
+                                             ConversationId="@_selectedConversationId.Value" />
+                        </div>
+
+                        <!-- Message Composer -->
+                        <div class="composer-container">
+                            <DirectMessageComposer ConversationId="@_selectedConversationId.Value"
+                                                 OnMessageSent="OnMessageSent" />
+                        </div>
+                    }
+                }
+            </div>
+        </MudPaper>
+    </MudContainer>
+</div>
+
+<style>
+    .messages-page {
+        background: linear-gradient(135deg, rgba(var(--mud-palette-primary-rgb), 0.05) 0%, rgba(var(--mud-palette-secondary-rgb), 0.05) 100%);
+        min-height: 100vh;
+    }
+
+    .conversations-sidebar {
+        width: 350px;
+        border-right: 1px solid var(--mud-palette-divider);
+        display: flex;
+        flex-direction: column;
+        background-color: var(--mud-palette-background);
+    }
+
+    .conversations-list {
+        overflow-y: auto;
+        flex: 1;
+    }
+
+    .chat-area {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .no-conversation-selected {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+    }
+
+    .chat-header {
+        flex-shrink: 0;
+        background-color: var(--mud-palette-background);
+    }
+
+    .messages-container {
+        flex: 1;
+        overflow: hidden;
+    }
+
+    .composer-container {
+        flex-shrink: 0;
+        padding: 16px;
+        background-color: var(--mud-palette-background);
+        border-top: 1px solid var(--mud-palette-divider);
+    }
+
+    .avatar-container {
+        position: relative;
+    }
+
+    .online-indicator {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        width: 12px;
+        height: 12px;
+        background-color: var(--mud-palette-success);
+        border: 2px solid white;
+        border-radius: 50%;
+    }
+
+    @@media (max-width: 960px) {
+        .conversations-sidebar {
+            width: 100%;
+        }
+
+        .chat-area {
+            display: none;
+        }
+
+        .chat-area.mobile-show {
+            display: flex;
+        }
+    }
+</style>
+
+@code {
+    private List<DirectConversationDto> _conversations = new();
+    private List<DirectConversationDto> _filteredConversations = new();
+    private string _searchQuery = string.Empty;
+    private Guid? _selectedConversationId = null;
+    private DirectMessageList? _messageList;
+    private bool _isLoading = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadConversations();
+        DirectMessageState.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        DirectMessageState.OnChange -= StateHasChanged;
+    }
+
+    private async Task LoadConversations()
+    {
+        _isLoading = true;
+
+        var result = await ConversationService.GetConversationsAsync();
+
+        _isLoading = false;
+
+        if (result.IsSuccess)
+        {
+            _conversations = result.Data ?? new();
+            DirectMessageState.SetConversations(_conversations);
+            ApplyFilters();
+        }
+        else
+        {
+            Snackbar.Add(result.Error ?? "Failed to load conversations", Severity.Error);
+        }
+    }
+
+    private void ApplyFilters()
+    {
+        if (!string.IsNullOrWhiteSpace(_searchQuery))
+        {
+            _filteredConversations = _conversations
+                .Where(c => c.OtherUserDisplayName.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                           c.OtherUserUsername.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+        else
+        {
+            _filteredConversations = _conversations;
+        }
+    }
+
+    private async Task OpenStartConversationDialog()
+    {
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<StartConversationDialog>("Start Conversation", options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is Guid conversationId)
+        {
+            await LoadConversations();
+            _selectedConversationId = conversationId;
+        }
+    }
+
+    private void SelectConversation(DirectConversationDto conversation)
+    {
+        _selectedConversationId = conversation.Id;
+        DirectMessageState.SetCurrentConversation(conversation);
+    }
+
+    private async Task OnMessageSent()
+    {
+        if (_messageList != null)
+        {
+            await _messageList.RefreshMessages();
+        }
+        await LoadConversations(); // Refresh to update last message
+    }
+}

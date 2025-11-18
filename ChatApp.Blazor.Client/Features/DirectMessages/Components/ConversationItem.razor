@@ -1,0 +1,119 @@
+<div class="conversation-item @(_isSelected ? "selected" : "")"
+     @onclick="OnClick"
+     style="animation: slideInRight 0.3s ease-out;">
+    <div class="d-flex align-items-center gap-3 pa-3">
+        <div class="avatar-container">
+            <MudAvatar Color="Color.Primary" Size="Size.Medium">
+                @Conversation.OtherUserDisplayName.Substring(0, 1).ToUpper()
+            </MudAvatar>
+            @if (Conversation.IsOtherUserOnline)
+            {
+                <div class="online-indicator"></div>
+            }
+        </div>
+
+        <div class="flex-grow-1 conversation-info">
+            <div class="d-flex justify-space-between align-center mb-1">
+                <MudText Typo="Typo.Subtitle1" Class="font-weight-bold">
+                    @Conversation.OtherUserDisplayName
+                </MudText>
+
+                <MudText Typo="Typo.Caption" Color="Color.Secondary">
+                    @GetRelativeTime(Conversation.LastMessageAtUtc)
+                </MudText>
+            </div>
+
+            <div class="d-flex justify-space-between align-center">
+                <MudText Typo="Typo.Body2"
+                         Color="Color.Secondary"
+                         Class="@(Conversation.UnreadCount > 0 ? "font-weight-bold" : "")">
+                    @(Conversation.LastMessageContent?.Length > 50
+                        ? Conversation.LastMessageContent.Substring(0, 50) + "..."
+                        : Conversation.LastMessageContent ?? "No messages yet")
+                </MudText>
+
+                @if (Conversation.UnreadCount > 0)
+                {
+                    <MudChip Size="Size.Small"
+                             Color="Color.Error"
+                             Class="unread-badge">
+                        @Conversation.UnreadCount
+                    </MudChip>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<MudDivider />
+
+<style>
+    .conversation-item {
+        cursor: pointer;
+        transition: background-color 0.2s;
+        position: relative;
+    }
+
+    .conversation-item:hover {
+        background-color: rgba(0, 0, 0, 0.04);
+    }
+
+    .conversation-item.selected {
+        background-color: rgba(var(--mud-palette-primary-rgb), 0.08);
+        border-left: 3px solid var(--mud-palette-primary);
+    }
+
+    .avatar-container {
+        position: relative;
+    }
+
+    .online-indicator {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        width: 12px;
+        height: 12px;
+        background-color: var(--mud-palette-success);
+        border: 2px solid white;
+        border-radius: 50%;
+    }
+
+    .conversation-info {
+        min-width: 0;
+    }
+
+    .unread-badge {
+        flex-shrink: 0;
+        margin-left: 8px;
+    }
+</style>
+
+@code {
+    [Parameter] public DirectConversationDto Conversation { get; set; } = null!;
+    [Parameter] public bool IsSelected { get; set; }
+    [Parameter] public EventCallback<DirectConversationDto> OnConversationClick { get; set; }
+
+    private bool _isSelected => IsSelected;
+
+    private async Task OnClick()
+    {
+        await OnConversationClick.InvokeAsync(Conversation);
+    }
+
+    private string GetRelativeTime(DateTime utcTime)
+    {
+        var localTime = utcTime.ToLocalTime();
+        var timeSpan = DateTime.Now - localTime;
+
+        if (timeSpan.TotalMinutes < 1)
+            return "just now";
+        if (timeSpan.TotalMinutes < 60)
+            return $"{(int)timeSpan.TotalMinutes}m ago";
+        if (timeSpan.TotalHours < 24)
+            return $"{(int)timeSpan.TotalHours}h ago";
+        if (timeSpan.TotalDays < 7)
+            return $"{(int)timeSpan.TotalDays}d ago";
+
+        return localTime.ToString("MMM dd");
+    }
+}

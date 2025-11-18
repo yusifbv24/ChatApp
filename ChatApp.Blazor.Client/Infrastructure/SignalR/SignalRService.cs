@@ -1,53 +1,56 @@
-﻿namespace ChatApp.Blazor.Client.Infrastructure.SignalR
+namespace ChatApp.Blazor.Client.Infrastructure.SignalR;
+
+/// <summary>
+/// Service for handling SignalR real-time events
+/// </summary>
+public class SignalRService : ISignalRService
 {
-    public class SignalRService : ISignalRService
+    private readonly IChatHubConnection _hubConnection;
+    private bool _isInitialized;
+
+    public event Action<Guid>? OnUserOnline;
+    public event Action<Guid>? OnUserOffline;
+    public event Action<object>? OnNewMessage;
+    public event Action<Guid, Guid>? OnMessageEdited;
+    public event Action<Guid, Guid>? OnMessageDeleted;
+    public event Action<Guid, string>? OnUserTyping;
+
+    public SignalRService(IChatHubConnection hubConnection)
     {
-        private readonly IChatHubConnection _hubConnection;
-        private bool _isInitialized;
-        public event Action<Guid>? OnUserOnline;
-        public event Action<Guid>? OnUserOffline;
-        public event Action<object>? OnNewMessage;
-        public event Action<Guid, Guid>? OnMessageEdited;
-        public event Action<Guid, Guid>? OnMessageDeleted;
-        public event Action<Guid, string>? OnUserTyping;
+        _hubConnection = hubConnection;
+    }
 
-        public SignalRService(IChatHubConnection hubConnection)
+    public async Task InitializeAsync()
+    {
+        if (_isInitialized)
         {
-            _hubConnection = hubConnection;
+            return;
         }
 
-        public async Task DisconnectAsync()
-        {
-            await _hubConnection.StopAsync();
-            _isInitialized = false;
-        }
+        await _hubConnection.StartAsync();
 
-        public async Task InitializeAsync()
-        {
-            if (_isInitialized)
-            {
-                return;
-            }
+        // Register event handlers
+        _hubConnection.On<Guid>("UserOnline", userId => OnUserOnline?.Invoke(userId));
+        _hubConnection.On<Guid>("UserOffline", userId => OnUserOffline?.Invoke(userId));
+        _hubConnection.On<object>("NewMessage", message => OnNewMessage?.Invoke(message));
+        _hubConnection.On<Guid, Guid>("MessageEdited", (conversationId, messageId) =>
+            OnMessageEdited?.Invoke(conversationId, messageId));
+        _hubConnection.On<Guid, Guid>("MessageDeleted", (conversationId, messageId) =>
+            OnMessageDeleted?.Invoke(conversationId, messageId));
+        _hubConnection.On<Guid, string>("UserTyping", (userId, conversationId) =>
+            OnUserTyping?.Invoke(userId, conversationId));
 
-            await _hubConnection.StartAsync();
+        _isInitialized = true;
+    }
 
-            // Register event handlers
-            _hubConnection.On<Guid>("UserOnline", userId => OnUserOnline?.Invoke(userId));
-            _hubConnection.On<Guid>("UserOffline", userId => OnUserOffline?.Invoke(userId));
-            _hubConnection.On<object>("NewMessage", message => OnNewMessage?.Invoke(message));
-            _hubConnection.On<Guid, Guid>("MessageEdited", (conversationId, messageId) =>
-                OnMessageEdited?.Invoke(conversationId, messageId));
-            _hubConnection.On<Guid, Guid>("MessageDeleted", (conversationId, messageId) =>
-                OnMessageDeleted?.Invoke(conversationId, messageId));
-            _hubConnection.On<Guid, string>("UserTyping", (userId, conversationId) =>
-                OnUserTyping?.Invoke(userId, conversationId));
+    public async Task DisconnectAsync()
+    {
+        await _hubConnection.StopAsync();
+        _isInitialized = false;
+    }
 
-            _isInitialized = true;
-        }
-
-        public async Task<bool> IsConnectedAsync()
-        {
-            return await _hubConnection.IsConnectedAsync();
-        }
+    public Task<bool> IsConnectedAsync()
+    {
+        return _hubConnection.IsConnectedAsync();
     }
 }

@@ -1,0 +1,93 @@
+@inject IDirectMessageService MessageService
+@inject ISnackbar Snackbar
+
+<div class="dm-composer">
+    <MudPaper Elevation="2" Class="pa-3">
+        <div class="d-flex gap-2">
+            <MudTextField @bind-Value="_messageContent"
+                          Placeholder="Type a message..."
+                          Variant="Variant.Outlined"
+                          Lines="3"
+                          MaxLines="10"
+                          Immediate="true"
+                          OnKeyDown="HandleKeyDown"
+                          Disabled="@_isSending"
+                          Class="flex-grow-1" />
+
+            <div class="d-flex flex-column gap-2">
+                <MudIconButton Icon="@Icons.Material.Filled.AttachFile"
+                               Color="Color.Default"
+                               Size="Size.Medium"
+                               Disabled="true"
+                               Title="File attachments (coming soon)" />
+
+                <MudIconButton Icon="@Icons.Material.Filled.Send"
+                               Color="Color.Primary"
+                               Size="Size.Medium"
+                               OnClick="SendMessage"
+                               Disabled="@(_isSending || string.IsNullOrWhiteSpace(_messageContent))" />
+            </div>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(_messageContent))
+        {
+            <MudText Typo="Typo.Caption" Color="Color.Secondary" Class="mt-2">
+                @_messageContent.Length / 4000 characters
+                @if (_messageContent.Length > 4000)
+                {
+                    <span class="ml-2" style="color: var(--mud-palette-error);">Message too long!</span>
+                }
+            </MudText>
+        }
+    </MudPaper>
+</div>
+
+<style>
+    .dm-composer {
+        animation: slideUp 0.3s ease-out;
+    }
+</style>
+
+@code {
+    [Parameter] public Guid ConversationId { get; set; }
+    [Parameter] public EventCallback OnMessageSent { get; set; }
+
+    private string _messageContent = string.Empty;
+    private bool _isSending = false;
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        // Send on Enter (without Shift)
+        if (e.Key == "Enter" && !e.ShiftKey)
+        {
+            await SendMessage();
+        }
+    }
+
+    private async Task SendMessage()
+    {
+        if (string.IsNullOrWhiteSpace(_messageContent) || _messageContent.Length > 4000)
+            return;
+
+        _isSending = true;
+
+        var request = new SendMessageRequest
+        {
+            Content = _messageContent.Trim()
+        };
+
+        var result = await MessageService.SendMessageAsync(ConversationId, request);
+
+        _isSending = false;
+
+        if (result.IsSuccess)
+        {
+            _messageContent = string.Empty;
+            await OnMessageSent.InvokeAsync();
+        }
+        else
+        {
+            Snackbar.Add(result.Error ?? "Failed to send message", Severity.Error);
+        }
+    }
+}
