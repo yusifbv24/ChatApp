@@ -61,9 +61,9 @@ builder.Services.AddControllers()
 // Add CORS policy
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy =>
+    options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:3000", "http://localhost:5001","null") // Add your frontend URLs
+        policy.WithOrigins("http://localhost:5300", "http://localhost:5301","null")
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials(); // Required for SignalR
@@ -297,7 +297,7 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 // IMPORTANT: CORS must be before routing for SignalR
-app.UseCors("AllowAll");
+app.UseCors("AllowFrontend");
 
 app.UseRouting();
 app.UseAuthentication();

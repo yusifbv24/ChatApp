@@ -127,7 +127,7 @@ namespace ChatApp.Modules.Search.Application.Queries.SearchMessages
             catch (Exception ex)
             {
                 _logger?.LogError(ex, "Error searching messages");
-                return Result.Failure<SearchResultsDto>("An error occured while searching messages");
+                return Result.Failure<SearchResultsDto>("An error occurred while searching messages");
             }
         }
     }

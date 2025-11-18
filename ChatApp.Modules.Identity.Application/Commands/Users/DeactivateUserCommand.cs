@@ -62,7 +62,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
             }
             catch (Exception ex)
             {
-                _logger?.LogError($"Error occured while deactivating user . Error is : {ex.Message}");
+                _logger?.LogError($"Error occurred while deactivating user . Error is : {ex.Message}");
                 return Result.Failure(ex.Message);
             }
         }

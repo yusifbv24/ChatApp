@@ -116,7 +116,7 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectMessageReact
                     ex,
                     "Error adding reaction to message {MessageId}",
                     request.MessageId);
-                return Result.Failure("An error occured while adding the reaction");
+                return Result.Failure("An error occurred while adding the reaction");
             }
         }
     }

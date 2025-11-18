@@ -41,7 +41,7 @@ namespace ChatApp.Shared.Infrastructure.Middleware
                 NotFoundException notFoundEx => (HttpStatusCode.NotFound, notFoundEx.Message, (IDictionary<string, string[]>?)null),
                 ValidationException validationEx => (HttpStatusCode.BadRequest, "Validation failed", validationEx.Errors),
                 DomainException domaineEx => (HttpStatusCode.BadRequest, domaineEx.Message, null),
-                _ => (HttpStatusCode.InternalServerError, "An internal server error occured. Please try again later.", null)
+                _ => (HttpStatusCode.InternalServerError, "An internal server error occurred. Please try again later.", null)
             };
 
             context.Response.StatusCode = (int)statusCode;

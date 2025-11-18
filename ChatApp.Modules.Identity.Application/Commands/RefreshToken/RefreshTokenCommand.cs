@@ -97,7 +97,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.RefreshToken
             catch (Exception ex)
             {
                 _logger?.LogError(ex, "Error during token refresh");
-                return Result.Failure<RefreshTokenResponse>("An error occured during token refresh");
+                return Result.Failure<RefreshTokenResponse>("An error occurred during token refresh");
             }
         }
     }

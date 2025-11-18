@@ -93,7 +93,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.Roles
             catch (Exception ex)
             {
                 _logger?.LogError(ex, "Error updating role {RoleName} ", request.Name);
-                return Result.Failure("An error occured while updating the role");
+                return Result.Failure("An error occurred while updating the role");
             }
         }
     }

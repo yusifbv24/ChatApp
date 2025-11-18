@@ -68,7 +68,7 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetUsers
             catch (Exception ex)
             {
                 _logger?.LogError(ex, "Error retrieving users");
-                return Result.Failure<List<UserDto>>("An error occured while retrieving users");
+                return Result.Failure<List<UserDto>>("An error occurred while retrieving users");
             }
         }
     }

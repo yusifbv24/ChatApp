@@ -1,7 +1,10 @@
-﻿<MudThemeProvider @ref="@_mudThemeProvider" @bind-IsDarkMode="@_isDarkMode" />
+﻿<MudThemeProvider @ref="@_mudThemeProvider"
+                  IsDarkMode="@_isDarkMode"
+                  IsDarkModeChanged="@(x => _isDarkMode = x)" />
 <MudDialogProvider />
 <MudSnackbarProvider />
 <MudPopoverProvider />
+
 <CascadingAuthenticationState>
     <Router AppAssembly="@typeof(App).Assembly">
         <Found Context="routeData">
@@ -14,8 +17,8 @@
                     else
                     {
                         <div class="unauthorized-container">
-                            <MudContainer MaxWidth="MaxWidth.Small" Class="d-flex flex-column align-center justify-center" 
-                            Style="height: 100vh;">
+                            <MudContainer MaxWidth="MaxWidth.Small" Class="d-flex flex-column align-center justify-center"
+                                          Style="height: 100vh;">
                                 <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Large" Color="Color.Error" Style="font-size: 100px;" />
                                 <MudText Typo="Typo.h4" Class="mt-4">Access Denied</MudText>
                                 <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/" Class="mt-4">
@@ -54,14 +57,13 @@
     </Router>
 </CascadingAuthenticationState>
 
-    
-@code{
+@code {
     private MudThemeProvider? _mudThemeProvider;
     private bool _isDarkMode = false;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if(firstRender && _mudThemeProvider != null)
+        if (firstRender && _mudThemeProvider != null)
         {
             _isDarkMode = await _mudThemeProvider.GetSystemDarkModeAsync();
             StateHasChanged();

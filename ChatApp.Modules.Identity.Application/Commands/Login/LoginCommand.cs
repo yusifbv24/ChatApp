@@ -121,7 +121,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.Login
             catch (Exception ex)
             {
                 _logger?.LogError(ex, "Error during login for username: {Username}", command.Username);
-                return Result.Failure<LoginResponse>("An error occured during login");
+                return Result.Failure<LoginResponse>("An error occurred during login");
             }
         }
     }

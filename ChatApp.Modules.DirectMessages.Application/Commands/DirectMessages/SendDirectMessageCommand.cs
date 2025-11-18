@@ -140,7 +140,7 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectMessages
             catch (Exception ex)
             {
                 _logger?.LogError(ex, "Error sending message");
-                return Result.Failure<Guid>("An error occured while sending message");
+                return Result.Failure<Guid>("An error occurred while sending message");
             }
         }
     }

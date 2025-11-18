@@ -139,7 +139,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
             catch (Exception ex)
             {
                 _logger?.LogError(ex, "Error creating user {Username}", command.Username);
-                return Result.Failure<Guid>("An error occured while creating the user");
+                return Result.Failure<Guid>("An error occurred while creating the user");
             }
         }
     }

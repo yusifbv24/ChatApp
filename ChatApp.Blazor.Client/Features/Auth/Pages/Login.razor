@@ -11,6 +11,7 @@
     Style="min-height: 100vh;">
     <MudPaper Elevation="8" Class="pa-8 animate-zoom-in" Style="width: 100%; max-width: 450px;">
         <MudStack Spacing="4">
+
             <!-- Logo and Title-->
             <MudStack AlignItems="AlignItems.Center" Spacing="2" Class="animate-fade-in-down">
                 <MudIcon Icon="@Icons.Material.Filled.Chat" Size="Size.Large" Color="Color.Primary" 
@@ -27,7 +28,8 @@
             <EditForm Model="@_model" OnValidSubmit="HandleLogin">
                 <DataAnnotationsValidator />
 
-                <MudStack Spacing="3" class="animate-fade-in-up delay-100">
+                <MudStack Spacing="4" class="animate-fade-in-up delay-100">
+                    <!-- Username Field with Improved Spacing -->
                     <MudTextField @bind-Value="_model.Username"
                                   Label="Username"
                                   Variant="Variant.Outlined"
@@ -46,10 +48,11 @@
                                   OnAdornmentClick="TogglePasswordVisibility"
                                   Required="true"
                                   For="@(()=>_model.Password)"
-                                  Disabled="@_isLoading" />
+                                  Disabled="@_isLoading" 
+                                  Immediate="true"/>
 
-                    <MudCheckBox T="bool" @bind-Checked="_model.RememberMe" Label="Remember me" 
-                        Color="Color.Primary" Disabled=@_isLoading" />
+                    <MudCheckBox T="bool" @bind-Checked="_model.RememberMe" Label="Remember me"
+                                 Color="Color.Primary" Disabled="@_isLoading" />
 
                     @if (!string.IsNullOrEmpty(_errorMessage))
                     {
@@ -73,16 +76,13 @@
                             <MudText>Sign In</MudText>
                         }
                     </MudButton>
-                    <MudDivider />
-                    <MudStack Row="true" Justify="Justify.Center" AlignItems="AlignItems.Center">
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">Don't have an account?</MudText>
-                        <MudLink Href="/register" Typo="Typo.body2" Color="Color.Primary">Sign up</MudLink>
-                    </MudStack>
                 </MudStack>
             </EditForm>
         </MudStack>
     </MudPaper>
 </MudContainer>
+
+
 @code{
     private LoginRequest _model = new();
     private bool _isLoading;
@@ -92,6 +92,12 @@
 
     [SupplyParameterFromQuery(Name ="returnUrl")]
     public string? ReturnUrl{ get; set; }
+
+    protected override void OnInitialized()
+    {
+        // Clear any remember password to prevent overlap issues
+        _model.Password = string.Empty;
+    }
 
     private void TogglePasswordVisibility()
     {
@@ -131,12 +137,12 @@
         }
         catch (Exception)
         {
-            _errorMessage = "An error occured during login. Please try again.";
+            _errorMessage = "An error occurred during login. Please try again.";
             Snackbar.Add(_errorMessage, Severity.Error);
         }
         finally
         {
-            _isLoading = false;
+            _isLoading = false; 
         }
     }
 }

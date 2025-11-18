@@ -93,7 +93,7 @@ namespace ChatApp.Modules.Notifications.Application.Commands.SendNotification
             catch (Exception ex)
             {
                 _logger?.LogError(ex, "Error creating notification");
-                return Result.Failure<Guid>("An error occured while creating the notification");
+                return Result.Failure<Guid>("An error occurred while creating the notification");
             }
         }    
     }

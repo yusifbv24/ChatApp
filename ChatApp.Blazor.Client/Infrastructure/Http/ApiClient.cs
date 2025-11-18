@@ -123,7 +123,33 @@ namespace ChatApp.Blazor.Client.Infrastructure.Http
             {
                 var content = await response.Content.ReadAsStringAsync();
                 var errorResponse = JsonSerializer.Deserialize<ErrorResponse>(content, _jsonOptions);
-                return errorResponse?.Error ?? $"Request failed with status code {response.StatusCode}";
+
+                // Handle validation errors with detailed field-level messages
+                if (errorResponse?.Errors != null && errorResponse.Errors.Count > 0)
+                {
+                    var errorMessages = new List<string>();
+                    foreach(var error in errorResponse.Errors)
+                    {
+                        foreach(var message in error.Value)
+                        {
+                            errorMessages.Add(message);
+                        }
+                    }
+                    return string.Join(" . ", errorMessages);
+                }
+
+                // Handle simple error responses
+                if (!string.IsNullOrEmpty(errorResponse?.Error))
+                {
+                    return errorResponse.Error;
+                }
+
+                // Handle message-based error responses
+                if (!string.IsNullOrEmpty(errorResponse?.Message))
+                {
+                    return errorResponse.Message;
+                }
+                return $"Request failed with status code {response.StatusCode}";
             }
             catch
             {

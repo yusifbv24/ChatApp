@@ -80,7 +80,7 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectConversation
             catch (Exception ex)
             {
                 _logger?.LogError(ex, "Error starting conversation");
-                return Result.Failure<Guid>("An error occured while starting the conversation");
+                return Result.Failure<Guid>("An error occurred while starting the conversation");
             }
         }
     }

@@ -5,7 +5,10 @@
 @inject AppState AppState
 @implements IDisposable
 
-<MudThemeProvider @ref="@_mudThemeProvider" @bind-IsDarkMode="@_isDarkMode" Theme="_theme" />
+<MudThemeProvider @ref="@_mudThemeProvider"
+                  IsDarkMode="@_isDarkMode"
+                  IsDarkModeChanged="@(x => { _isDarkMode = x; AppState.IsDarkMode = x; })"
+                  Theme="_theme" />
 <MudDialogProvider />
 <MudSnackbarProvider/>
 
@@ -156,6 +159,7 @@
     {
         _isDarkMode = !_isDarkMode;
         AppState.IsDarkMode = _isDarkMode;
+        StateHasChanged();
     }
 
     private async Task HandleLogout()

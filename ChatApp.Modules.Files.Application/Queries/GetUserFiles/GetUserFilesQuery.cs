@@ -44,7 +44,7 @@ namespace ChatApp.Modules.Files.Application.Queries.GetUserFiles
             catch (Exception ex)
             {
                 _logger?.LogError(ex, "Error retrieving files for user {UserId}", request.UserId);
-                return Result.Failure<List<FileDto>>("An error occured while retrieving files");
+                return Result.Failure<List<FileDto>>("An error occurred while retrieving files");
             }
         }
     }
