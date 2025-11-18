@@ -1,0 +1,177 @@
+@using ChatApp.Blazor.Client.Features.Files.Services
+@using ChatApp.Blazor.Client.Features.Files.State
+@using ChatApp.Blazor.Client.Models.Files
+@inject IFileService FileService
+@inject FileState FileState
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<MudCard Class="file-list-item">
+    <MudCardContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            @* File Icon or Thumbnail *@
+            <div class="file-preview">
+                @if (File.HasThumbnail && File.FileType == FileType.Image)
+                {
+                    <MudImage Src="@FileService.GetThumbnailUrl(File.Id)"
+                              Alt="@File.OriginalFileName"
+                              Class="file-thumbnail"
+                              ObjectFit="ObjectFit.Cover" />
+                }
+                else
+                {
+                    <MudIcon Icon="@GetFileIcon(File.FileType)" Size="Size.Large" Color="Color.Primary" />
+                }
+            </div>
+
+            @* File Info *@
+            <MudStack Spacing="1" Class="flex-grow-1">
+                <MudText Typo="Typo.subtitle1">@File.OriginalFileName</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    @FormatFileSize(File.FileSizeInBytes) • @File.FileType.ToString() • Uploaded @File.UploadedAtUtc.ToLocalTime().ToString("MMM dd, yyyy")
+                </MudText>
+                @if (File.Width.HasValue && File.Height.HasValue)
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        Dimensions: @File.Width x @File.Height
+                    </MudText>
+                }
+            </MudStack>
+
+            @* Actions *@
+            <MudStack Row="true" Spacing="1">
+                @if (File.HasThumbnail && File.FileType == FileType.Image)
+                {
+                    <MudTooltip Text="Preview">
+                        <MudIconButton Icon="@Icons.Material.Filled.Visibility"
+                                       Color="Color.Primary"
+                                       OnClick="ShowPreview" />
+                    </MudTooltip>
+                }
+
+                <MudTooltip Text="Download">
+                    <MudIconButton Icon="@Icons.Material.Filled.Download"
+                                   Color="Color.Primary"
+                                   Href="@FileService.GetDownloadUrl(File.Id)"
+                                   Target="_blank" />
+                </MudTooltip>
+
+                @if (ShowDeleteButton)
+                {
+                    <MudTooltip Text="Delete">
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                       Color="Color.Error"
+                                       OnClick="DeleteFile"
+                                       Disabled="_isDeleting" />
+                    </MudTooltip>
+                }
+            </MudStack>
+        </MudStack>
+    </MudCardContent>
+</MudCard>
+
+<style>
+    .file-list-item {
+        transition: all 0.2s ease;
+    }
+
+    .file-list-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .file-preview {
+        width: 60px;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        background: rgba(37, 99, 235, 0.05);
+    }
+
+    .file-thumbnail {
+        width: 60px;
+        height: 60px;
+        border-radius: 8px;
+    }
+</style>
+
+@code {
+    [Parameter, EditorRequired] public FileDto File { get; set; } = null!;
+    [Parameter] public bool ShowDeleteButton { get; set; } = true;
+    [Parameter] public EventCallback OnDeleted { get; set; }
+
+    private bool _isDeleting;
+
+    private async Task ShowPreview()
+    {
+        var parameters = new DialogParameters<FilePreview>
+        {
+            { x => x.File, File }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Large,
+            FullWidth = true,
+            CloseButton = true
+        };
+
+        await DialogService.ShowAsync<FilePreview>("File Preview", parameters, options);
+    }
+
+    private async Task DeleteFile()
+    {
+        var confirm = await DialogService.ShowMessageBox(
+            "Delete File",
+            $"Are you sure you want to delete '{File.OriginalFileName}'? This action cannot be undone.",
+            yesText: "Delete",
+            cancelText: "Cancel");
+
+        if (confirm != true) return;
+
+        _isDeleting = true;
+
+        var result = await FileService.DeleteFileAsync(File.Id);
+
+        if (result.IsSuccess)
+        {
+            Snackbar.Add($"File '{File.OriginalFileName}' deleted successfully", Severity.Success);
+            FileState.RemoveFile(File.Id);
+            await OnDeleted.InvokeAsync();
+        }
+        else
+        {
+            Snackbar.Add(result.Error ?? "Failed to delete file", Severity.Error);
+        }
+
+        _isDeleting = false;
+    }
+
+    private string GetFileIcon(FileType fileType)
+    {
+        return fileType switch
+        {
+            FileType.Image => Icons.Material.Filled.Image,
+            FileType.Video => Icons.Material.Filled.VideoFile,
+            FileType.Audio => Icons.Material.Filled.AudioFile,
+            FileType.Document => Icons.Material.Filled.Description,
+            FileType.Archive => Icons.Material.Filled.FolderZip,
+            _ => Icons.Material.Filled.InsertDriveFile
+        };
+    }
+
+    private string FormatFileSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        double len = bytes;
+        int order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len = len / 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
+    }
+}

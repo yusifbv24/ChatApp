@@ -1,0 +1,268 @@
+@page "/files"
+@using ChatApp.Blazor.Client.Features.Files.Components
+@using ChatApp.Blazor.Client.Features.Files.Services
+@using ChatApp.Blazor.Client.Features.Files.State
+@using ChatApp.Blazor.Client.Models.Files
+@inject IFileService FileService
+@inject FileState FileState
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudStack Spacing="4">
+        @* Header *@
+        <MudPaper Class="pa-4" Elevation="0">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                <MudStack Spacing="1">
+                    <MudText Typo="Typo.h4">My Files</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        Manage your uploaded files
+                    </MudText>
+                </MudStack>
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Upload"
+                           OnClick="OpenUploadDialog">
+                    Upload File
+                </MudButton>
+            </MudStack>
+        </MudPaper>
+
+        @* Filters and View Toggle *@
+        <MudPaper Class="pa-4" Elevation="0">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                <MudTextField @bind-Value="_searchQuery"
+                              Placeholder="Search files..."
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Search"
+                              Immediate="true"
+                              DebounceInterval="300"
+                              OnDebounceIntervalElapsed="FilterFiles"
+                              Class="flex-grow-1" />
+
+                <MudSelect @bind-Value="_selectedFileType"
+                           Label="File Type"
+                           Variant="Variant.Outlined"
+                           Dense="true"
+                           Style="min-width: 150px;">
+                    <MudSelectItem Value="@((FileType?)null)">All Types</MudSelectItem>
+                    <MudSelectItem Value="@FileType.Image">Images</MudSelectItem>
+                    <MudSelectItem Value="@FileType.Document">Documents</MudSelectItem>
+                    <MudSelectItem Value="@FileType.Video">Videos</MudSelectItem>
+                    <MudSelectItem Value="@FileType.Audio">Audio</MudSelectItem>
+                    <MudSelectItem Value="@FileType.Archive">Archives</MudSelectItem>
+                    <MudSelectItem Value="@FileType.Other">Other</MudSelectItem>
+                </MudSelect>
+
+                <MudToggleIconButton @bind-Toggled="_isGridView"
+                                     Icon="@Icons.Material.Filled.ViewList"
+                                     ToggledIcon="@Icons.Material.Filled.GridView"
+                                     Title="@(_isGridView ? "Switch to list view" : "Switch to grid view")" />
+
+                <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                               Color="Color.Primary"
+                               OnClick="LoadFiles"
+                               Title="Refresh" />
+            </MudStack>
+        </MudPaper>
+
+        @* Files Display *@
+        @if (FileState.IsLoading)
+        {
+            <MudPaper Class="pa-6" Elevation="0">
+                <MudStack AlignItems="AlignItems.Center" Spacing="2">
+                    <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                    <MudText Typo="Typo.body1">Loading files...</MudText>
+                </MudStack>
+            </MudPaper>
+        }
+        else if (!_filteredFiles.Any())
+        {
+            <MudPaper Class="pa-6" Elevation="0">
+                <MudStack AlignItems="AlignItems.Center" Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Filled.FolderOpen" Size="Size.Large" Color="Color.Secondary" />
+                    <MudText Typo="Typo.h6" Color="Color.Secondary">
+                        @(string.IsNullOrWhiteSpace(_searchQuery) ? "No files found" : "No matching files")
+                    </MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        @(string.IsNullOrWhiteSpace(_searchQuery) ? "Upload your first file to get started" : "Try adjusting your search or filters")
+                    </MudText>
+                    @if (string.IsNullOrWhiteSpace(_searchQuery))
+                    {
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.Upload"
+                                   OnClick="OpenUploadDialog"
+                                   Class="mt-2">
+                            Upload File
+                        </MudButton>
+                    }
+                </MudStack>
+            </MudPaper>
+        }
+        else
+        {
+            @if (_isGridView)
+            {
+                <FileGrid Files="_filteredFiles"
+                          ShowDeleteButton="true"
+                          OnFileDeleted="HandleFileDeleted" />
+            }
+            else
+            {
+                <MudStack Spacing="2">
+                    @foreach (var file in _filteredFiles)
+                    {
+                        <FileListItem File="file"
+                                      ShowDeleteButton="true"
+                                      OnDeleted="LoadFiles" />
+                    }
+                </MudStack>
+            }
+
+            @* Pagination Info *@
+            <MudPaper Class="pa-4" Elevation="0">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        Showing @_filteredFiles.Count of @FileState.MyFiles.Count files
+                    </MudText>
+                    @if (FileState.MyFiles.Count >= _pageSize)
+                    {
+                        <MudButton Variant="Variant.Text"
+                                   Color="Color.Primary"
+                                   OnClick="LoadMoreFiles">
+                            Load More
+                        </MudButton>
+                    }
+                </MudStack>
+            </MudPaper>
+        }
+    </MudStack>
+</MudContainer>
+
+@code {
+    private List<FileDto> _filteredFiles = new();
+    private string _searchQuery = string.Empty;
+    private FileType? _selectedFileType;
+    private bool _isGridView = true;
+    private int _pageSize = 50;
+    private int _currentSkip = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        FileState.OnChange += OnStateChanged;
+        await LoadFiles();
+    }
+
+    private async Task LoadFiles()
+    {
+        FileState.SetLoading(true);
+        _currentSkip = 0;
+
+        var result = await FileService.GetMyFilesAsync(_pageSize, _currentSkip);
+
+        if (result.IsSuccess && result.Data != null)
+        {
+            FileState.SetMyFiles(result.Data);
+            FilterFiles();
+        }
+        else
+        {
+            Snackbar.Add(result.Error ?? "Failed to load files", Severity.Error);
+        }
+
+        FileState.SetLoading(false);
+    }
+
+    private async Task LoadMoreFiles()
+    {
+        _currentSkip += _pageSize;
+
+        var result = await FileService.GetMyFilesAsync(_pageSize, _currentSkip);
+
+        if (result.IsSuccess && result.Data != null)
+        {
+            var currentFiles = FileState.MyFiles.ToList();
+            currentFiles.AddRange(result.Data);
+            FileState.SetMyFiles(currentFiles);
+            FilterFiles();
+        }
+        else
+        {
+            Snackbar.Add(result.Error ?? "Failed to load more files", Severity.Error);
+        }
+    }
+
+    private void FilterFiles()
+    {
+        var files = FileState.MyFiles.AsEnumerable();
+
+        // Filter by search query
+        if (!string.IsNullOrWhiteSpace(_searchQuery))
+        {
+            files = files.Where(f => f.OriginalFileName.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase));
+        }
+
+        // Filter by file type
+        if (_selectedFileType.HasValue)
+        {
+            files = files.Where(f => f.FileType == _selectedFileType.Value);
+        }
+
+        _filteredFiles = files.ToList();
+        StateHasChanged();
+    }
+
+    private async Task OpenUploadDialog()
+    {
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true,
+            CloseButton = true
+        };
+
+        var dialog = await DialogService.ShowAsync<FileUploadDialog>("Upload File", options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadFiles();
+        }
+    }
+
+    private async Task HandleFileDeleted(FileDto file)
+    {
+        var confirm = await DialogService.ShowMessageBox(
+            "Delete File",
+            $"Are you sure you want to delete '{file.OriginalFileName}'? This action cannot be undone.",
+            yesText: "Delete",
+            cancelText: "Cancel");
+
+        if (confirm != true) return;
+
+        var result = await FileService.DeleteFileAsync(file.Id);
+
+        if (result.IsSuccess)
+        {
+            Snackbar.Add($"File '{file.OriginalFileName}' deleted successfully", Severity.Success);
+            FileState.RemoveFile(file.Id);
+            FilterFiles();
+        }
+        else
+        {
+            Snackbar.Add(result.Error ?? "Failed to delete file", Severity.Error);
+        }
+    }
+
+    private void OnStateChanged()
+    {
+        FilterFiles();
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        FileState.OnChange -= OnStateChanged;
+    }
+}

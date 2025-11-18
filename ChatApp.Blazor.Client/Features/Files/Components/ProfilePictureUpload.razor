@@ -1,0 +1,196 @@
+@using ChatApp.Blazor.Client.Features.Files.Services
+@using ChatApp.Blazor.Client.Models.Files
+@using Microsoft.AspNetCore.Components.Forms
+@inject IFileService FileService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudText Typo="Typo.body1">
+                Upload a profile picture. Maximum file size: 10MB. The image will be resized to 400x400.
+            </MudText>
+
+            <InputFile id="profilePictureInput" OnChange="HandleFileSelected" hidden accept="image/*" />
+
+            <MudPaper Class="profile-upload-zone" Elevation="0" Outlined="true">
+                <MudStack AlignItems="AlignItems.Center" Spacing="3" Class="pa-6">
+                    @if (_previewUrl != null)
+                    {
+                        <MudAvatar Size="Size.Large" Style="width: 200px; height: 200px;">
+                            <MudImage Src="@_previewUrl" Alt="Preview" />
+                        </MudAvatar>
+                    }
+                    else if (!string.IsNullOrEmpty(CurrentProfilePictureUrl))
+                    {
+                        <MudAvatar Size="Size.Large" Style="width: 200px; height: 200px;">
+                            <MudImage Src="@CurrentProfilePictureUrl" Alt="Current profile picture" />
+                        </MudAvatar>
+                    }
+                    else
+                    {
+                        <MudAvatar Color="Color.Primary" Size="Size.Large" Style="width: 200px; height: 200px;">
+                            <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Large" />
+                        </MudAvatar>
+                    }
+
+                    @if (_selectedFile != null)
+                    {
+                        <MudText Typo="Typo.body1">@_selectedFile.Name</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            @FormatFileSize(_selectedFile.Size)
+                        </MudText>
+                        <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="ClearFile" Size="Size.Small">
+                            Clear
+                        </MudButton>
+                    }
+                    else
+                    {
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="OpenFileDialog">
+                            Choose Image
+                        </MudButton>
+                    }
+
+                    @if (_isUploading)
+                    {
+                        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mt-4" />
+                        <MudText Typo="Typo.body2">Uploading...</MudText>
+                    }
+                </MudStack>
+            </MudPaper>
+
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Dense="true">@_errorMessage</MudAlert>
+            }
+
+            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                Supported formats: JPEG, PNG, GIF, WebP
+            </MudText>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_isUploading">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Upload"
+                   Disabled="_selectedFile == null || _isUploading">
+            Upload
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+<style>
+    .profile-upload-zone {
+        transition: all 0.2s ease;
+    }
+
+    .profile-upload-zone:hover {
+        border-color: #2563EB;
+    }
+</style>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public string? CurrentProfilePictureUrl { get; set; }
+
+    private const long MaxFileSize = 10485760; // 10MB
+    private IBrowserFile? _selectedFile;
+    private string? _previewUrl;
+    private bool _isUploading;
+    private string? _errorMessage;
+
+    private void OpenFileDialog()
+    {
+        var element = Microsoft.JSInterop.JSRuntime.Current;
+        _ = Task.Run(async () =>
+        {
+            var module = await ((IJSRuntime)element).InvokeAsync<IJSObjectReference>("import", "./js/app.js");
+            await module.InvokeVoidAsync("clickElement", "profilePictureInput");
+        });
+    }
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        _errorMessage = null;
+        _selectedFile = e.File;
+
+        // Validate file type
+        if (!_selectedFile.ContentType.StartsWith("image/"))
+        {
+            _errorMessage = "Only image files are allowed";
+            _selectedFile = null;
+            return;
+        }
+
+        // Validate file size
+        if (_selectedFile.Size > MaxFileSize)
+        {
+            _errorMessage = $"File size exceeds maximum allowed size of {MaxFileSize / 1024 / 1024}MB";
+            _selectedFile = null;
+            return;
+        }
+
+        // Generate preview
+        try
+        {
+            var resizedImage = await _selectedFile.RequestImageFileAsync(_selectedFile.ContentType, 400, 400);
+            var buffer = new byte[resizedImage.Size];
+            await resizedImage.OpenReadStream(MaxFileSize).ReadAsync(buffer);
+            var base64 = Convert.ToBase64String(buffer);
+            _previewUrl = $"data:{_selectedFile.ContentType};base64,{base64}";
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to generate preview: {ex.Message}";
+        }
+
+        StateHasChanged();
+    }
+
+    private void ClearFile()
+    {
+        _selectedFile = null;
+        _previewUrl = null;
+        _errorMessage = null;
+    }
+
+    private async Task Upload()
+    {
+        if (_selectedFile == null) return;
+
+        _isUploading = true;
+        _errorMessage = null;
+
+        var result = await FileService.UploadProfilePictureAsync(_selectedFile, MaxFileSize);
+
+        if (result.IsSuccess && result.Data != null)
+        {
+            Snackbar.Add("Profile picture uploaded successfully", Severity.Success);
+            MudDialog.Close(DialogResult.Ok(result.Data));
+        }
+        else
+        {
+            _errorMessage = result.Error ?? "Upload failed";
+            Snackbar.Add(_errorMessage, Severity.Error);
+        }
+
+        _isUploading = false;
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private string FormatFileSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        double len = bytes;
+        int order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len = len / 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
+    }
+}

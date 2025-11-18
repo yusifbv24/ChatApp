@@ -1,0 +1,163 @@
+@using ChatApp.Blazor.Client.Features.Files.Services
+@using ChatApp.Blazor.Client.Features.Files.State
+@using ChatApp.Blazor.Client.Models.Files
+@using Microsoft.AspNetCore.Components.Forms
+@inject IFileService FileService
+@inject FileState FileState
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudText Typo="Typo.body1">
+                Upload a file to your personal storage. Maximum file size: @(MaxFileSize / 1024 / 1024)MB
+            </MudText>
+
+            <InputFile id="fileInput" OnChange="HandleFileSelected" hidden accept="*/*" />
+
+            <MudPaper Class="upload-drop-zone" Elevation="0" Outlined="true">
+                <MudStack AlignItems="AlignItems.Center" Spacing="2" Class="pa-6">
+                    @if (_selectedFile == null)
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.CloudUpload" Size="Size.Large" Color="Color.Primary" />
+                        <MudText Typo="Typo.h6">Choose a file to upload</MudText>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="OpenFileDialog">
+                            Browse Files
+                        </MudButton>
+                    }
+                    else
+                    {
+                        <MudIcon Icon="@GetFileIcon(_selectedFile.ContentType)" Size="Size.Large" Color="Color.Primary" />
+                        <MudText Typo="Typo.h6">@_selectedFile.Name</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            @FormatFileSize(_selectedFile.Size)
+                        </MudText>
+                        <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="ClearFile" Size="Size.Small">
+                            Clear
+                        </MudButton>
+                    }
+
+                    @if (_isUploading)
+                    {
+                        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mt-4" />
+                        <MudText Typo="Typo.body2">Uploading...</MudText>
+                    }
+                </MudStack>
+            </MudPaper>
+
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Dense="true">@_errorMessage</MudAlert>
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_isUploading">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Upload"
+                   Disabled="_selectedFile == null || _isUploading">
+            Upload
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public long MaxFileSize { get; set; } = 104857600; // 100MB default
+
+    private IBrowserFile? _selectedFile;
+    private bool _isUploading;
+    private string? _errorMessage;
+
+    private void OpenFileDialog()
+    {
+        var element = Microsoft.JSInterop.JSRuntime.Current;
+        // Trigger click on hidden input
+        _ = Task.Run(async () =>
+        {
+            var module = await ((IJSRuntime)element).InvokeAsync<IJSObjectReference>("import", "./js/app.js");
+            await module.InvokeVoidAsync("clickElement", "fileInput");
+        });
+    }
+
+    private void HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        _errorMessage = null;
+        _selectedFile = e.File;
+
+        // Validate file size
+        if (_selectedFile.Size > MaxFileSize)
+        {
+            _errorMessage = $"File size exceeds maximum allowed size of {MaxFileSize / 1024 / 1024}MB";
+            _selectedFile = null;
+        }
+
+        StateHasChanged();
+    }
+
+    private void ClearFile()
+    {
+        _selectedFile = null;
+        _errorMessage = null;
+    }
+
+    private async Task Upload()
+    {
+        if (_selectedFile == null) return;
+
+        _isUploading = true;
+        _errorMessage = null;
+
+        var result = await FileService.UploadFileAsync(_selectedFile, MaxFileSize);
+
+        if (result.IsSuccess && result.Data != null)
+        {
+            Snackbar.Add($"File '{_selectedFile.Name}' uploaded successfully", Severity.Success);
+
+            // Refresh user's files list
+            var filesResult = await FileService.GetMyFilesAsync();
+            if (filesResult.IsSuccess && filesResult.Data != null)
+            {
+                FileState.SetMyFiles(filesResult.Data);
+            }
+
+            MudDialog.Close(DialogResult.Ok(result.Data));
+        }
+        else
+        {
+            _errorMessage = result.Error ?? "Upload failed";
+            Snackbar.Add(_errorMessage, Severity.Error);
+        }
+
+        _isUploading = false;
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private string GetFileIcon(string contentType)
+    {
+        if (contentType.StartsWith("image/")) return Icons.Material.Filled.Image;
+        if (contentType.StartsWith("video/")) return Icons.Material.Filled.VideoFile;
+        if (contentType.StartsWith("audio/")) return Icons.Material.Filled.AudioFile;
+        if (contentType.Contains("pdf")) return Icons.Material.Filled.PictureAsPdf;
+        if (contentType.Contains("word") || contentType.Contains("document")) return Icons.Material.Filled.Description;
+        if (contentType.Contains("excel") || contentType.Contains("spreadsheet")) return Icons.Material.Filled.TableChart;
+        if (contentType.Contains("zip") || contentType.Contains("rar") || contentType.Contains("archive")) return Icons.Material.Filled.FolderZip;
+        return Icons.Material.Filled.InsertDriveFile;
+    }
+
+    private string FormatFileSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        double len = bytes;
+        int order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len = len / 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
+    }
+}

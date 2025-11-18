@@ -1,0 +1,179 @@
+@using ChatApp.Blazor.Client.Features.Files.Services
+@using ChatApp.Blazor.Client.Models.Files
+@inject IFileService FileService
+@inject IDialogService DialogService
+
+<MudGrid Spacing="3">
+    @foreach (var file in Files)
+    {
+        <MudItem xs="12" sm="6" md="4" lg="3">
+            <MudCard Class="file-grid-card" @onclick="() => ShowPreview(file)">
+                <MudCardMedia>
+                    <div class="file-grid-preview">
+                        @if (file.HasThumbnail && file.FileType == FileType.Image)
+                        {
+                            <MudImage Src="@FileService.GetThumbnailUrl(file.Id)"
+                                      Alt="@file.OriginalFileName"
+                                      Class="grid-thumbnail"
+                                      ObjectFit="ObjectFit.Cover" />
+                        }
+                        else
+                        {
+                            <div class="file-icon-container">
+                                <MudIcon Icon="@GetFileIcon(file.FileType)" Size="Size.Large" Color="Color.Primary" />
+                            </div>
+                        }
+                    </div>
+                </MudCardMedia>
+                <MudCardContent>
+                    <MudStack Spacing="1">
+                        <MudText Typo="Typo.subtitle2" Class="file-name">@file.OriginalFileName</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            @FormatFileSize(file.FileSizeInBytes)
+                        </MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            @file.UploadedAtUtc.ToLocalTime().ToString("MMM dd, yyyy")
+                        </MudText>
+                    </MudStack>
+                </MudCardContent>
+                <MudCardActions>
+                    <MudIconButton Icon="@Icons.Material.Filled.Visibility"
+                                   Color="Color.Primary"
+                                   Size="Size.Small"
+                                   Title="Preview" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Download"
+                                   Color="Color.Primary"
+                                   Size="Size.Small"
+                                   Href="@FileService.GetDownloadUrl(file.Id)"
+                                   Target="_blank"
+                                   Title="Download"
+                                   @onclick:stopPropagation="true" />
+                    @if (ShowDeleteButton)
+                    {
+                        <MudSpacer />
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                       Color="Color.Error"
+                                       Size="Size.Small"
+                                       OnClick="@((e) => DeleteFile(file, e))"
+                                       Title="Delete" />
+                    }
+                </MudCardActions>
+            </MudCard>
+        </MudItem>
+    }
+
+    @if (!Files.Any())
+    {
+        <MudItem xs="12">
+            <MudPaper Class="pa-6" Elevation="0">
+                <MudStack AlignItems="AlignItems.Center" Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Filled.FolderOpen" Size="Size.Large" Color="Color.Secondary" />
+                    <MudText Typo="Typo.h6" Color="Color.Secondary">No files found</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Upload your first file to get started</MudText>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+    }
+</MudGrid>
+
+<style>
+    .file-grid-card {
+        cursor: pointer;
+        transition: all 0.2s ease;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .file-grid-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+    }
+
+    .file-grid-preview {
+        width: 100%;
+        height: 200px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(37, 99, 235, 0.05);
+        overflow: hidden;
+    }
+
+    .grid-thumbnail {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .file-icon-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+    }
+
+    .file-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+</style>
+
+@code {
+    [Parameter, EditorRequired] public List<FileDto> Files { get; set; } = new();
+    [Parameter] public bool ShowDeleteButton { get; set; } = true;
+    [Parameter] public EventCallback<FileDto> OnFileDeleted { get; set; }
+
+    private async Task ShowPreview(FileDto file)
+    {
+        var parameters = new DialogParameters<FilePreview>
+        {
+            { x => x.File, file }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Large,
+            FullWidth = true,
+            CloseButton = true
+        };
+
+        await DialogService.ShowAsync<FilePreview>("File Preview", parameters, options);
+    }
+
+    private async Task DeleteFile(FileDto file, MouseEventArgs e)
+    {
+        // Stop event propagation to prevent card click
+        e.StopPropagation();
+
+        await OnFileDeleted.InvokeAsync(file);
+    }
+
+    private string GetFileIcon(FileType fileType)
+    {
+        return fileType switch
+        {
+            FileType.Image => Icons.Material.Filled.Image,
+            FileType.Video => Icons.Material.Filled.VideoFile,
+            FileType.Audio => Icons.Material.Filled.AudioFile,
+            FileType.Document => Icons.Material.Filled.Description,
+            FileType.Archive => Icons.Material.Filled.FolderZip,
+            _ => Icons.Material.Filled.InsertDriveFile
+        };
+    }
+
+    private string FormatFileSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        double len = bytes;
+        int order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len = len / 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
+    }
+}

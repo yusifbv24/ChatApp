@@ -1,0 +1,161 @@
+@using ChatApp.Blazor.Client.Features.Files.Services
+@using ChatApp.Blazor.Client.Models.Files
+@inject IFileService FileService
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="3">
+            @* File Preview *@
+            <div class="file-preview-container">
+                @if (File.FileType == FileType.Image)
+                {
+                    <MudImage Src="@FileService.GetDownloadUrl(File.Id)"
+                              Alt="@File.OriginalFileName"
+                              Class="preview-image"
+                              Elevation="0" />
+                }
+                else if (File.FileType == FileType.Video)
+                {
+                    <video controls class="preview-video">
+                        <source src="@FileService.GetDownloadUrl(File.Id)" type="@File.ContentType">
+                        Your browser does not support the video tag.
+                    </video>
+                }
+                else if (File.FileType == FileType.Audio)
+                {
+                    <audio controls class="preview-audio">
+                        <source src="@FileService.GetDownloadUrl(File.Id)" type="@File.ContentType">
+                        Your browser does not support the audio tag.
+                    </audio>
+                }
+                else
+                {
+                    <MudStack AlignItems="AlignItems.Center" Spacing="3" Class="pa-6">
+                        <MudIcon Icon="@GetFileIcon(File.FileType)" Size="Size.Large" Color="Color.Primary" />
+                        <MudText Typo="Typo.h6">Preview not available</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            This file type cannot be previewed. Please download to view.
+                        </MudText>
+                    </MudStack>
+                }
+            </div>
+
+            @* File Details *@
+            <MudDivider />
+            <MudStack Spacing="2">
+                <MudText Typo="Typo.h6">File Details</MudText>
+
+                <MudStack Row="true" Spacing="1">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Style="min-width: 120px;">File Name:</MudText>
+                    <MudText Typo="Typo.body1">@File.OriginalFileName</MudText>
+                </MudStack>
+
+                <MudStack Row="true" Spacing="1">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Style="min-width: 120px;">File Type:</MudText>
+                    <MudText Typo="Typo.body1">@File.FileType.ToString()</MudText>
+                </MudStack>
+
+                <MudStack Row="true" Spacing="1">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Style="min-width: 120px;">Content Type:</MudText>
+                    <MudText Typo="Typo.body1">@File.ContentType</MudText>
+                </MudStack>
+
+                <MudStack Row="true" Spacing="1">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Style="min-width: 120px;">File Size:</MudText>
+                    <MudText Typo="Typo.body1">@FormatFileSize(File.FileSizeInBytes)</MudText>
+                </MudStack>
+
+                @if (File.Width.HasValue && File.Height.HasValue)
+                {
+                    <MudStack Row="true" Spacing="1">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary" Style="min-width: 120px;">Dimensions:</MudText>
+                        <MudText Typo="Typo.body1">@File.Width x @File.Height</MudText>
+                    </MudStack>
+                }
+
+                <MudStack Row="true" Spacing="1">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Style="min-width: 120px;">Uploaded By:</MudText>
+                    <MudText Typo="Typo.body1">@File.UploaderDisplayName (@File.UploaderUsername)</MudText>
+                </MudStack>
+
+                <MudStack Row="true" Spacing="1">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Style="min-width: 120px;">Uploaded At:</MudText>
+                    <MudText Typo="Typo.body1">@File.UploadedAtUtc.ToLocalTime().ToString("MMMM dd, yyyy HH:mm:ss")</MudText>
+                </MudStack>
+            </MudStack>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close">Close</MudButton>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   Href="@FileService.GetDownloadUrl(File.Id)"
+                   Target="_blank"
+                   StartIcon="@Icons.Material.Filled.Download">
+            Download
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+<style>
+    .file-preview-container {
+        max-height: 500px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0, 0, 0, 0.02);
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .preview-image {
+        max-width: 100%;
+        max-height: 500px;
+        object-fit: contain;
+    }
+
+    .preview-video {
+        max-width: 100%;
+        max-height: 500px;
+    }
+
+    .preview-audio {
+        width: 100%;
+    }
+</style>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter, EditorRequired] public FileDto File { get; set; } = null!;
+
+    private void Close()
+    {
+        MudDialog.Close();
+    }
+
+    private string GetFileIcon(FileType fileType)
+    {
+        return fileType switch
+        {
+            FileType.Image => Icons.Material.Filled.Image,
+            FileType.Video => Icons.Material.Filled.VideoFile,
+            FileType.Audio => Icons.Material.Filled.AudioFile,
+            FileType.Document => Icons.Material.Filled.Description,
+            FileType.Archive => Icons.Material.Filled.FolderZip,
+            _ => Icons.Material.Filled.InsertDriveFile
+        };
+    }
+
+    private string FormatFileSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        double len = bytes;
+        int order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len = len / 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
+    }
+}

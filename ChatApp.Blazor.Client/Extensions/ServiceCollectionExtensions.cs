@@ -2,6 +2,8 @@ using ChatApp.Blazor.Client.Features.Auth.Services;
 using ChatApp.Blazor.Client.Features.Admin.Services;
 using ChatApp.Blazor.Client.Features.Channels.Services;
 using ChatApp.Blazor.Client.Features.DirectMessages.Services;
+using ChatApp.Blazor.Client.Features.Files.Services;
+using ChatApp.Blazor.Client.Features.Files.State;
 using ChatApp.Blazor.Client.State;
 
 namespace ChatApp.Blazor.Client.Extensions;
@@ -33,6 +35,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IDirectConversationService, DirectConversationService>();
         services.AddScoped<IDirectMessageService, DirectMessageService>();
 
+        // File Services
+        services.AddScoped<IFileService, FileService>();
+
         return services;
     }
 
@@ -45,6 +50,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<UserState>();
         services.AddScoped<ChannelState>();
         services.AddScoped<DirectMessageState>();
+        services.AddScoped<FileState>();
 
         return services;
     }
