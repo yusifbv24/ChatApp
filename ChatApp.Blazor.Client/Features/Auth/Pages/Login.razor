@@ -1,5 +1,6 @@
 ﻿@page "/login"
 @layout LoginLayout
+@attribute [AllowAnonymous]
 @inject IAuthService AuthService
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
