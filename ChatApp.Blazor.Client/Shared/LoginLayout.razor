@@ -1,0 +1,56 @@
+@inherits LayoutComponentBase
+
+<MudThemeProvider @ref="@_mudThemeProvider" @bind-IsDarkMode="@_isDarkMode" Theme="_theme" />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<div class="login-layout">
+    @Body
+</div>
+
+<style>
+    .login-layout {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    }
+</style>
+
+@code {
+    private MudThemeProvider? _mudThemeProvider;
+    private bool _isDarkMode = false;
+
+    private MudTheme _theme = new MudTheme()
+    {
+        Palette = new PaletteLight()
+        {
+            Primary = "#2563EB",
+            Secondary = "#64748B",
+            Success = "#059669",
+            Warning = "#D97706",
+            Error = "#DC2626",
+            Info = "#0284C7",
+            AppbarBackground = "#FFFFFF",
+        },
+        PaletteDark = new PaletteDark()
+        {
+            Primary = "#3B82F6",
+            Secondary = "#94A3B8",
+            Success = "#10B981",
+            Warning = "#F59E0B",
+            Error = "#EF4444",
+            Info = "#06B6D4",
+            AppbarBackground = "#1E293B",
+            Background = "#0F172A",
+            Surface = "#1E293B",
+        }
+    };
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && _mudThemeProvider != null)
+        {
+            _isDarkMode = await _mudThemeProvider.GetSystemPreference();
+            StateHasChanged();
+        }
+    }
+}

@@ -61,15 +61,18 @@
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
     <script src="js/app.js"></script>
 
-    <!-- Service Worker Registration -->
+    <!-- Service Worker Registration (Only for Production) -->
     <script>
-        navigator.serviceWorker.register('service-worker.js', {
-            scope: './'
-        }).then(registration => {
-            console.log('Service Worker registered successfully:', registration.scope);
-        }).catch(error => {
-            console.log('Service Worker registration failed:', error);
-        });
+        // Only register service worker in production
+        if (window.location.hostname !== 'localhost' && 'serviceWorker' in navigator) {
+            navigator.serviceWorker.register('service-worker.js', {
+                scope: './'
+            }).then(registration => {
+                console.log('Service Worker registered successfully:', registration.scope);
+            }).catch(error => {
+                console.log('Service Worker registration failed:', error);
+            });
+        }
 
         Blazor.start();
     </script>
