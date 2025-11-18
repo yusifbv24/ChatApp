@@ -8,16 +8,16 @@
 <PageTitle>Login - ChatApp</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.Small" Class="d-flex align-center justify-center"
-    Style="min-height: 100vh;">
-    <MudPaper Elevation="8" Class="pa-8 animate-zoom-in" Style="width: 100%; max-width: 450px;">
+    Style="min-height: 100vh; padding: 24px;">
+    <MudPaper Elevation="8" Class="pa-8 animate-zoom-in" Style="width: 100%; max-width: 450px; border-radius: 20px;">
         <MudStack Spacing="4">
 
             <!-- Logo and Title-->
-            <MudStack AlignItems="AlignItems.Center" Spacing="2" Class="animate-fade-in-down">
+            <MudStack AlignItems="AlignItems.Center" Spacing="2" Class="animate-fade-in-down mb-2">
                 <MudIcon Icon="@Icons.Material.Filled.Chat" Size="Size.Large" Color="Color.Primary" 
-                    Style="font-size: 4rem;" />
-                <MudText Typo="Typo.h4" Align="Align.Center">
-                    <b>Welcome to ChatApp</b>
+                    Style="font-size: 3.5rem;" />
+                <MudText Typo="Typo.h4" Align="Align.Center" Style="font-weight: 700;">
+                    <b>Welcome back</b>
                 </MudText>
                 <MudText Typo="Typo.body2" Align="Align.Center" Color="Color.Secondary">
                     Sign in to your account to continue
@@ -29,15 +29,17 @@
                 <DataAnnotationsValidator />
 
                 <MudStack Spacing="4" class="animate-fade-in-up delay-100">
-                    <!-- Username Field with Improved Spacing -->
+                    <!-- Username Field -->
                     <MudTextField @bind-Value="_model.Username"
                                   Label="Username"
                                   Variant="Variant.Outlined"
                                   Adornment="Adornment.Start"
                                   AdornmentIcon="@Icons.Material.Filled.Person"
+                                  AdornmentColor="Color.Primary"
                                   Required="true"
                                   For="@(()=> _model.Username)"
-                                  Disabled="@_isLoading" />
+                                  Disabled="@_isLoading"
+                                  Class="login-text-field" />
 
                     <MudTextField @bind-Value="_model.Password"
                                   Label="Password"
@@ -45,14 +47,17 @@
                                   InputType="@_passwordInputType"
                                   Adornment="Adornment.End"
                                   AdornmentIcon="@_passwordIcon"
+                                  AdornmentColor="Color.Primary"
                                   OnAdornmentClick="TogglePasswordVisibility"
                                   Required="true"
                                   For="@(()=>_model.Password)"
-                                  Disabled="@_isLoading" 
-                                  Immediate="true"/>
+                                  Disabled="@_isLoading"
+                                  Class="login-text-field" />
 
-                    <MudCheckBox T="bool" @bind-Checked="_model.RememberMe" Label="Remember me"
-                                 Color="Color.Primary" Disabled="@_isLoading" />
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mt-1">
+                        <MudCheckBox T="bool" @bind-Checked="_model.RememberMe" Label="Remember me"
+                                     Color="Color.Primary" Disabled="@_isLoading" Size="Size.Small" />
+                    </MudStack>
 
                     @if (!string.IsNullOrEmpty(_errorMessage))
                     {
@@ -65,11 +70,12 @@
                                FullWidth="true"
                                Size="Size.Large"
                                Disabled="@_isLoading"
-                               Class="mt-2">
+                               Class="mt-3"
+                               Style="height: 48px; text-transform: none; font-weight: 600; border-radius: 12px;">
                         @if (_isLoading)
                         {
-                            <MudProgressCircular Size="Size.Small" Indeterminate="true" />
-                            <MudText Class="ml-2">Signing in...</MudText>
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                            <MudText>Signing in...</MudText>
                         }
                         else
                         {
@@ -82,6 +88,29 @@
     </MudPaper>
 </MudContainer>
 
+<style>
+    /* Fix icon styling - remove background and adjust size */
+    .login-text-field .mud-input-adornment-start .mud-icon-root {
+        color: var(--mud-palette-primary);
+        font-size: 1.25rem;
+    }
+
+    /* Make password toggle icon smaller and cleaner */
+    .login-text-field .mud-input-adornment-end .mud-icon-button {
+        padding: 8px;
+    }
+
+    .login-text-field .mud-input-adornment-end .mud-icon-root {
+        font-size: 1.25rem;
+    }
+
+    /* Add better hover effect on button */
+    .mud-button-root:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(37, 99, 235, 0.3);
+        transition: all 0.3s ease;
+    }
+</style>
 
 @code{
     private LoginRequest _model = new();

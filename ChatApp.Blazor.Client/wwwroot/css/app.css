@@ -13,6 +13,7 @@
 
 * {
     box-sizing: border-box;
+    font-family: 'Inter', 'Roboto', 'Helvetica', 'Arial', sans-serif;
 }
 
 html, body {
@@ -29,7 +30,6 @@ html, body {
     overflow: hidden;
 }
 
-
 .loading-screen {
     position: fixed;
     top: 0;
@@ -43,31 +43,25 @@ html, body {
     z-index: 9999;
 }
 
-
 .loading-content {
     text-align: center;
     color: white;
 }
 
-
 .loading-logo {
     margin-bottom: 20px;
 }
-
 
 .circle-animation {
     animation: rotate 2s linear infinite;
     transform-origin: center;
 }
 
-
 .wave-animation {
     animation: wave 1.5s ease-in-out infinite;
 }
 
-
 @keyframes rotate {
-
     from {
         transform: rotate(0deg);
     }
@@ -77,18 +71,16 @@ html, body {
     }
 }
 
+/* Fixed wave animation - using transform instead of 'd' property */
 @keyframes wave {
-
     0%, 100% {
-        d: path("M30 50 Q40 30, 50 50 T70 50");
+        transform: translateY(0px);
     }
 
     50% {
-        d: path("M30 50 Q40 70, 50 50 T70 50");
+        transform: translateY(-10px);
     }
 }
-
-
 
 .loading-title {
     font-size: 2.5rem;
@@ -96,19 +88,16 @@ html, body {
     margin: 20px 0 10px;
     background: linear-gradient(to right, #ffffff, #e0e7ff);
     -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
     background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent; /* Fallback for browsers that don't support background-clip: text */
 }
-
-
 
 .loading-text {
     font-size: 1rem;
     opacity: 0.9;
     margin-bottom: 30px;
 }
-
-
 
 .loading-spinner {
     width: 50px;
@@ -120,16 +109,11 @@ html, body {
     animation: spin 1s linear infinite;
 }
 
-
-
 @keyframes spin {
-
     to {
         transform: rotate(360deg);
     }
 }
-
-
 
 #blazor-error-ui {
     background: #ef4444;
@@ -144,27 +128,19 @@ html, body {
     color: white;
 }
 
-
-
     #blazor-error-ui .error-content {
         display: flex;
         align-items: center;
         gap: 1rem;
     }
 
-
-
     #blazor-error-ui .error-icon {
         font-size: 1.5rem;
     }
 
-
-
     #blazor-error-ui .error-text {
         flex: 1;
     }
-
-
 
     #blazor-error-ui .reload-link,
     #blazor-error-ui .dismiss-link {
@@ -173,51 +149,34 @@ html, body {
         cursor: pointer;
     }
 
-
-
     #blazor-error-ui .dismiss-link {
         font-size: 1.5rem;
         text-decoration: none;
     }
 
-
-
-
 .fade-in {
     animation: fadeIn 0.5s ease-in;
 }
-
-
 
 .slide-in-left {
     animation: slideInLeft 0.5s ease-out;
 }
 
-
-
 .slide-in-right {
     animation: slideInRight 0.5s ease-out;
 }
-
-
 
 .slide-in-up {
     animation: slideInUp 0.5s ease-out;
 }
 
-
-
 .zoom-in {
     animation: zoomIn 0.4s ease-out;
 }
 
-
-
 .pulse {
     animation: pulse 2s ease-in-out infinite;
 }
-
-
 
 .modern-card {
     background: white;
@@ -226,14 +185,10 @@ html, body {
     transition: transform var(--transition-speed), box-shadow var(--transition-speed);
 }
 
-
-
     .modern-card:hover {
         transform: translateY(-4px);
         box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
     }
-
-
 
 .btn-gradient {
     background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
@@ -242,50 +197,103 @@ html, body {
     transition: all var(--transition-speed);
 }
 
-
-
     .btn-gradient:hover {
         transform: scale(1.05);
         box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);
     }
-
-
-
 
 ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
 }
 
-
-
 ::-webkit-scrollbar-track {
     background: #f1f1f1;
     border-radius: 10px;
 }
-
-
 
 ::-webkit-scrollbar-thumb {
     background: linear-gradient(180deg, var(--primary-color), var(--secondary-color));
     border-radius: 10px;
 }
 
-
-
     ::-webkit-scrollbar-thumb:hover {
         background: var(--primary-color);
     }
 
+/* Add missing animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
 
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideInLeft {
+    from {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideInUp {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes zoomIn {
+    from {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.05);
+    }
+}
 
 @media (max-width: 768px) {
-
     .loading-title {
         font-size: 2rem;
     }
-
-
 
     .loading-text {
         font-size: 0.875rem;
@@ -293,7 +301,6 @@ html, body {
 }
 
 @media (prefers-color-scheme: dark) {
-
     .modern-card {
         background: #1e293b;
         color: white;
