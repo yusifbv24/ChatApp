@@ -36,14 +36,15 @@ builder.Services.AddMudServices(config =>
 builder.Services.AddBlazoredLocalStorage();
 builder.Services.AddBlazoredSessionStorage();
 
-
 // Storage service
 builder.Services.AddScoped<IStorageService, StorageService>();
 
 // Authentication & Authorization
 builder.Services.AddAuthorizationCore();
-builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>(provider =>
-    (CustomAuthStateProvider)provider.GetRequiredService<AuthenticationStateProvider>());
+
+builder.Services.AddScoped<CustomAuthStateProvider>();
+builder.Services.AddScoped<AuthenticationStateProvider>(provider =>
+    provider.GetRequiredService<CustomAuthStateProvider>());
 
 // Http client with Authentication
 builder.Services.AddScoped<AuthenticationDelegatingHandler>();

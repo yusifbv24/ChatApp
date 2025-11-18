@@ -405,7 +405,7 @@ window.chatApp = {
 
 window.addEventListener('load', () => {
 
-    window.chatapp.hideLoadingScreen();
+    window.chatApp.hideLoadingScreen();
 
 });
 
