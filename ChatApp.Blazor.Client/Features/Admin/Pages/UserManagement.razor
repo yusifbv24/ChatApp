@@ -75,7 +75,7 @@ else
                                 <b>@context.DisplayName</b>
                                 @if (context.IsAdmin)
                                 {
-                                    <MudChip Size="Size.Small" Color="Color.Error" Class="ml-2">Admin</MudChip>
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Error" Class="ml-2">Admin</MudChip>
                                 }
                             </MudText>
                             <MudText Typo="Typo.caption" Color="Color.Secondary">@@@context.Username</MudText>
@@ -88,11 +88,11 @@ else
                     {
                         @foreach (var role in context.Roles.Take(2))
                         {
-                            <MudChip Size="Size.Small" Color="Color.Info">@role.Name</MudChip>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Info">@role.Name</MudChip>
                         }
                         @if (context.Roles.Count > 2)
                         {
-                            <MudChip Size="Size.Small">+@(context.Roles.Count - 2)</MudChip>
+                            <MudChip T="string" Size="Size.Small">+@(context.Roles.Count - 2)</MudChip>
                         }
                     }
                     else
@@ -101,7 +101,7 @@ else
                     }
                 </MudTd>
                 <MudTd DataLabel="Status">
-                    <MudChip Size="Size.Small" Color="@(context.IsActive ? Color.Success : Color.Default)">
+                    <MudChip T="string" Size="Size.Small" Color="@(context.IsActive ? Color.Success : Color.Default)">
                         @(context.IsActive ? "Active" : "Inactive")
                     </MudChip>
                 </MudTd>

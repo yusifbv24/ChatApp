@@ -25,7 +25,7 @@ else
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
                     <MudText Typo="Typo.h6">Filter by Module:</MudText>
 
-                    <MudChipSet @bind-SelectedChip="_selectedModuleChip" Filter="true" Mandatory="false">
+                    <MudChipSet T="string" @bind-SelectedChip="_selectedModuleChip" Filter="true" Mandatory="false">
                         <MudChip Text="All" Color="Color.Primary" Default="true" />
                         @foreach (var module in _modules)
                         {
@@ -94,7 +94,7 @@ else
                                                         {
                                                             @foreach (var role in rolesWithPermission)
                                                             {
-                                                                <MudChip Size="Size.Small" Color="Color.Info">@role.Name</MudChip>
+                                                                <MudChip T="string" Size="Size.Small" Color="Color.Info">@role.Name</MudChip>
                                                             }
                                                         }
                                                         else
@@ -169,7 +169,7 @@ else
     private List<RoleDto> _allRoles = new();
     private List<string> _modules = new();
     private bool _isLoading = true;
-    private MudChip? _selectedModuleChip;
+    private string? _selectedModuleChip;
 
     protected override async Task OnInitializedAsync()
     {
@@ -222,14 +222,14 @@ else
 
     private void FilterPermissions()
     {
-        if (_selectedModuleChip == null || _selectedModuleChip.Text == "All")
+        if (_selectedModuleChip == null || _selectedModuleChip == "All")
         {
             _filteredPermissions = _allPermissions;
         }
         else
         {
             _filteredPermissions = _allPermissions
-                .Where(p => p.Module == _selectedModuleChip.Text)
+                .Where(p => p.Module == _selectedModuleChip)
                 .ToList();
         }
     }

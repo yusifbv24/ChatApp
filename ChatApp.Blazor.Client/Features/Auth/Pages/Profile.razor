@@ -50,7 +50,7 @@
                     <MudItem xs="12">
                         <MudTextField @bind-Value="_profileModel.Notes"
                                       Label="Notes"
-                                      Variant="Outlined"
+                                      Variant="Variant.Outlined"
                                       Lines="3"
                                       For="@(() => _profileModel.Notes)"
                                       Disabled="@_isUpdating" />
@@ -157,7 +157,7 @@
                     <MudText Typo="Typo.body2" Color="Color.Secondary">@@@_currentUser?.Username</MudText>
                     @if (_currentUser?.IsAdmin == true)
                     {
-                        <MudChip Color="Color.Error" Size="Size.Small" Icon="@Icons.Material.Filled.AdminPanelSettings">
+                        <MudChip T="string" Color="Color.Error" Size="Size.Small" Icon="@Icons.Material.Filled.AdminPanelSettings">
                             Administrator
                         </MudChip>
                     }
@@ -173,7 +173,7 @@
 
                     <MudStack Row="true" Justify="Justify.SpaceBetween">
                         <MudText Typo="Typo.body2" Color="Color.Secondary">Status</MudText>
-                        <MudChip Color="@(_currentUser?.IsActive == true ? Color.Success : Color.Default)" Size="Size.Small">
+                        <MudChip T="string" Color="@(_currentUser?.IsActive == true ? Color.Success : Color.Default)" Size="Size.Small">
                             @(_currentUser?.IsActive == true ? "Active" : "Inactive")
                         </MudChip>
                     </MudStack>
@@ -190,7 +190,7 @@
                         <MudStack Spacing="1">
                             @foreach (var role in _currentUser.Roles)
                             {
-                                <MudChip Size="Size.Small" Color="Color.Primary">@role.Name</MudChip>
+                                <MudChip T="string" Size="Size.Small" Color="Color.Primary">@role.Name</MudChip>
                             }
                         </MudStack>
                     }

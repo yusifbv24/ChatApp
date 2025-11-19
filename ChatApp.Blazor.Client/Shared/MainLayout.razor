@@ -10,97 +10,296 @@
 <MudSnackbarProvider />
 
 <MudLayout>
-    <MudAppBar Elevation="1" Dense="true">
-        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@ToggleDrawer" />
-        <MudText Typo="Typo.h6" Class="ml-3">ChatApp</MudText>
-        <MudSpacer />
+    <div class="app-container">
+        <MudPaper Class="sidebar" Elevation="0" Square="true">
+            <div class="sidebar-content">
+                <div class="sidebar-header">
+                    <MudText Typo="Typo.h6" Class="app-logo">ChatApp</MudText>
+                </div>
 
-        <MudIconButton Icon="@Icons.Material.Filled.Search" Color="Color.Inherit" />
-        <MudIconButton Icon="@Icons.Material.Filled.Notifications" Color="Color.Inherit"
-                       OnClick="@(() => Navigation.NavigateTo("/notifications"))">
-            @if (AppState.UnreadNotificationCount > 0)
-            {
-                <MudBadge Content="@AppState.UnreadNotificationCount" Color="Color.Error" Overlap="true" Class="mx-6 my-4">
-                </MudBadge>
-            }
-        </MudIconButton>
+                <MudStack Class="sidebar-nav" Spacing="1">
+                    @if (UserState.IsAdmin)
+                    {
+                        <MudTooltip Text="Dashboard" Placement="Placement.Right" Delay="300">
+                            <MudButton Href="/"
+                                       Variant="@(IsActive("/") ? Variant.Filled : Variant.Text)"
+                                       Color="@(IsActive("/") ? Color.Primary : Color.Default)"
+                                       Class="nav-item"
+                                       FullWidth="true"
+                                       StartIcon="@Icons.Material.Filled.Dashboard">
+                                Dashboard
+                            </MudButton>
+                        </MudTooltip>
+                    }
 
-        <MudMenu Icon="@Icons.Material.Filled.AccountCircle" Color="Color.Inherit" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
-            <MudMenuItem OnClick="@(() => Navigation.NavigateTo("/profile"))">
-                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                    <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" />
-                    <MudText>Profile</MudText>
+                    <MudTooltip Text="Messages" Placement="Placement.Right" Delay="300">
+                        <MudButton Href="/messages"
+                                   Variant="@(IsActive("/messages") ? Variant.Filled : Variant.Text)"
+                                   Color="@(IsActive("/messages") ? Color.Primary : Color.Default)"
+                                   Class="nav-item"
+                                   FullWidth="true"
+                                   StartIcon="@Icons.Material.Filled.Message">
+                            Messages
+                        </MudButton>
+                    </MudTooltip>
+
+                    <MudTooltip Text="Channels" Placement="Placement.Right" Delay="300">
+                        <MudButton Href="/channels"
+                                   Variant="@(IsActive("/channels") ? Variant.Filled : Variant.Text)"
+                                   Color="@(IsActive("/channels") ? Color.Primary : Color.Default)"
+                                   Class="nav-item"
+                                   FullWidth="true"
+                                   StartIcon="@Icons.Material.Filled.Tag">
+                            Channels
+                        </MudButton>
+                    </MudTooltip>
+
+                    <MudTooltip Text="Search" Placement="Placement.Right" Delay="300">
+                        <MudButton Href="/search"
+                                   Variant="@(IsActive("/search") ? Variant.Filled : Variant.Text)"
+                                   Color="@(IsActive("/search") ? Color.Primary : Color.Default)"
+                                   Class="nav-item"
+                                   FullWidth="true"
+                                   StartIcon="@Icons.Material.Filled.Search">
+                            Search
+                        </MudButton>
+                    </MudTooltip>
+
+                    <MudDivider Class="my-3" />
+
+                    <MudTooltip Text="Settings" Placement="Placement.Right" Delay="300">
+                        <MudButton Href="/settings"
+                                   Variant="@(IsActive("/settings") ? Variant.Filled : Variant.Text)"
+                                   Color="@(IsActive("/settings") ? Color.Primary : Color.Default)"
+                                   Class="nav-item"
+                                   FullWidth="true"
+                                   StartIcon="@Icons.Material.Filled.Settings">
+                            Settings
+                        </MudButton>
+                    </MudTooltip>
+
+                    @if (UserState.IsAdmin)
+                    {
+                        <MudTooltip Text="Admin Panel" Placement="Placement.Right" Delay="300">
+                            <MudButton Href="/admin/users"
+                                       Variant="@(IsActive("/admin") ? Variant.Filled : Variant.Text)"
+                                       Color="@(IsActive("/admin") ? Color.Primary : Color.Default)"
+                                       Class="nav-item"
+                                       FullWidth="true"
+                                       StartIcon="@Icons.Material.Filled.AdminPanelSettings">
+                                Admin
+                            </MudButton>
+                        </MudTooltip>
+                    }
                 </MudStack>
-            </MudMenuItem>
-            <MudMenuItem OnClick="@(() => Navigation.NavigateTo("/settings"))">
-                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                    <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small" />
-                    <MudText>Settings</MudText>
-                </MudStack>
-            </MudMenuItem>
-            @if (UserState.IsAdmin)
-            {
-                <MudDivider />
-                <MudMenuItem OnClick="@(() => Navigation.NavigateTo("/admin/users"))">
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                        <MudIcon Icon="@Icons.Material.Filled.AdminPanelSettings" Size="Size.Small" />
-                        <MudText>Admin Panel</MudText>
+
+                <div class="sidebar-footer">
+                    <MudStack Spacing="2">
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="px-2">
+                            <MudTooltip Text="Notifications">
+                                <MudBadge Content="@AppState.UnreadNotificationCount"
+                                          Color="Color.Error"
+                                          Overlap="true"
+                                          Visible="@(AppState.UnreadNotificationCount > 0)"
+                                          Bordered="true">
+                                    <MudIconButton Icon="@Icons.Material.Filled.Notifications"
+                                                   Size="Size.Medium"
+                                                   OnClick="@(() => Navigation.NavigateTo("/notifications"))" />
+                                </MudBadge>
+                            </MudTooltip>
+
+                            <MudTooltip Text="@(_isDarkMode ? "Light Mode" : "Dark Mode")">
+                                <MudIconButton Icon="@(_isDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
+                                               Size="Size.Medium"
+                                               OnClick="ToggleDarkMode" />
+                            </MudTooltip>
+                        </MudStack>
+
+                        <MudDivider />
+
+                        <MudMenu AnchorOrigin="Origin.TopRight" TransformOrigin="Origin.BottomRight" FullWidth="true">
+                            <ActivatorContent>
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="user-profile-card">
+                                    @if (!string.IsNullOrEmpty(UserState.AvatarUrl))
+                                    {
+                                        <MudAvatar Image="@UserState.AvatarUrl" Size="Size.Medium" />
+                                    }
+                                    else
+                                    {
+                                        <MudAvatar Color="Color.Primary" Size="Size.Medium">
+                                            @GetInitials(UserState.DisplayName)
+                                        </MudAvatar>
+                                    }
+                                    <MudStack Spacing="0" Class="flex-grow-1" Style="min-width: 0;">
+                                        <MudText Typo="Typo.body2" Class="text-truncate">@UserState.DisplayName</MudText>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="text-truncate">@UserState.Username</MudText>
+                                    </MudStack>
+                                    <MudIcon Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" />
+                                </MudStack>
+                            </ActivatorContent>
+                            <ChildContent>
+                                <MudMenuItem OnClick="@(() => Navigation.NavigateTo("/profile"))">
+                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                        <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" />
+                                        <MudText>Profile</MudText>
+                                    </MudStack>
+                                </MudMenuItem>
+                                <MudDivider Class="my-1" />
+                                <MudMenuItem OnClick="HandleLogout">
+                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                        <MudIcon Icon="@Icons.Material.Filled.Logout" Size="Size.Small" Color="Color.Error" />
+                                        <MudText Color="Color.Error">Logout</MudText>
+                                    </MudStack>
+                                </MudMenuItem>
+                            </ChildContent>
+                        </MudMenu>
                     </MudStack>
-                </MudMenuItem>
-            }
-            <MudDivider />
-            <MudMenuItem OnClick="HandleLogout">
-                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                    <MudIcon Icon="@Icons.Material.Filled.Logout" Size="Size.Small" Color="Color.Error" />
-                    <MudText Color="Color.Error">Logout</MudText>
-                </MudStack>
-            </MudMenuItem>
-        </MudMenu>
-
-        <MudIconButton Icon="@(_isDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
-                       Color="Color.Inherit" OnClick="ToggleDarkMode" />
-    </MudAppBar>
-
-    <MudDrawer @bind-Open="_drawerOpen" Elevation="2" ClipMode="DrawerClipMode.Always">
-        <MudDrawerHeader>
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                @if (!string.IsNullOrEmpty(UserState.AvatarUrl))
-                {
-                    <MudAvatar Image="@UserState.AvatarUrl" Size="Size.Medium" />
-                }
-                else
-                {
-                    <MudAvatar Color="Color.Primary" Size="Size.Medium">
-                        @GetInitials(UserState.DisplayName)
-                    </MudAvatar>
-                }
-                <MudStack Spacing="0">
-                    <MudText Typo="Typo.subtitle1">@UserState.DisplayName</MudText>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">@UserState.Username</MudText>
-                </MudStack>
-            </MudStack>
-        </MudDrawerHeader>
-
-        <NavMenu />
-    </MudDrawer>
-
-    <MudMainContent>
-        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4 mb-4">
-            <div class="animate-fade-in">
-                @Body
+                </div>
             </div>
-        </MudContainer>
-    </MudMainContent>
+        </MudPaper>
+
+        <div class="main-content-wrapper">
+            <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="main-container">
+                @Body
+            </MudContainer>
+        </div>
+    </div>
 </MudLayout>
+
+<style>
+    .app-container {
+        display: flex;
+        height: 100vh;
+        overflow: hidden;
+    }
+
+    .sidebar {
+        width: 260px;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        border-right: 1px solid var(--mud-palette-divider);
+        background: var(--mud-palette-surface) !important;
+    }
+
+    .sidebar-content {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+
+    .sidebar-header {
+        padding: 20px 16px;
+        border-bottom: 1px solid var(--mud-palette-divider);
+    }
+
+    .app-logo {
+        font-weight: 700;
+        background: linear-gradient(135deg, var(--mud-palette-primary), var(--mud-palette-secondary));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .sidebar-nav {
+        flex: 1;
+        padding: 16px 12px;
+        overflow-y: auto;
+    }
+
+    .sidebar-nav::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .sidebar-nav::-webkit-scrollbar-thumb {
+        background: var(--mud-palette-divider);
+        border-radius: 3px;
+    }
+
+    .nav-item {
+        justify-content: flex-start;
+        text-transform: none;
+        font-weight: 500;
+        padding: 10px 16px;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+    }
+
+    .sidebar-footer {
+        padding: 12px;
+        border-top: 1px solid var(--mud-palette-divider);
+    }
+
+    .user-profile-card {
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 8px;
+        transition: background-color 0.2s ease;
+    }
+
+    .user-profile-card:hover {
+        background-color: var(--mud-palette-action-default-hover);
+    }
+
+    .main-content-wrapper {
+        flex: 1;
+        overflow-y: auto;
+        background: var(--mud-palette-background);
+    }
+
+    .main-container {
+        padding: 24px;
+        max-width: 100% !important;
+    }
+
+    .text-truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    @@media (max-width: 960px) {
+        .sidebar {
+            width: 72px;
+        }
+
+        .sidebar-header .app-logo {
+            display: none;
+        }
+
+        .nav-item .mud-button-label {
+            display: none;
+        }
+
+        .user-profile-card .mud-stack:not(:first-child) {
+            display: none;
+        }
+    }
+</style>
 
 @code {
     private MudThemeProvider? _mudThemeProvider;
     private bool _isDarkMode;
-    private bool _drawerOpen = true;
 
     private MudTheme _theme = new MudTheme()
     {
-        Palette = new PaletteLight()
+        PaletteLight = new PaletteLight()
+        {
+            Primary = "#4F46E5",
+            Secondary = "#7C3AED",
+            Success = "#059669",
+            Warning = "#D97706",
+            Error = "#DC2626",
+            Info = "#2563EB",
+            Background = "#F9FAFB",
+            Surface = "#FFFFFF",
+            AppbarBackground = "#FFFFFF",
+            DrawerBackground = "#FFFFFF",
+            Divider = "#E5E7EB",
+            TextPrimary = "#111827",
+            TextSecondary = "#6B7280",
+        },
+        PaletteDark = new PaletteDark()
         {
             Primary = "#6366F1",
             Secondary = "#8B5CF6",
@@ -108,19 +307,13 @@
             Warning = "#F59E0B",
             Error = "#EF4444",
             Info = "#3B82F6",
-            AppbarBackground = "#6366F1",
-        },
-        PaletteDark = new PaletteDark()
-        {
-            Primary = "#818CF8",
-            Secondary = "#A78BFA",
-            Success = "#34D399",
-            Warning = "#FBBF24",
-            Error = "#F87171",
-            Info = "#60A5FA",
-            AppbarBackground = "#1E293B",
-            Background = "#0F172A",
-            Surface = "#1E293B",
+            Background = "#0D1117",
+            Surface = "#161B22",
+            AppbarBackground = "#161B22",
+            DrawerBackground = "#161B22",
+            Divider = "#30363D",
+            TextPrimary = "#E6EDF3",
+            TextSecondary = "#8B949E",
         }
     };
 
@@ -147,9 +340,16 @@
         }
     }
 
-    private void ToggleDrawer()
+    private bool IsActive(string path)
     {
-        _drawerOpen = !_drawerOpen;
+        var currentPath = Navigation.Uri.Replace(Navigation.BaseUri, "/");
+        if (currentPath.EndsWith("/"))
+            currentPath = currentPath.TrimEnd('/');
+
+        if (path == "/")
+            return currentPath == "" || currentPath == "/";
+
+        return currentPath.StartsWith(path, StringComparison.OrdinalIgnoreCase);
     }
 
     private void ToggleDarkMode()

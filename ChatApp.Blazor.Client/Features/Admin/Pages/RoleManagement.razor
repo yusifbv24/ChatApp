@@ -44,10 +44,10 @@ else
                 }
                 else
                 {
-                    <MudList Clickable="true">
+                    <MudList T="RoleDto"  Clickable="true">
                         @foreach (var role in _roles)
                         {
-                            <MudListItem OnClick="@(() => SelectRole(role))"
+                            <MudListItem T="RoleDto" OnClick="@(() => SelectRole(role))"
                                          Class="@(_selectedRole?.Id == role.Id ? "mud-primary-text mud-background-primary" : "")">
                                 <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
                                     <MudStack Spacing="0">
@@ -105,7 +105,7 @@ else
                             <MudText Typo="Typo.h6">Role Details</MudText>
                             @if (_selectedRole.IsSystemRole)
                             {
-                                <MudChip Color="Color.Info" Size="Size.Small">System Role (Read-Only)</MudChip>
+                                <MudChip T="string" Color="Color.Info" Size="Size.Small">System Role (Read-Only)</MudChip>
                             }
                         </MudStack>
 
@@ -158,7 +158,7 @@ else
 
                                     @foreach (var permission in module)
                                     {
-                                        <MudChip Size="Size.Small"
+                                        <MudChip T="string" Size="Size.Small"
                                                  Color="Color.Default"
                                                  OnClose="@(() => RemovePermission(permission.Id))"
                                                  CloseIcon="@(_selectedRole.IsSystemRole ? null : Icons.Material.Filled.Close)">

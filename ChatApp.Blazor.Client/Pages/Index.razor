@@ -128,7 +128,7 @@
 
                     @if (UserState.IsAdmin)
                     {
-                        <MudChip Color="Color.Error" Size="Size.Small" Icon="@Icons.Material.Filled.AdminPanelSettings">
+                        <MudChip T="string" Color="Color.Error" Size="Size.Small" Icon="@Icons.Material.Filled.AdminPanelSettings">
                             Administrator
                         </MudChip>
                     }
@@ -143,7 +143,7 @@
                     {
                         @foreach (var role in UserState.CurrentUser.Roles)
                         {
-                            <MudChip Color="Color.Info" Size="Size.Small">@role.Name</MudChip>
+                            <MudChip T="string" Color="Color.Info" Size="Size.Small">@role.Name</MudChip>
                         }
                     }
                     else

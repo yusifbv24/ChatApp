@@ -44,7 +44,7 @@
                                   For="@(() => _model.Password)"
                                   Disabled="@_isLoading" />
 
-                    <MudCheckBox @bind-Checked="_model.RememberMe" Label="Remember me" Color="Color.Primary" Disabled="@_isLoading" />
+                    <MudCheckBox T="bool" @bind-Checked="_model.RememberMe" Label="Remember me" Color="Color.Primary" Disabled="@_isLoading" />
 
                     @if (!string.IsNullOrEmpty(_errorMessage))
                     {
