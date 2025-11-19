@@ -1,0 +1,42 @@
+﻿@page "/messages"
+@attribute [Authorize]
+@inject UserState UserState
+
+<PageTitle>Messages - ChatApp</PageTitle>
+
+<div class="messages-container">
+    <MudText Typo="Typo.h4" Class="mb-4">
+        <MudIcon Icon="@Icons.Material.Filled.Message" Class="mr-2" />
+        Messages
+    </MudText>
+
+    <MudPaper Elevation="2" Class="pa-6">
+        <MudStack AlignItems="AlignItems.Center" Spacing="4">
+            <MudIcon Icon="@Icons.Material.Filled.Message"
+                     Color="Color.Primary"
+                     Style="font-size: 100px; opacity: 0.3;" />
+
+            <MudText Typo="Typo.h5" Align="Align.Center">
+                Welcome to Messages, @UserState.DisplayName!
+            </MudText>
+
+            <MudText Typo="Typo.body1" Align="Align.Center" Color="Color.Secondary">
+                Your conversation list will appear here. Start chatting with your team members.
+            </MudText>
+
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Add"
+                       Class="mt-4">
+                Start New Conversation
+            </MudButton>
+        </MudStack>
+    </MudPaper>
+</div>
+
+<style>
+    .messages-container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+</style>
