@@ -17,7 +17,7 @@ builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
 // Configure base address
-var apiBaseAddress = builder.Configuration["ApiBaseAddress"] ?? "https://localhost:7000";
+var apiBaseAddress = builder.Configuration["ApiBaseAddress"] ?? "http://localhost:7000";
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(apiBaseAddress) });
 
 // MudBlazor Services

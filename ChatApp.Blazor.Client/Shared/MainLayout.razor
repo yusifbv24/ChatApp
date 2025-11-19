@@ -11,131 +11,173 @@
 
 <MudLayout>
     <div class="app-container">
-        <MudPaper Class="sidebar" Elevation="0" Square="true">
+        <MudPaper Class="@($"sidebar {(_sidebarExpanded ? "expanded" : "")}")" Elevation="0" Square="true">
             <div class="sidebar-content">
                 <div class="sidebar-header">
-                    <MudText Typo="Typo.h6" Class="app-logo">ChatApp</MudText>
+                    <MudIconButton Icon="@Icons.Material.Filled.Menu"
+                                   Color="Color.Default"
+                                   Size="Size.Medium"
+                                   Class="menu-toggle"
+                                   OnClick="ToggleSidebar" />
+                    @if (_sidebarExpanded)
+                    {
+                        <MudText Typo="Typo.h6" Class="app-logo">ChatApp</MudText>
+                    }
                 </div>
 
-                <MudStack Class="sidebar-nav" Spacing="1">
+                <MudStack Class="sidebar-nav" Spacing="0">
                     @if (UserState.IsAdmin)
                     {
-                        <MudTooltip Text="Dashboard" Placement="Placement.Right" Delay="300">
+                        <MudTooltip Text="Dashboard" Placement="Placement.Right" Delay="300" Disabled="@_sidebarExpanded">
                             <MudButton Href="/"
-                                       Variant="@(IsActive("/") ? Variant.Filled : Variant.Text)"
-                                       Color="@(IsActive("/") ? Color.Primary : Color.Default)"
-                                       Class="nav-item"
+                                       Variant="Variant.Text"
+                                       Color="Color.Default"
+                                       Class="@($"nav-item {(IsActive("/") ? "active" : "")}")"
                                        FullWidth="true"
                                        StartIcon="@Icons.Material.Filled.Dashboard">
-                                Dashboard
+                                @if (_sidebarExpanded)
+                                {
+                                    <span class="nav-text">Dashboard</span>
+                                }
                             </MudButton>
                         </MudTooltip>
                     }
 
-                    <MudTooltip Text="Messages" Placement="Placement.Right" Delay="300">
+                    <MudTooltip Text="Direct Messages" Placement="Placement.Right" Delay="300" Disabled="@_sidebarExpanded">
                         <MudButton Href="/messages"
-                                   Variant="@(IsActive("/messages") ? Variant.Filled : Variant.Text)"
-                                   Color="@(IsActive("/messages") ? Color.Primary : Color.Default)"
-                                   Class="nav-item"
+                                   Variant="Variant.Text"
+                                   Color="Color.Default"
+                                   Class="@($"nav-item {(IsActive("/messages") ? "active" : "")}")"
                                    FullWidth="true"
-                                   StartIcon="@Icons.Material.Filled.Message">
-                            Messages
+                                   StartIcon="@Icons.Material.Filled.ChatBubble">
+                            @if (_sidebarExpanded)
+                            {
+                                <span class="nav-text">Direct Messages</span>
+                            }
                         </MudButton>
                     </MudTooltip>
 
-                    <MudTooltip Text="Channels" Placement="Placement.Right" Delay="300">
+                    <MudTooltip Text="Channels" Placement="Placement.Right" Delay="300" Disabled="@_sidebarExpanded">
                         <MudButton Href="/channels"
-                                   Variant="@(IsActive("/channels") ? Variant.Filled : Variant.Text)"
-                                   Color="@(IsActive("/channels") ? Color.Primary : Color.Default)"
-                                   Class="nav-item"
+                                   Variant="Variant.Text"
+                                   Color="Color.Default"
+                                   Class="@($"nav-item {(IsActive("/channels") ? "active" : "")}")"
                                    FullWidth="true"
                                    StartIcon="@Icons.Material.Filled.Tag">
-                            Channels
+                            @if (_sidebarExpanded)
+                            {
+                                <span class="nav-text">Channels</span>
+                            }
                         </MudButton>
                     </MudTooltip>
 
-                    <MudTooltip Text="Search" Placement="Placement.Right" Delay="300">
+                    <MudTooltip Text="Search" Placement="Placement.Right" Delay="300" Disabled="@_sidebarExpanded">
                         <MudButton Href="/search"
-                                   Variant="@(IsActive("/search") ? Variant.Filled : Variant.Text)"
-                                   Color="@(IsActive("/search") ? Color.Primary : Color.Default)"
-                                   Class="nav-item"
+                                   Variant="Variant.Text"
+                                   Color="Color.Default"
+                                   Class="@($"nav-item {(IsActive("/search") ? "active" : "")}")"
                                    FullWidth="true"
                                    StartIcon="@Icons.Material.Filled.Search">
-                            Search
+                            @if (_sidebarExpanded)
+                            {
+                                <span class="nav-text">Search</span>
+                            }
                         </MudButton>
                     </MudTooltip>
-
-                    <MudDivider Class="my-3" />
-
-                    <MudTooltip Text="Settings" Placement="Placement.Right" Delay="300">
-                        <MudButton Href="/settings"
-                                   Variant="@(IsActive("/settings") ? Variant.Filled : Variant.Text)"
-                                   Color="@(IsActive("/settings") ? Color.Primary : Color.Default)"
-                                   Class="nav-item"
-                                   FullWidth="true"
-                                   StartIcon="@Icons.Material.Filled.Settings">
-                            Settings
-                        </MudButton>
-                    </MudTooltip>
-
-                    @if (UserState.IsAdmin)
-                    {
-                        <MudTooltip Text="Admin Panel" Placement="Placement.Right" Delay="300">
-                            <MudButton Href="/admin/users"
-                                       Variant="@(IsActive("/admin") ? Variant.Filled : Variant.Text)"
-                                       Color="@(IsActive("/admin") ? Color.Primary : Color.Default)"
-                                       Class="nav-item"
-                                       FullWidth="true"
-                                       StartIcon="@Icons.Material.Filled.AdminPanelSettings">
-                                Admin
-                            </MudButton>
-                        </MudTooltip>
-                    }
                 </MudStack>
 
                 <div class="sidebar-footer">
-                    <MudStack Spacing="2">
-                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="px-2">
-                            <MudTooltip Text="Notifications">
-                                <MudBadge Content="@AppState.UnreadNotificationCount"
-                                          Color="Color.Error"
-                                          Overlap="true"
-                                          Visible="@(AppState.UnreadNotificationCount > 0)"
-                                          Bordered="true">
-                                    <MudIconButton Icon="@Icons.Material.Filled.Notifications"
-                                                   Size="Size.Medium"
-                                                   OnClick="@(() => Navigation.NavigateTo("/notifications"))" />
-                                </MudBadge>
+                    <MudStack Spacing="0">
+                        <MudTooltip Text="Notifications" Placement="Placement.Right" Delay="300" Disabled="@_sidebarExpanded">
+                            <MudBadge Content="@AppState.UnreadNotificationCount"
+                                      Color="Color.Error"
+                                      Overlap="true"
+                                      Visible="@(AppState.UnreadNotificationCount > 0)"
+                                      Bordered="true"
+                                      Class="notification-badge">
+                                <MudButton Variant="Variant.Text"
+                                           Color="Color.Default"
+                                           Class="nav-item footer-item"
+                                           FullWidth="true"
+                                           StartIcon="@Icons.Material.Filled.Notifications"
+                                           OnClick="@(() => Navigation.NavigateTo("/notifications"))">
+                                    @if (_sidebarExpanded)
+                                    {
+                                        <span class="nav-text">Notifications</span>
+                                    }
+                                </MudButton>
+                            </MudBadge>
+                        </MudTooltip>
+
+                        <MudTooltip Text="Settings" Placement="Placement.Right" Delay="300" Disabled="@_sidebarExpanded">
+                            <MudButton Href="/settings"
+                                       Variant="Variant.Text"
+                                       Color="Color.Default"
+                                       Class="@($"nav-item footer-item {(IsActive("/settings") ? "active" : "")}")"
+                                       FullWidth="true"
+                                       StartIcon="@Icons.Material.Filled.Settings">
+                                @if (_sidebarExpanded)
+                                {
+                                    <span class="nav-text">Settings</span>
+                                }
+                            </MudButton>
+                        </MudTooltip>
+
+                        @if (UserState.IsAdmin)
+                        {
+                            <MudTooltip Text="Admin Panel" Placement="Placement.Right" Delay="300" Disabled="@_sidebarExpanded">
+                                <MudButton Href="/admin/users"
+                                           Variant="Variant.Text"
+                                           Color="Color.Default"
+                                           Class="@($"nav-item footer-item {(IsActive("/admin") ? "active" : "")}")"
+                                           FullWidth="true"
+                                           StartIcon="@Icons.Material.Filled.AdminPanelSettings">
+                                    @if (_sidebarExpanded)
+                                    {
+                                        <span class="nav-text">Admin</span>
+                                    }
+                                </MudButton>
                             </MudTooltip>
+                        }
 
-                            <MudTooltip Text="@(_isDarkMode ? "Light Mode" : "Dark Mode")">
-                                <MudIconButton Icon="@(_isDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
-                                               Size="Size.Medium"
-                                               OnClick="ToggleDarkMode" />
-                            </MudTooltip>
-                        </MudStack>
+                        <MudTooltip Text="@(_isDarkMode ? "Light Mode" : "Dark Mode")" Placement="Placement.Right" Delay="300" Disabled="@_sidebarExpanded">
+                            <MudButton Variant="Variant.Text"
+                                       Color="Color.Default"
+                                       Class="nav-item footer-item"
+                                       FullWidth="true"
+                                       StartIcon="@(_isDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
+                                       OnClick="ToggleDarkMode">
+                                @if (_sidebarExpanded)
+                                {
+                                    <span class="nav-text">@(_isDarkMode ? "Light Mode" : "Dark Mode")</span>
+                                }
+                            </MudButton>
+                        </MudTooltip>
 
-                        <MudDivider />
+                        <MudDivider Class="my-2" />
 
-                        <MudMenu AnchorOrigin="Origin.TopRight" TransformOrigin="Origin.BottomRight" FullWidth="true">
+                        <MudMenu AnchorOrigin="Origin.TopCenter" TransformOrigin="Origin.BottomCenter" FullWidth="@_sidebarExpanded">
                             <ActivatorContent>
-                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="user-profile-card">
+                                <div class="user-profile-card">
                                     @if (!string.IsNullOrEmpty(UserState.AvatarUrl))
                                     {
-                                        <MudAvatar Image="@UserState.AvatarUrl" Size="Size.Medium" />
+                                        <MudAvatar Image="@UserState.AvatarUrl" Size="Size.Medium" Class="user-avatar" />
                                     }
                                     else
                                     {
-                                        <MudAvatar Color="Color.Primary" Size="Size.Medium">
+                                        <MudAvatar Color="Color.Primary" Size="Size.Medium" Class="user-avatar">
                                             @GetInitials(UserState.DisplayName)
                                         </MudAvatar>
                                     }
-                                    <MudStack Spacing="0" Class="flex-grow-1" Style="min-width: 0;">
-                                        <MudText Typo="Typo.body2" Class="text-truncate">@UserState.DisplayName</MudText>
-                                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="text-truncate">@UserState.Username</MudText>
-                                    </MudStack>
-                                    <MudIcon Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" />
-                                </MudStack>
+                                    @if (_sidebarExpanded)
+                                    {
+                                        <MudStack Spacing="0" Class="user-info">
+                                            <MudText Typo="Typo.body2" Class="user-name">@UserState.DisplayName</MudText>
+                                            <MudText Typo="Typo.caption" Class="user-username">@UserState.Username</MudText>
+                                        </MudStack>
+                                        <MudIcon Icon="@Icons.Material.Filled.ExpandLess" Size="Size.Small" Class="expand-icon" />
+                                    }
+                                </div>
                             </ActivatorContent>
                             <ChildContent>
                                 <MudMenuItem OnClick="@(() => Navigation.NavigateTo("/profile"))">
@@ -174,71 +216,158 @@
     }
 
     .sidebar {
-        width: 260px;
+        width: 64px;
         height: 100vh;
         display: flex;
         flex-direction: column;
         border-right: 1px solid var(--mud-palette-divider);
         background: var(--mud-palette-surface) !important;
+        transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        overflow: hidden;
+    }
+
+    .sidebar.expanded {
+        width: 240px;
     }
 
     .sidebar-content {
         display: flex;
         flex-direction: column;
         height: 100%;
+        width: 240px;
     }
 
     .sidebar-header {
-        padding: 20px 16px;
+        padding: 14px 12px;
         border-bottom: 1px solid var(--mud-palette-divider);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-height: 64px;
+    }
+
+    .menu-toggle {
+        flex-shrink: 0;
     }
 
     .app-logo {
-        font-weight: 700;
+        font-weight: 600;
+        font-size: 1.1rem;
         background: linear-gradient(135deg, var(--mud-palette-primary), var(--mud-palette-secondary));
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
+        white-space: nowrap;
     }
 
     .sidebar-nav {
         flex: 1;
-        padding: 16px 12px;
+        padding: 8px 8px;
         overflow-y: auto;
+        overflow-x: hidden;
     }
 
     .sidebar-nav::-webkit-scrollbar {
-        width: 6px;
+        width: 4px;
     }
 
     .sidebar-nav::-webkit-scrollbar-thumb {
         background: var(--mud-palette-divider);
-        border-radius: 3px;
+        border-radius: 2px;
     }
 
     .nav-item {
         justify-content: flex-start;
         text-transform: none;
         font-weight: 500;
-        padding: 10px 16px;
-        border-radius: 8px;
-        transition: all 0.2s ease;
+        padding: 10px 12px;
+        border-radius: 10px;
+        margin-bottom: 2px;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        min-height: 44px;
+        position: relative;
+    }
+
+    .nav-item:hover {
+        background-color: var(--mud-palette-action-default-hover) !important;
+    }
+
+    .nav-item.active {
+        background-color: var(--mud-palette-primary-lighten) !important;
+        color: var(--mud-palette-primary) !important;
+    }
+
+    .nav-item.active::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 3px;
+        height: 24px;
+        background-color: var(--mud-palette-primary);
+        border-radius: 0 2px 2px 0;
+    }
+
+    .nav-text {
+        margin-left: 12px;
+        white-space: nowrap;
     }
 
     .sidebar-footer {
-        padding: 12px;
+        padding: 8px;
         border-top: 1px solid var(--mud-palette-divider);
+    }
+
+    .footer-item {
+        margin-bottom: 2px;
+    }
+
+    .notification-badge {
+        width: 100%;
     }
 
     .user-profile-card {
         cursor: pointer;
-        padding: 8px;
-        border-radius: 8px;
-        transition: background-color 0.2s ease;
+        padding: 10px 8px;
+        border-radius: 10px;
+        transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 48px;
     }
 
     .user-profile-card:hover {
         background-color: var(--mud-palette-action-default-hover);
+    }
+
+    .user-avatar {
+        flex-shrink: 0;
+    }
+
+    .user-info {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    .user-name {
+        font-weight: 500;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .user-username {
+        color: var(--mud-palette-text-secondary);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .expand-icon {
+        flex-shrink: 0;
     }
 
     .main-content-wrapper {
@@ -252,27 +381,17 @@
         max-width: 100% !important;
     }
 
-    .text-truncate {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
-    @@media (max-width: 960px) {
+    @@media (max-width: 768px) {
         .sidebar {
-            width: 72px;
+            width: 64px;
         }
 
-        .sidebar-header .app-logo {
-            display: none;
-        }
-
-        .nav-item .mud-button-label {
-            display: none;
-        }
-
-        .user-profile-card .mud-stack:not(:first-child) {
-            display: none;
+        .sidebar.expanded {
+            width: 100%;
+            max-width: 280px;
+            position: absolute;
+            z-index: 1000;
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
         }
     }
 </style>
@@ -280,40 +399,55 @@
 @code {
     private MudThemeProvider? _mudThemeProvider;
     private bool _isDarkMode;
+    private bool _sidebarExpanded = false;
 
     private MudTheme _theme = new MudTheme()
     {
         PaletteLight = new PaletteLight()
         {
-            Primary = "#4F46E5",
-            Secondary = "#7C3AED",
-            Success = "#059669",
-            Warning = "#D97706",
-            Error = "#DC2626",
-            Info = "#2563EB",
-            Background = "#F9FAFB",
+            Primary = "#2FC7F7",
+            PrimaryLighten = "rgba(47, 199, 247, 0.12)",
+            Secondary = "#00A1E0",
+            Success = "#55D66B",
+            Warning = "#FFA900",
+            Error = "#FF5752",
+            Info = "#2FC7F7",
+            Background = "#F4F6F9",
             Surface = "#FFFFFF",
             AppbarBackground = "#FFFFFF",
             DrawerBackground = "#FFFFFF",
-            Divider = "#E5E7EB",
-            TextPrimary = "#111827",
-            TextSecondary = "#6B7280",
+            Divider = "rgba(0, 0, 0, 0.08)",
+            DividerLight = "rgba(0, 0, 0, 0.05)",
+            TextPrimary = "rgba(0, 0, 0, 0.87)",
+            TextSecondary = "rgba(0, 0, 0, 0.54)",
+            ActionDefault = "rgba(0, 0, 0, 0.54)",
+            ActionDisabled = "rgba(0, 0, 0, 0.26)",
+            ActionDisabledBackground = "rgba(0, 0, 0, 0.12)",
         },
         PaletteDark = new PaletteDark()
         {
-            Primary = "#6366F1",
-            Secondary = "#8B5CF6",
-            Success = "#10B981",
-            Warning = "#F59E0B",
-            Error = "#EF4444",
-            Info = "#3B82F6",
-            Background = "#0D1117",
-            Surface = "#161B22",
-            AppbarBackground = "#161B22",
-            DrawerBackground = "#161B22",
-            Divider = "#30363D",
-            TextPrimary = "#E6EDF3",
-            TextSecondary = "#8B949E",
+            Primary = "#2FC7F7",
+            PrimaryLighten = "rgba(47, 199, 247, 0.16)",
+            Secondary = "#00A1E0",
+            Success = "#55D66B",
+            Warning = "#FFA900",
+            Error = "#FF5752",
+            Info = "#2FC7F7",
+            Background = "#1A1D24",
+            Surface = "#24272E",
+            AppbarBackground = "#24272E",
+            DrawerBackground = "#24272E",
+            Divider = "rgba(255, 255, 255, 0.08)",
+            DividerLight = "rgba(255, 255, 255, 0.05)",
+            TextPrimary = "rgba(255, 255, 255, 0.92)",
+            TextSecondary = "rgba(255, 255, 255, 0.60)",
+            ActionDefault = "rgba(255, 255, 255, 0.60)",
+            ActionDisabled = "rgba(255, 255, 255, 0.26)",
+            ActionDisabledBackground = "rgba(255, 255, 255, 0.12)",
+        },
+        LayoutProperties = new LayoutProperties()
+        {
+            DefaultBorderRadius = "10px"
         }
     };
 
@@ -338,6 +472,11 @@
             AppState.IsDarkMode = _isDarkMode;
             StateHasChanged();
         }
+    }
+
+    private void ToggleSidebar()
+    {
+        _sidebarExpanded = !_sidebarExpanded;
     }
 
     private bool IsActive(string path)

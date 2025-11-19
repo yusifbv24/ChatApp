@@ -17,7 +17,7 @@ public class ChatHubConnection : IChatHubConnection, IAsyncDisposable
         IConfiguration configuration)
     {
         _authStateProvider = authStateProvider;
-        var apiBaseUrl = configuration["ApiBaseAddress"] ?? "https://localhost:7000";
+        var apiBaseUrl = configuration["ApiBaseAddress"] ?? "http://localhost:7000";
         _hubUrl = $"{apiBaseUrl}/hubs/chat";
     }
 
