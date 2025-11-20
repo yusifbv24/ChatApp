@@ -1,0 +1,50 @@
+@inherits LayoutComponentBase
+
+<div class="login-layout">
+    <div class="login-background">
+        <div class="login-background-shapes">
+            <div class="shape shape-1"></div>
+            <div class="shape shape-2"></div>
+            <div class="shape shape-3"></div>
+        </div>
+        <div class="particles">
+            <div class="particle particle-1"></div>
+            <div class="particle particle-2"></div>
+            <div class="particle particle-3"></div>
+            <div class="particle particle-4"></div>
+            <div class="particle particle-5"></div>
+            <div class="particle particle-6"></div>
+            <div class="particle particle-7"></div>
+            <div class="particle particle-8"></div>
+        </div>
+    </div>
+
+    <div class="login-container">
+        <div class="login-header">
+            <div class="login-logo">
+                <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="48" height="48" rx="12" fill="url(#gradient)"/>
+                    <path d="M14 24C14 24 16 18 24 18C32 18 34 24 34 24C34 24 32 30 24 30C16 30 14 24 14 24Z"
+                          stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <circle cx="24" cy="24" r="3" fill="white"/>
+                    <defs>
+                        <linearGradient id="gradient" x1="0" y1="0" x2="48" y2="48">
+                            <stop offset="0%" stop-color="#6366F1"/>
+                            <stop offset="100%" stop-color="#8B5CF6"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+                <h1 class="login-brand">ChatApp</h1>
+            </div>
+            <p class="login-tagline">Modern Team Communication</p>
+        </div>
+
+        <div class="login-content">
+            @Body
+        </div>
+
+        <div class="login-footer">
+            <p>&copy; @DateTime.Now.Year ChatApp. All rights reserved.</p>
+        </div>
+    </div>
+</div>

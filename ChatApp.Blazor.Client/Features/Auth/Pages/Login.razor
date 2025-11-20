@@ -1,0 +1,125 @@
+@page "/login"
+@layout LoginLayout
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+
+<PageTitle>Login - ChatApp</PageTitle>
+
+<div class="login-card">
+    <div class="login-card-header">
+        <h2 class="login-card-title">Welcome Back</h2>
+        <p class="login-card-subtitle">Sign in to continue to ChatApp</p>
+    </div>
+
+    <div class="login-card-body">
+        <EditForm Model="@loginModel" OnValidSubmit="HandleLogin">
+            <DataAnnotationsValidator />
+
+            <div class="login-form-group">
+                <label class="login-label">Username</label>
+                <div class="login-input-wrapper">
+                    <span class="login-input-icon">
+                        <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" />
+                    </span>
+                    <InputText @bind-Value="loginModel.Username"
+                               class="login-input"
+                               placeholder="Enter your username"
+                               autocomplete="username" />
+                </div>
+                <ValidationMessage For="@(() => loginModel.Username)" class="login-validation-message" />
+            </div>
+
+            <div class="login-form-group">
+                <label class="login-label">Password</label>
+                <div class="login-input-wrapper">
+                    <span class="login-input-icon">
+                        <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" />
+                    </span>
+                    <InputText @bind-Value="loginModel.Password"
+                               type="@(showPassword ? "text" : "password")"
+                               class="login-input"
+                               placeholder="Enter your password"
+                               autocomplete="current-password" />
+                    <button type="button"
+                            class="login-input-toggle"
+                            @onclick="TogglePasswordVisibility"
+                            tabindex="-1">
+                        <MudIcon Icon="@(showPassword ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
+                                 Size="Size.Small" />
+                    </button>
+                </div>
+                <ValidationMessage For="@(() => loginModel.Password)" class="login-validation-message" />
+            </div>
+
+            <div class="login-form-options">
+                <label class="login-checkbox">
+                    <InputCheckbox @bind-Value="loginModel.RememberMe" />
+                    <span>Remember me</span>
+                </label>
+            </div>
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="login-error">
+                    <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Small" />
+                    <span>@errorMessage</span>
+                </div>
+            }
+
+            <button type="submit" class="login-button" disabled="@isLoading">
+                @if (isLoading)
+                {
+                    <span class="login-button-spinner"></span>
+                    <span>Signing in...</span>
+                }
+                else
+                {
+                    <span>Sign In</span>
+                }
+            </button>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    private LoginRequest loginModel = new();
+    private bool isLoading = false;
+    private bool showPassword = false;
+    private string? errorMessage;
+
+    private void TogglePasswordVisibility()
+    {
+        showPassword = !showPassword;
+    }
+
+    private async Task HandleLogin()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = null;
+            StateHasChanged();
+
+            var result = await AuthService.LoginAsync(loginModel);
+
+            if (result.IsSuccess)
+            {
+                Navigation.NavigateTo("/", forceLoad: true);
+            }
+            else
+            {
+                errorMessage = result.Error ?? "Invalid username or password. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "An error occurred during login. Please try again.";
+            Console.WriteLine($"Login error: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+}

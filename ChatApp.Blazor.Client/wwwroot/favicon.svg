@@ -1,0 +1,41 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background with gradient -->
+  <rect width="128" height="128" rx="28" fill="url(#gradient)"/>
+
+  <!-- Chat bubble design -->
+  <g transform="translate(24, 32)">
+    <!-- Main chat bubble -->
+    <rect x="8" y="0" width="64" height="48" rx="12" fill="white" opacity="0.95"/>
+
+    <!-- Chat bubble tail -->
+    <path d="M 8 32 L 0 42 L 8 38 Z" fill="white" opacity="0.95"/>
+
+    <!-- Message lines inside bubble -->
+    <rect x="16" y="12" width="32" height="4" rx="2" fill="#6366F1" opacity="0.6"/>
+    <rect x="16" y="22" width="48" height="4" rx="2" fill="#8B5CF6" opacity="0.6"/>
+    <rect x="16" y="32" width="40" height="4" rx="2" fill="#6366F1" opacity="0.4"/>
+  </g>
+
+  <!-- Secondary smaller chat bubble -->
+  <g transform="translate(52, 50)">
+    <rect x="0" y="12" width="48" height="36" rx="10" fill="white" opacity="0.85"/>
+    <path d="M 48 28 L 56 34 L 48 32 Z" fill="white" opacity="0.85"/>
+
+    <!-- Message lines in secondary bubble -->
+    <rect x="8" y="20" width="24" height="3" rx="1.5" fill="#8B5CF6" opacity="0.5"/>
+    <rect x="8" y="28" width="32" height="3" rx="1.5" fill="#6366F1" opacity="0.5"/>
+  </g>
+
+  <!-- Notification dot -->
+  <circle cx="100" cy="32" r="12" fill="#EF4444"/>
+  <text x="100" y="37" text-anchor="middle" font-size="14" font-weight="bold" fill="white">3</text>
+
+  <!-- Gradient definition -->
+  <defs>
+    <linearGradient id="gradient" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#6366F1"/>
+      <stop offset="50%" stop-color="#7C3AED"/>
+      <stop offset="100%" stop-color="#8B5CF6"/>
+    </linearGradient>
+  </defs>
+</svg>
