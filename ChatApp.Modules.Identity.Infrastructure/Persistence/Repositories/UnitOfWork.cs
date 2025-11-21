@@ -14,6 +14,7 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence.Repositories
         public DbSet<User> Users => _context.Users;
         public DbSet<Role> Roles => _context.Roles;
         public DbSet<UserRole> UserRoles => _context.UserRoles;
+        public DbSet<UserPermission> UserPermissions => _context.UserPermissions;
         public DbSet<Permission> Permissions => _context.Permissions;
         public DbSet<RolePermission> RolePermissions => _context.RolePermissions;
         public DbSet<RefreshToken> RefreshTokens => _context.RefreshTokens;

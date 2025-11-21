@@ -1,0 +1,380 @@
+@inject UserState UserState
+@inject IAuthService AuthService
+@inject IUserService UserService
+
+<div class="profile-panel-overlay @(IsOpen ? "active" : "")" @onclick="Close">
+    <div class="profile-panel @(IsOpen ? "open" : "")" @onclick:stopPropagation="true">
+        <!-- Panel Header -->
+        <div class="profile-panel-header">
+            <div class="profile-panel-title-section">
+                <h2 class="profile-panel-title">Profile Settings</h2>
+                <p class="profile-panel-subtitle">Manage your account and preferences</p>
+            </div>
+            <button class="profile-panel-close" @onclick="Close">
+                <MudIcon Icon="@Icons.Material.Filled.Close" />
+            </button>
+        </div>
+
+        <!-- Panel Content -->
+        <div class="profile-panel-content">
+            @if (UserState.CurrentUser != null)
+            {
+                <!-- User Info Card -->
+                <div class="profile-card">
+                    <div class="profile-card-header">
+                        <h3>Profile Information</h3>
+                    </div>
+                    <div class="profile-card-body">
+                        <!-- Avatar Section -->
+                        <div class="profile-avatar-section">
+                            <div class="profile-avatar-large">
+                                @if (!string.IsNullOrEmpty(UserState.CurrentUser.AvatarUrl))
+                                {
+                                    <img src="@UserState.CurrentUser.AvatarUrl" alt="@UserState.CurrentUser.DisplayName" />
+                                }
+                                else
+                                {
+                                    <div class="profile-avatar-placeholder">
+                                        @GetInitials(UserState.CurrentUser.DisplayName)
+                                    </div>
+                                }
+                            </div>
+                            <div class="profile-avatar-info">
+                                <h4>@UserState.CurrentUser.DisplayName</h4>
+                                <p class="profile-username">@("@" + UserState.CurrentUser.Username)</p>
+                                <p class="profile-role">
+                                    <MudIcon Icon="@Icons.Material.Filled.Shield" Size="Size.Small" />
+                                    @(UserState.CurrentUser.IsAdmin ? "Administrator" : "User")
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- User Details -->
+                        <div class="profile-info-grid">
+                            <div class="profile-info-item">
+                                <label>Email Address</label>
+                                <div class="profile-info-value">
+                                    <MudIcon Icon="@Icons.Material.Filled.Email" Size="Size.Small" />
+                                    <span>@UserState.CurrentUser.Email</span>
+                                </div>
+                            </div>
+                            <div class="profile-info-item">
+                                <label>Account Status</label>
+                                <div class="profile-info-value">
+                                    <MudIcon Icon="@(UserState.CurrentUser.IsActive ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Cancel)"
+                                             Size="Size.Small"
+                                             Color="@(UserState.CurrentUser.IsActive ? Color.Success : Color.Error)" />
+                                    <span>@(UserState.CurrentUser.IsActive ? "Active" : "Inactive")</span>
+                                </div>
+                            </div>
+                            <div class="profile-info-item">
+                                <label>Member Since</label>
+                                <div class="profile-info-value">
+                                    <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Small" />
+                                    <span>@UserState.CurrentUser.CreatedAtUtc.ToString("MMMM dd, yyyy")</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Edit Profile Card -->
+                <div class="profile-card">
+                    <div class="profile-card-header">
+                        <h3>Edit Profile</h3>
+                        <p class="profile-card-description">Update your personal information</p>
+                    </div>
+                    <div class="profile-card-body">
+                        <EditForm Model="@editModel" OnValidSubmit="HandleUpdateProfile">
+                            <DataAnnotationsValidator />
+
+                            <div class="profile-form-group">
+                                <label class="profile-label">Display Name</label>
+                                <div class="profile-input-wrapper">
+                                    <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Class="profile-input-icon" />
+                                    <InputText @bind-Value="editModel.DisplayName" class="profile-input" placeholder="Enter your display name" />
+                                </div>
+                                <ValidationMessage For="@(() => editModel.DisplayName)" class="profile-validation-message" />
+                            </div>
+
+                            <div class="profile-form-group">
+                                <label class="profile-label">Username</label>
+                                <div class="profile-info-value">
+                                    <MudIcon Icon="@Icons.Material.Filled.AlternateEmail" Size="Size.Small" />
+                                    <span>@(UserState.CurrentUser?.Username ?? "")</span>
+                                </div>
+                                <p class="profile-field-hint">Username cannot be changed</p>
+                            </div>
+
+                            <div class="profile-form-group">
+                                <label class="profile-label">Email Address</label>
+                                <div class="profile-input-wrapper">
+                                    <MudIcon Icon="@Icons.Material.Filled.Email" Size="Size.Small" Class="profile-input-icon" />
+                                    <InputText @bind-Value="editModel.Email" type="email" class="profile-input" placeholder="Enter your email address" />
+                                </div>
+                                <ValidationMessage For="@(() => editModel.Email)" class="profile-validation-message" />
+                            </div>
+
+                            <div class="profile-form-group">
+                                <label class="profile-label">About Me</label>
+                                <div class="profile-input-wrapper">
+                                    <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small" Class="profile-input-icon textarea-icon" />
+                                    <InputTextArea @bind-Value="editModel.Notes" class="profile-textarea" placeholder="Tell us about yourself..." rows="4" />
+                                </div>
+                                <ValidationMessage For="@(() => editModel.Notes)" class="profile-validation-message" />
+                            </div>
+
+                            @if (!string.IsNullOrEmpty(updateMessage))
+                            {
+                                <div class="profile-message @(updateSuccess ? "success" : "error")">
+                                    <MudIcon Icon="@(updateSuccess ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Error)" Size="Size.Small" />
+                                    <span>@updateMessage</span>
+                                </div>
+                            }
+
+                            <button type="submit" class="profile-button primary" disabled="@isUpdating">
+                                @if (isUpdating)
+                                {
+                                    <span class="profile-button-spinner"></span>
+                                    <span>Updating...</span>
+                                }
+                                else
+                                {
+                                    <MudIcon Icon="@Icons.Material.Filled.Save" Size="Size.Small" />
+                                    <span>Save Changes</span>
+                                }
+                            </button>
+                        </EditForm>
+                    </div>
+                </div>
+
+                <!-- Change Password Card -->
+                <div class="profile-card">
+                    <div class="profile-card-header">
+                        <h3>Change Password</h3>
+                        <p class="profile-card-description">Update your account password</p>
+                    </div>
+                    <div class="profile-card-body">
+                        <EditForm Model="@passwordModel" OnValidSubmit="HandleChangePassword">
+                            <DataAnnotationsValidator />
+
+                            <div class="profile-form-group">
+                                <label class="profile-label">Current Password</label>
+                                <div class="profile-input-wrapper">
+                                    <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" Class="profile-input-icon" />
+                                    <InputText @bind-Value="passwordModel.CurrentPassword" type="@(showCurrentPassword ? "text" : "password")" class="profile-input" placeholder="Enter current password" />
+                                    <button type="button" class="password-toggle-btn" @onclick="() => showCurrentPassword = !showCurrentPassword">
+                                        <MudIcon Icon="@(showCurrentPassword ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)" Size="Size.Small" />
+                                    </button>
+                                </div>
+                                <ValidationMessage For="@(() => passwordModel.CurrentPassword)" class="profile-validation-message" />
+                            </div>
+
+                            <div class="profile-form-group">
+                                <label class="profile-label">New Password</label>
+                                <div class="profile-input-wrapper">
+                                    <MudIcon Icon="@Icons.Material.Filled.LockReset" Size="Size.Small" Class="profile-input-icon" />
+                                    <InputText @bind-Value="passwordModel.NewPassword" type="@(showNewPassword ? "text" : "password")" class="profile-input" placeholder="Enter new password" />
+                                    <button type="button" class="password-toggle-btn" @onclick="() => showNewPassword = !showNewPassword">
+                                        <MudIcon Icon="@(showNewPassword ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)" Size="Size.Small" />
+                                    </button>
+                                </div>
+                                <ValidationMessage For="@(() => passwordModel.NewPassword)" class="profile-validation-message" />
+                            </div>
+
+                            <div class="profile-form-group">
+                                <label class="profile-label">Confirm New Password</label>
+                                <div class="profile-input-wrapper">
+                                    <MudIcon Icon="@Icons.Material.Filled.LockReset" Size="Size.Small" Class="profile-input-icon" />
+                                    <InputText @bind-Value="passwordModel.ConfirmNewPassword" type="@(showConfirmPassword ? "text" : "password")" class="profile-input" placeholder="Confirm new password" />
+                                    <button type="button" class="password-toggle-btn" @onclick="() => showConfirmPassword = !showConfirmPassword">
+                                        <MudIcon Icon="@(showConfirmPassword ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)" Size="Size.Small" />
+                                    </button>
+                                </div>
+                                <ValidationMessage For="@(() => passwordModel.ConfirmNewPassword)" class="profile-validation-message" />
+                            </div>
+
+                            @if (!string.IsNullOrEmpty(passwordMessage))
+                            {
+                                <div class="profile-message @(passwordSuccess ? "success" : "error")">
+                                    <MudIcon Icon="@(passwordSuccess ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Error)" Size="Size.Small" />
+                                    <span>@passwordMessage</span>
+                                </div>
+                            }
+
+                            <button type="submit" class="profile-button secondary" disabled="@isChangingPassword">
+                                @if (isChangingPassword)
+                                {
+                                    <span class="profile-button-spinner"></span>
+                                    <span>Changing...</span>
+                                }
+                                else
+                                {
+                                    <MudIcon Icon="@Icons.Material.Filled.VpnKey" Size="Size.Small" />
+                                    <span>Change Password</span>
+                                }
+                            </button>
+                        </EditForm>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public bool IsOpen { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> IsOpenChanged { get; set; }
+
+    private UpdateUserRequest editModel = new();
+    private ChangePasswordRequest passwordModel = new();
+
+    private bool isUpdating = false;
+    private bool isChangingPassword = false;
+    private string? updateMessage;
+    private string? passwordMessage;
+    private bool updateSuccess = false;
+    private bool passwordSuccess = false;
+
+    private bool showCurrentPassword = false;
+    private bool showNewPassword = false;
+    private bool showConfirmPassword = false;
+
+    private bool _previousIsOpen = false;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Check if panel was just opened
+        if (IsOpen && !_previousIsOpen)
+        {
+            // Fetch fresh user data from API
+            var userResult = await UserService.GetCurrentUserAsync();
+            if (userResult.IsSuccess && userResult.Value != null)
+            {
+                UserState.CurrentUser = userResult.Value;
+
+                // Initialize edit model with fresh user data
+                editModel = new UpdateUserRequest
+                {
+                    DisplayName = userResult.Value.DisplayName,
+                    Email = userResult.Value.Email,
+                    Notes = userResult.Value.Notes
+                };
+            }
+
+            // Clear any previous messages
+            updateMessage = null;
+            passwordMessage = null;
+            updateSuccess = false;
+            passwordSuccess = false;
+        }
+
+        _previousIsOpen = IsOpen;
+    }
+
+    private async Task Close()
+    {
+        IsOpen = false;
+        await IsOpenChanged.InvokeAsync(false);
+    }
+
+    private string GetInitials(string displayName)
+    {
+        if (string.IsNullOrWhiteSpace(displayName))
+            return "?";
+
+        var parts = displayName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length >= 2)
+            return $"{parts[0][0]}{parts[1][0]}".ToUpper();
+
+        return displayName[0].ToString().ToUpper();
+    }
+
+    private async Task HandleUpdateProfile()
+    {
+        isUpdating = true;
+        updateMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            var result = await UserService.UpdateCurrentUserAsync(editModel);
+
+            if (result.IsSuccess)
+            {
+                updateSuccess = true;
+                updateMessage = "Profile updated successfully!";
+
+                // Refresh current user data
+                var userResult = await UserService.GetCurrentUserAsync();
+                if (userResult.IsSuccess && userResult.Value != null)
+                {
+                    UserState.CurrentUser = userResult.Value;
+                }
+            }
+            else
+            {
+                updateSuccess = false;
+                updateMessage = result.Error ?? "Failed to update profile. Please try again.";
+            }
+        }
+        catch (Exception)
+        {
+            updateSuccess = false;
+            updateMessage = "An error occurred while updating profile.";
+        }
+        finally
+        {
+            isUpdating = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleChangePassword()
+    {
+        isChangingPassword = true;
+        passwordMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            if (UserState.CurrentUser == null)
+            {
+                passwordSuccess = false;
+                passwordMessage = "User information not available.";
+                return;
+            }
+
+            passwordModel.UserId = UserState.CurrentUser.Id;
+            var result = await UserService.ChangePasswordAsync(passwordModel);
+
+            if (result.IsSuccess)
+            {
+                passwordSuccess = true;
+                passwordMessage = "Password changed successfully!";
+                passwordModel = new(); // Reset form
+                showCurrentPassword = false;
+                showNewPassword = false;
+                showConfirmPassword = false;
+            }
+            else
+            {
+                passwordSuccess = false;
+                passwordMessage = result.Error ?? "Failed to change password. Please try again.";
+            }
+        }
+        catch (Exception)
+        {
+            passwordSuccess = false;
+            passwordMessage = "An error occurred while changing password.";
+        }
+        finally
+        {
+            isChangingPassword = false;
+            StateHasChanged();
+        }
+    }
+}

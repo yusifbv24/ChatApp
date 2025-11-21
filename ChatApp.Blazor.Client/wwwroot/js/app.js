@@ -16,7 +16,20 @@ window.addEventListener('DOMContentLoaded', () => {
 // Smooth scroll behavior
 document.documentElement.style.scrollBehavior = 'smooth';
 
-// Focus trap for modals (if needed)
+// Close dropdowns when clicking outside
+document.addEventListener('click', (e) => {
+    // Close user menu dropdown if click is outside
+    const userMenuWrapper = e.target.closest('.user-menu-wrapper');
+    if (!userMenuWrapper) {
+        const dropdown = document.querySelector('.user-menu-dropdown');
+        if (dropdown) {
+            // Trigger a custom event that Blazor can listen to
+            window.dispatchEvent(new CustomEvent('closeUserMenu'));
+        }
+    }
+});
+
+// Utilities
 window.chatAppUtils = {
     focusElement: (element) => {
         if (element) {
@@ -36,5 +49,14 @@ window.chatAppUtils = {
             console.error('Failed to copy:', err);
             return false;
         }
+    },
+
+    // Subscribe to outside click events
+    subscribeToOutsideClick: (dotNetHelper) => {
+        const handler = () => dotNetHelper.invokeMethodAsync('CloseUserMenuFromJS');
+        window.addEventListener('closeUserMenu', handler);
+        return {
+            dispose: () => window.removeEventListener('closeUserMenu', handler)
+        };
     }
 };

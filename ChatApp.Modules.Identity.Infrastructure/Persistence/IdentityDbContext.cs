@@ -14,6 +14,7 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence
         public DbSet<Role> Roles=>Set<Role>();
         public DbSet<Permission> Permissions => Set<Permission>();
         public DbSet<UserRole> UserRoles=> Set<UserRole>();
+        public DbSet<UserPermission> UserPermissions => Set<UserPermission>();
         public DbSet<RolePermission> RolePermissions=>Set<RolePermission>();
         public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
@@ -27,6 +28,7 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence
             modelBuilder.ApplyConfiguration(new RoleConfiguration());
             modelBuilder.ApplyConfiguration(new PermissionConfiguration());
             modelBuilder.ApplyConfiguration(new UserRoleConfiguration());
+            modelBuilder.ApplyConfiguration(new UserPermissionConfiguration());
             modelBuilder.ApplyConfiguration(new RolePermissionConfiguration());
             modelBuilder.ApplyConfiguration(new RefreshTokenConfiguration());
         }

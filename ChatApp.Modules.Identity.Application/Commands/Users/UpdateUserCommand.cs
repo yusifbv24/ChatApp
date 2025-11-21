@@ -12,7 +12,6 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
         Guid UserId,
         string? Email,
         string? DisplayName,
-        string? AvatarUrl,
         string? Notes
     ) : IRequest<Result>;
 
@@ -44,13 +43,6 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
             {
                 RuleFor(x => x.Notes)
                     .MaximumLength(1000).WithMessage("Notes must not exceed 1000 characters");
-            });
-
-
-            When(x => !string.IsNullOrWhiteSpace(x.AvatarUrl), () =>
-            {
-                RuleFor(x => x.AvatarUrl)
-                    .MaximumLength(500).WithMessage("Avatar url must not exceed 500 characters");
             });
         }
     }
@@ -121,16 +113,8 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
                 }
 
 
-                if (!string.IsNullOrWhiteSpace(request.AvatarUrl))
-                {
-                    user.ChangeAvatar(request.AvatarUrl);
-                }
-
-
-                if (!string.IsNullOrWhiteSpace(request.Notes))
-                {
-                    user.UpdateNotes(request.Notes);
-                }
+                // Always update notes, even if empty/null (to allow clearing notes)
+                user.UpdateNotes(request.Notes);
 
                 _unitOfWork.Users.Update(user);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);

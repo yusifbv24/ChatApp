@@ -16,8 +16,10 @@ namespace ChatApp.Modules.Identity.Domain.Entities
 
         // Navigation properties
         private readonly List<UserRole> _userRoles = new();
+        private readonly List<UserPermission> _userPermissions = new();
 
         public IReadOnlyCollection<UserRole> UserRoles => _userRoles.AsReadOnly();
+        public IReadOnlyCollection<UserPermission> UserPermissions => _userPermissions.AsReadOnly();
 
         private User() :base() { }
 
@@ -160,6 +162,31 @@ namespace ChatApp.Modules.Identity.Domain.Entities
             if (userRole != null)
             {
                 _userRoles.Remove(userRole);
+                UpdateTimestamp();
+            }
+        }
+
+
+        public void GrantPermission(UserPermission userPermission)
+        {
+            // Remove existing permission grant/revoke for this permission if exists
+            var existing = _userPermissions.FirstOrDefault(up => up.PermissionId == userPermission.PermissionId);
+            if (existing != null)
+            {
+                _userPermissions.Remove(existing);
+            }
+
+            _userPermissions.Add(userPermission);
+            UpdateTimestamp();
+        }
+
+
+        public void RevokePermission(Guid permissionId)
+        {
+            var userPermission = _userPermissions.FirstOrDefault(up => up.PermissionId == permissionId);
+            if (userPermission != null)
+            {
+                _userPermissions.Remove(userPermission);
                 UpdateTimestamp();
             }
         }

@@ -1,0 +1,49 @@
+@page "/"
+@attribute [Authorize]
+
+<PageTitle>Messages - ChatApp</PageTitle>
+
+<div class="messages-page">
+    <div class="page-header">
+        <h1 class="page-title">Messages</h1>
+        <p class="page-subtitle">Stay connected with your team</p>
+    </div>
+
+    <div class="messages-container">
+        <div class="welcome-card">
+            <div class="welcome-icon">
+                <MudIcon Icon="@Icons.Material.Filled.Message" Style="font-size: 64px; color: var(--primary-color);" />
+            </div>
+            <h2>Welcome to ChatApp!</h2>
+            <p>Your modern team communication platform is ready to use.</p>
+            <div class="feature-grid">
+                <div class="feature-item">
+                    <MudIcon Icon="@Icons.Material.Filled.Speed" Color="Color.Primary" />
+                    <div class="feature-text">
+                        <h4>Fast & Responsive</h4>
+                        <p>Lightning-fast messaging experience</p>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <MudIcon Icon="@Icons.Material.Filled.Security" Color="Color.Success" />
+                    <div class="feature-text">
+                        <h4>Secure & Private</h4>
+                        <p>Your data is protected</p>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <MudIcon Icon="@Icons.Material.Filled.Groups" Color="Color.Info" />
+                    <div class="feature-text">
+                        <h4>Team Collaboration</h4>
+                        <p>Work together seamlessly</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@code {
+    // Home page with welcome message
+}

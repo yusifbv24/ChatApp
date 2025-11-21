@@ -38,7 +38,7 @@ public class UserService : IUserService
     /// </summary>
     public async Task<Result> ChangePasswordAsync(ChangePasswordRequest request)
     {
-        return await _apiClient.PostAsync("/api/users/me/change-password", request);
+        return await _apiClient.PutAsync("/api/users/me/change-password", request);
     }
 
     /// <summary>
@@ -108,9 +108,9 @@ public class UserService : IUserService
     /// Changes user password (admin) - POST /api/users/change-password/{userId}
     /// Requires: Users.Update permission
     /// </summary>
-    public async Task<Result> ChangeUserPasswordAsync(Guid userId, AdminChangePasswordRequest request)
+    public async Task<Result> ChangeUserPasswordAsync(AdminChangePasswordRequest request)
     {
-        return await _apiClient.PostAsync($"/api/users/change-password/{userId}", request);
+        return await _apiClient.PutAsync($"/api/users/change-user-password", request);
     }
 
     /// <summary>
@@ -129,5 +129,23 @@ public class UserService : IUserService
     public async Task<Result> RemoveRoleAsync(Guid userId, Guid roleId)
     {
         return await _apiClient.DeleteAsync($"/api/users/{userId}/roles/{roleId}");
+    }
+
+    /// <summary>
+    /// Grants a specific permission to a user - POST /api/users/{userId}/permissions/{permissionId}
+    /// Requires: Users.Update permission
+    /// </summary>
+    public async Task<Result> GrantUserPermissionAsync(Guid userId, Guid permissionId)
+    {
+        return await _apiClient.PostAsync($"/api/users/{userId}/permissions/{permissionId}");
+    }
+
+    /// <summary>
+    /// Revokes a specific permission from a user - DELETE /api/users/{userId}/permissions/{permissionId}
+    /// Requires: Users.Update permission
+    /// </summary>
+    public async Task<Result> RevokeUserPermissionAsync(Guid userId, Guid permissionId)
+    {
+        return await _apiClient.DeleteAsync($"/api/users/{userId}/permissions/{permissionId}");
     }
 }

@@ -1,0 +1,572 @@
+@page "/admin/users"
+@attribute [Authorize]
+
+<PageTitle>User Management - ChatApp</PageTitle>
+
+<div class="admin-page">
+    <div class="admin-page-header">
+        <div class="admin-page-title-section">
+            <h1 class="admin-page-title">
+                <MudIcon Icon="@Icons.Material.Filled.People" />
+                User Management
+            </h1>
+            <p class="admin-page-subtitle">Manage system users, roles, and permissions</p>
+        </div>
+        <div class="admin-page-actions">
+            <button class="admin-btn admin-btn-primary" @onclick="OpenCreateUserDialog">
+                <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Size="Size.Small" />
+                <span>Create User</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="admin-page-content">
+        <div class="admin-search-bar">
+            <div class="admin-search-input-wrapper">
+                <MudIcon Icon="@Icons.Material.Filled.Search" Class="admin-search-icon" />
+                <input type="text" class="admin-search-input" placeholder="Search users..." @bind="searchTerm" @bind:event="oninput" @onkeyup="HandleSearch" />
+                @if (!string.IsNullOrEmpty(searchTerm))
+                {
+                    <button class="admin-search-clear" @onclick="ClearSearch">
+                        <MudIcon Icon="@Icons.Material.Filled.Clear" Size="Size.Small" />
+                    </button>
+                }
+            </div>
+            <select class="admin-select" @bind="statusFilter" @bind:after="LoadUsers">
+                <option value="all">All Status</option>
+                <option value="active">Active Only</option>
+                <option value="inactive">Inactive Only</option>
+            </select>
+        </div>
+
+        @if (isLoading)
+        {
+            <div class="admin-loading">
+                <div class="admin-loading-spinner"></div>
+                <p>Loading users...</p>
+            </div>
+        }
+        else if (errorMessage != null)
+        {
+            <div class="admin-error">
+                <MudIcon Icon="@Icons.Material.Filled.Error" />
+                <span>@errorMessage</span>
+            </div>
+        }
+        else
+        {
+            <div class="admin-table-container">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Email</th>
+                            <th>Roles</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th class="admin-table-actions-header">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var user in filteredUsers)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="admin-user-cell">
+                                        <div class="admin-user-avatar">
+                                            @if (!string.IsNullOrEmpty(user.AvatarUrl))
+                                            {
+                                                <img src="@user.AvatarUrl" alt="@user.DisplayName" />
+                                            }
+                                            else
+                                            {
+                                                <div class="admin-user-avatar-placeholder">@GetInitials(user.DisplayName)</div>
+                                            }
+                                        </div>
+                                        <div class="admin-user-info">
+                                            <span class="admin-user-name">@user.DisplayName</span>
+                                            <span class="admin-user-username">@("@" + user.Username)</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>@user.Email</td>
+                                <td>
+                                    <div class="admin-badges">
+                                        @if (user.IsAdmin)
+                                        {
+                                            <span class="admin-badge admin-badge-admin">
+                                                <MudIcon Icon="@Icons.Material.Filled.Shield" Size="Size.Small" />
+                                                Admin
+                                            </span>
+                                        }
+                                        @foreach (var role in user.Roles.Take(2))
+                                        {
+                                            <span class="admin-badge admin-badge-role">@role.Name</span>
+                                        }
+                                        @if (user.Roles.Count > 2)
+                                        {
+                                            <span class="admin-badge admin-badge-more">+@(user.Roles.Count - 2)</span>
+                                        }
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="admin-status @(user.IsActive ? "active" : "inactive")">
+                                        @(user.IsActive ? "Active" : "Inactive")
+                                    </span>
+                                </td>
+                                <td class="admin-table-date">@user.CreatedAtUtc.ToString("MMM dd, yyyy")</td>
+                                <td>
+                                    <div class="admin-table-actions">
+                                        <button class="admin-action-btn" title="Manage Roles" @onclick="() => OpenManageRolesDialog(user)">
+                                            <MudIcon Icon="@Icons.Material.Filled.AdminPanelSettings" Size="Size.Small" />
+                                        </button>
+                                        <button class="admin-action-btn" title="Manage Permissions" @onclick="() => OpenManagePermissionsDialog(user)">
+                                            <MudIcon Icon="@Icons.Material.Filled.Security" Size="Size.Small" />
+                                        </button>
+                                        <button class="admin-action-btn" title="Edit User" @onclick="() => OpenEditUserDialog(user)">
+                                            <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" />
+                                        </button>
+                                        <button class="admin-action-btn" title="Change Password" @onclick="() => OpenChangePasswordDialog(user)">
+                                            <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" />
+                                        </button>
+                                        @if (user.IsActive)
+                                        {
+                                            <button class="admin-action-btn admin-action-warning" title="Deactivate" @onclick="() => DeactivateUser(user)">
+                                                <MudIcon Icon="@Icons.Material.Filled.Block" Size="Size.Small" />
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button class="admin-action-btn admin-action-success" title="Activate" @onclick="() => ActivateUser(user)">
+                                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" />
+                                            </button>
+                                        }
+                                        <button class="admin-action-btn admin-action-danger" title="Delete User" @onclick="() => OpenDeleteUserDialog(user)">
+                                            <MudIcon Icon="@Icons.Material.Filled.Delete" Size="Size.Small" />
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (filteredUsers.Count == 0)
+            {
+                <div class="admin-empty-state">
+                    <MudIcon Icon="@Icons.Material.Filled.PersonOff" />
+                    <h3>No users found</h3>
+                    <p>@(string.IsNullOrEmpty(searchTerm) ? "There are no users in the system yet." : "Try adjusting your search criteria.")</p>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@* User Dialogs *@
+@if (showCreateUserDialog)
+{
+    <div class="admin-dialog-overlay" @onclick="CloseCreateUserDialog">
+        <div class="admin-dialog" @onclick:stopPropagation="true">
+            <div class="admin-dialog-header">
+                <h2>Create New User</h2>
+                <button class="admin-dialog-close" @onclick="CloseCreateUserDialog">
+                    <MudIcon Icon="@Icons.Material.Filled.Close" />
+                </button>
+            </div>
+            <div class="admin-dialog-content">
+                <EditForm Model="@createUserModel" OnValidSubmit="HandleCreateUser">
+                    <DataAnnotationsValidator />
+
+                    <div class="admin-form-row">
+                        <div class="admin-form-group">
+                            <label>Username *</label>
+                            <InputText @bind-Value="createUserModel.Username" class="admin-input" placeholder="Enter username" />
+                            <ValidationMessage For="@(() => createUserModel.Username)" />
+                        </div>
+                        <div class="admin-form-group">
+                            <label>Email *</label>
+                            <InputText @bind-Value="createUserModel.Email" type="email" class="admin-input" placeholder="Enter email" />
+                            <ValidationMessage For="@(() => createUserModel.Email)" />
+                        </div>
+                    </div>
+
+                    <div class="admin-form-row">
+                        <div class="admin-form-group">
+                            <label>Display Name *</label>
+                            <InputText @bind-Value="createUserModel.DisplayName" class="admin-input" placeholder="Enter display name" />
+                            <ValidationMessage For="@(() => createUserModel.DisplayName)" />
+                        </div>
+                        <div class="admin-form-group">
+                            <label>Password *</label>
+                            <InputText @bind-Value="createUserModel.Password" type="password" class="admin-input" placeholder="Enter password" />
+                            <ValidationMessage For="@(() => createUserModel.Password)" />
+                        </div>
+                    </div>
+
+                    <div class="admin-form-group">
+                        <label>Avatar URL (Optional)</label>
+                        <InputText @bind-Value="createUserModel.AvatarUrl" class="admin-input" placeholder="https://example.com/avatar.jpg" />
+                    </div>
+
+                    <div class="admin-form-group">
+                        <label>Notes (Optional)</label>
+                        <InputTextArea @bind-Value="createUserModel.Notes" class="admin-textarea" placeholder="Additional notes about the user..." rows="3" />
+                    </div>
+
+                    <div class="admin-form-group">
+                        <label class="admin-checkbox-label">
+                            <InputCheckbox @bind-Value="createUserModel.IsAdmin" class="admin-checkbox" />
+                            <span>Admin User</span>
+                        </label>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(createUserMessage))
+                    {
+                        <div class="admin-message @(createUserSuccess ? "success" : "error")">
+                            <MudIcon Icon="@(createUserSuccess ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Error)" Size="Size.Small" />
+                            <span>@createUserMessage</span>
+                        </div>
+                    }
+
+                    <div class="admin-dialog-actions">
+                        <button type="button" class="admin-btn admin-btn-secondary" @onclick="CloseCreateUserDialog" disabled="@isCreatingUser">
+                            Cancel
+                        </button>
+                        <button type="submit" class="admin-btn admin-btn-primary" disabled="@isCreatingUser">
+                            @if (isCreatingUser)
+                            {
+                                <span class="admin-btn-spinner"></span>
+                                <span>Creating...</span>
+                            }
+                            else
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Size="Size.Small" />
+                                <span>Create User</span>
+                            }
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+
+@* Edit User Dialog *@
+
+
+@if (showEditUserDialog)
+{
+    <div class="admin-dialog-overlay" @onclick="CloseEditUserDialog">
+        <div class="admin-dialog" @onclick:stopPropagation="true">
+            <div class="admin-dialog-header">
+                <h2>Edit User</h2>
+                <button class="admin-dialog-close" @onclick="CloseEditUserDialog">
+                    <MudIcon Icon="@Icons.Material.Filled.Close" />
+                </button>
+            </div>
+            <div class="admin-dialog-content">
+                <EditForm Model="@editUserModel" OnValidSubmit="HandleEditUser">
+                    <DataAnnotationsValidator />
+
+                    <div class="admin-form-row">
+                        <div class="admin-form-group">
+                            <label>Display Name *</label>
+                            <InputText @bind-Value="editUserModel.DisplayName" class="admin-input" placeholder="Enter display name" />
+                            <ValidationMessage For="@(() => editUserModel.DisplayName)" />
+                        </div>
+                        <div class="admin-form-group">
+                            <label>Email *</label>
+                            <InputText @bind-Value="editUserModel.Email" type="email" class="admin-input" placeholder="Enter email" />
+                            <ValidationMessage For="@(() => editUserModel.Email)" />
+                        </div>
+                    </div>
+
+                    <div class="admin-form-group">
+                        <label>Avatar URL (Optional)</label>
+                        <InputText @bind-Value="editUserModel.AvatarUrl" class="admin-input" placeholder="https://example.com/avatar.jpg" />
+                    </div>
+
+                    <div class="admin-form-group">
+                        <label>Notes (Optional)</label>
+                        <InputTextArea @bind-Value="editUserModel.Notes" class="admin-textarea" placeholder="Additional notes about the user..." rows="3" />
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(editUserMessage))
+                    {
+                        <div class="admin-message @(editUserSuccess ? "success" : "error")">
+                            <MudIcon Icon="@(editUserSuccess ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Error)" Size="Size.Small" />
+                            <span>@editUserMessage</span>
+                        </div>
+                    }
+
+                    <div class="admin-dialog-actions">
+                        <button type="button" class="admin-btn admin-btn-secondary" @onclick="CloseEditUserDialog" disabled="@isUpdatingUser">
+                            Cancel
+                        </button>
+                        <button type="submit" class="admin-btn admin-btn-primary" disabled="@isUpdatingUser">
+                            @if (isUpdatingUser)
+                            {
+                                <span class="admin-btn-spinner"></span>
+                                <span>Updating...</span>
+                            }
+                            else
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.Save" Size="Size.Small" />
+                                <span>Save Changes</span>
+                            }
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@* Manage Roles Dialog *@
+
+
+@if (showManageRolesDialog)
+{
+    <div class="admin-dialog-overlay" @onclick="CloseManageRolesDialog">
+        <div class="admin-dialog" @onclick:stopPropagation="true">
+            <div class="admin-dialog-header">
+                <h2>Manage Roles - @managingRolesUser?.DisplayName</h2>
+                <button class="admin-dialog-close" @onclick="CloseManageRolesDialog">
+                    <MudIcon Icon="@Icons.Material.Filled.Close" />
+                </button>
+            </div>
+            <div class="admin-dialog-content">
+                <div class="admin-roles-list">
+                    @foreach (var role in availableRoles)
+                    {
+                        <label class="admin-role-item">
+                            <input type="checkbox"
+                                   checked="@selectedRoleIds.Contains(role.Id)"
+                                   @onchange="() => ToggleRole(role.Id)"
+                                   class="admin-checkbox" />
+                            <div class="admin-role-info">
+                                <span class="admin-role-name">@role.Name</span>
+                                <span class="admin-role-description">@role.Description</span>
+                            </div>
+                        </label>
+                    }
+                </div>
+
+                @if (!string.IsNullOrEmpty(rolesMessage))
+                {
+                    <div class="admin-message @(rolesSuccess ? "success" : "error")">
+                        <MudIcon Icon="@(rolesSuccess ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Error)" Size="Size.Small" />
+                        <span>@rolesMessage</span>
+                    </div>
+                }
+
+                <div class="admin-dialog-actions">
+                    <button type="button" class="admin-btn admin-btn-secondary" @onclick="CloseManageRolesDialog" disabled="@isUpdatingRoles">
+                        Cancel
+                    </button>
+                    <button type="button" class="admin-btn admin-btn-primary" @onclick="SaveRoles" disabled="@isUpdatingRoles">
+                        @if (isUpdatingRoles)
+                        {
+                            <span class="admin-btn-spinner"></span>
+                            <span>Saving...</span>
+                        }
+                        else
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.Save" Size="Size.Small" />
+                            <span>Save Roles</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* Manage Permissions Dialog *@
+
+
+@if (showManagePermissionsDialog)
+{
+    <div class="admin-dialog-overlay" @onclick="CloseManagePermissionsDialog">
+        <div class="admin-dialog admin-dialog-large" @onclick:stopPropagation="true">
+            <div class="admin-dialog-header">
+                <h2>Manage Permissions - @managingPermissionsUser?.DisplayName</h2>
+                <button class="admin-dialog-close" @onclick="CloseManagePermissionsDialog">
+                    <MudIcon Icon="@Icons.Material.Filled.Close" />
+                </button>
+            </div>
+            <div class="admin-dialog-content">
+                <div class="admin-form-group">
+                    <label>Filter by Module</label>
+                    <select class="admin-select" @bind="selectedModule" @bind:after="FilterPermissionsByModule">
+                        <option value="all">All Modules</option>
+                        @foreach (var module in availablePermissions.Select(p => p.Module).Distinct())
+                        {
+                            <option value="@module">@module</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="admin-permissions-list">
+                    @foreach (var permission in filteredPermissions)
+                    {
+                        <label class="admin-permission-item">
+                            <input type="checkbox"
+                                   checked="@permissionStates.ContainsKey(permission.Id)"
+                                   @onchange="() => TogglePermission(permission.Id)"
+                                   class="admin-checkbox" />
+                            <div class="admin-permission-info">
+                                <span class="admin-permission-name">@permission.Name</span>
+                                <span class="admin-permission-description">@permission.Description</span>
+                            </div>
+                        </label>
+                    }
+                </div>
+
+                @if (!string.IsNullOrEmpty(permissionsMessage))
+                {
+                    <div class="admin-message @(permissionsSuccess ? "success" : "error")">
+                        <MudIcon Icon="@(permissionsSuccess ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Error)" Size="Size.Small" />
+                        <span>@permissionsMessage</span>
+                    </div>
+                }
+
+                <div class="admin-dialog-actions">
+                    <button type="button" class="admin-btn admin-btn-secondary" @onclick="CloseManagePermissionsDialog" disabled="@isUpdatingPermissions">
+                        Cancel
+                    </button>
+                    <button type="button" class="admin-btn admin-btn-primary" @onclick="SavePermissions" disabled="@isUpdatingPermissions">
+                        @if (isUpdatingPermissions)
+                        {
+                            <span class="admin-btn-spinner"></span>
+                            <span>Saving...</span>
+                        }
+                        else
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.Save" Size="Size.Small" />
+                            <span>Save Permissions</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* Change Password Dialog *@
+
+
+@if (showChangePasswordDialog)
+{
+    <div class="admin-dialog-overlay" @onclick="CloseChangePasswordDialog">
+        <div class="admin-dialog" @onclick:stopPropagation="true">
+            <div class="admin-dialog-header">
+                <h2>Change Password - @changingPasswordUser?.DisplayName</h2>
+                <button class="admin-dialog-close" @onclick="CloseChangePasswordDialog">
+                    <MudIcon Icon="@Icons.Material.Filled.Close" />
+                </button>
+            </div>
+            <div class="admin-dialog-content">
+                <EditForm Model="@changePasswordModel" OnValidSubmit="HandleChangePassword">
+                    <DataAnnotationsValidator />
+
+                    <div class="admin-form-group">
+                        <label>New Password *</label>
+                        <InputText @bind-Value="changePasswordModel.NewPassword" type="password" class="admin-input" placeholder="Enter new password" />
+                        <ValidationMessage For="@(() => changePasswordModel.NewPassword)" />
+                    </div>
+
+                    <div class="admin-form-group">
+                        <label>Confirm Password *</label>
+                        <InputText @bind-Value="changePasswordModel.ConfirmPassword" type="password" class="admin-input" placeholder="Confirm new password" />
+                        <ValidationMessage For="@(() => changePasswordModel.ConfirmPassword)" />
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(changePasswordMessage))
+                    {
+                        <div class="admin-message @(changePasswordSuccess ? "success" : "error")">
+                            <MudIcon Icon="@(changePasswordSuccess ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Error)" Size="Size.Small" />
+                            <span>@changePasswordMessage</span>
+                        </div>
+                    }
+
+                    <div class="admin-dialog-actions">
+                        <button type="button" class="admin-btn admin-btn-secondary" @onclick="CloseChangePasswordDialog" disabled="@isChangingPassword">
+                            Cancel
+                        </button>
+                        <button type="submit" class="admin-btn admin-btn-primary" disabled="@isChangingPassword">
+                            @if (isChangingPassword)
+                            {
+                                <span class="admin-btn-spinner"></span>
+                                <span>Changing...</span>
+                            }
+                            else
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" />
+                                <span>Change Password</span>
+                            }
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@* Delete User Dialog *@
+
+
+@if (showDeleteUserDialog)
+{
+    <div class="admin-dialog-overlay" @onclick="CloseDeleteUserDialog">
+        <div class="admin-dialog admin-dialog-small" @onclick:stopPropagation="true">
+            <div class="admin-dialog-header">
+                <h2>Delete User</h2>
+                <button class="admin-dialog-close" @onclick="CloseDeleteUserDialog">
+                    <MudIcon Icon="@Icons.Material.Filled.Close" />
+                </button>
+            </div>
+            <div class="admin-dialog-content">
+                <div class="admin-delete-warning">
+                    <MudIcon Icon="@Icons.Material.Filled.Warning" Class="admin-delete-icon" />
+                    <h3>Are you sure?</h3>
+                    <p>You are about to delete the user:</p>
+                    <div class="admin-delete-user-info">
+                        <strong>@deletingUser?.DisplayName</strong>
+                        <span>@deletingUser?.Email</span>
+                    </div>
+                    <p class="admin-delete-note">This action cannot be undone. All user data will be permanently deleted.</p>
+                </div>
+
+                @if (!string.IsNullOrEmpty(deleteUserMessage))
+                {
+                    <div class="admin-message error">
+                        <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Small" />
+                        <span>@deleteUserMessage</span>
+                    </div>
+                }
+
+                <div class="admin-dialog-actions">
+                    <button type="button" class="admin-btn admin-btn-secondary" @onclick="CloseDeleteUserDialog" disabled="@isDeletingUser">
+                        Cancel
+                    </button>
+                    <button type="button" class="admin-btn admin-btn-danger" @onclick="HandleDeleteUser" disabled="@isDeletingUser">
+                        @if (isDeletingUser)
+                        {
+                            <span class="admin-btn-spinner"></span>
+                            <span>Deleting...</span>
+                        }
+                        else
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.Delete" Size="Size.Small" />
+                            <span>Delete User</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}

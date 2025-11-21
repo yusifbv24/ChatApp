@@ -58,8 +58,8 @@ namespace ChatApp.Modules.Identity.Application.Commands.RefreshToken
                     return Result.Failure<RefreshTokenResponse>("User not found or inactive");
                 }
 
-                // Get user permissions
-                var permissions = await _unitOfWork.UserRoles
+                // Get role-based permissions
+                var rolePermissions = await _unitOfWork.UserRoles
                     .Where(ur => ur.UserId == user.Id)
                     .Include(ur => ur.Role)
                         .ThenInclude(r => r.RolePermissions)
@@ -67,6 +67,32 @@ namespace ChatApp.Modules.Identity.Application.Commands.RefreshToken
                     .SelectMany(ur => ur.Role.RolePermissions.Select(rp => rp.Permission.Name))
                     .Distinct()
                     .ToListAsync(cancellationToken);
+
+                // Get user-specific permissions (direct grants/revokes)
+                var userPermissions = await _unitOfWork.UserPermissions
+                    .Where(up => up.UserId == user.Id)
+                    .Include(up => up.Permission)
+                    .ToListAsync(cancellationToken);
+
+                // Start with role-based permissions
+                var finalPermissions = new HashSet<string>(rolePermissions);
+
+                // Apply user-specific permission overrides
+                foreach (var userPermission in userPermissions)
+                {
+                    if (userPermission.IsGranted)
+                    {
+                        // Grant permission (add if not already present)
+                        finalPermissions.Add(userPermission.Permission.Name!);
+                    }
+                    else
+                    {
+                        // Revoke permission (remove even if role grants it)
+                        finalPermissions.Remove(userPermission.Permission.Name!);
+                    }
+                }
+
+                var permissions = finalPermissions.ToList();
 
                 // Generate new tokens
                 var newAccessToken = _tokenGenerator.GenerateAccessToken(user, permissions);

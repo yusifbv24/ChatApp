@@ -18,7 +18,9 @@ public interface IUserService
     Task<Result> ActivateUserAsync(Guid userId);
     Task<Result> DeactivateUserAsync(Guid userId);
     Task<Result> DeleteUserAsync(Guid userId);
-    Task<Result> ChangeUserPasswordAsync(Guid userId, AdminChangePasswordRequest request);
+    Task<Result> ChangeUserPasswordAsync(AdminChangePasswordRequest request);
     Task<Result> AssignRoleAsync(Guid userId, Guid roleId);
     Task<Result> RemoveRoleAsync(Guid userId, Guid roleId);
+    Task<Result> GrantUserPermissionAsync(Guid userId, Guid permissionId);
+    Task<Result> RevokeUserPermissionAsync(Guid userId, Guid permissionId);
 }

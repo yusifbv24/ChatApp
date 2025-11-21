@@ -124,7 +124,6 @@ namespace ChatApp.Modules.Identity.Api.Controllers
                 userId,
                 request.Email,
                 request.DisplayName,
-                request.AvatarUrl,
                 request.Notes);
 
             var result = await _mediator.Send(command, cancellationToken);
@@ -143,7 +142,7 @@ namespace ChatApp.Modules.Identity.Api.Controllers
         /// Requires the current password for security verification
         /// This endpoint does not require any permissions - any authenticated user can change their own password
         /// </summary>
-        [HttpPost("me/change-password")]
+        [HttpPut("me/change-password")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -177,14 +176,13 @@ namespace ChatApp.Modules.Identity.Api.Controllers
         /// Requires the current password for security verification
         /// This endpoint does not require any permissions - any authenticated user can change their own password
         /// </summary>
-        [HttpPost("change-password/{id:guid}")]
+        [HttpPut("change-user-password")]
         [RequirePermission("Users.Update")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> ChangeUserPassword(
-            [FromRoute] Guid Id,
             [FromBody] AdminChangePasswordRequest request,
             CancellationToken cancellationToken)
         {
@@ -193,7 +191,7 @@ namespace ChatApp.Modules.Identity.Api.Controllers
                 return Unauthorized();
 
             var command = new AdminChangePasswordCommand(
-                Id,
+                request.Id,
                 request.NewPassword,
                 request.ConfirmNewPassword);
 
@@ -283,7 +281,6 @@ namespace ChatApp.Modules.Identity.Api.Controllers
                 userId,
                 request.Email,
                 request.DisplayName,
-                request.AvatarUrl,
                 request.Notes);
 
             var result = await _mediator.Send(command, cancellationToken);
@@ -432,6 +429,64 @@ namespace ChatApp.Modules.Identity.Api.Controllers
                 return BadRequest(new { error = result.Error });
 
             return Ok(new { message = "Role removed successfully" });
+        }
+
+
+
+        /// <summary>
+        /// Grants a specific permission directly to a user
+        /// </summary>
+        [HttpPost("{userId:guid}/permissions/{permissionId:guid}")]
+        [RequirePermission("Users.Update")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<IActionResult> GrantUserPermission(
+            [FromRoute] Guid userId,
+            [FromRoute] Guid permissionId,
+            CancellationToken cancellationToken)
+        {
+            var grantedBy = GetCurrentUserId();
+            if (grantedBy == Guid.Empty)
+                return Unauthorized();
+
+            var result = await _mediator.Send(
+                new GrantUserPermissionCommand(userId, permissionId, grantedBy),
+                cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return Ok(new { message = "Permission granted to user successfully" });
+        }
+
+
+
+        /// <summary>
+        /// Revokes a specific permission from a user
+        /// </summary>
+        [HttpDelete("{userId:guid}/permissions/{permissionId:guid}")]
+        [RequirePermission("Users.Update")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<IActionResult> RevokeUserPermission(
+            [FromRoute] Guid userId,
+            [FromRoute] Guid permissionId,
+            CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(
+                new RevokeUserPermissionCommand(userId, permissionId),
+                cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return Ok(new { message = "Permission revoked from user successfully" });
         }
 
 

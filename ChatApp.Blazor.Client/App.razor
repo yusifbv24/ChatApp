@@ -55,9 +55,25 @@
 <MudDialogProvider />
 <MudSnackbarProvider />
 
+@inject IAuthService AuthService
+@inject UserState UserState
+
 @code {
     private MudThemeProvider? _mudThemeProvider;
     private bool _isDarkMode = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Load current user into UserState on app initialization
+        if (UserState.CurrentUser == null)
+        {
+            var user = await AuthService.GetCurrentUserAsync();
+            if (user != null)
+            {
+                UserState.CurrentUser = user;
+            }
+        }
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

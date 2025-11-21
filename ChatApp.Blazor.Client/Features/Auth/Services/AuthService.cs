@@ -63,6 +63,10 @@ public class AuthService : IAuthService
         if (result.IsSuccess && result.Value != null)
         {
             await _authStateProvider.MarkUserAsAuthenticated(result.Value);
+
+            // Reload current user info
+            var user = await _authStateProvider.GetCurrentUserAsync();
+            _userState.CurrentUser = user;
         }
 
         return result;

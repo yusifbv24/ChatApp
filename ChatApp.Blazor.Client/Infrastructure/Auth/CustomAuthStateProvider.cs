@@ -94,12 +94,35 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
             return null;
         }
 
-        var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        var username = user.FindFirst(ClaimTypes.Name)?.Value;
-        var email = user.FindFirst(ClaimTypes.Email)?.Value;
-        var displayName = user.FindFirst("DisplayName")?.Value;
-        var avatarUrl = user.FindFirst("AvatarUrl")?.Value;
-        var isAdmin = user.FindFirst("IsAdmin")?.Value == "True";
+        // Try multiple possible claim type variations
+        var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                     ?? user.FindFirst("sub")?.Value
+                     ?? user.FindFirst("nameid")?.Value;
+
+        var username = user.FindFirst(ClaimTypes.Name)?.Value
+                      ?? user.FindFirst("name")?.Value
+                      ?? user.FindFirst("unique_name")?.Value;
+
+        var email = user.FindFirst(ClaimTypes.Email)?.Value
+                   ?? user.FindFirst("email")?.Value;
+
+        var displayName = user.FindFirst("DisplayName")?.Value
+                         ?? user.FindFirst("display_name")?.Value
+                         ?? user.FindFirst("name")?.Value;
+
+        var avatarUrl = user.FindFirst("AvatarUrl")?.Value
+                       ?? user.FindFirst("avatar_url")?.Value
+                       ?? user.FindFirst("picture")?.Value;
+
+        // Check for admin claim in various formats
+        var isAdminClaim = user.FindFirst("IsAdmin")?.Value
+                          ?? user.FindFirst("is_admin")?.Value
+                          ?? user.FindFirst(ClaimTypes.Role)?.Value;
+
+        var isAdmin = isAdminClaim == "True"
+                     || isAdminClaim == "true"
+                     || isAdminClaim == "Admin"
+                     || user.IsInRole("Admin");
 
         if (string.IsNullOrEmpty(userId))
         {
@@ -108,16 +131,17 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
 
         return new UserDto(
             Guid.Parse(userId),
-            username ?? "",
+            username ?? email ?? "unknown",
             email ?? "",
-            displayName ?? username ?? "",
+            displayName ?? username ?? email ?? "User",
             avatarUrl,
             null,
             Guid.Empty,
             true,
             isAdmin,
             DateTime.UtcNow,
-            new List<RoleDto>()
+            new List<RoleDto>(),
+            new List<PermissionDto>()
         );
     }
 

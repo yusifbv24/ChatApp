@@ -111,10 +111,9 @@
                 errorMessage = result.Error ?? "Invalid username or password. Please try again.";
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             errorMessage = "An error occurred during login. Please try again.";
-            Console.WriteLine($"Login error: {ex.Message}");
         }
         finally
         {

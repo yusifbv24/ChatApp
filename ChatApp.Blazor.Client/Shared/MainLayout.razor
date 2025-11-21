@@ -1,11 +1,361 @@
 @inherits LayoutComponentBase
+@inject UserState UserState
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@implements IDisposable
 
-<div class="page">
-    <main>
-        @Body
-    </main>
+<div class="main-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar @(isSidebarOpen ? "sidebar-open" : "sidebar-closed")">
+        <!-- Sidebar Header -->
+        <div class="sidebar-header">
+            @if (isSidebarOpen)
+            {
+                <div class="sidebar-brand">
+                    <svg width="32" height="32" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="48" height="48" rx="12" fill="url(#gradient-sidebar)"/>
+                        <path d="M12 18C12 16.3431 13.3431 15 15 15H33C34.6569 15 36 16.3431 36 18V28C36 29.6569 34.6569 31 33 31H20L14 35V31C12.8954 31 12 30.1046 12 29V18Z"
+                              fill="white" fill-opacity="0.9"/>
+                        <circle cx="18" cy="23" r="1.5" fill="#6366F1"/>
+                        <circle cx="24" cy="23" r="1.5" fill="#6366F1"/>
+                        <circle cx="30" cy="23" r="1.5" fill="#6366F1"/>
+                        <defs>
+                            <linearGradient id="gradient-sidebar" x1="0" y1="0" x2="48" y2="48">
+                                <stop offset="0%" stop-color="#6366F1"/>
+                                <stop offset="100%" stop-color="#8B5CF6"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                    <span class="brand-text">ChatApp</span>
+                </div>
+            }
+            else
+            {
+                <div class="sidebar-brand-collapsed">
+                    <svg width="32" height="32" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="48" height="48" rx="12" fill="url(#gradient-sidebar-collapsed)"/>
+                        <path d="M12 18C12 16.3431 13.3431 15 15 15H33C34.6569 15 36 16.3431 36 18V28C36 29.6569 34.6569 31 33 31H20L14 35V31C12.8954 31 12 30.1046 12 29V18Z"
+                              fill="white" fill-opacity="0.9"/>
+                        <circle cx="18" cy="23" r="1.5" fill="#6366F1"/>
+                        <circle cx="24" cy="23" r="1.5" fill="#6366F1"/>
+                        <circle cx="30" cy="23" r="1.5" fill="#6366F1"/>
+                        <defs>
+                            <linearGradient id="gradient-sidebar-collapsed" x1="0" y1="0" x2="48" y2="48">
+                                <stop offset="0%" stop-color="#6366F1"/>
+                                <stop offset="100%" stop-color="#8B5CF6"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>  
+                </div>
+            }
+        </div>
+
+        <!-- User Info -->
+        @if (UserState.CurrentUser != null)
+        {
+            <div class="sidebar-user">
+                @if (isSidebarOpen)
+                {
+                    <div class="user-avatar">
+                        @if (!string.IsNullOrEmpty(UserState.CurrentUser.AvatarUrl))
+                        {
+                            <img src="@UserState.CurrentUser.AvatarUrl" alt="@UserState.CurrentUser.DisplayName" />
+                        }
+                        else
+                        {
+                            <div class="user-avatar-placeholder">
+                                @GetInitials(UserState.CurrentUser.DisplayName)
+                            </div>
+                        }
+                        <span class="user-status @(UserState.CurrentUser.IsActive ? "status-active" : "status-inactive")"></span>
+                    </div>
+                    <div class="user-info">
+                        <div class="user-display-name">@UserState.CurrentUser.DisplayName</div>
+                        <div class="user-username">@("@" + UserState.CurrentUser.Username)</div>
+                        <div class="user-status-text">
+                            <span class="status-dot @(UserState.CurrentUser.IsActive ? "active" : "inactive")"></span>
+                            @(UserState.CurrentUser.IsActive ? "Active" : "Inactive")
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="user-avatar-small">
+                        @if (!string.IsNullOrEmpty(UserState.CurrentUser.AvatarUrl))
+                        {
+                            <img src="@UserState.CurrentUser.AvatarUrl" alt="@UserState.CurrentUser.DisplayName" />
+                        }
+                        else
+                        {
+                            <div class="user-avatar-placeholder">
+                                @GetInitials(UserState.CurrentUser.DisplayName)
+                            </div>
+                        }
+                        <span class="user-status @(UserState.CurrentUser.IsActive ? "status-active" : "status-inactive")"></span>
+                    </div>
+                }
+            </div>
+        }
+
+        <!-- Navigation -->
+        <nav class="sidebar-nav">
+            <a href="/" class="nav-item @(IsActive("/"))">
+                <MudIcon Icon="@Icons.Material.Filled.Message" />
+                @if (isSidebarOpen)
+                {
+                    <span>Messages</span>
+                }
+            </a>
+            <button class="nav-item" @onclick="OpenProfilePanel">
+                <MudIcon Icon="@Icons.Material.Filled.Person" />
+                @if (isSidebarOpen)
+                {
+                    <span>Profile</span>
+                }
+            </button>
+            <a href="/settings" class="nav-item @(IsActive("/settings"))">
+                <MudIcon Icon="@Icons.Material.Filled.Settings" />
+                @if (isSidebarOpen)
+                {
+                    <span>Settings</span>
+                }
+            </a>
+
+            @if (UserState.IsAdmin)
+            {
+                <div class="nav-divider"></div>
+                <div class="nav-section-title">
+                    @if (isSidebarOpen)
+                    {
+                        <span>Admin Panel</span>
+                    }
+                </div>
+                <a href="/admin/users" class="nav-item @(IsActive("/admin/users"))">
+                    <MudIcon Icon="@Icons.Material.Filled.People" />
+                    @if (isSidebarOpen)
+                    {
+                        <span>Users</span>
+                    }
+                </a>
+                <a href="/admin/roles" class="nav-item @(IsActive("/admin/roles"))">
+                    <MudIcon Icon="@Icons.Material.Filled.AdminPanelSettings" />
+                    @if (isSidebarOpen)
+                    {
+                        <span>Roles</span>
+                    }
+                </a>
+            }
+        </nav>
+
+        <!-- Clock/Date at Bottom -->
+        <div class="sidebar-footer">
+            @if (isSidebarOpen)
+            {
+                <div class="clock-detailed">
+                    <div class="clock-time">@currentTime.ToString("HH:mm:ss")</div>
+                    <div class="clock-date">@currentTime.ToString("dddd, MMMM dd, yyyy")</div>
+                </div>
+            }
+            else
+            {
+                <div class="clock-compact">
+                    <MudIcon Icon="@Icons.Material.Filled.AccessTime" Size="Size.Small" />
+                </div>
+            }
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="main-content">
+        <!-- Top Header -->
+        <header class="top-header">
+            <!-- Left Side -->
+            <div class="header-left">
+                <button class="sidebar-toggle" @onclick="ToggleSidebar">
+                    <MudIcon Icon="@Icons.Material.Filled.Menu" />
+                </button>
+                <div class="header-brand">ChatApp</div>
+            </div>
+
+            <!-- Right Side -->
+            <div class="header-right">
+                <!-- Notifications -->
+                <button class="header-icon-btn" @onclick="OpenNotifications">
+                    <MudBadge Content="@notificationCount" Color="Color.Error" Overlap="true" Visible="@(notificationCount > 0)">
+                        <MudIcon Icon="@Icons.Material.Filled.Notifications" />
+                    </MudBadge>
+                </button>
+
+                <!-- Clock -->
+                <div class="header-clock">
+                    @currentTime.ToString("HH:mm")
+                </div>
+
+                <!-- User Menu -->
+                <div class="user-menu-wrapper">
+                    <button class="user-menu-trigger" @onclick="ToggleUserMenu">
+                        @if (UserState.CurrentUser != null)
+                        {
+                            @if (!string.IsNullOrEmpty(UserState.CurrentUser.AvatarUrl))
+                            {
+                                <img src="@UserState.CurrentUser.AvatarUrl" alt="@UserState.CurrentUser.DisplayName" class="user-menu-avatar" />
+                            }
+                            else
+                            {
+                                <div class="user-menu-avatar-placeholder">
+                                    @GetInitials(UserState.CurrentUser.DisplayName)
+                                </div>
+                            }
+                        }
+                        <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" />
+                    </button>
+
+                    @if (isUserMenuOpen)
+                    {
+                        <div class="user-menu-dropdown" @onclick:stopPropagation="true">
+                            <div class="user-menu-header">
+                                <div class="user-menu-name">@UserState.CurrentUser?.DisplayName</div>
+                                <div class="user-menu-email">@UserState.CurrentUser?.Email</div>
+                            </div>
+                            <div class="user-menu-divider"></div>
+                            <button class="user-menu-item" @onclick="OpenProfilePanelFromMenu">
+                                <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" />
+                                <span>Profile</span>
+                            </button>
+                            <a href="/settings" class="user-menu-item" @onclick="CloseUserMenu">
+                                <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small" />
+                                <span>Settings</span>
+                            </a>
+                            <div class="user-menu-divider"></div>
+                            <button class="user-menu-item user-menu-logout" @onclick="HandleLogout">
+                                <MudIcon Icon="@Icons.Material.Filled.Logout" Size="Size.Small" />
+                                <span>Logout</span>
+                            </button>
+                        </div>
+                    }
+                </div>
+            </div>
+        </header>
+
+        <!-- Page Content -->
+        <main class="page-content">
+            @Body
+        </main>
+    </div>
+
+    <!-- Profile Panel -->
+    <ProfilePanel @bind-IsOpen="isProfilePanelOpen" />
 </div>
 
 @code {
-    // MainLayout - Will be designed in next steps
+    private bool isSidebarOpen = false;
+    private bool isUserMenuOpen = false;
+    private bool isProfilePanelOpen = false;
+    private DateTime currentTime = DateTime.Now;
+    private System.Threading.Timer? timer;
+    private int notificationCount = 3;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Load current user into UserState if not already loaded
+        if (UserState.CurrentUser == null)
+        {
+            var user = await AuthService.GetCurrentUserAsync();
+            if (user != null)
+            {
+                UserState.CurrentUser = user;
+            }
+        }
+
+        UserState.OnChange += StateHasChanged;
+
+        // Update clock every second
+        timer = new System.Threading.Timer(async _ =>
+        {
+            currentTime = DateTime.Now;
+            await InvokeAsync(StateHasChanged);
+        }, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("chatAppUtils.subscribeToOutsideClick",
+                DotNetObjectReference.Create(this));
+        }
+    }
+
+    [JSInvokable]
+    public void CloseUserMenuFromJS()
+    {
+        if (isUserMenuOpen)
+        {
+            isUserMenuOpen = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ToggleSidebar()
+    {
+        isSidebarOpen = !isSidebarOpen;
+    }
+
+    private void ToggleUserMenu()
+    {
+        isUserMenuOpen = !isUserMenuOpen;
+    }
+
+    private void CloseUserMenu()
+    {
+        isUserMenuOpen = false;
+    }
+
+    private void OpenNotifications()
+    {
+        // TODO: Implement notifications panel
+    }
+
+    private void OpenProfilePanel()
+    {
+        isProfilePanelOpen = true;
+    }
+
+    private void OpenProfilePanelFromMenu()
+    {
+        CloseUserMenu();
+        isProfilePanelOpen = true;
+    }
+
+    private async Task HandleLogout()
+    {
+        CloseUserMenu();
+        await AuthService.LogoutAsync();
+        Navigation.NavigateTo("/login", forceLoad: true);
+    }
+
+    private string IsActive(string path)
+    {
+        var currentPath = new Uri(Navigation.Uri).AbsolutePath;
+        return currentPath == path || currentPath.StartsWith(path + "/") ? "active" : "";
+    }
+
+    private string GetInitials(string displayName)
+    {
+        if (string.IsNullOrWhiteSpace(displayName))
+            return "?";
+
+        var parts = displayName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length >= 2)
+            return $"{parts[0][0]}{parts[1][0]}".ToUpper();
+
+        return displayName[0].ToString().ToUpper();
+    }
+
+    public void Dispose()
+    {
+        timer?.Dispose();
+        UserState.OnChange -= StateHasChanged;
+    }
 }
