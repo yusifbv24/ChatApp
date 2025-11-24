@@ -200,37 +200,37 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence
             {
                 // Users can view their own and others' basic information
                 new RolePermission(
-                    Guid.Parse("22222222-2222-2222-2222-222222222221"), // User role
+                    Guid.Parse("33333333-3333-3333-3333-333333333333"), // User role
                     Guid.Parse("11111111-1111-1111-1111-111111111112")  // Users.Read
                 ) { Id = Guid.NewGuid() },
-                
+
                 // Users can send and read messages
                 new RolePermission(
-                    Guid.Parse("22222222-2222-2222-2222-222222222221"),
+                    Guid.Parse("33333333-3333-3333-3333-333333333333"),
                     Guid.Parse("11111111-1111-1111-1111-111111111119")  // Messages.Send
                 ) { Id = Guid.NewGuid() },
                 new RolePermission(
-                    Guid.Parse("22222222-2222-2222-2222-222222222221"),
+                    Guid.Parse("33333333-3333-3333-3333-333333333333"),
                     Guid.Parse("11111111-1111-1111-1111-11111111111a")  // Messages.Read
                 ) { Id = Guid.NewGuid() },
-                
+
                 // Users can edit and delete their own messages
                 new RolePermission(
-                    Guid.Parse("22222222-2222-2222-2222-222222222221"),
+                    Guid.Parse("33333333-3333-3333-3333-333333333333"),
                     Guid.Parse("11111111-1111-1111-1111-11111111111b")  // Messages.Edit
                 ) { Id = Guid.NewGuid() },
                 new RolePermission(
-                    Guid.Parse("22222222-2222-2222-2222-222222222221"),
+                    Guid.Parse("33333333-3333-3333-3333-333333333333"),
                     Guid.Parse("11111111-1111-1111-1111-11111111111c")  // Messages.Delete
                 ) { Id = Guid.NewGuid() },
-                
+
                 // Users can upload and download files
                 new RolePermission(
-                    Guid.Parse("22222222-2222-2222-2222-222222222221"),
+                    Guid.Parse("33333333-3333-3333-3333-333333333333"),
                     Guid.Parse("11111111-1111-1111-1111-11111111111d")  // Files.Upload
                 ) { Id = Guid.NewGuid() },
                 new RolePermission(
-                    Guid.Parse("22222222-2222-2222-2222-222222222221"),
+                    Guid.Parse("33333333-3333-3333-3333-333333333333"),
                     Guid.Parse("11111111-1111-1111-1111-11111111111e")  // Files.Download
                 ) { Id = Guid.NewGuid() }
             };
@@ -291,83 +291,83 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence
             {
                 // Full user management
                 new RolePermission(
-                    Guid.Parse("22222222-2222-2222-2222-222222222223"),
+                    Guid.Parse("11111111-1111-1111-1111-111111111111"),
                     Guid.Parse("11111111-1111-1111-1111-111111111111")  // Users.Create
                 ) { Id = Guid.NewGuid() },
                 new RolePermission(
-                    Guid.Parse("22222222-2222-2222-2222-222222222223"),
+                    Guid.Parse("11111111-1111-1111-1111-111111111111"),
                     Guid.Parse("11111111-1111-1111-1111-111111111112")  // Users.Read
                 ) { Id = Guid.NewGuid() },
                 new RolePermission(
-                    Guid.Parse("22222222-2222-2222-2222-222222222223"),
+                    Guid.Parse("11111111-1111-1111-1111-111111111111"),
                     Guid.Parse("11111111-1111-1111-1111-111111111113")  // Users.Update
                 ) { Id = Guid.NewGuid() },
                 new RolePermission(
-                    Guid.Parse("22222222-2222-2222-2222-222222222223"),
+                    Guid.Parse("11111111-1111-1111-1111-111111111111"),
                     Guid.Parse("11111111-1111-1111-1111-111111111114")  // Users.Delete
                 ) { Id = Guid.NewGuid() },
                 
                 // Full role management
                 new RolePermission(
-                    Guid.Parse("22222222-2222-2222-2222-222222222223"),
+                    Guid.Parse("11111111-1111-1111-1111-111111111111"),
                     Guid.Parse("11111111-1111-1111-1111-111111111115")  // Roles.Create
                 ) { Id = Guid.NewGuid() },
                 new RolePermission(
-                    Guid.Parse("22222222-2222-2222-2222-222222222223"),
+                    Guid.Parse("11111111-1111-1111-1111-111111111111"),
                     Guid.Parse("11111111-1111-1111-1111-111111111116")  // Roles.Read
                 ) { Id = Guid.NewGuid() },
                 new RolePermission(
-                    Guid.Parse("22222222-2222-2222-2222-222222222223"),
+                    Guid.Parse("11111111-1111-1111-1111-111111111111"),
                     Guid.Parse("11111111-1111-1111-1111-111111111117")  // Roles.Update
                 ) { Id = Guid.NewGuid() },
                 new RolePermission(
-                    Guid.Parse("22222222-2222-2222-2222-222222222223"),
+                    Guid.Parse("11111111-1111-1111-1111-111111111111"),
                     Guid.Parse("11111111-1111-1111-1111-111111111118")  // Roles.Delete
                 ) { Id = Guid.NewGuid() },
                 
                 // All messaging permissions
                 new RolePermission(
-                    Guid.Parse("22222222-2222-2222-2222-222222222223"),
+                    Guid.Parse("11111111-1111-1111-1111-111111111111"),
                     Guid.Parse("11111111-1111-1111-1111-111111111119")  // Messages.Send
                 ) { Id = Guid.NewGuid() },
                 new RolePermission(
-                    Guid.Parse("22222222-2222-2222-2222-222222222223"),
+                    Guid.Parse("11111111-1111-1111-1111-111111111111"),
                     Guid.Parse("11111111-1111-1111-1111-11111111111a")  // Messages.Read
                 ) { Id = Guid.NewGuid() },
                 new RolePermission(
-                    Guid.Parse("22222222-2222-2222-2222-222222222223"),
+                    Guid.Parse("11111111-1111-1111-1111-111111111111"),
                     Guid.Parse("11111111-1111-1111-1111-11111111111b")  // Messages.Edit
                 ) { Id = Guid.NewGuid() },
                 new RolePermission(
-                    Guid.Parse("22222222-2222-2222-2222-222222222223"),
+                    Guid.Parse("11111111-1111-1111-1111-111111111111"),
                     Guid.Parse("11111111-1111-1111-1111-11111111111c")  // Messages.Delete
                 ) { Id = Guid.NewGuid() },
                 
                 // All file permissions
                 new RolePermission(
-                    Guid.Parse("22222222-2222-2222-2222-222222222223"),
+                    Guid.Parse("11111111-1111-1111-1111-111111111111"),
                     Guid.Parse("11111111-1111-1111-1111-11111111111d")  // Files.Upload
                 ) { Id = Guid.NewGuid() },
                 new RolePermission(
-                    Guid.Parse("22222222-2222-2222-2222-222222222223"),
+                    Guid.Parse("11111111-1111-1111-1111-111111111111"),
                     Guid.Parse("11111111-1111-1111-1111-11111111111e")  // Files.Download
                 ) { Id = Guid.NewGuid() },
                 new RolePermission(
-                    Guid.Parse("22222222-2222-2222-2222-222222222223"),
+                    Guid.Parse("11111111-1111-1111-1111-111111111111"),
                     Guid.Parse("11111111-1111-1111-1111-11111111111f")  // Files.Delete
                 ) { Id = Guid.NewGuid() },
                 
                 // All group permissions
                 new RolePermission(
-                    Guid.Parse("22222222-2222-2222-2222-222222222223"),
+                    Guid.Parse("11111111-1111-1111-1111-111111111111"),
                     Guid.Parse("11111111-1111-1111-1111-111111111120")  // Groups.Create
                 ) { Id = Guid.NewGuid() },
                 new RolePermission(
-                    Guid.Parse("22222222-2222-2222-2222-222222222223"),
+                    Guid.Parse("11111111-1111-1111-1111-111111111111"),
                     Guid.Parse("11111111-1111-1111-1111-111111111121")  // Groups.Manage
                 ) { Id = Guid.NewGuid() },
                 new RolePermission(
-                    Guid.Parse("22222222-2222-2222-2222-222222222223"),
+                    Guid.Parse("11111111-1111-1111-1111-111111111111"),
                     Guid.Parse("11111111-1111-1111-1111-111111111122")  // Groups.Delete
                 ) { Id = Guid.NewGuid() },
             };

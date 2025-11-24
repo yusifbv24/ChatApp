@@ -236,7 +236,8 @@ using (var scope = app.Services.CreateScope())
         // Identity Module
         var identityContext = services.GetRequiredService<IdentityDbContext>();
         await identityContext.Database.MigrateAsync();
-        await IdentityDatabaseSeeder.SeedAsync(identityContext,passwordHasher,logger);
+        await IdentityDatabaseSeeder.SeedAsync(identityContext, passwordHasher, logger);
+
 
         // Channels Module
         var channelsContext = services.GetRequiredService<ChannelsDbContext>();

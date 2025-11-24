@@ -72,5 +72,4 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetUsers
             }
         }
     }
-
 }

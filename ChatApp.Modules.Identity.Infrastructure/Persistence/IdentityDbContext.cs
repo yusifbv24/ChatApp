@@ -29,9 +29,6 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence
             modelBuilder.ApplyConfiguration(new UserRoleConfiguration());
             modelBuilder.ApplyConfiguration(new RolePermissionConfiguration());
             modelBuilder.ApplyConfiguration(new RefreshTokenConfiguration());
-
-            // Seed initial data (3 system roles with permissions)
-            SeedData.Seed(modelBuilder);
         }
     }
 }
