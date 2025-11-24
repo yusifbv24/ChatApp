@@ -140,8 +140,7 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
             true,
             isAdmin,
             DateTime.UtcNow,
-            new List<RoleDto>(),
-            new List<PermissionDto>()
+            new List<RoleDto>()
         );
     }
 

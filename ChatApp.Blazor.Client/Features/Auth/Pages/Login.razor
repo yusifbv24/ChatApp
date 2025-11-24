@@ -22,6 +22,7 @@
                         <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" />
                     </span>
                     <InputText @bind-Value="loginModel.Username"
+                               @oninput="ClearErrorMessage"
                                class="login-input"
                                placeholder="Enter your username"
                                autocomplete="username" />
@@ -36,6 +37,7 @@
                         <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" />
                     </span>
                     <InputText @bind-Value="loginModel.Password"
+                               @oninput="ClearErrorMessage"
                                type="@(showPassword ? "text" : "password")"
                                class="login-input"
                                placeholder="Enter your password"
@@ -90,6 +92,15 @@
     private void TogglePasswordVisibility()
     {
         showPassword = !showPassword;
+    }
+
+    private void ClearErrorMessage()
+    {
+        // Clear error message when user starts typing
+        if (!string.IsNullOrEmpty(errorMessage))
+        {
+            errorMessage = null;
+        }
     }
 
     private async Task HandleLogin()

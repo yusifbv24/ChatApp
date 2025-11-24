@@ -4,5 +4,6 @@
         Guid FileId,
         string FileName,
         long FileSizeInBytes,
-        string DownloadUrl);
+        string DownloadUrl,
+        string? ThumbnailUrl);
 }

@@ -48,6 +48,12 @@ namespace ChatApp.Modules.Identity.Application.Commands.Roles
                     return Result.Failure("Role was not found to delete");
                 }
 
+                if (existingRole.IsSystemRole)
+                {
+                    _logger?.LogWarning("Attempt to delete system role {RoleName}", existingRole.Name);
+                    return Result.Failure("Cannot delete system role");
+                }
+
                 _unitOfWork.Roles.Remove(existingRole);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 

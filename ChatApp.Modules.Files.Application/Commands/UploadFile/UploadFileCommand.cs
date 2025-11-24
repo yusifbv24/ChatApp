@@ -9,6 +9,7 @@ using ChatApp.Shared.Kernel.Interfaces;
 using FluentValidation;
 using MediatR;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
@@ -50,6 +51,7 @@ namespace ChatApp.Modules.Files.Application.Commands.UploadFile
         private readonly IFileStorageService _fileStorageService;
         private readonly IVirusScanningService _virusScanningService;
         private readonly IEventBus _eventBus;
+        private readonly IConfiguration _configuration;
         private readonly ILogger<UploadFileCommandHandler> _logger;
 
         public UploadFileCommandHandler(
@@ -57,12 +59,14 @@ namespace ChatApp.Modules.Files.Application.Commands.UploadFile
             IFileStorageService fileStorageService,
             IVirusScanningService virusScanningService,
             IEventBus eventBus,
+            IConfiguration configuration,
             ILogger<UploadFileCommandHandler> logger)
         {
             _unitOfWork = unitOfWork;
             _fileStorageService= fileStorageService;
             _virusScanningService = virusScanningService;
             _eventBus = eventBus;
+            _configuration = configuration;
             _logger = logger;
         }
 
@@ -83,7 +87,7 @@ namespace ChatApp.Modules.Files.Application.Commands.UploadFile
                 var originalFileName = request.File.FileName;
                 var contentType=request.File.ContentType;
                 var fileType=FileTypeHelper.GetFileType(contentType);
-                var extension=FileTypeHelper.GetFileExtension(contentType);
+                var extension=FileTypeHelper.GetExtensionFromContentType(contentType);
 
 
                 // Generate unique filename
@@ -167,6 +171,7 @@ namespace ChatApp.Modules.Files.Application.Commands.UploadFile
                     }
                 }
 
+
                 await _unitOfWork.Files.AddAsync(fileMetadata, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -183,13 +188,28 @@ namespace ChatApp.Modules.Files.Application.Commands.UploadFile
 
                 _logger?.LogInformation(
                     "File {FileId} uploaded succesfully",
-                    fileMetadata.Id);   
+                    fileMetadata.Id);
+
+                // Generate URL from directory and filename with API base URL
+                var apiBaseUrl = _configuration["ApiBaseUrl"] ?? "http://localhost:7000";
+                var relativePath = $"/uploads/{directory}/{uniqueFileName}".Replace("\\", "/");
+                var downloadUrl = $"{apiBaseUrl.TrimEnd('/')}{relativePath}";
+
+                // Generate thumbnail URL if thumbnail was created
+                string? thumbnailUrl = null;
+                if (!string.IsNullOrEmpty(fileMetadata.ThumbnailPath))
+                {
+                    var thumbnailFileName = Path.GetFileName(fileMetadata.ThumbnailPath);
+                    var thumbnailRelativePath = $"/uploads/{directory}/{thumbnailFileName}".Replace("\\", "/");
+                    thumbnailUrl = $"{apiBaseUrl.TrimEnd('/')}{thumbnailRelativePath}";
+                }
 
                 var result = new FileUploadResult(
                     fileMetadata.Id,
                     uniqueFileName,
                     request.File.Length,
-                    $"/api/files/{fileMetadata.Id}/download");
+                    downloadUrl,
+                    thumbnailUrl);
 
                 return Result.Success(result);
             }

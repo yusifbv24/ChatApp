@@ -1,6 +1,8 @@
 @inherits LayoutComponentBase
+@using ChatApp.Blazor.Client.Features.Auth.Services
 @inject UserState UserState
 @inject IAuthService AuthService
+@inject IUserService UserService
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 @implements IDisposable
@@ -261,10 +263,11 @@
         // Load current user into UserState if not already loaded
         if (UserState.CurrentUser == null)
         {
-            var user = await AuthService.GetCurrentUserAsync();
-            if (user != null)
+            // Fetch user from API to get the latest data including avatar URL
+            var result = await UserService.GetCurrentUserAsync();
+            if (result.IsSuccess && result.Value != null)
             {
-                UserState.CurrentUser = user;
+                UserState.CurrentUser = result.Value;
             }
         }
 

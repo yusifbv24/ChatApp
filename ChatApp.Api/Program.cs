@@ -299,6 +299,21 @@ app.UseHttpsRedirection();
 // IMPORTANT: CORS must be before routing for SignalR
 app.UseCors("AllowFrontend");
 
+// Configure static files to serve uploaded files from the storage path
+var fileStoragePath = builder.Configuration.GetSection("FileStorage")["LocalPath"] ?? "D:\\ChatAppUploads";
+if (Directory.Exists(fileStoragePath))
+{
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(fileStoragePath),
+        RequestPath = "/uploads"
+    });
+}
+else
+{
+    Log.Warning($"File storage path does not exist: {fileStoragePath}");
+}
+
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();

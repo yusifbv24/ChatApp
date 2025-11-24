@@ -47,20 +47,42 @@ namespace ChatApp.Modules.Identity.Application.Commands.Permisisons
             RemovePermissionCommand request,
             CancellationToken cancellationToken = default)
         {
-            _logger?.LogInformation("Removing permission {PermissionId} from role {RoleId}", request.PermissionId, request.RoleId);
+            try
+            {
+                _logger?.LogInformation("Removing permission {PermissionId} from role {RoleId}", request.PermissionId, request.RoleId);
 
-            var rolePermission = await _unitOfWork.RolePermissions
-               .FirstOrDefaultAsync(
-                r=>r.RoleId == request.RoleId
-                && r.PermissionId == request.PermissionId,
-                cancellationToken);
+                var role = await _unitOfWork.Roles
+                    .FirstOrDefaultAsync(r => r.Id == request.RoleId, cancellationToken);
 
-            if(rolePermission==null)
-                throw new NotFoundException($"Permission {request.PermissionId} with this Role {request.RoleId} not found");
+                if (role == null)
+                    throw new NotFoundException($"Role with ID {request.RoleId} not found");
 
-            _unitOfWork.RolePermissions.Remove(rolePermission);
-            _logger?.LogInformation("Permission {PermissionId} removed from role {RoleId} successfully", request.PermissionId, request.RoleId);
-            return Result.Success();
+                if (role.IsSystemRole)
+                {
+                    _logger?.LogWarning("Attempt to modify system role {RoleName}", role.Name);
+                    return Result.Failure("Cannot modify system role permissions");
+                }
+
+                var rolePermission = await _unitOfWork.RolePermissions
+                   .FirstOrDefaultAsync(
+                    r=>r.RoleId == request.RoleId
+                    && r.PermissionId == request.PermissionId,
+                    cancellationToken);
+
+                if(rolePermission==null)
+                    throw new NotFoundException($"Permission {request.PermissionId} with this Role {request.RoleId} not found");
+
+                _unitOfWork.RolePermissions.Remove(rolePermission);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                _logger?.LogInformation("Permission {PermissionId} removed from role {RoleId} successfully", request.PermissionId, request.RoleId);
+                return Result.Success();
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error removing permission {PermissionId} from role {RoleId}", request.PermissionId, request.RoleId);
+                return Result.Failure(ex.Message);
+            }
         }
     }
 }

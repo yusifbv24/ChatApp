@@ -77,6 +77,7 @@ namespace ChatApp.Modules.Files.Api.Controllers
 
         /// <summary>
         /// Upload profile picture (auto-resized to 400x400 thumbnail)
+        /// Admins can specify targetUserId to upload for other users
         /// </summary>
         [HttpPost("upload/profile-picture")]
         [RequirePermission("File.Upload")]
@@ -87,10 +88,11 @@ namespace ChatApp.Modules.Files.Api.Controllers
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> UploadProfilePicture(
             [FromForm] UploadFileRequest request,
+            [FromQuery] Guid? targetUserId,
             CancellationToken cancellationToken)
         {
-            var userId = GetCurrentUserId();
-            if (userId == Guid.Empty)
+            var currentUserId = GetCurrentUserId();
+            if (currentUserId == Guid.Empty)
                 return Unauthorized();
 
             // Validate it's an image
@@ -99,10 +101,26 @@ namespace ChatApp.Modules.Files.Api.Controllers
                 return BadRequest(new { error = "Only image files are allowed for profile pictures" });
             }
 
+            // Determine which user's folder to use
+            var uploadForUserId = targetUserId ?? currentUserId;
+
+            // If uploading for another user, verify admin permission
+            if (targetUserId.HasValue && targetUserId.Value != currentUserId)
+            {
+                // Only admins can upload for other users
+                var isAdminClaim = User.FindFirst("isAdmin")?.Value; // Note: camelCase, matches JwtTokenGenerator
+                var isAdmin = isAdminClaim?.Equals("True", StringComparison.OrdinalIgnoreCase) == true;
+
+                if (!isAdmin)
+                {
+                    return StatusCode(StatusCodes.Status403Forbidden, new { error = "Only administrators can upload avatars for other users" });
+                }
+            }
+
             var result = await _mediator.Send(
                 new UploadFileCommand(
                     request.File,
-                    userId,
+                    uploadForUserId,  // Use target user's ID for folder
                     null,
                     null,
                     true),  // Special flag for profile pictures

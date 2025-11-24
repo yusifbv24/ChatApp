@@ -57,8 +57,14 @@ namespace ChatApp.Modules.Identity.Application.Commands.Permisisons
                 if (role == null)
                     throw new NotFoundException($"Role with ID {request.RoleId} not found");
 
+                if (role.IsSystemRole)
+                {
+                    _logger?.LogWarning("Attempt to modify system role {RoleName}", role.Name);
+                    return Result.Failure("Cannot modify system role permissions");
+                }
+
                 var permission=await _unitOfWork.Permissions
-                    .FirstOrDefaultAsync(u => u.Id == request.RoleId, cancellationToken);
+                    .FirstOrDefaultAsync(u => u.Id == request.PermissionId, cancellationToken);
 
                 if (permission == null)
                     throw new NotFoundException($"Permission with ID {request.PermissionId} not found");

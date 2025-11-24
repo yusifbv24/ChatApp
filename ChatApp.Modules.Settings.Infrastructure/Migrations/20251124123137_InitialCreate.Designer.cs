@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ChatApp.Modules.Settings.Infrastructure.Migrations
 {
     [DbContext(typeof(SettingsDbContext))]
-    [Migration("20251107080911_InitialUserSettingsInitialSchema")]
-    partial class InitialUserSettingsInitialSchema
+    [Migration("20251124123137_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

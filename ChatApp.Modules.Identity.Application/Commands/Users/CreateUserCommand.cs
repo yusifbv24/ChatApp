@@ -110,11 +110,17 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
                     _logger?.LogWarning("Username {Username} already exists", command.Username);
                     return Result.Failure<Guid>("Username already exists");
                 }
-                
+
                 if(await _unitOfWork.Users.AnyAsync(u=>u.Email==command.Email, cancellationToken))
                 {
                     _logger?.LogWarning("Email {Email} already exists", command.Email);
                     return Result.Failure<Guid>("Email already exists");
+                }
+
+                if(await _unitOfWork.Users.AnyAsync(u=>u.DisplayName==command.DisplayName, cancellationToken))
+                {
+                    _logger?.LogWarning("Display name {DisplayName} already exists", command.DisplayName);
+                    return Result.Failure<Guid>("Display name already exists");
                 }
                
                 var passwordHash=_passwordHasher.Hash(command.Password);

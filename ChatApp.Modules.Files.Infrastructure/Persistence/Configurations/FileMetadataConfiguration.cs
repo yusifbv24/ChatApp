@@ -69,7 +69,7 @@ namespace ChatApp.Modules.Files.Infrastructure.Persistence.Configurations
 
             builder.Property(f => f.ThumbnailPath)
                 .HasColumnName("thumbnail_path")
-                .HasMaxLength(100);
+                .HasMaxLength(1000);
 
 
             builder.Property(f => f.CreatedAtUtc)

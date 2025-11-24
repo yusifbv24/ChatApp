@@ -120,9 +120,6 @@
                                         <button class="admin-action-btn" title="Manage Roles" @onclick="() => OpenManageRolesDialog(user)">
                                             <MudIcon Icon="@Icons.Material.Filled.AdminPanelSettings" Size="Size.Small" />
                                         </button>
-                                        <button class="admin-action-btn" title="Manage Permissions" @onclick="() => OpenManagePermissionsDialog(user)">
-                                            <MudIcon Icon="@Icons.Material.Filled.Security" Size="Size.Small" />
-                                        </button>
                                         <button class="admin-action-btn" title="Edit User" @onclick="() => OpenEditUserDialog(user)">
                                             <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" />
                                         </button>
@@ -206,8 +203,35 @@
                     </div>
 
                     <div class="admin-form-group">
-                        <label>Avatar URL (Optional)</label>
-                        <InputText @bind-Value="createUserModel.AvatarUrl" class="admin-input" placeholder="https://example.com/avatar.jpg" />
+                        <label>Profile Avatar (Optional)</label>
+                        <div class="admin-file-upload">
+                            @if (selectedAvatarFileData != null && !string.IsNullOrEmpty(avatarPreviewUrl))
+                            {
+                                <div class="admin-file-selected">
+                                    <div class="admin-file-icon">
+                                        <MudIcon Icon="@Icons.Material.Filled.Image" />
+                                    </div>
+                                    <div class="admin-file-info">
+                                        <span class="admin-file-name">@selectedAvatarFileName</span>
+                                        <span class="admin-file-size">@FormatFileSize(selectedAvatarFileSize)</span>
+                                    </div>
+                                    <button type="button" class="admin-file-remove-btn" @onclick="RemoveAvatar">
+                                        <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" />
+                                    </button>
+                                </div>
+                            }
+                            else
+                            {
+                                <label class="admin-file-input-label">
+                                    <InputFile OnChange="OnAvatarFileSelected" accept="image/*" class="admin-file-input" />
+                                    <div class="admin-file-placeholder">
+                                        <MudIcon Icon="@Icons.Material.Filled.CloudUpload" />
+                                        <span>Click to upload or drag and drop</span>
+                                        <small>PNG, JPG, GIF up to 10MB</small>
+                                    </div>
+                                </label>
+                            }
+                        </div>
                     </div>
 
                     <div class="admin-form-group">
@@ -234,11 +258,16 @@
                         <button type="button" class="admin-btn admin-btn-secondary" @onclick="CloseCreateUserDialog" disabled="@isCreatingUser">
                             Cancel
                         </button>
-                        <button type="submit" class="admin-btn admin-btn-primary" disabled="@isCreatingUser">
-                            @if (isCreatingUser)
+                        <button type="submit" class="admin-btn admin-btn-primary" disabled="@(isCreatingUser || isUploadingAvatar)">
+                            @if (isUploadingAvatar)
                             {
                                 <span class="admin-btn-spinner"></span>
-                                <span>Creating...</span>
+                                <span>Uploading Avatar...</span>
+                            }
+                            else if (isCreatingUser)
+                            {
+                                <span class="admin-btn-spinner"></span>
+                                <span>Creating User...</span>
                             }
                             else
                             {
@@ -285,8 +314,50 @@
                     </div>
 
                     <div class="admin-form-group">
-                        <label>Avatar URL (Optional)</label>
-                        <InputText @bind-Value="editUserModel.AvatarUrl" class="admin-input" placeholder="https://example.com/avatar.jpg" />
+                        <label>Profile Avatar (Optional)</label>
+                        <div class="admin-file-upload">
+                            @if (editAvatarFileData != null && !string.IsNullOrEmpty(editAvatarPreviewUrl))
+                            {
+                                <div class="admin-file-selected">
+                                    <div class="admin-file-icon">
+                                        <MudIcon Icon="@Icons.Material.Filled.Image" />
+                                    </div>
+                                    <div class="admin-file-info">
+                                        <span class="admin-file-name">@editAvatarFileName</span>
+                                        <span class="admin-file-size">@FormatFileSize(editAvatarFileSize)</span>
+                                    </div>
+                                    <button type="button" class="admin-file-remove-btn" @onclick="RemoveEditAvatar">
+                                        <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" />
+                                    </button>
+                                </div>
+                            }
+                            else if (!string.IsNullOrEmpty(editUserModel.AvatarUrl))
+                            {
+                                <div class="admin-file-selected">
+                                    <div class="admin-file-icon">
+                                        <MudIcon Icon="@Icons.Material.Filled.Image" />
+                                    </div>
+                                    <div class="admin-file-info">
+                                        <span class="admin-file-name">Current avatar</span>
+                                        <span class="admin-file-size">Click to change</span>
+                                    </div>
+                                    <button type="button" class="admin-file-remove-btn" @onclick="RemoveEditAvatar">
+                                        <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" />
+                                    </button>
+                                </div>
+                            }
+                            else
+                            {
+                                <label class="admin-file-input-label">
+                                    <InputFile OnChange="OnEditAvatarFileSelected" accept="image/*" class="admin-file-input" />
+                                    <div class="admin-file-placeholder">
+                                        <MudIcon Icon="@Icons.Material.Filled.CloudUpload" />
+                                        <span>Click to upload or drag and drop</span>
+                                        <small>PNG, JPG, GIF up to 10MB</small>
+                                    </div>
+                                </label>
+                            }
+                        </div>
                     </div>
 
                     <div class="admin-form-group">
@@ -385,77 +456,6 @@
     </div>
 }
 
-@* Manage Permissions Dialog *@
-
-
-@if (showManagePermissionsDialog)
-{
-    <div class="admin-dialog-overlay" @onclick="CloseManagePermissionsDialog">
-        <div class="admin-dialog admin-dialog-large" @onclick:stopPropagation="true">
-            <div class="admin-dialog-header">
-                <h2>Manage Permissions - @managingPermissionsUser?.DisplayName</h2>
-                <button class="admin-dialog-close" @onclick="CloseManagePermissionsDialog">
-                    <MudIcon Icon="@Icons.Material.Filled.Close" />
-                </button>
-            </div>
-            <div class="admin-dialog-content">
-                <div class="admin-form-group">
-                    <label>Filter by Module</label>
-                    <select class="admin-select" @bind="selectedModule" @bind:after="FilterPermissionsByModule">
-                        <option value="all">All Modules</option>
-                        @foreach (var module in availablePermissions.Select(p => p.Module).Distinct())
-                        {
-                            <option value="@module">@module</option>
-                        }
-                    </select>
-                </div>
-
-                <div class="admin-permissions-list">
-                    @foreach (var permission in filteredPermissions)
-                    {
-                        <label class="admin-permission-item">
-                            <input type="checkbox"
-                                   checked="@permissionStates.ContainsKey(permission.Id)"
-                                   @onchange="() => TogglePermission(permission.Id)"
-                                   class="admin-checkbox" />
-                            <div class="admin-permission-info">
-                                <span class="admin-permission-name">@permission.Name</span>
-                                <span class="admin-permission-description">@permission.Description</span>
-                            </div>
-                        </label>
-                    }
-                </div>
-
-                @if (!string.IsNullOrEmpty(permissionsMessage))
-                {
-                    <div class="admin-message @(permissionsSuccess ? "success" : "error")">
-                        <MudIcon Icon="@(permissionsSuccess ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Error)" Size="Size.Small" />
-                        <span>@permissionsMessage</span>
-                    </div>
-                }
-
-                <div class="admin-dialog-actions">
-                    <button type="button" class="admin-btn admin-btn-secondary" @onclick="CloseManagePermissionsDialog" disabled="@isUpdatingPermissions">
-                        Cancel
-                    </button>
-                    <button type="button" class="admin-btn admin-btn-primary" @onclick="SavePermissions" disabled="@isUpdatingPermissions">
-                        @if (isUpdatingPermissions)
-                        {
-                            <span class="admin-btn-spinner"></span>
-                            <span>Saving...</span>
-                        }
-                        else
-                        {
-                            <MudIcon Icon="@Icons.Material.Filled.Save" Size="Size.Small" />
-                            <span>Save Permissions</span>
-                        }
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-}
-
 @* Change Password Dialog *@
 
 
@@ -481,8 +481,8 @@
 
                     <div class="admin-form-group">
                         <label>Confirm Password *</label>
-                        <InputText @bind-Value="changePasswordModel.ConfirmPassword" type="password" class="admin-input" placeholder="Confirm new password" />
-                        <ValidationMessage For="@(() => changePasswordModel.ConfirmPassword)" />
+                        <InputText @bind-Value="changePasswordModel.ConfirmNewPassword" type="password" class="admin-input" placeholder="Confirm new password" />
+                        <ValidationMessage For="@(() => changePasswordModel.ConfirmNewPassword)" />
                     </div>
 
                     @if (!string.IsNullOrEmpty(changePasswordMessage))

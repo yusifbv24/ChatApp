@@ -17,6 +17,7 @@ public class UserService : IUserService
         _apiClient = apiClient;
     }
 
+
     /// <summary>
     /// Gets current user profile - GET /api/users/me
     /// </summary>
@@ -24,6 +25,7 @@ public class UserService : IUserService
     {
         return await _apiClient.GetAsync<UserDto>("/api/users/me");
     }
+
 
     /// <summary>
     /// Updates current user profile - PUT /api/users/me
@@ -33,6 +35,7 @@ public class UserService : IUserService
         return await _apiClient.PutAsync("/api/users/me", request);
     }
 
+
     /// <summary>
     /// Changes current user password - POST /api/users/me/change-password
     /// </summary>
@@ -40,6 +43,7 @@ public class UserService : IUserService
     {
         return await _apiClient.PutAsync("/api/users/me/change-password", request);
     }
+
 
     /// <summary>
     /// Gets user by ID - GET /api/users/{userId}
@@ -50,6 +54,7 @@ public class UserService : IUserService
         return await _apiClient.GetAsync<UserDto>($"/api/users/{userId}");
     }
 
+
     /// <summary>
     /// Gets paginated list of users - GET /api/users
     /// Requires: Users.Read permission
@@ -59,14 +64,16 @@ public class UserService : IUserService
         return await _apiClient.GetAsync<List<UserDto>>($"/api/users?pageNumber={pageNumber}&pageSize={pageSize}");
     }
 
+
     /// <summary>
     /// Creates a new user - POST /api/users
     /// Requires: Users.Create permission
     /// </summary>
-    public async Task<Result<Guid>> CreateUserAsync(CreateUserRequest request)
+    public async Task<Result<CreateUserResponse>> CreateUserAsync(CreateUserRequest request)
     {
-        return await _apiClient.PostAsync<Guid>("/api/users", request);
+        return await _apiClient.PostAsync<CreateUserResponse>("/api/users", request);
     }
+
 
     /// <summary>
     /// Updates user information - PUT /api/users/{userId}
@@ -77,6 +84,7 @@ public class UserService : IUserService
         return await _apiClient.PutAsync($"/api/users/{userId}", request);
     }
 
+
     /// <summary>
     /// Activates a user - PUT /api/users/{userId}/activate
     /// Requires: Users.Update permission
@@ -85,6 +93,7 @@ public class UserService : IUserService
     {
         return await _apiClient.PutAsync($"/api/users/{userId}/activate");
     }
+
 
     /// <summary>
     /// Deactivates a user - PUT /api/users/{userId}/deactivate
@@ -95,6 +104,7 @@ public class UserService : IUserService
         return await _apiClient.PutAsync($"/api/users/{userId}/deactivate");
     }
 
+
     /// <summary>
     /// Deletes a user - DELETE /api/users/{userId}
     /// Requires: Users.Delete permission
@@ -103,6 +113,7 @@ public class UserService : IUserService
     {
         return await _apiClient.DeleteAsync($"/api/users/{userId}");
     }
+
 
     /// <summary>
     /// Changes user password (admin) - POST /api/users/change-password/{userId}
@@ -113,6 +124,7 @@ public class UserService : IUserService
         return await _apiClient.PutAsync($"/api/users/change-user-password", request);
     }
 
+
     /// <summary>
     /// Assigns a role to user - POST /api/users/{userId}/roles/{roleId}
     /// Requires: Users.Update permission
@@ -122,6 +134,7 @@ public class UserService : IUserService
         return await _apiClient.PostAsync($"/api/users/{userId}/roles/{roleId}");
     }
 
+
     /// <summary>
     /// Removes a role from user - DELETE /api/users/{userId}/roles/{roleId}
     /// Requires: Users.Update permission
@@ -129,23 +142,5 @@ public class UserService : IUserService
     public async Task<Result> RemoveRoleAsync(Guid userId, Guid roleId)
     {
         return await _apiClient.DeleteAsync($"/api/users/{userId}/roles/{roleId}");
-    }
-
-    /// <summary>
-    /// Grants a specific permission to a user - POST /api/users/{userId}/permissions/{permissionId}
-    /// Requires: Users.Update permission
-    /// </summary>
-    public async Task<Result> GrantUserPermissionAsync(Guid userId, Guid permissionId)
-    {
-        return await _apiClient.PostAsync($"/api/users/{userId}/permissions/{permissionId}");
-    }
-
-    /// <summary>
-    /// Revokes a specific permission from a user - DELETE /api/users/{userId}/permissions/{permissionId}
-    /// Requires: Users.Update permission
-    /// </summary>
-    public async Task<Result> RevokeUserPermissionAsync(Guid userId, Guid permissionId)
-    {
-        return await _apiClient.DeleteAsync($"/api/users/{userId}/permissions/{permissionId}");
     }
 }

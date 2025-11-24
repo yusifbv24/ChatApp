@@ -28,6 +28,10 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence.Configurations
                 .HasColumnName("is_system_role")
                 .IsRequired();
 
+            builder.Property(r => r.SystemRoleType)
+                .HasColumnName("system_role_type")
+                .IsRequired(false);
+
             builder.Property(r => r.CreatedAtUtc)
                 .HasColumnName("created_at_utc")
                 .IsRequired()

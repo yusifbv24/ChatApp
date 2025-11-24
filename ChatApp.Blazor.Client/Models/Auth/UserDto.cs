@@ -14,6 +14,5 @@ public record UserDto(
     bool IsActive,
     bool IsAdmin,
     DateTime CreatedAtUtc,
-    List<RoleDto> Roles,
-    List<PermissionDto> DirectPermissions
+    List<RoleDto> Roles
 );

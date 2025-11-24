@@ -8,7 +8,6 @@ namespace ChatApp.Modules.Identity.Application.Interfaces
         DbSet<User> Users { get; }
         DbSet<Role> Roles { get; }
         DbSet<UserRole> UserRoles { get; }
-        DbSet<UserPermission> UserPermissions { get; }
         DbSet<Permission> Permissions { get; }
         DbSet<RolePermission> RolePermissions { get; }
         DbSet<RefreshToken> RefreshTokens { get; }

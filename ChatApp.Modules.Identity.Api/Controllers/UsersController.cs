@@ -124,7 +124,8 @@ namespace ChatApp.Modules.Identity.Api.Controllers
                 userId,
                 request.Email,
                 request.DisplayName,
-                request.Notes);
+                request.Notes,
+                request.AvatarUrl);
 
             var result = await _mediator.Send(command, cancellationToken);
 
@@ -281,7 +282,8 @@ namespace ChatApp.Modules.Identity.Api.Controllers
                 userId,
                 request.Email,
                 request.DisplayName,
-                request.Notes);
+                request.Notes,
+                request.AvatarUrl);
 
             var result = await _mediator.Send(command, cancellationToken);
 
@@ -429,64 +431,6 @@ namespace ChatApp.Modules.Identity.Api.Controllers
                 return BadRequest(new { error = result.Error });
 
             return Ok(new { message = "Role removed successfully" });
-        }
-
-
-
-        /// <summary>
-        /// Grants a specific permission directly to a user
-        /// </summary>
-        [HttpPost("{userId:guid}/permissions/{permissionId:guid}")]
-        [RequirePermission("Users.Update")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        public async Task<IActionResult> GrantUserPermission(
-            [FromRoute] Guid userId,
-            [FromRoute] Guid permissionId,
-            CancellationToken cancellationToken)
-        {
-            var grantedBy = GetCurrentUserId();
-            if (grantedBy == Guid.Empty)
-                return Unauthorized();
-
-            var result = await _mediator.Send(
-                new GrantUserPermissionCommand(userId, permissionId, grantedBy),
-                cancellationToken);
-
-            if (result.IsFailure)
-                return BadRequest(new { error = result.Error });
-
-            return Ok(new { message = "Permission granted to user successfully" });
-        }
-
-
-
-        /// <summary>
-        /// Revokes a specific permission from a user
-        /// </summary>
-        [HttpDelete("{userId:guid}/permissions/{permissionId:guid}")]
-        [RequirePermission("Users.Update")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        public async Task<IActionResult> RevokeUserPermission(
-            [FromRoute] Guid userId,
-            [FromRoute] Guid permissionId,
-            CancellationToken cancellationToken)
-        {
-            var result = await _mediator.Send(
-                new RevokeUserPermissionCommand(userId, permissionId),
-                cancellationToken);
-
-            if (result.IsFailure)
-                return BadRequest(new { error = result.Error });
-
-            return Ok(new { message = "Permission revoked from user successfully" });
         }
 
 

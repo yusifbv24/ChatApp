@@ -840,6 +840,123 @@
     margin-top: -0.25rem;
 }
 
+/* File Upload */
+.admin-file-upload {
+    width: 100%;
+}
+
+.admin-file-input {
+    display: none;
+}
+
+.admin-file-input-label {
+    display: block;
+    cursor: pointer;
+}
+
+.admin-file-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 2rem;
+    border: 2px dashed #d1d5db;
+    border-radius: 8px;
+    background: #f9fafb;
+    transition: all 0.2s ease;
+}
+
+.admin-file-placeholder:hover {
+    border-color: #6366f1;
+    background: #eef2ff;
+}
+
+.admin-file-placeholder .mud-icon-root {
+    font-size: 2.5rem;
+    color: #6b7280;
+}
+
+.admin-file-placeholder span {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #374151;
+}
+
+.admin-file-placeholder small {
+    font-size: 0.75rem;
+    color: #9ca3af;
+}
+
+/* File Selected Display */
+.admin-file-selected {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #f9fafb;
+}
+
+.admin-file-icon {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    border-radius: 8px;
+    color: white;
+    flex-shrink: 0;
+}
+
+.admin-file-icon .mud-icon-root {
+    font-size: 1.5rem;
+}
+
+.admin-file-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.admin-file-name {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #111827;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.admin-file-size {
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+.admin-file-remove-btn {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fee2e2;
+    border: none;
+    border-radius: 50%;
+    color: #dc2626;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.admin-file-remove-btn:hover {
+    background: #fecaca;
+    transform: scale(1.1);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .admin-page {

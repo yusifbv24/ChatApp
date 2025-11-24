@@ -12,7 +12,8 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
         Guid UserId,
         string? Email,
         string? DisplayName,
-        string? Notes
+        string? Notes,
+        string? AvatarUrl
     ) : IRequest<Result>;
 
 
@@ -115,6 +116,9 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
 
                 // Always update notes, even if empty/null (to allow clearing notes)
                 user.UpdateNotes(request.Notes);
+
+                // Update avatar URL (allow null to clear avatar)
+                user.UpdateAvatarUrl(request.AvatarUrl);
 
                 _unitOfWork.Users.Update(user);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);

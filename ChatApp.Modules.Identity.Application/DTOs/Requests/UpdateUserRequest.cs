@@ -3,6 +3,7 @@
     public record UpdateUserRequest(
         string? Email,
         string? DisplayName,
-        string? Notes
+        string? Notes,
+        string? AvatarUrl
     );
 }

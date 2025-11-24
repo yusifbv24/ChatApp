@@ -7,8 +7,8 @@ namespace ChatApp.Blazor.Client.Models.Auth;
 /// </summary>
 public class AdminChangePasswordRequest
 {
-    public Guid UserId { get; set; }
-
+    // Property name must match backend: "Id" not "UserId"
+    public Guid Id { get; set; }
 
     [Required(ErrorMessage = "New password is required")]
     [StringLength(100, MinimumLength = 8, ErrorMessage = "Password must be at least 8 characters")]
@@ -18,5 +18,6 @@ public class AdminChangePasswordRequest
 
     [Required(ErrorMessage = "Confirm password is required")]
     [Compare(nameof(NewPassword), ErrorMessage = "Passwords do not match")]
-    public string ConfirmPassword { get; set; } = string.Empty;
+    // Property name must match backend: "ConfirmNewPassword" not "ConfirmPassword"
+    public string ConfirmNewPassword { get; set; } = string.Empty;
 }

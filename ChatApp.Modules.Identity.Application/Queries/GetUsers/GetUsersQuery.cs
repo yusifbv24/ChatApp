@@ -35,8 +35,6 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetUsers
                 var users = await _unitOfWork.Users
                     .Include(u=>u.UserRoles)
                         .ThenInclude(u=>u.Role)
-                    .Include(u => u.UserPermissions)
-                        .ThenInclude(up => up.Permission)
                     .Skip((query.PageNumber-1)*query.PageSize)
                     .Take(query.PageSize)
                     .AsNoTracking()
@@ -61,16 +59,7 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetUsers
                             [],
                             0,
                             ur.Role.CreatedAtUtc
-                        )).ToList(),
-                        u.UserPermissions
-                            .Where(up => up.IsGranted)
-                            .Select(up => new PermissionDto(
-                                up.Permission.Id,
-                                up.Permission.Name,
-                                up.Permission.Description,
-                                up.Permission.Module
-                            ))
-                            .ToList()
+                        )).ToList()
                     ))
                     .ToList();
 

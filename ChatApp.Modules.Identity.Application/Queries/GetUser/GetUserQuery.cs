@@ -35,8 +35,6 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetUser
                 var user = await _unitOfWork.Users
                     .Include(u => u.UserRoles)
                         .ThenInclude(ur => ur.Role)
-                    .Include(u => u.UserPermissions)
-                        .ThenInclude(up => up.Permission)
                     .AsNoTracking()
                     .FirstOrDefaultAsync(u => u.Id == query.UserId, cancellationToken);
 
@@ -62,16 +60,7 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetUser
                         [],
                         0,
                         ur.Role.CreatedAtUtc
-                    )).ToList(),
-                    user.UserPermissions
-                        .Where(up => up.IsGranted)
-                        .Select(up => new PermissionDto(
-                            up.Permission.Id,
-                            up.Permission.Name,
-                            up.Permission.Description,
-                            up.Permission.Module
-                        ))
-                        .ToList()
+                    )).ToList()
                 );
 
                 return Result.Success<UserDto?>(userDto);
