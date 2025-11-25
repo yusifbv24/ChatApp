@@ -52,7 +52,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.Roles
                 var existingRole=await unitOfWork.Roles
                     .FirstOrDefaultAsync(r=>r.Id==request.RoleId,cancellationToken);
 
-                if(existingRole == null)
+                if(existingRole==null)
                 {
                     return Result.Failure("Role was not found");
                 }
@@ -63,7 +63,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.Roles
                         .Where(r=>r.Name==request.Name)
                         .ToListAsync(cancellationToken);
 
-                    if(existingRoleName != null)
+                    if(existingRoleName.Any())
                     {
                         logger?.LogWarning("Role with Name : {RoleName} already exists", request.Name);
                         return Result.Failure($"Role name already exists with {request.Name}");

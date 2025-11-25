@@ -510,6 +510,7 @@ public partial class Users
             {
                 editUserSuccess = true;
                 editUserMessage = "User updated successfully!";
+                StateHasChanged(); // Force UI update to show success message
                 await Task.Delay(1500);
                 showEditUserDialog = false;
                 await LoadUsers();
@@ -518,16 +519,19 @@ public partial class Users
             {
                 editUserSuccess = false;
                 editUserMessage = result.Error ?? "Failed to update user";
+                StateHasChanged(); // Force UI update to show error message
             }
         }
         catch
         {
             editUserSuccess = false;
             editUserMessage = "An error occurred while updating the user";
+            StateHasChanged(); // Force UI update to show error message
         }
         finally
         {
             isUpdatingUser = false;
+            StateHasChanged(); // Force UI update to re-enable button
         }
     }
 
@@ -596,6 +600,7 @@ public partial class Users
 
             rolesSuccess = true;
             rolesMessage = "Roles updated successfully!";
+            StateHasChanged(); // Force UI update to show success message
             await Task.Delay(1500);
             showManageRolesDialog = false;
             await LoadUsers();
@@ -604,10 +609,12 @@ public partial class Users
         {
             rolesSuccess = false;
             rolesMessage = "An error occurred while updating roles";
+            StateHasChanged(); // Force UI update to show error message
         }
         finally
         {
             isUpdatingRoles = false;
+            StateHasChanged(); // Force UI update to re-enable button
         }
     }
 

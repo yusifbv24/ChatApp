@@ -680,7 +680,7 @@ html, body {
 
 .login-button span {
     position: relative;
-    z-index: 1;
+    z-index: 10;
 }
 
 .login-button::before {
@@ -694,6 +694,7 @@ html, body {
     background: rgba(255, 255, 255, 0.3);
     transform: translate(-50%, -50%);
     transition: width 0.6s, height 0.6s;
+    z-index: 0;
 }
 
 .login-button::after {
@@ -711,6 +712,7 @@ html, body {
     );
     transform: skewX(-20deg);
     animation: shimmer 3s infinite;
+    z-index: 0;
 }
 
 @keyframes shimmer {
@@ -722,7 +724,7 @@ html, body {
     }
 }
 
-.login-button:hover::before {
+.login-button:hover:not(:disabled)::before {
     width: 300px;
     height: 300px;
 }
@@ -748,8 +750,16 @@ html, body {
 }
 
 .login-button:disabled {
-    opacity: 0.7;
+    opacity: 0.9;
     cursor: not-allowed;
+}
+
+.login-button:disabled::after {
+    display: none;
+}
+
+.login-button:disabled::before {
+    display: none;
 }
 
 .login-button-spinner {
@@ -759,6 +769,8 @@ html, body {
     border-top-color: var(--white);
     border-radius: 50%;
     animation: spin 0.6s linear infinite;
+    position: relative;
+    z-index: 10;
 }
 
 @keyframes spin {

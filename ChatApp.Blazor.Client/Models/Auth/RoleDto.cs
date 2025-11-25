@@ -5,7 +5,7 @@ namespace ChatApp.Blazor.Client.Models.Auth;
 /// </summary>
 public record RoleDto(
     Guid Id,
-    string? Name,
+    string Name,
     string? Description,
     bool IsSystemRole,
     List<PermissionDto> Permissions,

@@ -720,60 +720,6 @@
     color: #6b7280;
 }
 
-/* Roles Row (Horizontal Chip Layout) */
-.admin-roles-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.625rem;
-    margin-top: 0.5rem;
-}
-
-.admin-role-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 0.875rem;
-    border: 1.5px solid #e5e7eb;
-    border-radius: 20px;
-    background: #f9fafb;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    user-select: none;
-}
-
-.admin-role-chip:hover {
-    background: #f3f4f6;
-    border-color: #d1d5db;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-.admin-role-chip input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
-    border: 2px solid #d1d5db;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    flex-shrink: 0;
-}
-
-.admin-role-chip input[type="checkbox"]:checked {
-    background: #6366f1;
-    border-color: #6366f1;
-}
-
-.admin-role-chip input[type="checkbox"]:checked ~ .admin-role-chip-label {
-    font-weight: 600;
-    color: #4338ca;
-}
-
-.admin-role-chip-label {
-    font-size: 0.875rem;
-    color: #374151;
-    transition: all 0.2s ease;
-}
-
 /* Permissions List */
 .admin-permissions-list {
     display: flex;

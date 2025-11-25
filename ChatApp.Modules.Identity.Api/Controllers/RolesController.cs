@@ -50,7 +50,7 @@ namespace ChatApp.Modules.Identity.Api.Controllers
             return CreatedAtAction(
                 nameof(GetRoles),
                 new { roleId = result.Value },
-                new { roleId = result.Value, message = "Role created successfully" });
+                result.Value);
         }
 
 

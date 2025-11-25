@@ -241,15 +241,18 @@
 
                     <div class="admin-form-group">
                         <label>Roles *</label>
-                        <div class="admin-roles-row">
+                        <div class="admin-roles-list">
                             @foreach (var role in availableRoles)
                             {
-                                <label class="admin-role-chip">
+                                <label class="admin-role-item">
                                     <input type="checkbox"
                                            checked="@createUserSelectedRoleIds.Contains(role.Id)"
                                            @onchange="() => ToggleCreateUserRole(role.Id)"
                                            class="admin-checkbox" />
-                                    <span class="admin-role-chip-label">@role.Name</span>
+                                    <div class="admin-role-info">
+                                        <span class="admin-role-name">@role.Name</span>
+                                        <span class="admin-role-description">@role.Description</span>
+                                    </div>
                                 </label>
                             }
                         </div>

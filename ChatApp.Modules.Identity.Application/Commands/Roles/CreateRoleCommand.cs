@@ -50,7 +50,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.Roles
                     .Where(r=>r.Name==request.Name)
                     .ToListAsync(cancellationToken);
 
-                if(existingRole!= null)
+                if(existingRole.Any())
                 {
                     logger?.LogWarning("Role {RoleName} already exists", request.Name);
                     return Result.Failure<Guid>("Role with this name already exists");

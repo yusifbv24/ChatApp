@@ -137,6 +137,7 @@ public partial class Roles
             {
                 createRoleSuccess = true;
                 createRoleMessage = "Role created successfully!";
+                StateHasChanged(); // Force UI update to show success message
                 await Task.Delay(1500);
                 showCreateRoleDialog = false;
                 await LoadRoles();
@@ -145,16 +146,19 @@ public partial class Roles
             {
                 createRoleSuccess = false;
                 createRoleMessage = result.Error ?? "Failed to create role";
+                StateHasChanged(); // Force UI update to show error message
             }
         }
         catch
         {
             createRoleSuccess = false;
             createRoleMessage = "An error occurred while creating the role";
+            StateHasChanged(); // Force UI update to show error message
         }
         finally
         {
             isCreatingRole = false;
+            StateHasChanged(); // Force UI update to re-enable button
         }
     }
 
@@ -188,6 +192,7 @@ public partial class Roles
             {
                 editRoleSuccess = true;
                 editRoleMessage = "Role updated successfully!";
+                StateHasChanged(); // Force UI update to show success message
                 await Task.Delay(1500);
                 showEditRoleDialog = false;
                 await LoadRoles();
@@ -196,16 +201,19 @@ public partial class Roles
             {
                 editRoleSuccess = false;
                 editRoleMessage = result.Error ?? "Failed to update role";
+                StateHasChanged(); // Force UI update to show error message
             }
         }
         catch
         {
             editRoleSuccess = false;
             editRoleMessage = "An error occurred while updating the role";
+            StateHasChanged(); // Force UI update to show error message
         }
         finally
         {
             isUpdatingRole = false;
+            StateHasChanged(); // Force UI update to re-enable button
         }
     }
 
@@ -262,6 +270,7 @@ public partial class Roles
 
             permissionsSuccess = true;
             permissionsMessage = "Permissions updated successfully!";
+            StateHasChanged(); // Force UI update to show success message
             await Task.Delay(1500);
             showManagePermissionsDialog = false;
             await LoadRoles();
@@ -270,10 +279,12 @@ public partial class Roles
         {
             permissionsSuccess = false;
             permissionsMessage = "An error occurred while updating permissions";
+            StateHasChanged(); // Force UI update to show error message
         }
         finally
         {
             isUpdatingPermissions = false;
+            StateHasChanged(); // Force UI update to re-enable button
         }
     }
 
@@ -306,15 +317,18 @@ public partial class Roles
             else
             {
                 deleteRoleMessage = result.Error ?? "Failed to delete role";
+                StateHasChanged(); // Force UI update to show error message
             }
         }
         catch
         {
             deleteRoleMessage = "An error occurred while deleting the role";
+            StateHasChanged(); // Force UI update to show error message
         }
         finally
         {
             isDeletingRole = false;
+            StateHasChanged(); // Force UI update to re-enable button
         }
     }
 }

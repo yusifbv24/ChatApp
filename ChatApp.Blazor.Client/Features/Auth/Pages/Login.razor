@@ -21,11 +21,12 @@
                     <span class="login-input-icon">
                         <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" />
                     </span>
-                    <InputText @bind-Value="loginModel.Username"
-                               @oninput="ClearErrorMessage"
-                               class="login-input"
-                               placeholder="Enter your username"
-                               autocomplete="username" />
+                    <input type="text"
+                           value="@loginModel.Username"
+                           @oninput="@(e => { loginModel.Username = e.Value?.ToString() ?? string.Empty; ClearErrorMessage(); })"
+                           class="login-input"
+                           placeholder="Enter your username"
+                           autocomplete="username" />
                 </div>
                 <ValidationMessage For="@(() => loginModel.Username)" class="login-validation-message" />
             </div>
@@ -36,12 +37,12 @@
                     <span class="login-input-icon">
                         <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" />
                     </span>
-                    <InputText @bind-Value="loginModel.Password"
-                               @oninput="ClearErrorMessage"
-                               type="@(showPassword ? "text" : "password")"
-                               class="login-input"
-                               placeholder="Enter your password"
-                               autocomplete="current-password" />
+                    <input type="@(showPassword ? "text" : "password")"
+                           value="@loginModel.Password"
+                           @oninput="@(e => { loginModel.Password = e.Value?.ToString() ?? string.Empty; ClearErrorMessage(); })"
+                           class="login-input"
+                           placeholder="Enter your password"
+                           autocomplete="current-password" />
                     <button type="button"
                             class="login-input-toggle"
                             @onclick="TogglePasswordVisibility"
@@ -110,6 +111,7 @@
             isLoading = true;
             errorMessage = null;
             StateHasChanged();
+            await Task.Yield(); // Allow UI to update before starting async operation
 
             var result = await AuthService.LoginAsync(loginModel);
 
