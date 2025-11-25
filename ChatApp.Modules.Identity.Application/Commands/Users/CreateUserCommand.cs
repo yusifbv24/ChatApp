@@ -1,4 +1,5 @@
-﻿using ChatApp.Modules.Identity.Domain.Entities;
+﻿using ChatApp.Modules.Identity.Application.Interfaces;
+using ChatApp.Modules.Identity.Domain.Entities;
 using ChatApp.Modules.Identity.Domain.Events;
 using ChatApp.Modules.Identity.Domain.Services;
 using ChatApp.Shared.Kernel.Common;
@@ -16,7 +17,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
         string Password,
         string DisplayName,
         Guid CreatedBy,
-        bool IsAdmin,
+        List<Guid> RoleIds,
         string? AvatarUrl,
         string? Notes
     ) : IRequest<Result<Guid>>;
@@ -59,6 +60,18 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
             RuleFor(x => x.CreatedBy)
                 .NotEmpty().WithMessage("CreatedBy is required");
 
+            RuleFor(x => x.RoleIds)
+                .NotEmpty().WithMessage("At least one role must be selected")
+                .Must(roleIds => roleIds != null && roleIds.Count > 0).WithMessage("At least one role must be selected")
+                .Must(roleIds =>
+                {
+                    var administratorRoleId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+                    if (roleIds.Contains(administratorRoleId))
+                    {
+                        return roleIds.Count == 1;
+                    }
+                    return true;
+                }).WithMessage("Administrator role cannot be combined with other roles");
 
             When(x => !string.IsNullOrWhiteSpace(x.Notes), () =>
             {
@@ -78,52 +91,49 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
 
 
 
-    public class CreateUserCommandHandler:IRequestHandler<CreateUserCommand, Result<Guid>>
+    public class CreateUserCommandHandler(
+        IUnitOfWork unitOfWork,
+        IPasswordHasher passwordHasher,
+        IEventBus eventBus,
+        ILogger<CreateUserCommand> logger) : IRequestHandler<CreateUserCommand, Result<Guid>>
     {
-        private readonly Interfaces.IUnitOfWork _unitOfWork;
-        private readonly IPasswordHasher _passwordHasher;
-        private readonly IEventBus _eventBus;
-        private readonly ILogger<CreateUserCommand> _logger;
-
-        public CreateUserCommandHandler(
-            Interfaces.IUnitOfWork unitOfWork,
-            IPasswordHasher passwordHasher,
-            IEventBus eventBus,
-            ILogger<CreateUserCommand> logger)
-        {
-            _unitOfWork= unitOfWork;
-            _passwordHasher= passwordHasher;
-            _eventBus= eventBus;
-            _logger= logger;
-        }
-
-
         public async Task<Result<Guid>> Handle(
             CreateUserCommand command,
             CancellationToken cancellationToken = default)
         {
             try
             {
-                _logger?.LogInformation("Creating user : {Username} ", command.Username);
-                if(await _unitOfWork.Users.AnyAsync(u=>u.Username==command.Username, cancellationToken))
+                logger?.LogInformation("Creating user : {Username} ", command.Username);
+                if(await unitOfWork.Users.AnyAsync(u=>u.Username==command.Username, cancellationToken))
                 {
-                    _logger?.LogWarning("Username {Username} already exists", command.Username);
+                    logger?.LogWarning("Username {Username} already exists", command.Username);
                     return Result.Failure<Guid>("Username already exists");
                 }
 
-                if(await _unitOfWork.Users.AnyAsync(u=>u.Email==command.Email, cancellationToken))
+                if(await unitOfWork.Users.AnyAsync(u=>u.Email==command.Email, cancellationToken))
                 {
-                    _logger?.LogWarning("Email {Email} already exists", command.Email);
+                    logger?.LogWarning("Email {Email} already exists", command.Email);
                     return Result.Failure<Guid>("Email already exists");
                 }
 
-                if(await _unitOfWork.Users.AnyAsync(u=>u.DisplayName==command.DisplayName, cancellationToken))
+                if(await unitOfWork.Users.AnyAsync(u=>u.DisplayName==command.DisplayName, cancellationToken))
                 {
-                    _logger?.LogWarning("Display name {DisplayName} already exists", command.DisplayName);
+                    logger?.LogWarning("Display name {DisplayName} already exists", command.DisplayName);
                     return Result.Failure<Guid>("Display name already exists");
                 }
-               
-                var passwordHash=_passwordHasher.Hash(command.Password);
+
+                // Validate that all role IDs exist
+                var existingRoles = await unitOfWork.Roles
+                    .Where(r => command.RoleIds.Contains(r.Id))
+                    .ToListAsync(cancellationToken);
+
+                if (existingRoles.Count != command.RoleIds.Count)
+                {
+                    logger?.LogWarning("One or more role IDs do not exist");
+                    return Result.Failure<Guid>("One or more selected roles do not exist");
+                }
+
+                var passwordHash=passwordHasher.Hash(command.Password);
                 var user = new User(
                     command.Username,
                     command.Email,
@@ -131,20 +141,27 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
                     command.DisplayName,
                     command.CreatedBy,
                     command.AvatarUrl,
-                    command.Notes,
-                    command.IsAdmin);
-                await _unitOfWork.Users.AddAsync(user, cancellationToken);
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                    command.Notes);
+                await unitOfWork.Users.AddAsync(user, cancellationToken);
+
+                // Create UserRole entries for each selected role
+                foreach (var roleId in command.RoleIds)
+                {
+                    var userRole = new UserRole(user.Id, roleId);
+                    await unitOfWork.UserRoles.AddAsync(userRole, cancellationToken);
+                }
+
+                await unitOfWork.SaveChangesAsync(cancellationToken);
 
                 // Publish event
-                await _eventBus.PublishAsync(new UserCreatedEvent(user.Id, user.Username, user.DisplayName,user.CreatedBy));
+                await eventBus.PublishAsync(new UserCreatedEvent(user.Id, user.Username, user.DisplayName,user.CreatedBy));
 
-                _logger?.LogInformation("User {Username} created succesfully with ID {UserId}", command.Username, user.Id);
+                logger?.LogInformation("User {Username} created succesfully with ID {UserId}", command.Username, user.Id);
                 return Result.Success(user.Id);
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Error creating user {Username}", command.Username);
+                logger?.LogError(ex, "Error creating user {Username}", command.Username);
                 return Result.Failure<Guid>("An error occurred while creating the user");
             }
         }

@@ -29,6 +29,7 @@ public partial class Users
     // Create User Dialog
     private bool showCreateUserDialog = false;
     private CreateUserRequest createUserModel = new();
+    private List<Guid> createUserSelectedRoleIds = new();
     private bool isCreatingUser = false;
     private string? createUserMessage;
     private bool createUserSuccess = false;
@@ -172,6 +173,7 @@ public partial class Users
     private void OpenCreateUserDialog()
     {
         createUserModel = new CreateUserRequest();
+        createUserSelectedRoleIds = new();
         createUserMessage = null;
         createUserSuccess = false;
         selectedAvatarFileData = null;
@@ -263,6 +265,36 @@ public partial class Users
         StateHasChanged();
     }
 
+    private void ToggleCreateUserRole(Guid roleId)
+    {
+        var administratorRoleId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+
+        if (createUserSelectedRoleIds.Contains(roleId))
+        {
+            createUserSelectedRoleIds.Remove(roleId);
+        }
+        else
+        {
+            // Administrator exclusivity check
+            if (roleId == administratorRoleId)
+            {
+                // If selecting Administrator, clear all other roles
+                createUserSelectedRoleIds.Clear();
+                createUserSelectedRoleIds.Add(roleId);
+            }
+            else
+            {
+                // If Administrator is already selected, remove it before adding other role
+                if (createUserSelectedRoleIds.Contains(administratorRoleId))
+                {
+                    createUserSelectedRoleIds.Remove(administratorRoleId);
+                }
+                createUserSelectedRoleIds.Add(roleId);
+            }
+        }
+        StateHasChanged();
+    }
+
     private async Task HandleCreateUser()
     {
         isCreatingUser = true;
@@ -306,6 +338,7 @@ public partial class Users
 
             // Create user
             createUserModel.CreatedBy = UserState.CurrentUser?.Id ?? Guid.Empty;
+            createUserModel.RoleIds = createUserSelectedRoleIds;
             var result = await UserService.CreateUserAsync(createUserModel);
 
             if (result.IsSuccess && result.Value != null)
@@ -511,10 +544,31 @@ public partial class Users
 
     private void ToggleRole(Guid roleId)
     {
+        var administratorRoleId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+
         if (selectedRoleIds.Contains(roleId))
+        {
             selectedRoleIds.Remove(roleId);
+        }
         else
-            selectedRoleIds.Add(roleId);
+        {
+            // Administrator exclusivity check
+            if (roleId == administratorRoleId)
+            {
+                // If selecting Administrator, clear all other roles
+                selectedRoleIds.Clear();
+                selectedRoleIds.Add(roleId);
+            }
+            else
+            {
+                // If Administrator is already selected, remove it before adding other role
+                if (selectedRoleIds.Contains(administratorRoleId))
+                {
+                    selectedRoleIds.Remove(administratorRoleId);
+                }
+                selectedRoleIds.Add(roleId);
+            }
+        }
     }
 
     private async Task SaveRoles()

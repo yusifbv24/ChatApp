@@ -57,80 +57,65 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
 
 
 
-    public class ChangePasswordCommandHandler : IRequestHandler<ChangePasswordCommand, Result>
+    public class ChangePasswordCommandHandler(
+        IUnitOfWork unitOfWork,
+        IPasswordHasher passwordHasher,
+        IEventBus eventBus,
+        ILogger<ChangePasswordCommandHandler> logger) : IRequestHandler<ChangePasswordCommand, Result>
     {
-        private readonly IUnitOfWork _unitOfWork;
-        private readonly IPasswordHasher _passwordHasher;
-        private readonly IEventBus _eventBus;
-        private readonly ILogger<ChangePasswordCommandHandler> _logger;
-
-        public ChangePasswordCommandHandler(
-            IUnitOfWork unitOfWork,
-            IPasswordHasher passwordHasher,
-            IEventBus eventBus,
-            ILogger<ChangePasswordCommandHandler> logger)
-        {
-            _unitOfWork = unitOfWork;
-            _passwordHasher = passwordHasher;
-            _eventBus = eventBus;
-            _logger = logger;
-        }
-
         public async Task<Result> Handle(
             ChangePasswordCommand request,
             CancellationToken cancellationToken = default)
         {
             try
             {
-                _logger?.LogInformation("User {UserId} attempting to change password", request.UserId);
+                logger?.LogInformation("User {UserId} attempting to change password", request.UserId);
 
                 // Get the user
-                var user = await _unitOfWork.Users
-                    .FirstOrDefaultAsync(r=>r.Id==request.UserId, cancellationToken);
-
-                if (user == null)
-                    throw new NotFoundException($"User with ID {request.UserId} not found");
+                var user = await unitOfWork.Users
+                    .FirstOrDefaultAsync(r=>r.Id==request.UserId, cancellationToken) 
+                        ?? throw new NotFoundException($"User with ID {request.UserId} not found");
 
                 // Verify current password
-                if (!_passwordHasher.Verify(request.CurrentPassword, user.PasswordHash))
+                if (!passwordHasher.Verify(request.CurrentPassword, user.PasswordHash))
                 {
-                    _logger?.LogWarning("User {UserId} provided incorrect current password", request.UserId);
+                    logger?.LogWarning("User {UserId} provided incorrect current password", request.UserId);
                     return Result.Failure("Current password is incorrect");
                 }
 
                 // Check if user is active
                 if (!user.IsActive)
                 {
-                    _logger?.LogWarning("Inactive user {UserId} attempted to change password", request.UserId);
+                    logger?.LogWarning("Inactive user {UserId} attempted to change password", request.UserId);
                     return Result.Failure("Your account is deactivated. Please contact an administrator.");
                 }
 
                 // Hash the new password
-                var newPasswordHash = _passwordHasher.Hash(request.NewPassword);
+                var newPasswordHash = passwordHasher.Hash(request.NewPassword);
 
                 // Update the password
                 user.ChangePassword(newPasswordHash);
 
                 // Save changes
-                _unitOfWork.Users.Update(user);
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                unitOfWork.Users.Update(user);
+                await unitOfWork.SaveChangesAsync(cancellationToken);
 
                 // Publish password changed event for potential notifications or security logging
-                await _eventBus.PublishAsync(
+                await eventBus.PublishAsync(
                     new UserPasswordChangedEvent(user.Id),
                     cancellationToken);
 
-                _logger?.LogInformation("User {UserId} successfully changed password", request.UserId);
+                logger?.LogInformation("User {UserId} successfully changed password", request.UserId);
                 return Result.Success();
             }
             catch (NotFoundException ex)
             {
-                _logger?.LogError(ex, "User {UserId} not found", request.UserId);
+                logger?.LogError(ex, "User {UserId} not found", request.UserId);
                 return Result.Failure(ex.Message);
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Error changing password for user {UserId}", request.UserId);
+                logger?.LogError(ex, "Error changing password for user {UserId}", request.UserId);
                 return Result.Failure("An error occurred while changing your password");
             }
         }

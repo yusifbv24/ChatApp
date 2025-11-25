@@ -13,26 +13,17 @@ namespace ChatApp.Modules.Notifications.Application.Queries.GetUserNotifications
     ):IRequest<Result<List<NotificationDto>>>;
 
 
-    public class GetUserNotificationsQueryHandler : IRequestHandler<GetUserNotificationsQuery, Result<List<NotificationDto>>>
+    public class GetUserNotificationsQueryHandler(
+        IUnitOfWork unitOfWork,
+        ILogger<GetUserNotificationsQueryHandler> logger) : IRequestHandler<GetUserNotificationsQuery, Result<List<NotificationDto>>>
     {
-        private readonly IUnitOfWork _unitOfWork;
-        private readonly ILogger<GetUserNotificationsQueryHandler> _logger;
-        public GetUserNotificationsQueryHandler(
-            IUnitOfWork unitOfWork,
-            ILogger<GetUserNotificationsQueryHandler> logger)
-        {
-            _unitOfWork=unitOfWork;
-            _logger=logger;
-        }
-
-
         public async Task<Result<List<NotificationDto>>> Handle(
             GetUserNotificationsQuery request,
             CancellationToken cancellationToken)
         {
             try
             {
-                var notifications = await _unitOfWork.Notifications.GetUserNotificationsAsync(
+                var notifications = await unitOfWork.Notifications.GetUserNotificationsAsync(
                     request.UserId,
                     request.PageSize,
                     request.skip,
@@ -42,7 +33,7 @@ namespace ChatApp.Modules.Notifications.Application.Queries.GetUserNotifications
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving notifications for user {UserId}", request.UserId);
+                logger.LogError(ex, "Error retrieving notifications for user {UserId}", request.UserId);
                 return Result.Failure<List<NotificationDto>>("An error occurred while retrieving notifications");
             }
         }

@@ -6,7 +6,7 @@
         string Password,
         string DisplayName,
         Guid CreatedBy,
-        bool IsAdmin,
+        List<Guid> RoleIds,
         string? AvatarUrl,
         string? Notes
     );

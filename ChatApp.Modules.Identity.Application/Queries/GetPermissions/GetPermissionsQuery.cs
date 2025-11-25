@@ -13,19 +13,10 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetPermissions
 
 
 
-    public class GetPermissionsQueryHandler:IRequestHandler<GetPermissionsQuery,Result<List<PermissionDto>>>
+    public class GetPermissionsQueryHandler(
+        IUnitOfWork unitOfWork,
+        ILogger<GetPermissionsQuery> logger) : IRequestHandler<GetPermissionsQuery,Result<List<PermissionDto>>>
     {
-        private readonly IUnitOfWork _unitOfWork;
-        private readonly ILogger<GetPermissionsQuery> _logger;
-
-        public GetPermissionsQueryHandler(
-            IUnitOfWork unitOfWork,
-            ILogger<GetPermissionsQuery> logger)
-        {
-            _unitOfWork= unitOfWork;
-            _logger= logger;
-        }
-
         public async Task<Result<List<PermissionDto>>> Handle(
             GetPermissionsQuery request,
             CancellationToken cancellationToken = default)
@@ -33,8 +24,8 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetPermissions
             try
             {
                 var permissions = string.IsNullOrWhiteSpace(request.Module)
-                    ? await _unitOfWork.Permissions.AsNoTracking().ToListAsync(cancellationToken)
-                    : await _unitOfWork.Permissions
+                    ? await unitOfWork.Permissions.AsNoTracking().ToListAsync(cancellationToken)
+                    : await unitOfWork.Permissions
                         .Where(p=>p.Module==request.Module)
                         .AsNoTracking()
                         .ToListAsync(cancellationToken);
@@ -51,7 +42,7 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetPermissions
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Error retrieving permissions");
+                logger?.LogError(ex, "Error retrieving permissions");
                 return Result.Failure<List<PermissionDto>>("An error occurred while retrieving permissions");
             }
         }

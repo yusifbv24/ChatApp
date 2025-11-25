@@ -27,29 +27,18 @@ namespace ChatApp.Modules.Notifications.Application.Commands.MarkNotificationAsR
     }
 
 
-    public class MarkNotificationAsReadCommandHandler : IRequestHandler<MarkNotificationAsReadCommand, Result>
+    public class MarkNotificationAsReadCommandHandler(
+        IUnitOfWork unitOfWork,
+        ILogger<MarkNotificationAsReadCommandHandler> logger) : IRequestHandler<MarkNotificationAsReadCommand, Result>
     {
-        private readonly IUnitOfWork _unitOfWork;
-        private readonly ILogger<MarkNotificationAsReadCommandHandler> _logger;
-        public MarkNotificationAsReadCommandHandler(
-            IUnitOfWork unitOfWork,
-            ILogger<MarkNotificationAsReadCommandHandler> logger)
-        {
-            _unitOfWork = unitOfWork;
-            _logger = logger;
-        }
-
-
         public async Task<Result> Handle(
             MarkNotificationAsReadCommand request,
             CancellationToken cancellationToken)
         {
-            var notification = await _unitOfWork.Notifications.GetByIdAsync(
+            var notification = await unitOfWork.Notifications.GetByIdAsync(
                 request.NotificationId,
-                cancellationToken);
-
-            if (notification == null)
-                throw new NotFoundException($"Notification with ID {request.NotificationId} not found");
+                cancellationToken) 
+                    ?? throw new NotFoundException($"Notification with ID {request.NotificationId} not found");
 
             if (notification.UserId != request.UserId)
             {
@@ -59,8 +48,8 @@ namespace ChatApp.Modules.Notifications.Application.Commands.MarkNotificationAsR
             {
                 notification.MarkAsRead();
 
-                await _unitOfWork.Notifications.UpdateAsync(notification, cancellationToken);
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                await unitOfWork.Notifications.UpdateAsync(notification, cancellationToken);
+                await unitOfWork.SaveChangesAsync(cancellationToken);
 
                 return Result.Success();
             }

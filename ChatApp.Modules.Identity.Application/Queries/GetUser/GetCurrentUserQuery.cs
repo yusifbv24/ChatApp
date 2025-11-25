@@ -12,25 +12,17 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetUser
     ):IRequest<Result<UserDto?>>;
 
 
-    public class GetCurrentUserQueryHandler:IRequestHandler<GetCurrentUserQuery, Result<UserDto?>>
+    public class GetCurrentUserQueryHandler(
+        IUnitOfWork unitOfWork,
+        ILogger<GetCurrentUserQueryHandler> logger) : IRequestHandler<GetCurrentUserQuery, Result<UserDto?>>
     {
-        private readonly IUnitOfWork _unitOfWork;
-        private readonly ILogger<GetCurrentUserQueryHandler> _logger;
-        public GetCurrentUserQueryHandler(
-            IUnitOfWork unitOfWork,
-            ILogger<GetCurrentUserQueryHandler> logger)
-        {
-            _unitOfWork=unitOfWork;
-            _logger=logger;
-        }
-
         public async Task<Result<UserDto?>> Handle(
             GetCurrentUserQuery request,
             CancellationToken cancellationToken)
         {
             try
             {
-                var user = await _unitOfWork.Users
+                var user = await unitOfWork.Users
                     .Include(u => u.UserRoles)
                         .ThenInclude(ur => ur.Role)
                     .AsNoTracking()
@@ -38,7 +30,7 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetUser
 
                 if(user is null)
                 {
-                    _logger?.LogWarning("User {UserId} not found", request.UserId);
+                    logger?.LogWarning("User {UserId} not found", request.UserId);
                     return Result.Success<UserDto?>(null);
                 }
 
@@ -69,7 +61,7 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetUser
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Error retrieving current user information for user {UserId}", request.UserId);
+                logger?.LogError(ex, "Error retrieving current user information for user {UserId}", request.UserId);
                 return Result.Failure<UserDto?>("An error occurred while retrieving your profile information");
             }
         }

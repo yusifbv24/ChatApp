@@ -55,7 +55,7 @@ namespace ChatApp.Modules.Identity.Api.Controllers
                 request.Password,
                 request.DisplayName,
                 request.CreatedBy,
-                request.IsAdmin,
+                request.RoleIds,
                 request.AvatarUrl,
                 request.Notes);
 

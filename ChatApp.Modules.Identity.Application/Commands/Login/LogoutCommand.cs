@@ -10,23 +10,14 @@ namespace ChatApp.Modules.Identity.Application.Commands.Login
     ):IRequest<Result>;
 
 
-    public class LogoutCommandHandler : IRequestHandler<LogoutCommand, Result>
+    public class LogoutCommandHandler(IUnitOfWork unifOfWork) : IRequestHandler<LogoutCommand, Result>
     {
-        private readonly IUnitOfWork _unitOfWork;
-
-        public LogoutCommandHandler(IUnitOfWork unifOfWork)
-        {
-            _unitOfWork = unifOfWork;
-        }
-
-
-
         public async Task<Result> Handle(
             LogoutCommand request,
             CancellationToken cancellationToken)
         {
             // Find all active refresh token for this User
-            var tokens = await _unitOfWork.RefreshTokens
+            var tokens = await unifOfWork.RefreshTokens
                 .Where(rt => rt.UserId == request.UserId)
                 .ToListAsync(cancellationToken);
 
@@ -34,9 +25,9 @@ namespace ChatApp.Modules.Identity.Application.Commands.Login
             foreach(var token in tokens)
             {
                 token.Revoke();
-                _unitOfWork.RefreshTokens.Update(token);
+                unifOfWork.RefreshTokens.Update(token);
             }
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await unifOfWork.SaveChangesAsync(cancellationToken);
             return Result.Success();
         }
     }

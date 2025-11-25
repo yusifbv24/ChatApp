@@ -22,26 +22,17 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
     }
 
 
-    public class ActivateUserCommandHandler : IRequestHandler<ActivateUserCommand, Result>
+    public class ActivateUserCommandHandler(
+        IUnitOfWork unitOfWork,
+        ILogger<ActivateUserCommandHandler> logger) : IRequestHandler<ActivateUserCommand, Result>
     {
-        private readonly IUnitOfWork _unitOfWork;
-        private readonly ILogger<ActivateUserCommandHandler> _logger;
-
-        public ActivateUserCommandHandler(
-            IUnitOfWork unitOfWork,
-            ILogger<ActivateUserCommandHandler> logger)
-        {
-            _unitOfWork = unitOfWork;
-            _logger = logger;
-        }
-
         public async Task<Result> Handle(
             ActivateUserCommand request,
             CancellationToken cancellationToken)
         {
             try
             {
-                var existingUser = await _unitOfWork.Users
+                var existingUser = await unitOfWork.Users
                     .FirstOrDefaultAsync(r=>r.Id== request.UserId,cancellationToken);
 
                 if(existingUser == null)
@@ -55,14 +46,14 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
                 }
                 existingUser.Activate();
 
-                _unitOfWork.Users.Update(existingUser);
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                unitOfWork.Users.Update(existingUser);
+                await unitOfWork.SaveChangesAsync(cancellationToken);
 
                 return Result.Success();
             }
             catch (Exception ex)
             {
-                _logger?.LogError($"Error occurred while activating user . Error is : {ex.Message}");
+                logger?.LogError($"Error occurred while activating user . Error is : {ex.Message}");
                 return Result.Failure(ex.Message);
             }
         }

@@ -14,52 +14,41 @@ namespace ChatApp.Modules.Identity.Application.Commands.RefreshToken
 
 
 
-    public class RefreshTokenCommandHandler:IRequestHandler<RefreshTokenCommand,Result<RefreshTokenResponse>>
+    public class RefreshTokenCommandHandler(
+        IUnitOfWork unitOfWork,
+        ITokenGenerator tokenGenerator,
+        ILogger<RefreshTokenCommand> logger) : IRequestHandler<RefreshTokenCommand,Result<RefreshTokenResponse>>
     {
-        private readonly IUnitOfWork _unitOfWork;
-        private readonly ITokenGenerator _tokenGenerator;
-        private readonly ILogger<RefreshTokenCommand> _logger;
-
-        public RefreshTokenCommandHandler(
-            IUnitOfWork unitOfWork,
-            ITokenGenerator tokenGenerator,
-            ILogger<RefreshTokenCommand> logger)
-        {
-            _unitOfWork = unitOfWork;
-            _tokenGenerator= tokenGenerator;
-            _logger= logger;
-        }
-
         public async Task<Result<RefreshTokenResponse>> Handle(
             RefreshTokenCommand request,
             CancellationToken cancellationToken = default)
         {
             try
             {
-                _logger?.LogInformation("Refresh token request received");
+                logger?.LogInformation("Refresh token request received");
 
-                var refreshToken = await _unitOfWork.RefreshTokens
+                var refreshToken = await unitOfWork.RefreshTokens
                    .FirstOrDefaultAsync(
                     x=>x.Token==request.RefreshToken,
                     cancellationToken);
 
                 if(refreshToken==null || !refreshToken.IsValid())
                 {
-                    _logger?.LogInformation("Invalid or expired refresh token");
+                    logger?.LogInformation("Invalid or expired refresh token");
                     return Result.Failure<RefreshTokenResponse>("Invalid or expired refresh token");
                 }
 
-                var user = await _unitOfWork.Users
+                var user = await unitOfWork.Users
                     .FirstOrDefaultAsync(r => r.Id == refreshToken.UserId, cancellationToken);
 
                 if(user==null || !user.IsActive)
                 {
-                    _logger?.LogWarning("User not found or inactive for refresh token");
+                    logger?.LogWarning("User not found or inactive for refresh token");
                     return Result.Failure<RefreshTokenResponse>("User not found or inactive");
                 }
 
                 // Get ONLY role-based permissions (no more direct user permissions)
-                var permissions = await _unitOfWork.UserRoles
+                var permissions = await unitOfWork.UserRoles
                     .Where(ur => ur.UserId == user.Id)
                     .Include(ur => ur.Role)
                         .ThenInclude(r => r.RolePermissions)
@@ -69,12 +58,12 @@ namespace ChatApp.Modules.Identity.Application.Commands.RefreshToken
                     .ToListAsync(cancellationToken);
 
                 // Generate new tokens
-                var newAccessToken = _tokenGenerator.GenerateAccessToken(user, permissions);
-                var newRefreshToken = _tokenGenerator.GenerateRefreshToken();
+                var newAccessToken = tokenGenerator.GenerateAccessToken(user, permissions);
+                var newRefreshToken = tokenGenerator.GenerateRefreshToken();
 
                 // Revoke old refresh token
                 refreshToken.Revoke();
-                _unitOfWork.RefreshTokens.Update(refreshToken);
+                unitOfWork.RefreshTokens.Update(refreshToken);
 
                 // Save new refresh token
                 var newRefreshTokenEntity = new Domain.Entities.RefreshToken(
@@ -82,10 +71,10 @@ namespace ChatApp.Modules.Identity.Application.Commands.RefreshToken
                     newRefreshToken,
                     DateTime.UtcNow.AddDays(30));
 
-                await _unitOfWork.RefreshTokens.AddAsync(newRefreshTokenEntity, cancellationToken);
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                await unitOfWork.RefreshTokens.AddAsync(newRefreshTokenEntity, cancellationToken);
+                await unitOfWork.SaveChangesAsync(cancellationToken);
 
-                _logger?.LogInformation("Tokens refreshed succesfully for user {UserId}", user.Id);
+                logger?.LogInformation("Tokens refreshed succesfully for user {UserId}", user.Id);
 
                 return Result.Success(new RefreshTokenResponse
                 (
@@ -96,7 +85,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.RefreshToken
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Error during token refresh");
+                logger?.LogError(ex, "Error during token refresh");
                 return Result.Failure<RefreshTokenResponse>("An error occurred during token refresh");
             }
         }

@@ -46,7 +46,7 @@ namespace ChatApp.Modules.Files.Api.Controllers
         /// Upload a file
         /// </summary>
         [HttpPost("upload")]
-        [RequirePermission("File.Upload")]
+        [RequirePermission("Files.Upload")]
         [RequestSizeLimit(100 * 1024 * 1024)] // 100 MB
         [ProducesResponseType(typeof(FileUploadResult), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -80,7 +80,7 @@ namespace ChatApp.Modules.Files.Api.Controllers
         /// Admins can specify targetUserId to upload for other users
         /// </summary>
         [HttpPost("upload/profile-picture")]
-        [RequirePermission("File.Upload")]
+        [RequirePermission("Files.Upload")]
         [RequestSizeLimit(10 * 1024 * 1024)] // 10 MB for profile pictures
         [ProducesResponseType(typeof(FileUploadResult), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -174,7 +174,7 @@ namespace ChatApp.Modules.Files.Api.Controllers
         /// Download a file
         /// </summary>
         [HttpGet("{fileId:guid}/download")]
-        [RequirePermission("File.Download")]
+        [RequirePermission("Files.Download")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -236,7 +236,7 @@ namespace ChatApp.Modules.Files.Api.Controllers
         /// </summary>
         /// 
         [HttpGet("{fileId:guid}/thumbnail")]
-        [RequirePermission("File.Download")]
+        [RequirePermission("Files.Download")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -312,7 +312,7 @@ namespace ChatApp.Modules.Files.Api.Controllers
         /// Delete a file
         /// </summary>
         [HttpDelete("{fileId:guid}")]
-        [RequirePermission("File.Delete")]
+        [RequirePermission("Files.Delete")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]

@@ -37,57 +37,43 @@ namespace ChatApp.Modules.Identity.Application.Commands.Login
 
 
 
-    public class LoginCommandHandler:IRequestHandler<LoginCommand,Result<LoginResponse>>
+    public class LoginCommandHandler(
+        IUnitOfWork unitOfWork,
+        IPasswordHasher passwordHasher,
+        ITokenGenerator tokenGenerator,
+        ILogger<LoginCommand> logger) : IRequestHandler<LoginCommand,Result<LoginResponse>>
     {
-        private readonly IUnitOfWork _unitOfWork;
-        private readonly IPasswordHasher _passwordHasher;
-        private readonly ITokenGenerator _tokenGenerator;
-        private readonly ILogger<LoginCommand> _logger;
-
-        public LoginCommandHandler(
-            IUnitOfWork unitOfWork,
-            IPasswordHasher passwordHasher,
-            ITokenGenerator tokenGenerator,
-            ILogger<LoginCommand> logger)
-        {
-            _unitOfWork = unitOfWork;
-            _passwordHasher= passwordHasher;
-            _tokenGenerator= tokenGenerator;
-            _logger= logger;
-        }
-
-
         public async Task<Result<LoginResponse>> Handle(
             LoginCommand command,
             CancellationToken cancellationToken = default)
         {
             try
             {
-                _logger?.LogInformation("Login attempt for username: {Username}", command.Username);
+                logger?.LogInformation("Login attempt for username: {Username}", command.Username);
 
-                var user = await _unitOfWork.Users
+                var user = await unitOfWork.Users
                     .FirstOrDefaultAsync(u => u.Username == command.Username,cancellationToken);
 
                 if (user == null)
                 {
-                    _logger?.LogWarning("Login failed : User {Username} not found",command.Username);
+                    logger?.LogWarning("Login failed : User {Username} not found",command.Username);
                     return Result.Failure<LoginResponse>("Invalid username or password");
                 }
 
                 if (!user.IsActive)
                 {
-                    _logger?.LogWarning("Login failed : User {Username} is not active", command.Username);
+                    logger?.LogWarning("Login failed : User {Username} is not active", command.Username);
                     return Result.Failure<LoginResponse>("Account is deactivated");
                 }
 
-                if (!_passwordHasher.Verify(command.Password, user.PasswordHash))
+                if (!passwordHasher.Verify(command.Password, user.PasswordHash))
                 {
-                    _logger?.LogWarning("Login failed : Invalid password or username {Username}", command.Username);
+                    logger?.LogWarning("Login failed : Invalid password or username {Username}", command.Username);
                     return Result.Failure<LoginResponse>("Invalid username or password");
                 }
 
                 // Get ONLY role-based permissions (no more direct user permissions)
-                var permissions = await _unitOfWork.UserRoles
+                var permissions = await unitOfWork.UserRoles
                     .Where(ur => ur.UserId == user.Id)
                     .Include(ur => ur.Role)
                         .ThenInclude(r => r.RolePermissions)
@@ -97,8 +83,8 @@ namespace ChatApp.Modules.Identity.Application.Commands.Login
                     .ToListAsync(cancellationToken);
 
                 // Generate tokens
-                var accessToken = _tokenGenerator.GenerateAccessToken(user, permissions);
-                var refreshToken = _tokenGenerator.GenerateRefreshToken();
+                var accessToken = tokenGenerator.GenerateAccessToken(user, permissions);
+                var refreshToken = tokenGenerator.GenerateRefreshToken();
 
                 // Save refresh token
                 var refreshTokenEntity = new Domain.Entities.RefreshToken(
@@ -106,10 +92,10 @@ namespace ChatApp.Modules.Identity.Application.Commands.Login
                     refreshToken,
                     DateTime.UtcNow.AddDays(30));
 
-                await _unitOfWork.RefreshTokens.AddAsync(refreshTokenEntity, cancellationToken);
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                await unitOfWork.RefreshTokens.AddAsync(refreshTokenEntity, cancellationToken);
+                await unitOfWork.SaveChangesAsync(cancellationToken);
 
-                _logger?.LogInformation("Login successful for user {Username}", command.Username);
+                logger?.LogInformation("Login successful for user {Username}", command.Username);
 
                 return Result.Success(new LoginResponse
                 (
@@ -120,7 +106,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.Login
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Error during login for username: {Username}", command.Username);
+                logger?.LogError(ex, "Error during login for username: {Username}", command.Username);
                 return Result.Failure<LoginResponse>("An error occurred during login");
             }
         }

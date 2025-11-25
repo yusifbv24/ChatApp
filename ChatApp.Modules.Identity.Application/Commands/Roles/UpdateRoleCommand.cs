@@ -37,29 +37,19 @@ namespace ChatApp.Modules.Identity.Application.Commands.Roles
     }
 
 
-    public class UpdateRoleCommandHandler : IRequestHandler<UpdateRoleCommand, Result>
+    public class UpdateRoleCommandHandler(
+        IUnitOfWork unitOfWork,
+        ILogger<UpdateRoleCommandHandler> logger) : IRequestHandler<UpdateRoleCommand, Result>
     {
-        private readonly IUnitOfWork _unitOfWork;
-        private readonly ILogger<UpdateRoleCommandHandler> _logger;
-
-        public UpdateRoleCommandHandler(
-            IUnitOfWork unitOfWork,
-            ILogger<UpdateRoleCommandHandler> logger)
-        {
-            _unitOfWork= unitOfWork;
-            _logger= logger;
-        }
-
-
         public async Task<Result> Handle(
             UpdateRoleCommand request,
             CancellationToken cancellationToken = default)
         {
             try
             {
-                _logger?.LogInformation("Updating role: {RoleName}", request.Name);
+                logger?.LogInformation("Updating role: {RoleName}", request.Name);
 
-                var existingRole=await _unitOfWork.Roles
+                var existingRole=await unitOfWork.Roles
                     .FirstOrDefaultAsync(r=>r.Id==request.RoleId,cancellationToken);
 
                 if(existingRole == null)
@@ -69,13 +59,13 @@ namespace ChatApp.Modules.Identity.Application.Commands.Roles
 
                 if (!string.IsNullOrWhiteSpace(request.Name))
                 {
-                    var existingRoleName = await _unitOfWork.Roles
+                    var existingRoleName = await unitOfWork.Roles
                         .Where(r=>r.Name==request.Name)
                         .ToListAsync(cancellationToken);
 
                     if(existingRoleName != null)
                     {
-                        _logger?.LogWarning("Role with Name : {RoleName} already exists", request.Name);
+                        logger?.LogWarning("Role with Name : {RoleName} already exists", request.Name);
                         return Result.Failure($"Role name already exists with {request.Name}");
                     }
                     existingRole.UpdateName(request.Name);
@@ -84,15 +74,15 @@ namespace ChatApp.Modules.Identity.Application.Commands.Roles
                 if (!string.IsNullOrWhiteSpace(request.Description))
                     existingRole.UpdateDescription(request.Description);
 
-                _unitOfWork.Roles.Update(existingRole);
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                unitOfWork.Roles.Update(existingRole);
+                await unitOfWork.SaveChangesAsync(cancellationToken);
 
-                _logger?.LogInformation("Role {RoleName} updated succesfully with ID {RoleId}", request.Name, request.RoleId);
+                logger?.LogInformation("Role {RoleName} updated succesfully with ID {RoleId}", request.Name, request.RoleId);
                 return Result.Success();
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Error updating role {RoleName} ", request.Name);
+                logger?.LogError(ex, "Error updating role {RoleName} ", request.Name);
                 return Result.Failure("An error occurred while updating the role");
             }
         }

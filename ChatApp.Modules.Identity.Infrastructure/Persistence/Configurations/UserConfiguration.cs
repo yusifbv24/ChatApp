@@ -40,10 +40,8 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence.Configurations
                 .HasColumnName("is_active")
                 .HasDefaultValue(true);
 
-            builder.Property(u => u.IsAdmin)
-                .IsRequired()
-                .HasColumnName("is_admin")
-                .HasDefaultValue(false);
+            // IsAdmin is now a calculated property based on roles, not stored in database
+            builder.Ignore(u => u.IsAdmin);
 
             builder.Property(u => u.AvatarUrl)
                 .HasColumnName("avatar_url")

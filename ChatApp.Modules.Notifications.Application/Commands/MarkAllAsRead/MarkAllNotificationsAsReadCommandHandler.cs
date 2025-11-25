@@ -21,32 +21,24 @@ namespace ChatApp.Modules.Notifications.Application.Commands.MarkAllAsRead
     }
 
 
-    public class MarkAllNotificationsAsReadCommandHandler :IRequestHandler<MarkAllNotificationsAsReadCommand, Result>
+    public class MarkAllNotificationsAsReadCommandHandler(
+        IUnitOfWork unitOfWork,
+        ILogger<MarkAllNotificationsAsReadCommandHandler> logger) : IRequestHandler<MarkAllNotificationsAsReadCommand, Result>
     {
-        private readonly IUnitOfWork _unitOfWork;
-        private readonly ILogger<MarkAllNotificationsAsReadCommandHandler > _logger;
-        public MarkAllNotificationsAsReadCommandHandler (
-            IUnitOfWork unitOfWork,
-            ILogger<MarkAllNotificationsAsReadCommandHandler > logger)
-        {
-            _unitOfWork= unitOfWork;
-            _logger= logger;
-        }
-
         public async Task<Result> Handle(
             MarkAllNotificationsAsReadCommand request,
             CancellationToken cancellationToken)
         {
             try
             {
-                await _unitOfWork.Notifications.MarkAllAsReadAsync(request.UserId, cancellationToken);
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                await unitOfWork.Notifications.MarkAllAsReadAsync(request.UserId, cancellationToken);
+                await unitOfWork.SaveChangesAsync(cancellationToken);
 
                 return Result.Success();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error marking all notifications as read");
+                logger.LogError(ex, "Error marking all notifications as read");
                 return Result.Failure("An error occurred while marking notifications as read");
             }
         }

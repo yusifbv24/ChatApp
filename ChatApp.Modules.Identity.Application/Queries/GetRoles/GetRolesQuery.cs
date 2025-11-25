@@ -11,27 +11,17 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetRoles
 
 
 
-    public class GetRolesQueryHandler : IRequestHandler<GetRolesQuery, Result<List<RoleDto>>>
+    public class GetRolesQueryHandler(
+        IUnitOfWork unitOfWork,
+        ILogger<GetRolesQueryHandler> logger) : IRequestHandler<GetRolesQuery, Result<List<RoleDto>>>
     {
-        private readonly IUnitOfWork _unitOfWork;
-        private readonly ILogger<GetRolesQueryHandler> _logger;
-
-        public GetRolesQueryHandler(
-            IUnitOfWork unitOfWork,
-            ILogger<GetRolesQueryHandler> logger)
-        {
-            _unitOfWork = unitOfWork;
-            _logger = logger;
-        }
-
-
         public async Task<Result<List<RoleDto>>> Handle(
             GetRolesQuery query,
             CancellationToken cancellationToken = default)
         {
             try
             {
-                var roles = await _unitOfWork.Roles
+                var roles = await unitOfWork.Roles
                     .Include(r=>r.RolePermissions)
                         .ThenInclude(rp=>rp.Permission)
                     .Include(r=>r.UserRoles)
@@ -58,7 +48,7 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetRoles
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Error retrieving roles");
+                logger?.LogError(ex, "Error retrieving roles");
                 return Result.Failure<List<RoleDto>>("An error occurred while retrieving roles");
             }
         }

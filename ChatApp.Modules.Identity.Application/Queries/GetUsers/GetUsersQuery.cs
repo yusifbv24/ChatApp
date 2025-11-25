@@ -13,26 +13,17 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetUsers
     ):IRequest<Result<List<UserDto>>>;
 
 
-    public class GetUsersQueryHandler : IRequestHandler<GetUsersQuery, Result<List<UserDto>>>
+    public class GetUsersQueryHandler(
+        IUnitOfWork unitOfWork,
+        ILogger<GetUsersQueryHandler> logger) : IRequestHandler<GetUsersQuery, Result<List<UserDto>>>
     {
-        private readonly IUnitOfWork _unitOfWork;
-        private readonly ILogger<GetUsersQueryHandler> _logger;
-
-        public GetUsersQueryHandler(
-            IUnitOfWork unitOfWork,
-            ILogger<GetUsersQueryHandler> logger)
-        {
-            _unitOfWork = unitOfWork;
-            _logger = logger;
-        }
-
         public async Task<Result<List<UserDto>>> Handle(
             GetUsersQuery query,
             CancellationToken cancellationToken = default)
         {
             try
             {
-                var users = await _unitOfWork.Users
+                var users = await unitOfWork.Users
                     .Include(u=>u.UserRoles)
                         .ThenInclude(u=>u.Role)
                     .Skip((query.PageNumber-1)*query.PageSize)
@@ -67,7 +58,7 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetUsers
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Error retrieving users");
+                logger?.LogError(ex, "Error retrieving users");
                 return Result.Failure<List<UserDto>>("An error occurred while retrieving users");
             }
         }

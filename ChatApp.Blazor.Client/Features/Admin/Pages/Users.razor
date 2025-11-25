@@ -240,10 +240,23 @@
                     </div>
 
                     <div class="admin-form-group">
-                        <label class="admin-checkbox-label">
-                            <InputCheckbox @bind-Value="createUserModel.IsAdmin" class="admin-checkbox" />
-                            <span>Admin User</span>
-                        </label>
+                        <label>Roles *</label>
+                        <div class="admin-roles-row">
+                            @foreach (var role in availableRoles)
+                            {
+                                <label class="admin-role-chip">
+                                    <input type="checkbox"
+                                           checked="@createUserSelectedRoleIds.Contains(role.Id)"
+                                           @onchange="() => ToggleCreateUserRole(role.Id)"
+                                           class="admin-checkbox" />
+                                    <span class="admin-role-chip-label">@role.Name</span>
+                                </label>
+                            }
+                        </div>
+                        @if (createUserSelectedRoleIds.Count == 0)
+                        {
+                            <small class="text-danger">At least one role must be selected</small>
+                        }
                     </div>
 
                     @if (!string.IsNullOrEmpty(createUserMessage))

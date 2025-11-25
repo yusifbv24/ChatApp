@@ -11,7 +11,11 @@
       "Bash(dotnet ef database update:*)",
       "Bash(cat:*)",
       "Bash(dotnet ef migrations:*)",
-      "Bash(dotnet ef database drop:*)"
+      "Bash(dotnet ef database drop:*)",
+      "Bash(tasklist:*)",
+      "Bash(findstr:*)",
+      "Bash(ping:*)",
+      "Bash(nul)"
     ],
     "deny": [],
     "ask": []

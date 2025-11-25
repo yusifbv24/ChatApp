@@ -26,48 +26,35 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
 
 
 
-    public class DeleteUserCommandHandler:IRequestHandler<DeleteUserCommand,Result>
+    public class DeleteUserCommandHandler(
+        IUnitOfWork unitOfWork,
+        IEventBus eventBus,
+        ILogger<DeleteUserCommand> logger) : IRequestHandler<DeleteUserCommand,Result>
     {
-        private readonly IUnitOfWork _unitOfWork;
-        private readonly IEventBus _eventBus;
-        private readonly ILogger<DeleteUserCommand> _logger;
-        public DeleteUserCommandHandler(
-            IUnitOfWork unitOfWork,
-            IEventBus eventBus,
-            ILogger<DeleteUserCommand> logger)
-        {
-            _unitOfWork=unitOfWork;
-            _eventBus=eventBus;
-            _logger=logger;
-        }
-
-
         public async Task<Result> Handle(
             DeleteUserCommand request,
             CancellationToken cancellationToken)
         {
             try
             {
-                _logger?.LogInformation("Deleting user {UserId}", request.UserId);
+                logger?.LogInformation("Deleting user {UserId}", request.UserId);
 
-                var user = await _unitOfWork.Users
-                    .FirstOrDefaultAsync(r=>r.Id==request.UserId, cancellationToken);
+                var user = await unitOfWork.Users
+                    .FirstOrDefaultAsync(r=>r.Id==request.UserId, cancellationToken) 
+                        ?? throw new NotFoundException($"User with ID {request.UserId} not found");
 
-                if (user == null)
-                    throw new NotFoundException($"User with ID {request.UserId} not found");
+                unitOfWork.Users.Remove(user);
+                await unitOfWork.SaveChangesAsync(cancellationToken);
 
-                _unitOfWork.Users.Remove(user);
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                await eventBus.PublishAsync(new UserDeletedEvent(user.Id, user.Username), cancellationToken);
 
-                await _eventBus.PublishAsync(new UserDeletedEvent(user.Id, user.Username), cancellationToken);
-
-                _logger?.LogInformation("User {UserId} deleted successfully", request.UserId);
+                logger?.LogInformation("User {UserId} deleted successfully", request.UserId);
 
                 return Result.Success();
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Error deleting user {UserId}", request.UserId);
+                logger?.LogError(ex, "Error deleting user {UserId}", request.UserId);
                 return Result.Failure(ex.Message);
             }
         }

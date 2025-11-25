@@ -38,13 +38,6 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence
 
                 try
                 {
-                    // Seed in this order because of foreign key relationships:
-                    // 1. Permissions (no dependencies)
-                    // 2. Roles (no dependencies)
-                    // 3. RolePermissions (depends on Roles and Permissions)
-                    // 4. Users (no dependencies for the admin user)
-                    // 5. UserRoles (depends on Users and Roles)
-
                     await SeedPermissionsAsync(context, logger);
                     await SeedRolesAsync(context, logger);
                     await SeedRolePermissionsAsync(context, logger);
@@ -408,8 +401,7 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence
                 displayName: "System Administrator",
                 createdBy: adminUserId, // Self-created
                 avatarUrl: null,
-                notes: "System administrator account created during initial setup",
-                isAdmin: true
+                notes: "System administrator account created during initial setup"
             )
             {
                 Id = adminUserId

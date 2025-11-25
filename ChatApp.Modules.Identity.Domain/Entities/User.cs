@@ -8,16 +8,18 @@ namespace ChatApp.Modules.Identity.Domain.Entities
         public string Email { get; private set; } = null!;
         public string PasswordHash { get; private set; } = null!;
         public bool IsActive { get; private set;  }
-        public bool IsAdmin { get; private set;  }
         public string DisplayName { get; private set; } = null!;
         public Guid CreatedBy { get;private set;  }
         public string? AvatarUrl { get; private set; } = string.Empty;
         public string? Notes { get; private set; } = string.Empty;
 
         // Navigation properties
-        private readonly List<UserRole> _userRoles = new();
+        private readonly List<UserRole> _userRoles = [];
 
         public IReadOnlyCollection<UserRole> UserRoles => _userRoles.AsReadOnly();
+
+        // Calculated property based on roles
+        public bool IsAdmin => _userRoles.Any(ur => ur.RoleId == Guid.Parse("11111111-1111-1111-1111-111111111111"));
 
         private User() :base() { }
 
@@ -28,8 +30,7 @@ namespace ChatApp.Modules.Identity.Domain.Entities
             string displayName,
             Guid createdBy,
             string? avatarUrl,
-            string? notes,
-            bool isAdmin = false) :base()
+            string? notes) :base()
         {
             if (string.IsNullOrWhiteSpace(username))
                 throw new ArgumentNullException("Usename cannot be empty", nameof(username));
@@ -54,7 +55,6 @@ namespace ChatApp.Modules.Identity.Domain.Entities
             AvatarUrl = avatarUrl ?? string.Empty;
             Notes= notes ?? string.Empty;
             IsActive = true;
-            IsAdmin = isAdmin;
         }
 
 
@@ -132,23 +132,6 @@ namespace ChatApp.Modules.Identity.Domain.Entities
             Username = newUsername;
             UpdateTimestamp();
         }
-
-
-        public void MakeAdmin()
-        {
-            IsAdmin = true;
-            UpdateTimestamp();
-        }
-
-
-
-        public void RevokeAdmin()
-        {
-            IsAdmin = false;
-            UpdateTimestamp();
-        }
-
-
 
         public void AssignRole(UserRole userRole)
         {

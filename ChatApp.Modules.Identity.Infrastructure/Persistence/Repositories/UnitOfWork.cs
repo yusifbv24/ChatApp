@@ -1,36 +1,29 @@
 ﻿using ChatApp.Modules.Identity.Application.Interfaces;
 using ChatApp.Modules.Identity.Domain.Entities;
-using ChatApp.Modules.Identity.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 
 namespace ChatApp.Modules.Identity.Infrastructure.Persistence.Repositories
 {
-    public class UnitOfWork : IUnitOfWork
+    public class UnitOfWork(IdentityDbContext context) : IUnitOfWork
     {
-        private readonly IdentityDbContext _context;
         private IDbContextTransaction? _transaction;
 
-        public DbSet<User> Users => _context.Users;
-        public DbSet<Role> Roles => _context.Roles;
-        public DbSet<UserRole> UserRoles => _context.UserRoles;
-        public DbSet<Permission> Permissions => _context.Permissions;
-        public DbSet<RolePermission> RolePermissions => _context.RolePermissions;
-        public DbSet<RefreshToken> RefreshTokens => _context.RefreshTokens;
-
-        public UnitOfWork(IdentityDbContext context)
-        {
-            _context = context;
-        }
+        public DbSet<User> Users => context.Users;
+        public DbSet<Role> Roles => context.Roles;
+        public DbSet<UserRole> UserRoles => context.UserRoles;
+        public DbSet<Permission> Permissions => context.Permissions;
+        public DbSet<RolePermission> RolePermissions => context.RolePermissions;
+        public DbSet<RefreshToken> RefreshTokens => context.RefreshTokens;
 
         public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
-            return await _context.SaveChangesAsync(cancellationToken);
+            return await context.SaveChangesAsync(cancellationToken);
         }
 
         public async Task BeginTransactionAsync(CancellationToken cancellationToken = default)
         {
-            _transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+            _transaction = await context.Database.BeginTransactionAsync(cancellationToken);
         }
 
         public async Task CommitTransactionAsync(CancellationToken cancellationToken = default)
@@ -56,7 +49,7 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence.Repositories
         public void Dispose()
         {
             _transaction?.Dispose();
-            _context.Dispose();
+            context.Dispose();
         }
     }
 }

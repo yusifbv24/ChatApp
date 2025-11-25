@@ -7,18 +7,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ChatApp.Modules.Notifications.Infrastructure.Repositories
 {
-    public class NotificationRepository : INotificationRepository
+    public class NotificationRepository(NotificationsDbContext context) : INotificationRepository
     {
-        private readonly NotificationsDbContext _context;
-
-        public NotificationRepository(NotificationsDbContext context)
-        {
-            _context = context;
-        }
-
         public async Task<Notification?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
         {
-            return await _context.Notifications
+            return await context.Notifications
                 .FirstOrDefaultAsync(n => n.Id == id, cancellationToken);
         }
 
@@ -28,8 +21,8 @@ namespace ChatApp.Modules.Notifications.Infrastructure.Repositories
             int skip = 0,
             CancellationToken cancellationToken = default)
         {
-            var query = from notification in _context.Notifications
-                        join sender in _context.Set<UserReadModel>()
+            var query = from notification in context.Notifications
+                        join sender in context.Set<UserReadModel>()
                             on notification.SenderId equals sender.Id into senderJoin
                         from sender in senderJoin.DefaultIfEmpty()
                         where notification.UserId == userId
@@ -59,7 +52,7 @@ namespace ChatApp.Modules.Notifications.Infrastructure.Repositories
 
         public async Task<int> GetUnreadCountAsync(Guid userId, CancellationToken cancellationToken = default)
         {
-            return await _context.Notifications
+            return await context.Notifications
                 .Where(n => n.UserId == userId && n.Status != NotificationStatus.Read)
                 .CountAsync(cancellationToken);
         }
@@ -69,7 +62,7 @@ namespace ChatApp.Modules.Notifications.Infrastructure.Repositories
             int batchSize = 100,
             CancellationToken cancellationToken = default)
         {
-            return await _context.Notifications
+            return await context.Notifications
                 .Where(n => n.Channel == channel && n.Status == NotificationStatus.Pending)
                 .OrderBy(n => n.CreatedAtUtc)
                 .Take(batchSize)
@@ -78,24 +71,24 @@ namespace ChatApp.Modules.Notifications.Infrastructure.Repositories
 
         public async Task AddAsync(Notification notification, CancellationToken cancellationToken = default)
         {
-            await _context.Notifications.AddAsync(notification, cancellationToken);
+            await context.Notifications.AddAsync(notification, cancellationToken);
         }
 
         public Task DeleteAsync(Notification notification, CancellationToken cancellationToken = default)
         {
-            _context.Notifications.Remove(notification);
+            context.Notifications.Remove(notification);
             return Task.CompletedTask;
         }
 
         public Task UpdateAsync(Notification notification, CancellationToken cancellationToken = default)
         {
-            _context.Notifications.Update(notification);
+            context.Notifications.Update(notification);
             return Task.CompletedTask;
         }
 
         public async Task MarkAllAsReadAsync(Guid userId, CancellationToken cancellationToken = default)
         {
-            await _context.Notifications
+            await context.Notifications
                 .Where(n => n.UserId == userId && n.Status == NotificationStatus.Sent)
                 .ExecuteUpdateAsync(
                     setters => setters

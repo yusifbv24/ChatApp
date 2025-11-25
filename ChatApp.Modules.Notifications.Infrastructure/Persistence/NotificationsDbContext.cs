@@ -5,12 +5,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ChatApp.Modules.Notifications.Infrastructure.Persistence
 {
-    public class NotificationsDbContext : DbContext
+    public class NotificationsDbContext(DbContextOptions<NotificationsDbContext> options) : DbContext(options)
     {
-        public NotificationsDbContext(DbContextOptions<NotificationsDbContext> options) : base(options)
-        {
-        }
-
         public DbSet<Notification> Notifications => Set<Notification>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

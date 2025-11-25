@@ -40,22 +40,11 @@ namespace ChatApp.Modules.Notifications.Application.Commands.SendNotification
     }
 
 
-    public class SendNotificationCommandHandler : IRequestHandler<SendNotificationCommand, Result<Guid>>
+    public class SendNotificationCommandHandler(
+        IUnitOfWork unitOfWork,
+        IEventBus eventBus,
+        ILogger<SendNotificationCommandHandler> logger) : IRequestHandler<SendNotificationCommand, Result<Guid>>
     {
-        private readonly IUnitOfWork _unitOfWork;
-        private readonly IEventBus _eventBus;
-        private readonly ILogger<SendNotificationCommandHandler> _logger;
-        public SendNotificationCommandHandler(
-            IUnitOfWork unitOfWork,
-            IEventBus eventBus,
-            ILogger<SendNotificationCommandHandler> logger)
-        {
-            _unitOfWork = unitOfWork;
-            _eventBus = eventBus;
-            _logger = logger;
-        }
-
-
         public async Task<Result<Guid>> Handle(
             SendNotificationCommand request,
             CancellationToken cancellationToken)
@@ -74,10 +63,10 @@ namespace ChatApp.Modules.Notifications.Application.Commands.SendNotification
 
                 notification.MarkAsSent();
 
-                await _unitOfWork.Notifications.AddAsync(notification, cancellationToken);
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                await unitOfWork.Notifications.AddAsync(notification, cancellationToken);
+                await unitOfWork.SaveChangesAsync(cancellationToken);
 
-                await _eventBus.PublishAsync(
+                await eventBus.PublishAsync(
                     new NotificationSentEvent(
                         notification.Id,
                         notification.UserId,
@@ -86,13 +75,13 @@ namespace ChatApp.Modules.Notifications.Application.Commands.SendNotification
                         notification.CreatedAtUtc)
                     ,cancellationToken);
 
-                _logger?.LogInformation("Notification {NotificationId} created", notification.Id);
+                logger?.LogInformation("Notification {NotificationId} created", notification.Id);
 
                 return Result.Success(notification.Id);
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Error creating notification");
+                logger?.LogError(ex, "Error creating notification");
                 return Result.Failure<Guid>("An error occurred while creating the notification");
             }
         }    

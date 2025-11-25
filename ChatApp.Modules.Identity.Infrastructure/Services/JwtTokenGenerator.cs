@@ -9,18 +9,11 @@ using System.Text;
 
 namespace ChatApp.Modules.Identity.Infrastructure.Services
 {
-    public class JwtTokenGenerator:ITokenGenerator
+    public class JwtTokenGenerator(IConfiguration configuration) : ITokenGenerator
     {
-        private readonly IConfiguration _configuration;
-
-        public JwtTokenGenerator(IConfiguration configuration)
-        {
-            _configuration= configuration;
-        }
-
         public string GenerateAccessToken(User user, List<string>? permissions)
         {
-            var jwtSettings = _configuration.GetSection("JwtSettings");
+            var jwtSettings = configuration.GetSection("JwtSettings");
             var secret = jwtSettings["Secret"] ?? throw new InvalidOperationException("JWT Secret not configured");
             var issuer = jwtSettings["Issuer"] ?? "ChatApp";
             var audience = jwtSettings["Audience"] ?? "ChatApp";

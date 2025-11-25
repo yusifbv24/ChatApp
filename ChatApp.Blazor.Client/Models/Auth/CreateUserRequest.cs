@@ -25,7 +25,7 @@ public class CreateUserRequest
 
     public Guid CreatedBy { get; set; }
 
-    public bool IsAdmin { get; set; }
+    public List<Guid> RoleIds { get; set; } = new();
 
     public string? AvatarUrl { get; set; }
 

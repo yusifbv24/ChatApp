@@ -4,27 +4,20 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace ChatApp.Modules.Notifications.Infrastructure.Repositories
 {
-    public class UnitOfWork : IUnitOfWork
+    public class UnitOfWork(NotificationsDbContext context) : IUnitOfWork
     {
-        private readonly NotificationsDbContext _context;
         private IDbContextTransaction? _transaction;
 
-        public INotificationRepository Notifications { get; }
-
-        public UnitOfWork(NotificationsDbContext context)
-        {
-            _context = context;
-            Notifications = new NotificationRepository(context);
-        }
+        public INotificationRepository Notifications { get; } = new NotificationRepository(context);
 
         public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
-            return await _context.SaveChangesAsync(cancellationToken);
+            return await context.SaveChangesAsync(cancellationToken);
         }
 
         public async Task BeginTransactionAsync(CancellationToken cancellationToken = default)
         {
-            _transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+            _transaction = await context.Database.BeginTransactionAsync(cancellationToken);
         }
 
         public async Task CommitTransactionAsync(CancellationToken cancellationToken = default)
@@ -50,7 +43,7 @@ namespace ChatApp.Modules.Notifications.Infrastructure.Repositories
         public void Dispose()
         {
             _transaction?.Dispose();
-            _context.Dispose();
+            context.Dispose();
         }
     }
 }

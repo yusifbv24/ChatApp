@@ -41,25 +41,12 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
     }
 
 
-    public class AdminChangePasswordCommandHandler : IRequestHandler<AdminChangePasswordCommand, Result>
+    public class AdminChangePasswordCommandHandler(
+        IUnitOfWork unitOfWork,
+        IPasswordHasher passwordHasher,
+        IEventBus eventBus,
+        ILogger<AdminChangePasswordCommandHandler> logger) : IRequestHandler<AdminChangePasswordCommand, Result>
     {
-        private readonly IUnitOfWork _unitOfWork;
-        private readonly IPasswordHasher _passwordHasher;
-        private readonly IEventBus _eventBus;
-        private readonly ILogger<AdminChangePasswordCommandHandler> _logger;
-
-        public AdminChangePasswordCommandHandler(
-            IUnitOfWork unitOfWork,
-            IPasswordHasher passwordHasher,
-            IEventBus eventBus,
-            ILogger<AdminChangePasswordCommandHandler> logger)
-        {
-            _unitOfWork = unitOfWork;
-            _passwordHasher = passwordHasher;
-            _eventBus = eventBus;
-            _logger = logger;
-        }
-
         public async Task<Result> Handle(
             AdminChangePasswordCommand request,
             CancellationToken cancellationToken = default)
@@ -67,38 +54,36 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
             try
             {
                 // Get the user
-                var user = await _unitOfWork.Users
-                    .FirstOrDefaultAsync(r=>r.Id==request.UserId, cancellationToken);
-
-                if (user == null)
-                    throw new NotFoundException($"User with ID {request.UserId} not found");
+                var user = await unitOfWork.Users
+                    .FirstOrDefaultAsync(r=>r.Id==request.UserId, cancellationToken) 
+                        ?? throw new NotFoundException($"User with ID {request.UserId} not found");
 
                 // Hash the new password
-                var newPasswordHash = _passwordHasher.Hash(request.NewPassword);
+                var newPasswordHash = passwordHasher.Hash(request.NewPassword);
 
                 // Update the password
                 user.ChangePassword(newPasswordHash);
 
                 // Save changes
-                _unitOfWork.Users.Update(user);
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                unitOfWork.Users.Update(user);
+                await unitOfWork.SaveChangesAsync(cancellationToken);
 
                 // Publish password changed event for potential notifications or security logging
-                await _eventBus.PublishAsync(
+                await eventBus.PublishAsync(
                     new UserPasswordChangedEvent(user.Id),
                     cancellationToken);
 
-                _logger?.LogInformation("Admin changed the password of the user {UserId} succesfully", request.UserId);
+                logger?.LogInformation("Admin changed the password of the user {UserId} succesfully", request.UserId);
                 return Result.Success();
             }
             catch (NotFoundException ex)
             {
-                _logger?.LogError(ex, "User {UserId} not found", request.UserId);
+                logger?.LogError(ex, "User {UserId} not found", request.UserId);
                 return Result.Failure(ex.Message);
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Error changing password for user {UserId} by Admin", request.UserId);
+                logger?.LogError(ex, "Error changing password for user {UserId} by Admin", request.UserId);
                 return Result.Failure("An error occurred while changing user password by Admin");
             }
         }

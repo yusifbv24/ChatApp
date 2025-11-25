@@ -51,66 +51,55 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
 
 
 
-    public class UpdateUserCommandHandler:IRequestHandler<UpdateUserCommand,Result>
+    public class UpdateUserCommandHandler(
+        IUnitOfWork unitOfWork,
+        ILogger<UpdateUserCommand> logger) : IRequestHandler<UpdateUserCommand,Result>
     {
-        private readonly IUnitOfWork _unitOfWork;
-        private readonly ILogger<UpdateUserCommand> _logger;
-
-        public UpdateUserCommandHandler(
-            IUnitOfWork unitOfWork,
-            ILogger<UpdateUserCommand> logger)
-        {
-            _unitOfWork = unitOfWork;
-            _logger = logger;
-        }
-
         public async Task<Result> Handle(
             UpdateUserCommand request,
             CancellationToken cancellationToken = default)
         {
             try
             {
-                _logger?.LogInformation("Updating user {UserId}", request.UserId);
+                logger?.LogInformation("Updating user {UserId}", request.UserId);
 
-                var user = await _unitOfWork.Users
-                    .FirstOrDefaultAsync(r=>r.Id==request.UserId, cancellationToken);
-
-                if (user == null)
-                    throw new NotFoundException($"User with ID {request.UserId} not found");
+                var user = await unitOfWork.Users
+                    .FirstOrDefaultAsync(r=>r.Id==request.UserId, cancellationToken) 
+                        ?? throw new NotFoundException($"User with ID {request.UserId} not found");
 
 
                 // Check if user is trying to update email and if it's already taken by another user
-                if(!string.IsNullOrWhiteSpace(request.Email) && request.Email != user.Email)
+                if (!string.IsNullOrWhiteSpace(request.Email) && request.Email != user.Email)
                 {
-                    var emailExists= await _unitOfWork.Users.AnyAsync(
+                    var emailExists= await unitOfWork.Users.AnyAsync(
                         u => u.Email == request.Email && u.Id != request.UserId,
                         cancellationToken);
 
                     if (emailExists)
                     {
-                        _logger?.LogWarning("Email {Email} is already taken by another user ", request.Email);
+                        logger?.LogWarning("Email {Email} is already taken by another user ", request.Email);
                         return Result.Failure("Email is already in use by another user");
                     }
 
                     user.UpdateEmail(request.Email);
-                    _logger?.LogInformation("User {UserId} updated email to {Email}", request.UserId, request.Email);
+                    logger?.LogInformation("User {UserId} updated email to {Email}", request.UserId, request.Email);
                 }
 
                 // Check if display name is already taken by another user
                 if (!string.IsNullOrWhiteSpace(request.DisplayName) && request.DisplayName != user.DisplayName)
                 {
-                    var displayNameExists = await _unitOfWork.Users.AnyAsync(
+                    var displayNameExists = await unitOfWork.Users.AnyAsync(
                         u => u.DisplayName == request.DisplayName && u.Id != request.UserId,
                         cancellationToken);
 
                     if (displayNameExists)
                     {
-                        _logger?.LogWarning("Display name {DisplayName} is already taken by another user", request.DisplayName);
+                        logger?.LogWarning("Display name {DisplayName} is already taken by another user", request.DisplayName);
                         return Result.Failure("Display name is already in use by another user");
                     }
 
                     user.ChangeDisplayName(request.DisplayName);
-                    _logger?.LogInformation("User {UserId} updated display name to {DisplayName}", request.UserId, request.DisplayName);
+                    logger?.LogInformation("User {UserId} updated display name to {DisplayName}", request.UserId, request.DisplayName);
                 }
 
 
@@ -120,20 +109,20 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
                 // Update avatar URL (allow null to clear avatar)
                 user.UpdateAvatarUrl(request.AvatarUrl);
 
-                _unitOfWork.Users.Update(user);
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                unitOfWork.Users.Update(user);
+                await unitOfWork.SaveChangesAsync(cancellationToken);
 
-                _logger?.LogInformation("User {UserId} updated successfully", request.UserId);
+                logger?.LogInformation("User {UserId} updated successfully", request.UserId);
                 return Result.Success();
             }
             catch (NotFoundException ex)
             {
-                _logger?.LogError(ex, "User {UserId} not found", request.UserId);
+                logger?.LogError(ex, "User {UserId} not found", request.UserId);
                 return Result.Failure(ex.Message);
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Error updating user {UserId}", request.UserId);
+                logger?.LogError(ex, "Error updating user {UserId}", request.UserId);
                 return Result.Failure(ex.Message);
             }
         }

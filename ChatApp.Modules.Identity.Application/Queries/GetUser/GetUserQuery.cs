@@ -12,27 +12,17 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetUser
     ):IRequest<Result<UserDto?>>;
 
 
-    public class GetUserQueryHandler : IRequestHandler<GetUserQuery, Result<UserDto?>>
+    public class GetUserQueryHandler(
+        IUnitOfWork unitOfWork,
+        ILogger<GetUserQueryHandler> logger) : IRequestHandler<GetUserQuery, Result<UserDto?>>
     {
-        private readonly IUnitOfWork _unitOfWork;
-        private readonly ILogger<GetUserQueryHandler> _logger;
-
-        public GetUserQueryHandler(
-            IUnitOfWork unitOfWork,
-            ILogger<GetUserQueryHandler> logger)
-        {
-            _unitOfWork = unitOfWork;
-            _logger = logger;
-        }
-
-
         public async Task<Result<UserDto?>> Handle(
             GetUserQuery query,
             CancellationToken cancellationToken = default)
         {
             try
             {
-                var user = await _unitOfWork.Users
+                var user = await unitOfWork.Users
                     .Include(u => u.UserRoles)
                         .ThenInclude(ur => ur.Role)
                     .AsNoTracking()
@@ -67,7 +57,7 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetUser
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Error retrieving user {UserId}", query.UserId);
+                logger?.LogError(ex, "Error retrieving user {UserId}", query.UserId);
                 return Result.Failure<UserDto?>("An error occurred while retrieving the user");
             }
         }
