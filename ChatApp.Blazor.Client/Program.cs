@@ -1,14 +1,12 @@
-using Blazored.LocalStorage;
-using Blazored.SessionStorage;
 using ChatApp.Blazor.Client;
 using ChatApp.Blazor.Client.Extensions;
 using ChatApp.Blazor.Client.Infrastructure.Auth;
 using ChatApp.Blazor.Client.Infrastructure.Http;
 using ChatApp.Blazor.Client.Infrastructure.SignalR;
-using ChatApp.Blazor.Client.Infrastructure.Storage;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using Microsoft.AspNetCore.Components.WebAssembly.Http;
 using MudBlazor.Services;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
@@ -18,7 +16,19 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 
 // Configure base address
 var apiBaseAddress = builder.Configuration["ApiBaseAddress"] ?? "http://localhost:7000";
-builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(apiBaseAddress) });
+
+// Register cookie handler to ensure credentials (cookies) are sent with requests
+builder.Services.AddTransient<CookieHandler>();
+
+// Default HttpClient with cookie support
+builder.Services.AddHttpClient("Default", client =>
+{
+    client.BaseAddress = new Uri(apiBaseAddress);
+})
+.AddHttpMessageHandler<CookieHandler>();
+
+builder.Services.AddScoped(sp =>
+    sp.GetRequiredService<IHttpClientFactory>().CreateClient("Default"));
 
 // MudBlazor Services
 builder.Services.AddMudServices(config =>
@@ -33,26 +43,20 @@ builder.Services.AddMudServices(config =>
     config.SnackbarConfiguration.SnackbarVariant = MudBlazor.Variant.Filled;
 });
 
-// Local and Session Storage
-builder.Services.AddBlazoredLocalStorage();
-builder.Services.AddBlazoredSessionStorage();
-
-// Storage Service
-builder.Services.AddScoped<IStorageService, StorageService>();
-
-// Authentication & Authorization
+// Authentication & Authorization (using secure HttpOnly cookies)
 builder.Services.AddAuthorizationCore();
-builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
-builder.Services.AddScoped<CustomAuthStateProvider>(provider =>
-    (CustomAuthStateProvider)provider.GetRequiredService<AuthenticationStateProvider>());
+builder.Services.AddScoped<CustomAuthStateProvider>();
+builder.Services.AddScoped<AuthenticationStateProvider>(sp =>
+    sp.GetRequiredService<CustomAuthStateProvider>());
 
-// HTTP Client with Authentication
-builder.Services.AddScoped<AuthenticationDelegatingHandler>();
+// HTTP Client with Authentication and Cookie support
+builder.Services.AddTransient<AuthenticationDelegatingHandler>();
 builder.Services.AddHttpClient("ChatApp.Api", client =>
 {
     client.BaseAddress = new Uri(apiBaseAddress);
     client.Timeout = TimeSpan.FromSeconds(30);
 })
+.AddHttpMessageHandler<CookieHandler>()
 .AddHttpMessageHandler<AuthenticationDelegatingHandler>();
 
 builder.Services.AddScoped(sp =>

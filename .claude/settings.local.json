@@ -15,7 +15,12 @@
       "Bash(tasklist:*)",
       "Bash(findstr:*)",
       "Bash(ping:*)",
-      "Bash(nul)"
+      "Bash(nul)",
+      "Bash(Stop-Process -Id 14008 -Force)",
+      "Bash(Stop-Process -Id 11928 -Force)",
+      "Bash(curl:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(netstat:*)"
     ],
     "deny": [],
     "ask": []

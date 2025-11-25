@@ -25,6 +25,8 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetUser
                 var user = await unitOfWork.Users
                     .Include(u => u.UserRoles)
                         .ThenInclude(ur => ur.Role)
+                            .ThenInclude(r => r.RolePermissions)
+                                .ThenInclude(rp => rp.Permission)
                     .AsNoTracking()
                     .FirstOrDefaultAsync(u => u.Id == request.UserId, cancellationToken);
 
@@ -50,7 +52,12 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetUser
                         ur.Role.Name,
                         ur.Role.Description,
                         ur.Role.IsSystemRole,
-                        [],
+                        ur.Role.RolePermissions.Select(rp => new PermissionDto(
+                            rp.Permission.Id,
+                            rp.Permission.Name,
+                            rp.Permission.Description,
+                            rp.Permission.Module
+                        )).ToList(),
                         0,
                         ur.Role.CreatedAtUtc
                     ))

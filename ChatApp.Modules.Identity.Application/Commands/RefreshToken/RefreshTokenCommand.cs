@@ -4,6 +4,7 @@ using ChatApp.Modules.Identity.Domain.Services;
 using ChatApp.Shared.Kernel.Common;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace ChatApp.Modules.Identity.Application.Commands.RefreshToken
@@ -17,7 +18,8 @@ namespace ChatApp.Modules.Identity.Application.Commands.RefreshToken
     public class RefreshTokenCommandHandler(
         IUnitOfWork unitOfWork,
         ITokenGenerator tokenGenerator,
-        ILogger<RefreshTokenCommand> logger) : IRequestHandler<RefreshTokenCommand,Result<RefreshTokenResponse>>
+        ILogger<RefreshTokenCommand> logger,
+        IConfiguration configuration) : IRequestHandler<RefreshTokenCommand,Result<RefreshTokenResponse>>
     {
         public async Task<Result<RefreshTokenResponse>> Handle(
             RefreshTokenCommand request,
@@ -57,6 +59,9 @@ namespace ChatApp.Modules.Identity.Application.Commands.RefreshToken
                     .Distinct()
                     .ToListAsync(cancellationToken);
 
+                // Get token expiration settings from configuration
+                var accessTokenExpirationMinutes = configuration.GetValue<int>("JwtSettings:AccessTokenExpirationMinutes", 30);
+
                 // Generate new tokens
                 var newAccessToken = tokenGenerator.GenerateAccessToken(user, permissions);
                 var newRefreshToken = tokenGenerator.GenerateRefreshToken();
@@ -65,11 +70,11 @@ namespace ChatApp.Modules.Identity.Application.Commands.RefreshToken
                 refreshToken.Revoke();
                 unitOfWork.RefreshTokens.Update(refreshToken);
 
-                // Save new refresh token
+                // Save new refresh token with the same expiration as the old one
                 var newRefreshTokenEntity = new Domain.Entities.RefreshToken(
                     user.Id,
                     newRefreshToken,
-                    DateTime.UtcNow.AddDays(30));
+                    refreshToken.ExpiresAtUtc);
 
                 await unitOfWork.RefreshTokens.AddAsync(newRefreshTokenEntity, cancellationToken);
                 await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -80,7 +85,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.RefreshToken
                 (
                     newAccessToken,
                     newRefreshToken,
-                    28800
+                    accessTokenExpirationMinutes * 60 // Convert minutes to seconds
                ));
             }
             catch (Exception ex)

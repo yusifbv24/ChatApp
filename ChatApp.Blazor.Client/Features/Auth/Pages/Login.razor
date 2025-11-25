@@ -2,6 +2,7 @@
 @layout LoginLayout
 @inject IAuthService AuthService
 @inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
 
 <PageTitle>Login - ChatApp</PageTitle>
 
@@ -90,6 +91,21 @@
     private bool showPassword = false;
     private string? errorMessage;
 
+    protected override async Task OnInitializedAsync()
+    {
+        // Load saved username from localStorage if exists
+        try
+        {
+            var savedUsername = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "rememberedUsername");
+            if (!string.IsNullOrEmpty(savedUsername))
+            {
+                loginModel.Username = savedUsername;
+                loginModel.RememberMe = true;
+            }
+        }
+        catch { }
+    }
+
     private void TogglePasswordVisibility()
     {
         showPassword = !showPassword;
@@ -97,7 +113,6 @@
 
     private void ClearErrorMessage()
     {
-        // Clear error message when user starts typing
         if (!string.IsNullOrEmpty(errorMessage))
         {
             errorMessage = null;
@@ -111,12 +126,22 @@
             isLoading = true;
             errorMessage = null;
             StateHasChanged();
-            await Task.Yield(); // Allow UI to update before starting async operation
+            await Task.Yield();
 
             var result = await AuthService.LoginAsync(loginModel);
 
             if (result.IsSuccess)
             {
+                // Save or clear username based on RememberMe checkbox
+                if (loginModel.RememberMe)
+                {
+                    await JSRuntime.InvokeVoidAsync("localStorage.setItem", "rememberedUsername", loginModel.Username);
+                }
+                else
+                {
+                    await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "rememberedUsername");
+                }
+
                 Navigation.NavigateTo("/", forceLoad: true);
             }
             else

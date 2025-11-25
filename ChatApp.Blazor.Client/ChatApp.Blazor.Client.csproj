@@ -4,7 +4,8 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <ServiceWorkerAssetsManifest>service-worker-assets.js</ServiceWorkerAssetsManifest>
+    <!-- ServiceWorkerAssetsManifest disabled for development to avoid integrity check errors -->
+    <!-- <ServiceWorkerAssetsManifest>service-worker-assets.js</ServiceWorkerAssetsManifest> -->
   </PropertyGroup>
 
   <ItemGroup>
@@ -25,20 +26,14 @@
     <!-- SignalR Client -->
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.0" />
 
-    <!-- Local Storage -->
-    <PackageReference Include="Blazored.LocalStorage" Version="4.5.0" />
-
-    <!-- Session Storage -->
-    <PackageReference Include="Blazored.SessionStorage" Version="2.4.0" />
-
-    <!-- System.Text.Json -->
+    <!-- Note: localStorage/sessionStorage removed - using secure HttpOnly cookies for authentication -->
 
     <!-- FluentValidation -->
     <PackageReference Include="FluentValidation" Version="11.9.0" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.15.0" />
 
-    <!-- Service Worker -->
-    <ServiceWorker Include="wwwroot\service-worker.js" PublishedContent="wwwroot\service-worker.published.js" />
+    <!-- Service Worker disabled for development to avoid integrity check errors -->
+    <!-- <ServiceWorker Include="wwwroot\service-worker.js" PublishedContent="wwwroot\service-worker.published.js" /> -->
   </ItemGroup>
 
   <ItemGroup>

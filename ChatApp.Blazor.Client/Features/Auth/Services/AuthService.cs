@@ -27,49 +27,49 @@ public class AuthService : IAuthService
     }
 
     /// <summary>
-    /// Authenticates user - POST /api/auth/login
+    /// Authenticates user - POST /api/auth/login (cookies set by backend)
     /// </summary>
     public async Task<Result<LoginResponse>> LoginAsync(LoginRequest request)
     {
-        var result = await _apiClient.PostAsync<LoginResponse>("/api/auth/login", request);
+        var result = await _apiClient.PostAsync<object>("/api/auth/login", request);
 
-        if (result.IsSuccess && result.Value != null)
+        if (result.IsSuccess)
         {
-            await _authStateProvider.MarkUserAsAuthenticated(result.Value);
+            // Notify auth state changed (cookies are already set by backend)
+            await _authStateProvider.MarkUserAsAuthenticated();
 
-            // Load current user info
+            // Load current user info from /api/auth/me
             var user = await _authStateProvider.GetCurrentUserAsync();
             _userState.CurrentUser = user;
+
+            // Return success (no tokens in response for security)
+            return Result.Success(new LoginResponse("", "", 0));
         }
 
-        return result;
+        return Result.Failure<LoginResponse>(result.Error ?? "Login failed");
     }
 
     /// <summary>
-    /// Refreshes access token - POST /api/auth/refresh
+    /// Refreshes access token - POST /api/auth/refresh (cookies rotated by backend)
     /// </summary>
     public async Task<Result<LoginResponse>> RefreshTokenAsync()
     {
-        var refreshToken = await _authStateProvider.GetRefreshTokenAsync();
+        var result = await _apiClient.PostAsync<object>("/api/auth/refresh");
 
-        if (string.IsNullOrEmpty(refreshToken))
+        if (result.IsSuccess)
         {
-            return Result.Failure<LoginResponse>("No refresh token available");
-        }
+            // Notify auth state changed (new cookies are already set by backend)
+            await _authStateProvider.MarkUserAsAuthenticated();
 
-        var request = new RefreshTokenRequest(refreshToken);
-        var result = await _apiClient.PostAsync<LoginResponse>("/api/auth/refresh", request);
-
-        if (result.IsSuccess && result.Value != null)
-        {
-            await _authStateProvider.MarkUserAsAuthenticated(result.Value);
-
-            // Reload current user info
+            // Reload current user info from /api/auth/me
             var user = await _authStateProvider.GetCurrentUserAsync();
             _userState.CurrentUser = user;
+
+            // Return success (no tokens in response for security)
+            return Result.Success(new LoginResponse("", "", 0));
         }
 
-        return result;
+        return Result.Failure<LoginResponse>(result.Error ?? "Token refresh failed");
     }
 
     /// <summary>

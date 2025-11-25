@@ -1,34 +1,58 @@
-using ChatApp.Blazor.Client.Infrastructure.Storage;
-using System.Net.Http.Headers;
+using System.Net;
 
 namespace ChatApp.Blazor.Client.Infrastructure.Http;
 
 /// <summary>
-/// HTTP message handler that automatically adds JWT token to requests
+/// HTTP message handler that automatically refreshes access token on 401 responses
 /// </summary>
 public class AuthenticationDelegatingHandler : DelegatingHandler
 {
-    private readonly IStorageService _storageService;
-    private const string AccessTokenKey = "accessToken";
+    private readonly IServiceProvider _serviceProvider;
+    private bool _refreshing = false;
 
-    public AuthenticationDelegatingHandler(IStorageService storageService)
+    public AuthenticationDelegatingHandler(IServiceProvider serviceProvider)
     {
-        _storageService = storageService;
+        _serviceProvider = serviceProvider;
     }
 
     protected override async Task<HttpResponseMessage> SendAsync(
         HttpRequestMessage request,
         CancellationToken cancellationToken)
     {
-        // Get access token from storage
-        var accessToken = await _storageService.GetItemAsync<string>(AccessTokenKey);
-
-        // Add token to request if available
-        if (!string.IsNullOrEmpty(accessToken))
+        // Skip token refresh for auth endpoints to avoid infinite loops
+        if (request.RequestUri?.AbsolutePath.Contains("/api/auth/") == true)
         {
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            return await base.SendAsync(request, cancellationToken);
         }
 
-        return await base.SendAsync(request, cancellationToken);
+        var response = await base.SendAsync(request, cancellationToken);
+
+        // If 401 and not already refreshing, try to refresh token
+        if (response.StatusCode == HttpStatusCode.Unauthorized && !_refreshing)
+        {
+            _refreshing = true;
+            try
+            {
+                // Get auth service from DI
+                using var scope = _serviceProvider.CreateScope();
+                var authService = scope.ServiceProvider.GetRequiredService<Features.Auth.Services.IAuthService>();
+
+                // Try to refresh token
+                var refreshResult = await authService.RefreshTokenAsync();
+
+                if (refreshResult.IsSuccess)
+                {
+                    // Retry the original request with new access token
+                    var retryResponse = await base.SendAsync(request, cancellationToken);
+                    return retryResponse;
+                }
+            }
+            finally
+            {
+                _refreshing = false;
+            }
+        }
+
+        return response;
     }
 }

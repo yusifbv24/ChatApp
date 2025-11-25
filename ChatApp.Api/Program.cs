@@ -144,16 +144,31 @@ builder.Services.AddAuthentication(options =>
         ClockSkew = TimeSpan.Zero
     };
 
-    // Configure JWT for SignalR
+    // Configure JWT to read from cookies (XSS-proof) and SignalR
     options.Events = new JwtBearerEvents
     {
         OnMessageReceived = context =>
         {
-            var accessToken = context.Request.Query["access_token"];
+            // Priority 1: Read token from HttpOnly cookie (secure, XSS-proof)
+            var accessToken = context.Request.Cookies["accessToken"];
 
-            // If the request is for SignalR hub
-            var path = context.HttpContext.Request.Path;
-            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs/chat"))
+            // Priority 2: For SignalR, read from query string (cookies not available in SignalR handshake)
+            if (string.IsNullOrEmpty(accessToken))
+            {
+                accessToken = context.Request.Query["access_token"];
+            }
+
+            // Priority 3: Fall back to Authorization header (for backward compatibility)
+            if (string.IsNullOrEmpty(accessToken))
+            {
+                var authHeader = context.Request.Headers["Authorization"].ToString();
+                if (authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                {
+                    accessToken = authHeader.Substring("Bearer ".Length).Trim();
+                }
+            }
+
+            if (!string.IsNullOrEmpty(accessToken))
             {
                 context.Token = accessToken;
             }

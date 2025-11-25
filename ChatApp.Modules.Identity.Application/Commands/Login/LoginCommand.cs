@@ -5,6 +5,7 @@ using ChatApp.Shared.Kernel.Common;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace ChatApp.Modules.Identity.Application.Commands.Login
@@ -41,7 +42,8 @@ namespace ChatApp.Modules.Identity.Application.Commands.Login
         IUnitOfWork unitOfWork,
         IPasswordHasher passwordHasher,
         ITokenGenerator tokenGenerator,
-        ILogger<LoginCommand> logger) : IRequestHandler<LoginCommand,Result<LoginResponse>>
+        ILogger<LoginCommand> logger,
+        IConfiguration configuration) : IRequestHandler<LoginCommand,Result<LoginResponse>>
     {
         public async Task<Result<LoginResponse>> Handle(
             LoginCommand command,
@@ -82,6 +84,10 @@ namespace ChatApp.Modules.Identity.Application.Commands.Login
                     .Distinct()
                     .ToListAsync(cancellationToken);
 
+                // Get token expiration settings from configuration
+                var accessTokenExpirationMinutes = int.TryParse(configuration["JwtSettings:AccessTokenExpirationMinutes"], out var accessMinutes) ? accessMinutes : 30;
+                var refreshTokenExpirationDays = int.TryParse(configuration["JwtSettings:RefreshTokenExpirationDays"], out var refreshDays) ? refreshDays : 30;
+
                 // Generate tokens
                 var accessToken = tokenGenerator.GenerateAccessToken(user, permissions);
                 var refreshToken = tokenGenerator.GenerateRefreshToken();
@@ -90,7 +96,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.Login
                 var refreshTokenEntity = new Domain.Entities.RefreshToken(
                     user.Id,
                     refreshToken,
-                    DateTime.UtcNow.AddDays(30));
+                    DateTime.UtcNow.AddDays(refreshTokenExpirationDays));
 
                 await unitOfWork.RefreshTokens.AddAsync(refreshTokenEntity, cancellationToken);
                 await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -101,7 +107,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.Login
                 (
                     accessToken,
                     refreshToken,
-                    28800 //8 hours in seconds
+                    accessTokenExpirationMinutes * 60 // Convert minutes to seconds
                 ));
             }
             catch (Exception ex)

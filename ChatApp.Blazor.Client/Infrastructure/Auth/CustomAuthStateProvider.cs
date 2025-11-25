@@ -1,147 +1,94 @@
-using ChatApp.Blazor.Client.Infrastructure.Storage;
 using ChatApp.Blazor.Client.Models.Auth;
 using Microsoft.AspNetCore.Components.Authorization;
-using System.IdentityModel.Tokens.Jwt;
+using System.Net.Http.Json;
 using System.Security.Claims;
 
 namespace ChatApp.Blazor.Client.Infrastructure.Auth;
 
 /// <summary>
-/// Custom authentication state provider for JWT-based authentication
+/// Custom authentication state provider using HttpOnly cookies (XSS-proof)
 /// </summary>
 public class CustomAuthStateProvider : AuthenticationStateProvider
 {
-    private readonly IStorageService _storageService;
     private readonly HttpClient _httpClient;
-    private readonly JwtSecurityTokenHandler _jwtHandler;
 
-    private const string AccessTokenKey = "accessToken";
-    private const string RefreshTokenKey = "refreshToken";
-
-    public CustomAuthStateProvider(
-        IStorageService storageService,
-        HttpClient httpClient)
+    public CustomAuthStateProvider(HttpClient httpClient)
     {
-        _storageService = storageService;
         _httpClient = httpClient;
-        _jwtHandler = new JwtSecurityTokenHandler();
     }
 
     public override async Task<AuthenticationState> GetAuthenticationStateAsync()
     {
-        var accessToken = await _storageService.GetItemAsync<string>(AccessTokenKey);
-
-        if (string.IsNullOrEmpty(accessToken))
-        {
-            return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
-        }
-
         try
         {
-            var claims = ParseClaimsFromJwt(accessToken);
-            var identity = new ClaimsIdentity(claims, "jwt");
-            var user = new ClaimsPrincipal(identity);
+            // Call /api/auth/me to get current user (cookie sent automatically)
+            var user = await _httpClient.GetFromJsonAsync<UserDto>("/api/auth/me");
 
-            return new AuthenticationState(user);
+            if (user != null)
+            {
+                var claims = new List<Claim>
+                {
+                    new(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                    new(ClaimTypes.Name, user.Username),
+                    new(ClaimTypes.Email, user.Email),
+                    new("DisplayName", user.DisplayName ?? user.Username),
+                    new("IsAdmin", user.IsAdmin.ToString())
+                };
+
+                if (!string.IsNullOrEmpty(user.AvatarUrl))
+                {
+                    claims.Add(new("AvatarUrl", user.AvatarUrl));
+                }
+
+                var identity = new ClaimsIdentity(claims, "cookie");
+                var principal = new ClaimsPrincipal(identity);
+
+                return new AuthenticationState(principal);
+            }
         }
         catch
         {
-            // Token is invalid, clear it
-            await MarkUserAsLoggedOut();
-            return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
+            // Not authenticated or error occurred
         }
+
+        return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
     }
 
     /// <summary>
-    /// Marks user as authenticated and stores tokens
+    /// Marks user as authenticated (cookies are set by backend)
     /// </summary>
-    public async Task MarkUserAsAuthenticated(LoginResponse loginResponse)
+    public async Task MarkUserAsAuthenticated()
     {
-        await _storageService.SetItemAsync(AccessTokenKey, loginResponse.AccessToken);
-        await _storageService.SetItemAsync(RefreshTokenKey, loginResponse.RefreshToken);
-
-        var claims = ParseClaimsFromJwt(loginResponse.AccessToken);
-        var identity = new ClaimsIdentity(claims, "jwt");
-        var user = new ClaimsPrincipal(identity);
-
-        var authState = Task.FromResult(new AuthenticationState(user));
+        // Get updated authentication state from /api/auth/me
+        var authState = GetAuthenticationStateAsync();
         NotifyAuthenticationStateChanged(authState);
+        await Task.CompletedTask;
     }
 
     /// <summary>
-    /// Marks user as logged out and clears tokens
+    /// Marks user as logged out (cookies are cleared by backend)
     /// </summary>
-    public async Task MarkUserAsLoggedOut()
+    public Task MarkUserAsLoggedOut()
     {
-        await _storageService.RemoveItemAsync(AccessTokenKey);
-        await _storageService.RemoveItemAsync(RefreshTokenKey);
-
         var anonymousUser = new ClaimsPrincipal(new ClaimsIdentity());
         var authState = Task.FromResult(new AuthenticationState(anonymousUser));
         NotifyAuthenticationStateChanged(authState);
+        return Task.CompletedTask;
     }
 
     /// <summary>
-    /// Gets the current user information
+    /// Gets the current user information from the API (cookie-based)
     /// </summary>
     public async Task<UserDto?> GetCurrentUserAsync()
     {
-        var authState = await GetAuthenticationStateAsync();
-        var user = authState.User;
-
-        if (!user.Identity?.IsAuthenticated ?? true)
+        try
+        {
+            return await _httpClient.GetFromJsonAsync<UserDto>("/api/auth/me");
+        }
+        catch
         {
             return null;
         }
-
-        // Try multiple possible claim type variations
-        var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value
-                     ?? user.FindFirst("sub")?.Value
-                     ?? user.FindFirst("nameid")?.Value;
-
-        var username = user.FindFirst(ClaimTypes.Name)?.Value
-                      ?? user.FindFirst("name")?.Value
-                      ?? user.FindFirst("unique_name")?.Value;
-
-        var email = user.FindFirst(ClaimTypes.Email)?.Value
-                   ?? user.FindFirst("email")?.Value;
-
-        var displayName = user.FindFirst("DisplayName")?.Value
-                         ?? user.FindFirst("display_name")?.Value
-                         ?? user.FindFirst("name")?.Value;
-
-        var avatarUrl = user.FindFirst("AvatarUrl")?.Value
-                       ?? user.FindFirst("avatar_url")?.Value
-                       ?? user.FindFirst("picture")?.Value;
-
-        // Check for admin claim in various formats
-        var isAdminClaim = user.FindFirst("IsAdmin")?.Value
-                          ?? user.FindFirst("is_admin")?.Value
-                          ?? user.FindFirst(ClaimTypes.Role)?.Value;
-
-        var isAdmin = isAdminClaim == "True"
-                     || isAdminClaim == "true"
-                     || isAdminClaim == "Admin"
-                     || user.IsInRole("Admin");
-
-        if (string.IsNullOrEmpty(userId))
-        {
-            return null;
-        }
-
-        return new UserDto(
-            Guid.Parse(userId),
-            username ?? email ?? "unknown",
-            email ?? "",
-            displayName ?? username ?? email ?? "User",
-            avatarUrl,
-            null,
-            Guid.Empty,
-            true,
-            isAdmin,
-            DateTime.UtcNow,
-            new List<RoleDto>()
-        );
     }
 
     /// <summary>
@@ -149,47 +96,20 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
     /// </summary>
     public async Task<bool> HasPermissionAsync(string permission)
     {
-        var authState = await GetAuthenticationStateAsync();
-        var user = authState.User;
+        var user = await GetCurrentUserAsync();
 
-        if (!user.Identity?.IsAuthenticated ?? true)
+        if (user == null)
         {
             return false;
         }
 
         // Check if user is admin (admins have all permissions)
-        var isAdmin = user.FindFirst("IsAdmin")?.Value == "True";
-        if (isAdmin)
+        if (user.IsAdmin)
         {
             return true;
         }
 
-        // Check specific permission
-        return user.HasClaim("Permission", permission);
-    }
-
-    /// <summary>
-    /// Gets access token from storage
-    /// </summary>
-    public async Task<string?> GetAccessTokenAsync()
-    {
-        return await _storageService.GetItemAsync<string>(AccessTokenKey);
-    }
-
-    /// <summary>
-    /// Gets refresh token from storage
-    /// </summary>
-    public async Task<string?> GetRefreshTokenAsync()
-    {
-        return await _storageService.GetItemAsync<string>(RefreshTokenKey);
-    }
-
-    /// <summary>
-    /// Parses claims from JWT token
-    /// </summary>
-    private IEnumerable<Claim> ParseClaimsFromJwt(string jwt)
-    {
-        var token = _jwtHandler.ReadJwtToken(jwt);
-        return token.Claims;
+        // Check specific permission in user's roles
+        return user.Roles.Any(r => r.Permissions.Any(p => p.Name == permission));
     }
 }

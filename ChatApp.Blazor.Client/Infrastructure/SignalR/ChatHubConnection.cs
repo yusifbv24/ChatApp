@@ -28,16 +28,11 @@ public class ChatHubConnection : IChatHubConnection, IAsyncDisposable
             return;
         }
 
-        var accessToken = await _authStateProvider.GetAccessTokenAsync();
-
+        // Note: SignalR will use cookies automatically for authentication
+        // The backend JWT middleware reads from cookies first
+        // Cookies are sent automatically by the browser in Blazor WASM
         _hubConnection = new HubConnectionBuilder()
-            .WithUrl(_hubUrl, options =>
-            {
-                if (!string.IsNullOrEmpty(accessToken))
-                {
-                    options.AccessTokenProvider = () => Task.FromResult<string?>(accessToken);
-                }
-            })
+            .WithUrl(_hubUrl)
             .WithAutomaticReconnect()
             .Build();
 
