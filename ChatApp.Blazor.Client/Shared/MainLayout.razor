@@ -102,8 +102,15 @@
 
         <!-- Navigation -->
         <nav class="sidebar-nav">
-            <a href="/" class="nav-item @(IsActive("/"))">
-                <MudIcon Icon="@Icons.Material.Filled.Message" />
+            <a href="/" class="nav-item @(IsActive("/") && !Navigation.Uri.Contains("/messages"))">
+                <MudIcon Icon="@Icons.Material.Filled.Dashboard" />
+                @if (isSidebarOpen)
+                {
+                    <span>Dashboard</span>
+                }
+            </a>
+            <a href="/messages" class="nav-item @(IsActive("/messages"))">
+                <MudIcon Icon="@Icons.Material.Filled.Chat" />
                 @if (isSidebarOpen)
                 {
                     <span>Messages</span>
