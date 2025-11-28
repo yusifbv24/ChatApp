@@ -1,0 +1,419 @@
+﻿@implements IDisposable
+
+<div class="chat-area">
+    @if (IsEmpty)
+    {
+        <!-- Empty State -->
+        <div class="chat-empty-state">
+            <div class="empty-illustration">
+                <MudIcon Icon="@Icons.Material.Filled.Forum" Class="empty-main-icon"/>
+            </div>
+            <h2>Select a conversation</h2>
+            <p>Choose a conversation from the list or start a new one</p>
+        </div>
+    }
+    else
+    {
+        <!-- Chat Header -->
+        <div class="chat-header">
+            <div class="chat-header-info">
+                @if (IsDirectMessage)
+                {
+                    <div class="header-avatar">
+                        @if (!string.IsNullOrEmpty(RecipientAvatarUrl))
+                        {
+                            <img src="@RecipientAvatarUrl" alt="@RecipientName" />
+                        }
+                        else
+                        {
+                            <div class="avatar-placeholder">@GetInitials(RecipientName)</div>
+                        }
+                        <span class="online-indicator @(IsRecipientOnline ? "online" : "offline")"></span>
+                    </div>
+                    <div class="header-details">
+                        <h3 class="header-name">@RecipientName</h3>
+                        <span class="header-status">@(IsRecipientOnline ? "Online" : "Offline")</span>
+                    </div>
+                }
+                else
+                {
+                    <div class="header-channel-icon">
+                        <MudIcon Icon="@(ChannelType==ChannelType.Private ? Icons.Material.Filled.Lock : Icons.Material.Filled.Tag)" />
+                    </div>
+                    <div class="header-details">
+                        <h3 class="header-name">@ChannelName</h3>
+                        <span class="header-status">@MemberCount members</span>
+                    </div>
+                }
+            </div>
+            <div class="chat-header-actions">
+                @if (!IsDirectMessage)
+                {
+                    <button class="header-action-btn" title="Pinned messages" @onclick="TogglePinnedMessages">
+                        <MudIcon Icon="@Icons.Material.Filled.PushPin" />
+                        @if (PinnedCount > 0)
+                        {
+                            <span class="action-badge">@PinnedCount</span>
+                        }
+                    </button>
+                }
+                <button class="header-action-btn" title="Search" @onclick="ToggleSearch">
+                    <MudIcon Icon="@Icons.Material.Filled.Search" />
+                </button>
+                <button class="header-action-btn" title="Info" @onclick="ToggleInfoPanel">
+                    <MudIcon Icon="@Icons.Material.Filled.Info" />
+                </button>
+            </div>
+        </div>
+
+        @if (showSearch)
+        {
+            <div class="chat-search-bar">
+                <MudIcon Icon="@Icons.Material.Filled.Search" Size="Size.Small" />
+                <input type="text"
+                       placeholder="Search in conversation..."
+                       @bind="SearchQuery"
+                       @bind:event="oninput" />
+                <button class="close-search-btn" @onclick="ToggleSearch">
+                    <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small"/>
+                </button>
+            </div>
+        }
+
+        <!-- Messages Area -->
+        <div class="messages-container" @ref="messagesContainerRef">
+            @if (IsLoading)
+            {
+                <div class="messages-loading">
+                    <div class="loading-spinner"></div>
+                    <span>Loading messages...</span>
+                </div>
+            }
+            else if (HasMoreMessages)
+            {
+                <div class="load-more-container">
+                    <button class="load-more-btn" @onclick="LoadMoreMessages" disabled="@IsLoadingMore">
+                        @if (IsLoadingMore)
+                        {
+                            <div class="loading-spinner small"></div>
+                        }
+                        else
+                        {
+                            <span>Load earlier messages</span>
+                        }
+                    </button>
+                </div>
+            }
+
+            @if (DirectMessages.Any())
+            {
+                @foreach(var group in GroupedDirectMessages)
+                {
+                    <div class="date-divider">
+                        <span>@FormatDateDivider(group.Key)</span>
+                    </div>
+                    @foreach(var message in group)
+                    {
+                        <MessageBubble MessageId="message.Id"
+                                       Content="@message.Content"
+                                       SenderName="@message.SenderDisplayName"
+                                       AvatarUrl="@message.SenderAvatarUrl"
+                                       CreatedAt="@message.CreatedAtUtc"
+                                       IsOwn="@(message.SenderId==CurrentUserId)"
+                                       IsEdited="@message.IsEdited"
+                                       IsDeleted="@message.IsDeleted"
+                                       IsRead="@message.IsRead"
+                                       ReactionCount="@message.ReactionCount"
+                                       IsDirectMessage="true"
+                                       ShowAvatar="@ShouldShowAvatar(message,group)"
+                                       ShowSenderName="false"
+                                       OnEdit="()=>StartEditMessage(message.Id,message.Content)"
+                                       OnDelete="()=>DeleteMessage(message.Id)"
+                                       OnReaction="(emoji)=>AddReaction(message.Id,emoji)" />
+                    }
+                }
+            }
+            else if (ChannelMessages.Any())
+            {
+                @foreach(var group in GroupedChannelMessages)
+                {
+                    <div class="date-divider">
+                        <span>@FormatDateDivider(group.Key)</span>
+                    </div>
+                    @foreach (var message in group)
+                    {
+                        <MessageBubble MessageId="message.Id"
+                                       Content="@message.Content"
+                                       SenderName="@message.SenderDisplayName"
+                                       AvatarUrl="@message.SenderAvatarUrl"
+                                       CreatedAt="@message.CreatedAtUtc"
+                                       IsOwn="@(message.SenderId == CurrentUserId)"
+                                       IsEdited="@message.IsEdited"
+                                       IsDeleted="@message.IsDeleted"
+                                       IsPinned="@message.IsPinned"
+                                       ReactionCount="@message.ReactionCount"
+                                       IsDirectMessage="false"
+                                       ShowAvatar="@ShouldShowChannelAvatar(message, group)"
+                                       ShowSenderName="@ShouldShowSenderName(message, group)"
+                                       OnEdit="() => StartEditMessage(message.Id, message.Content)"
+                                       OnDelete="() => DeleteMessage(message.Id)"
+                                       OnReaction="(emoji) => AddReaction(message.Id, emoji)" />
+                    }
+                }
+            }
+            else if (!IsLoading)
+            {
+                <div class="no-messages">
+                    <MudIcon Icon="@Icons.Material.Filled.ChatBubbleOutline" Class="no-messages-icon">
+                        <p>No messages yet</p>
+                        <span>Send a message to start the conversation</span>
+                    </MudIcon>
+                </div>
+            }
+            <div @ref="scrollAnchorRef"></div>
+        </div>
+
+        <!-- Message Input -->
+        <MessageInput Placeholder="@GetInputPlaceholder()"
+                      IsEditing="@isEditing"
+                      EditingContent="@editingContent"
+                      IsSending="@IsSending"
+                      TypingUsers="@TypingUsers"
+                      OnSend="SendMessage"
+                      OnEdit="EditMessage"
+                      OnCancelEdit="CancelEdit"
+                      OnTyping="HandleTyping"
+                      OnAttach="HandleAttach" />
+    }
+</div>
+<!-- Info Panel (slide out) -->
+@if (showInfoPanel)
+{
+    <div class="info-panel-overlay" @onclick="CloseInfoPanel">
+        <div class="info-panel" @onclick:stopPropagation="true">
+            <div class="info-panel-header">
+                <h3>@(IsDirectMessage? "Contact Info" : "Channel Info")</h3>
+                <button class="close-panel-btn" @onclick="CloseInfoPanel">
+                    <MudIcon Icon="@Icons.Material.Filled.Close" />
+                </button>
+            </div>
+            <div class="info-panel-content">
+                @if (IsDirectMessage)
+                {
+                    <div class="info-avatar-section">
+                        @if (!string.IsNullOrEmpty(RecipientAvatarUrl))
+                        {
+                            <img src="@RecipientAvatarUrl" alt="@RecipientName" class="info-avatar" />
+                        }
+                        else
+                        {
+                            <div class="info-avatar-placeholder">@GetInitials(RecipientName)></div>
+                        }
+                        <h4>@RecipientName</h4> 
+                        <span class="info-status @(IsRecipientOnline ? "online" : "")">
+                            @(IsRecipientOnline ? "Online" : "Offline")
+                        </span>
+                    </div>
+                }
+                else
+                {
+                    <div class="info-channel-section">
+                        <div class="info-channel-icon">
+                            <MudIcon Icon="@(ChannelType == ChannelType.Private ? Icons.Material.Filled.Lock : Icons.Material.Filled.Tag)" />
+                        </div>
+                        <h4>@ChannelName</h4>
+                        <p class="info-description">@ChannelDescription</p>
+                        <span class="info-members">@MemberCount members</span>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+
+@code {
+    [Parameter] public bool IsEmpty { get; set; } = true;
+    [Parameter] public bool IsDirectMessage { get; set; } = true;
+    [Parameter] public Guid CurrentUserId { get; set; }
+
+    // Direct Message Parameters
+    [Parameter] public List<DirectMessageDto> DirectMessages { get; set; } = new();
+    [Parameter] public string RecipientName { get; set; } = "";
+    [Parameter] public string? RecipientAvatarUrl { get; set; }
+    [Parameter] public bool IsRecipientOnline { get; set; }
+
+    // Channel Parameters
+    [Parameter] public List<ChannelMessageDto> ChannelMessages { get; set; } = new();
+    [Parameter] public string ChannelName { get; set; } = "";
+    [Parameter] public string? ChannelDescription { get; set; }
+    [Parameter] public ChannelType ChannelType { get; set; }
+    [Parameter] public int MemberCount { get; set; }
+    [Parameter] public int PinnedCount { get; set; }
+
+    // Common Parameters
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public bool IsLoadingMore { get; set; }
+    [Parameter] public bool HasMoreMessages { get; set; }
+    [Parameter] public bool IsSending { get; set; }
+    [Parameter] public List<string> TypingUsers { get; set; } = new();
+
+
+    // Event Callbacks
+    [Parameter] public EventCallback<string> OnSendMessage { get; set; }
+    [Parameter] public EventCallback<(Guid messageId, string content)> OnEditMessage { get; set; }
+    [Parameter] public EventCallback<Guid> OnDeleteMessage { get; set; }
+    [Parameter] public EventCallback<(Guid messageId, string emoji)> OnAddReaction { get; set; }
+    [Parameter] public EventCallback<bool> OnTyping { get; set; }
+    [Parameter] public EventCallback OnLoadMore { get; set; }
+    [Parameter] public EventCallback OnShowPinnedMessages { get; set; }
+
+
+    private ElementReference messagesContainerRef;
+    private ElementReference scrollAnchorRef;
+    private bool showSearch = false;
+    private bool showInfoPanel = false;
+    private string SearchQuery { get; set; } = "";
+    private bool isEditing = false;
+    private Guid editingMessageId;
+    private string editingContent = "";
+
+
+    private IEnumerable<IGrouping<DateTime, DirectMessageDto>> GroupedDirectMessages =>
+        DirectMessages
+            .OrderBy(m => m.CreatedAtUtc)
+            .GroupBy(m => m.CreatedAtUtc.Date);
+
+    private IEnumerable<IGrouping<DateTime, ChannelMessageDto>> GroupedChannelMessages =>
+        ChannelMessages
+            .OrderBy(m => m.CreatedAtUtc)
+            .GroupBy(m => m.CreatedAtUtc.Date);
+
+    private string GetInitials(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "?";
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length >= 2
+            ? $"{parts[0][0]}{parts[1][0]}".ToUpper()
+            : name[0].ToString().ToUpper();
+    }
+
+    private string FormatDateDivider(DateTime date)
+    {
+        var today = DateTime.UtcNow.Date;
+        if (date == today) return "Today";
+        if (date == today.AddDays(-1)) return "Yesterday";
+        if ((today - date).TotalDays < 7) return date.ToString("dddd");
+        return date.ToString("MMMM d, yyyy");
+    }
+
+    private string GetInputPlaceholder()
+    {
+        return IsDirectMessage
+            ? $"Message {RecipientName}..."
+            : $"Message #{ChannelName}...";
+    }
+
+    private bool ShouldShowAvatar(DirectMessageDto message, IEnumerable<DirectMessageDto> messages)
+    {
+        var list = messages.ToList();
+        var index = list.IndexOf(message);
+        if (index == 0) return true;
+        return list[index - 1].SenderId != message.SenderId;
+    }
+
+    private bool ShouldShowChannelAvatar(ChannelMessageDto message, IEnumerable<ChannelMessageDto> messages)
+    {
+        var list = messages.ToList();
+        var index = list.IndexOf(message);
+        if (index == 0) return true;
+        return list[index - 1].SenderId != message.SenderId;
+    }
+
+    private bool ShouldShowSenderName(ChannelMessageDto message, IEnumerable<ChannelMessageDto> messages)
+    {
+        var list = messages.ToList();
+        var index = list.IndexOf(message);
+        if (index == 0) return message.SenderId != CurrentUserId;
+        if (message.SenderId == CurrentUserId) return false;
+        return list[index - 1].SenderId != message.SenderId;
+    }
+
+    private void ToggleSearch()
+    {
+        showSearch = !showSearch;
+        if (!showSearch) SearchQuery = "";
+    }
+
+    private void ToggleInfoPanel()
+    {
+        showInfoPanel = !showInfoPanel;
+    }
+
+    private void CloseInfoPanel()
+    {
+        showInfoPanel = false;
+    }
+
+    private async Task TogglePinnedMessages()
+    {
+        await OnShowPinnedMessages.InvokeAsync();
+    }
+
+
+    private async Task LoadMoreMessages()
+    {
+        await OnLoadMore.InvokeAsync();
+    }
+
+    private async Task SendMessage(string content)
+    {
+        await OnSendMessage.InvokeAsync(content);
+    }
+
+    private void StartEditMessage(Guid messageId, string content)
+    {
+        isEditing = true;
+        editingMessageId = messageId;
+        editingContent = content;
+    }
+
+    private async Task EditMessage(string newContent)
+    {
+        await OnEditMessage.InvokeAsync((editingMessageId, newContent));
+        CancelEdit();
+    }
+
+    private void CancelEdit()
+    {
+        isEditing = false;
+        editingMessageId = Guid.Empty;
+        editingContent = "";
+    }
+
+    private async Task DeleteMessage(Guid messageId)
+    {
+        await OnDeleteMessage.InvokeAsync(messageId);
+    }
+
+    private async Task AddReaction(Guid messageId, string emoji)
+    {
+        await OnAddReaction.InvokeAsync((messageId, emoji));
+    }
+
+    private async Task HandleTyping(bool isTyping)
+    {
+        await OnTyping.InvokeAsync(isTyping);
+    }
+
+    private void HandleAttach()
+    {
+        // File attachment will be implemented later
+        Console.WriteLine("Attach file clicked");
+    }
+
+    public void Dispose()
+    {
+        // Cleanup if needed
+    }
+}

@@ -142,7 +142,7 @@
                     await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "rememberedUsername");
                 }
 
-                Navigation.NavigateTo("/", forceLoad: true);
+                Navigation.NavigateTo("/", forceLoad: false);
             }
             else
             {

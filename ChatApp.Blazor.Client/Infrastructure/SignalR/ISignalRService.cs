@@ -1,3 +1,5 @@
+using ChatApp.Blazor.Client.Models.Messages;
+
 namespace ChatApp.Blazor.Client.Infrastructure.SignalR;
 
 /// <summary>
@@ -5,14 +7,60 @@ namespace ChatApp.Blazor.Client.Infrastructure.SignalR;
 /// </summary>
 public interface ISignalRService
 {
+    // Connection state
+    bool IsConnected { get; }
+    event Action? OnConnected;
+    event Action? OnDisconnected;
+    event Action? OnReconnecting;
+    event Action? OnReconnected;
+
+
+    // Presence events
     event Action<Guid>? OnUserOnline;
     event Action<Guid>? OnUserOffline;
-    event Action<object>? OnNewMessage;
-    event Action<Guid, Guid>? OnMessageEdited;
-    event Action<Guid, Guid>? OnMessageDeleted;
-    event Action<Guid, string>? OnUserTyping;
 
+
+    // Direct message events
+    event Action<DirectMessageDto>? OnNewDirectMessage;
+    event Action<Guid, Guid>? OnDirectMessageEdited;
+    event Action<Guid, Guid>? OnDirectMessageDeleted;
+    event Action<Guid, Guid, Guid, DateTime>? OnMessageRead;
+
+
+    // Channel message events
+    event Action<ChannelMessageDto>? OnNewChannelMessage;
+    event Action<Guid,Guid>? OnChannelMessageEdited;
+    event Action<Guid,Guid>? OnChannelMessageDeleted;
+
+
+    // Typing indicators
+    event Action<Guid, Guid, bool>? OnUserTypingInChannel;
+    event Action<Guid, Guid, bool>? OnUserTypingInConversation;
+
+
+    // Reaction events
+    event Action<Guid, Guid, Guid, string>? OnReactionAdded;
+    event Action<Guid, Guid, Guid, string>? OnReactionRemoved;
+
+
+    // Connection management
     Task InitializeAsync();
     Task DisconnectAsync();
     Task<bool> IsConnectedAsync();
+
+
+    // Channel/Conversation group management
+    Task JoinChannelAsync(Guid channelId);
+    Task LeaveChannelAsync(Guid channelId);
+    Task JoinConversationAsync(Guid channelId);
+    Task LeaveConversationAsync(Guid conversationId);
+
+
+    // Typing indicators
+    Task SendTypingInChannelAsync(Guid channelId, bool isTyping);
+    Task SendTypingInConversationAsync(Guid conversationId, bool isTyping);
+
+
+    // Online status
+    Task<Dictionary<Guid, bool>> GetOnlineStatusAsync(List<Guid> userIds);
 }

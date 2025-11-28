@@ -1,6 +1,7 @@
-using ChatApp.Blazor.Client.Features.Auth.Services;
 using ChatApp.Blazor.Client.Features.Admin.Services;
+using ChatApp.Blazor.Client.Features.Auth.Services;
 using ChatApp.Blazor.Client.Features.Files.Services;
+using ChatApp.Blazor.Client.Features.Messages.Services;
 using ChatApp.Blazor.Client.State;
 
 namespace ChatApp.Blazor.Client.Extensions;
@@ -25,6 +26,10 @@ public static class ServiceCollectionExtensions
 
         // File Services
         services.AddScoped<IFileService, FileService>();
+
+        // Messaging Services
+        services.AddScoped<IConversationService, ConversationService>();
+        services.AddScoped<IChannelService, ChannelService>();
 
         return services;
     }

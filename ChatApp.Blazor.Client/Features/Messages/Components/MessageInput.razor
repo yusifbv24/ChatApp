@@ -1,0 +1,243 @@
+﻿<div class="message-input-container @(IsEditing ? "editing" : "")">
+    @if (IsEditing)
+    {
+        <div class="edit-indicator">
+            <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" />
+            <span>Editing message</span>
+            <button class="cancel-edit-btn" @onclick="CancelEdit">
+                <MudIcon  Icon="@Icons.Material.Filled.Close" Size="Size.Small" />
+            </button>
+        </div>
+    }
+    @if (TypingUsers.Any())
+    {
+        <div class="typing-indicator">
+            <div class="typing-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            <span class="typing-text">
+                @if (TypingUsers.Count == 1)
+                {
+                    @($"{TypingUsers.First()} is typing...")
+                }
+                else if (TypingUsers.Count == 2)
+                {
+                    @($"{TypingUsers[0]} and {TypingUsers[1]} are typing...")
+                }
+                else
+                {
+                    @($"{TypingUsers.Count} people are typing...")
+                }
+            </span>
+        </div>
+    }
+
+    <div class="input-row">
+        <button class="input-action-btn attach-btn" title="Attach file" @onclick="OnAttachClick" disabled="@IsSending">
+            <MudIcon Icon="@Icons.Material.Filled.AttachFile" />
+        </button>
+
+        <div class="input-wrapper">
+            <textarea @ref="textAreaRef"
+                      class="message-textarea"
+                      placeholder="@Placeholder"
+                      @bind="MessageText"
+                      @bind:event="oninput"
+                      @onkeydown="HandleKeyDown"
+                      @onfocus="HandleFocus"
+                      @onblur="HandleBlur"
+                      disabled="@IsSending"
+                      rows="1"></textarea>
+        </div>
+
+        <button class="input-action-btn emoji-btn" title="Emoji" @onclick="ToggleEmojiPicker" disabled="@IsSending">
+            <MudIcon Icon="@Icons.Material.Filled.EmojiEmotions"/>
+        </button>
+
+        <button class="send-btn @(CanSend ? "active" : "")"
+                title="@(IsEditing ? "Save" : "Send")"
+                @onclick="SendMessage"
+                disabled="@(!CanSend || IsSending)">
+            @if (IsSending)
+            {
+                <div class="send-spinner"></div>
+            }
+            else
+            {
+                <MudIcon Icon="@(IsEditing ? Icons.Material.Filled.Check : Icons.Material.Filled.Send)" />
+            }
+        </button>
+    </div>
+</div>
+
+<!-- Emoji Picker -->
+@if (showEmojiPicker)
+{
+    <div class="emoji-picker-overlay" @onclick="CloseEmojiPicker">
+        <div class="emoji-picker" @onclick:stopPropagation="true">
+            <div class="emoji-picker-header">
+                <span>Emoji</span>
+                <button class="close-picker-btn" @onclick="CloseEmojiPicker">
+                    <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" />
+                </button>
+            </div>
+            <div class="emoji-grid">
+                @foreach(var emoji in CommonEmojis)
+                {
+                    <button class="emoji-btn" @onclick="()=>InsertEmoji(emoji)">@emoji</button>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@code{
+    [Parameter] public string Placeholder { get; set; } = "Type a message...";
+    [Parameter] public bool IsEditing { get; set; }
+    [Parameter] public string? EditingContent { get; set; }
+    [Parameter] public bool IsSending { get; set; }
+    [Parameter] public List<string> TypingUsers { get; set; } = [];
+    [Parameter] public EventCallback<string> OnSend { get; set; }
+    [Parameter] public EventCallback<string> OnEdit { get; set; }
+    [Parameter] public EventCallback OnCancelEdit { get; set; }
+    [Parameter] public EventCallback<bool> OnTyping { get; set; }
+    [Parameter] public EventCallback OnAttach { get; set; }
+
+    private ElementReference textAreaRef;
+    private string MessageText { get; set; } = "";
+    private bool showEmojiPicker=false;
+    private bool isTyping = false;
+    private System.Timers.Timer? typingTimer;
+
+    private readonly string[] CommonEmojis = {
+
+        "😀", "😃", "😄", "😁", "😅", "😂", "🤣", "😊",
+
+        "😇", "🙂", "🙃", "😉", "😌", "😍", "🥰", "😘",
+
+        "😗", "😙", "😚", "😋", "😛", "😜", "🤪", "😝",
+
+        "🤑", "🤗", "🤭", "🤫", "🤔", "🤐", "🤨", "😐",
+
+        "👍", "👎", "👌", "✌️", "🤞", "🤟", "🤘", "🤙",
+
+        "👏", "🙌", "👐", "🤲", "🤝", "🙏", "❤️", "🧡",
+
+        "💛", "💚", "💙", "💜", "🖤", "💔", "💕", "💞",
+
+        "🎉", "🎊", "🎁", "🔥", "⭐", "✨", "💯", "💪"
+
+    };
+
+    private bool CanSend => !string.IsNullOrWhiteSpace(MessageText) && !IsSending;
+
+    protected override void OnInitialized()
+    {
+        typingTimer = new System.Timers.Timer(2000);
+        typingTimer.Elapsed += async (s, e) => await StopTyping();
+        typingTimer.AutoReset=false;
+    }
+
+    protected override void OnParametersSet()
+    {
+        if(IsEditing && !string.IsNullOrEmpty(EditingContent))
+        {
+            MessageText = EditingContent;
+        }
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if(e.Key == "Enter" && !e.ShiftKey)
+        {
+            await SendMessage();
+        }
+        else
+        {
+            await StartTyping();
+        }
+    }
+
+    private async Task HandleFocus()
+    {
+        // Focus handling if needed
+        await Task.CompletedTask;
+    }
+
+    private async Task HandleBlur()
+    {
+        await StopTyping();
+    }
+
+    private async Task StartTyping()
+    {
+        if (!isTyping)
+        {
+            isTyping = true;
+            await OnTyping.InvokeAsync(true);
+        }
+        typingTimer?.Stop();
+        typingTimer?.Start();
+    }
+
+    private async Task StopTyping()
+    {
+        if (isTyping)
+        {
+            isTyping = false;
+            await InvokeAsync(async () => await OnTyping.InvokeAsync(false));
+        }
+    }
+
+    private async Task SendMessage()
+    {
+        if (!CanSend) return;
+
+        var message = MessageText.Trim();
+        MessageText = "";
+        await StopTyping();
+
+        if (IsEditing)
+        {
+            await OnEdit.InvokeAsync(message);
+        }
+        else
+        {
+            await OnSend.InvokeAsync(message);
+        }
+    }
+
+    private async Task CancelEdit()
+    {
+        MessageText = "";
+        await OnCancelEdit.InvokeAsync();
+    }
+
+    private async Task OnAttachClick()
+    {
+        await OnAttach.InvokeAsync();
+    }
+
+    private void ToggleEmojiPicker()
+    {
+        showEmojiPicker = !showEmojiPicker;
+    }
+
+    private void CloseEmojiPicker()
+    {
+        showEmojiPicker = false;
+    }
+
+    private void InsertEmoji(string emoji)
+    {
+        MessageText += emoji;
+        showEmojiPicker = false;
+    }
+
+    public void Dispose()
+    {
+        typingTimer?.Dispose();
+    }
+}

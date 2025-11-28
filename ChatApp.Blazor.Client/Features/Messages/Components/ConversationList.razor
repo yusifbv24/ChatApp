@@ -1,0 +1,244 @@
+﻿<div class="conversation-list">
+    <!-- Tabs for switching between Direct Messages and Channels -->
+    <div class="conversation-tabs">
+        <button class="conversation-tab @(ActiveTab=="direct" ? "active" :"")" @onclick='()=> SwitchTab("direct")'>
+            <MudIcon Icon="@Icons.Material.Filled.Chat" Size="Size.Small" />
+            <span>Direct</span>
+            @if (TotalDirectUnread > 0)
+            {
+                <span class="tab-badge">@(TotalDirectUnread > 99 ? "99+" : TotalDirectUnread.ToString())</span>
+            }
+        </button>
+        <button class="conversation-tab @(ActiveTab=="channels" ? "active" : "")" @onclick='()=> SwitchTab("channels")'>
+            <MudIcon Icon="@Icons.Material.Filled.Tag" Size="Size.Small" />
+            <span>Channels</span>
+            @if (TotalChannelUnread > 0)
+            {
+                <span class="tab-badge">@(TotalChannelUnread > 99 ? "99+" : TotalChannelUnread.ToString())</span>
+            }
+        </button>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="conversation-search">
+        <div class="search-input-wrapper">
+            <MudIcon Icon="@Icons.Material.Filled.Search" Class="search-icon" Size="Size.Small"/>
+            <input type="text"
+                   class="search-input"
+                   placeholder="@(ActiveTab == "direct" ? "Search conversations..." : "Search channels...")"
+                   @bind="SearchTerm"
+                   @bind:event="oninput" />
+            @if (!string.IsNullOrEmpty(SearchTerm))
+            {
+                <button class="search-clear" @onclick="ClearSearch">
+                    <MudIcon Icon="@Icons.Material.Filled.Clear" Size="Size.Small" />
+                </button>
+            }
+        </div>
+    </div>
+
+    <!-- New Conversation/Channel Button -->
+    <div class="conversation-actions">
+        @if (ActiveTab == "direct")
+        {
+            <button class="new-conversation-btn" @onclick="OnNewConversationClick">
+                <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Size="Size.Small" />
+                <span>New Message</span>
+            </button>
+        }
+        else
+        {
+            <button class="new-conversation-btn" @onclick="OnNewChannelClick">
+                <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" />
+                <span>Create Channel</span>
+            </button>
+        }
+    </div>
+
+    <!-- Conversation/Channel List -->
+    <div class="conversation-items">
+        @if (IsLoading)
+        {
+            <div class="conversation-loading">
+                <div class="loading-spinner"></div>
+                <span>Loading...</span>
+            </div>
+        }
+        else if (ActiveTab == "direct")
+        {
+            @if (FilteredConversations.Any())
+            {
+                @foreach(var conversation in FilteredConversations)
+                {
+                    <div class="conversation-item @(SelectedConversationId == conversation.Id ? "selected": "")"
+                         @onclick="()=>SelectConversation(conversation)">
+                         <div class="conversation-avatar">
+                            @if (!string.IsNullOrEmpty(conversation.OtherUserAvatarUrl))
+                            {
+                                <img src="@conversation.OtherUserAvatarUrl" alt="@conversation.OtherUserDisplayName" />
+                            }
+                            else
+                            {
+                                <div class="avatar-placeholder">@GetInitials(conversation.OtherUserDisplayName)</div>
+                            }
+                            <span class="online-indicator @(conversation.IsOtherUserOnline ? "online" : "offline")"></span>
+                        </div>
+                        <div class="conversation-info">
+                            <div class="conversation-header">
+                                <span class="conversation-name">@conversation.OtherUserDisplayName</span>
+                                <span class="conversation-time">@FormatTime(conversation.LastMessageAtUtc)</span>
+                            </div>
+                            <div class="conversation-preview">
+                                <span class="preview-text">@TruncateMessage(conversation.LastMessageContent)</span>
+                                @if (conversation.UnreadCount > 0)
+                                {
+                                    <span class="unread-badge">@(conversation.UnreadCount > 99 ? "99+" : conversation.UnreadCount.ToString())</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="empty-state">
+                    <MudIcon Icon="@Icons.Material.Filled.ChatBubbleOutline" Class="empty-icon" />
+                    <p>@(string.IsNullOrEmpty(SearchTerm) ? "No conversations yet" :"No results found")</p>
+                    @if (string.IsNullOrEmpty(SearchTerm))
+                    {
+                        <button class="empty-action-btn" @onclick="OnNewConversationClick">Start a conversation</button>
+                    }
+                </div>
+            }
+        }
+        else
+        {
+            @if (FilteredChannels.Any())
+            {
+                @foreach(var channel in FilteredChannels)
+                {
+                    <div class="conversation-item channel-item @(SelectedChannelId == channel.Id ? "selected" : "")"
+                         @onclick="()=> SelectChannel(channel)">
+                         <div class="channel-icon-wrapper">
+                             <MudIcon Icon="@(channel.Type==ChannelType.Private ? Icons.Material.Filled.Lock : Icons.Material.Filled.Tag)"
+                                      Class="channel-icon" />
+                         </div>
+                         <div class="conversation-info">
+                             <div class="conversation-header">
+                                 <span class="conversation-name">@channel.Name</span>
+                             </div>
+                             <div class="conversation-preview">
+                                 <span class="preview-text channel-members">@channel.MemberCount members</span>
+                             </div>
+                         </div>
+                     </div>
+                }
+            }
+            else
+            {
+                <div class="empty-state">
+                    <MudIcon Icon="@Icons.Material.Filled.Forum" Class="empty-icon"/>
+                    <p>@(string.IsNullOrEmpty(SearchTerm) ? "No channels yet" : "No results found")</p>
+                    @if (string.IsNullOrEmpty(SearchTerm))
+                    {
+                        <button class="empty-action-btn" @onclick="OnNewChannelClick"> Create a channel</button>
+                    }
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code{
+    [Parameter] public List<DirectConversationDto> Conversations { get; set; } = new();
+    [Parameter] public List<ChannelDto> Channels { get; set; } = new();
+    [Parameter] public Guid? SelectedConversationId { get; set; }
+    [Parameter] public Guid? SelectedChannelId { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public EventCallback<DirectConversationDto> OnConversationSelected { get; set; }
+    [Parameter] public EventCallback<ChannelDto> OnChannelSelected { get; set; }
+    [Parameter] public EventCallback OnNewConversation { get; set; }
+    [Parameter] public EventCallback OnNewChannel { get; set; }
+
+    private string ActiveTab { get; set; } = "direct";
+    private string SearchTerm { get; set; } = "";
+
+    private int TotalDirectUnread => Conversations.Sum(c => c.UnreadCount);
+    private int TotalChannelUnread => 0; // Channels don't have unread count in the DTO yet
+
+    private IEnumerable<DirectConversationDto> FilteredConversations =>
+        string.IsNullOrEmpty(SearchTerm)
+            ? Conversations.OrderByDescending(c => c.LastMessageAtUtc)
+            : Conversations
+                .Where(c => c.OtherUserDisplayName.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase) ||
+                          c.OtherUserUsername.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(c => c.LastMessageAtUtc);
+
+    private IEnumerable<ChannelDto> FilteredChannels =>
+        string.IsNullOrEmpty(SearchTerm)
+            ? Channels.OrderBy(c => c.Name)
+            : Channels
+                .Where(c => c.Name.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase) ||
+                       (c.Description?.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase) ?? false))
+                .OrderBy(c => c.Name);
+
+    private void SwitchTab(string tab)
+    {
+        ActiveTab = tab;
+        SearchTerm = "";
+    }
+
+    private void ClearSearch()
+    {
+        SearchTerm = "";
+    }
+
+    private async Task SelectConversation(DirectConversationDto conversation)
+    {
+        await OnConversationSelected.InvokeAsync(conversation);
+    }
+
+    private async Task SelectChannel(ChannelDto channel)
+    {
+        await OnChannelSelected.InvokeAsync(channel);
+    }
+
+    private async Task OnNewConversationClick()
+    {
+        await OnNewConversation.InvokeAsync();
+    }
+
+    private async Task OnNewChannelClick()
+    {
+        await OnNewChannel.InvokeAsync();
+    }
+
+
+    private string GetInitials(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "?";
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length >= 2
+            ? $"{parts[0][0]}{parts[1][0]}".ToUpper()
+            : name[0].ToString().ToUpper();
+    }
+
+
+    private string FormatTime(DateTime dateTime)
+    {
+        var now=DateTime.UtcNow;
+        var diff=now-dateTime;
+
+        if (diff.TotalMinutes < 1) return "Now";
+        if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes}m";
+        if (diff.TotalHours < 24) return $"{(int)diff.TotalHours}h";
+        if(diff.TotalDays<7) return $"{(int)diff.TotalDays}d";
+        return dateTime.ToString("MMM d");
+    }
+
+    private string TruncateMessage(string? message)
+    {
+        if (string.IsNullOrEmpty(message)) return "No messages yet";
+        return message.Length > 40 ? message[..40] + "..." : message;
+    }
+}

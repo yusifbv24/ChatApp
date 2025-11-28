@@ -1,0 +1,237 @@
+﻿@page "/messages"
+@page "/messages/conversation/{ConversationId:guid}"
+@page "/messages/channel/{ChannelId:guid}"
+@attribute [Authorize]
+@implements IAsyncDisposable
+
+<div class="messages-page">
+    <!-- Left Panel : Conversation List -->
+    <div class="messages-sidebar @(isMobileSidebarOpen ? "mobile-open" : "")">
+        <ConversationList Conversations="conversations"
+                          Channels="channels"
+                          SelectedConversationId="@selectedConversationId"
+                          SelectedChannelId="@selectedChannelId"
+                          IsLoading="@isLoadingList"
+                          OnConversationSelected="SelectConversation"
+                          OnChannelSelected="SelectChannel"
+                          OnNewConversation="OpenNewConversationDialog"
+                          OnNewChannel="OpenNewChannelDialog" />
+    </div>
+
+    <!-- Mobile Sidebar Toggle -->
+    <button class="mobile-sidebar-toggle" @onclick="ToggleMobileSidebar">
+        <MudIcon Icon="@(isMobileSidebarOpen ? Icons.Material.Filled.Close : Icons.Material.Filled.Menu)" />
+    </button>
+
+    <!-- Main Panel: Chat Area -->
+    <div class="messages-main">
+        <ChatArea IsEmpty="@IsEmpty"
+                  IsDirectMessage="@isDirectMessage"
+                  CurrentUserId="@currentUserId"
+                  DirectMessages="@directMessages"
+                  RecipientName="@recipientName"
+                  RecipientAvatarUrl="@recipientAvatarUrl"
+                  IsRecipientOnline="@isRecipientOnline"
+                  ChannelMessages="@channelMessages"
+                  ChannelName="@selectedChannelName"
+                  ChannelDescription="@selectedChannelDescription"
+                  ChannelType="@selectedChannelType"
+                  MemberCount="@selectedChannelMemberCount"
+                  PinnedCount="@pinnedMessageCount"
+                  IsLoading="@isLoadingMessages"
+                  IsLoadingMore="@isLoadingMoreMessages"
+                  HasMoreMessages="@hasMoreMessages"
+                  IsSending="@isSendingMessage"
+                  TypingUsers="@typingUsers"
+                  OnSendMessage="SendMessage"
+                  OnEditMessage="EditMessage"
+                  OnDeleteMessage="DeleteMessage"
+                  OnAddReaction="AddReaction"
+                  OnTyping="HandleTyping"
+                  OnLoadMore="LoadMoreMessages"
+                  OnShowPinnedMessages="ShowPinnedMessages" />
+    </div>
+</div>
+
+    <!-- New Conversation Dialog-->
+@if (showNewConversationDialog)
+    {
+        <div class="dialog-overlay" @onclick="CloseNewConversationDialog">
+            <div class="dialog-content" @onclick:stopPropagation="true">
+                <div class="dialog-header">
+                    <h3>New Message</h3>
+                    <button class="dialog-close-btn" @onclick="CloseNewConversationDialog">
+                        <MudIcon Icon="@Icons.Material.Filled.Close"/>
+                    </button>
+                </div>
+                <div class="dialog-body">
+                    <div class="form-group">
+                        <label>Search users</label>
+                        <input type="text"
+                               class="form-input"
+                               placeholder="Type a username..."
+                               @bind="userSearchQuery"
+                               @bind:event="oninput" />
+                    </div>
+                    @if (isSearchingUsers)
+                    {
+                        <div class="search-loading">
+                            <div class="loading-spinner small"></div>
+                            <span>Searching...</span>
+                        </div>
+                    }
+                    else if (userSearchResults.Any())
+                    {
+                        <div class="user-search-result">
+                            @foreach(var user in userSearchResults)
+                            {
+                                <div class="user-result-item" @onclick="()=>StartConversationWithUser(user.Id)">
+                                    @if (!string.IsNullOrEmpty(user.AvatarUrl))
+                                    {
+                                        <img src="@user.AvatarUrl" alt="@user.DisplayName" class="user-result-avatar" />
+                                    }
+                                    else
+                                    {
+                                        <div class="user-result-avatar-placeholder">@GetInitials(user.DisplayName)</div>
+                                    }
+                                    <div class="user-result-info">
+                                        <span class="user-result-name">@user.DisplayName</span>
+                                        <span class="user-result-username">@@@user.Username</span>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else if (!string.IsNullOrEmpty(userSearchQuery))
+                    {
+                        <div class="no-results">
+                            <p>No users found</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+
+
+    <!-- New Channel Dialog -->
+@if (showNewChannelDialog)
+{
+        <div class="dialog-overlay" @onclick="CloseNewChannelDialog">
+            <div class="dialog-content" @onclick:stopPropagation="true">
+                <div class="dialog-header">
+                    <h3>Create Channel</h3>
+                    <button class="dialog-close-btn" @onclick="CloseNewChannelDialog">
+                        <MudIcon Icon="@Icons.Material.Filled.Close" />
+                    </button>
+                </div>
+                <div class="dialog-body">
+                    <EditForm Model="@newChannelRequest" OnValidSubmit="CreateChannel">
+                        <DataAnnotationsValidator />
+                        <div class="form-group">
+                            <label>Channel Name</label>
+                            <InputText class="form-input" @bind-Value="newChannelRequest.Name" placeholder="e.g., general" />
+                            <ValidationMessage For="@(() => newChannelRequest.Name)" />
+                        </div>
+                        <div class="form-group">
+                            <label>Description (optional)</label>
+                            <InputTextArea class="form-input form-textarea" @bind-Value="newChannelRequest.Description" placeholder="What's this channel about?" />
+                            <ValidationMessage For="@(() => newChannelRequest.Description)" />
+                        </div>
+                        <div class="form-group">
+                            <label>Channel Type</label>
+                            <div class="channel-type-selector">
+                                <button type="button"
+                                        class="type-option @(newChannelRequest.Type == ChannelType.Public ? "selected" : "")"
+                                        @onclick="() => newChannelRequest.Type = ChannelType.Public">
+                                    <MudIcon Icon="@Icons.Material.Filled.Public" />
+                                    <span>Public</span>
+                                    <small>Anyone can join</small>
+                                </button>
+                                <button type="button"
+                                        class="type-option @(newChannelRequest.Type == ChannelType.Private ? "selected" : "")"
+                                        @onclick="() => newChannelRequest.Type = ChannelType.Private">
+                                    <MudIcon Icon="@Icons.Material.Filled.Lock" />
+                                    <span>Private</span>
+                                    <small>Invite only</small>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="dialog-actions">
+                            <button type="button" class="btn-secondary" @onclick="CloseNewChannelDialog">Cancel</button>
+                            <button type="submit" class="btn-primary" disabled="@isCreatingChannel">
+                                @if (isCreatingChannel)
+                                {
+                                    <div class="loading-spinner small"></div>
+                                }
+                                else
+                                {
+                                    <span>Create Channel</span>
+                                }
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+}
+
+
+    <!-- Pinned Messages Dialog -->
+@if (showPinnedMessagesDialog)
+{
+        <div class="dialog-overlay" @onclick="ClosePinnedMessagesDialog">
+            <div class="dialog-content pinned-dialog" @onclick:stopPropagation="true">
+                <div class="dialog-header">
+                    <h3>Pinned Messages</h3>
+                    <button class="dialog-close-btn" @onclick="ClosePinnedMessagesDialog">
+                        <MudIcon Icon="@Icons.Material.Filled.Close" />
+                    </button>
+                </div>
+                <div class="dialog-body">
+                    @if (isLoadingPinnedMessages)
+                    {
+                        <div class="loading-state">
+                            <div class="loading-spinner"></div>
+                            <span>Loading pinned messages...</span>
+                        </div>
+                    }
+                    else if (pinnedMessages.Any())
+                    {
+                        <div class="pinned-messages-list">
+                            @foreach (var message in pinnedMessages)
+                            {
+                                <div class="pinned-message-item">
+                                    <div class="pinned-message-header">
+                                        <span class="pinned-sender">@message.SenderDisplayName</span>
+                                        <span class="pinned-date">@message.CreatedAtUtc.ToLocalTime().ToString("MMM d, HH:mm")</span>
+                                    </div>
+                                    <div class="pinned-message-content">@message.Content</div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="empty-state">
+                            <MudIcon Icon="@Icons.Material.Filled.PushPin" Class="empty-icon" />
+                            <p>No pinned messages</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+}
+
+
+    <!-- Error Toast -->
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+        <div class="error-toast">
+            <MudIcon Icon="@Icons.Material.Filled.Error" />
+            <span>@errorMessage</span>
+            <button @onclick="ClearError">
+                <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" />
+            </button>
+        </div>
+}

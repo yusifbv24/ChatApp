@@ -27,8 +27,8 @@ public class AuthenticationDelegatingHandler : DelegatingHandler
 
         var response = await base.SendAsync(request, cancellationToken);
 
-        // If 401 and not already refreshing, try to refresh token
-        if (response.StatusCode == HttpStatusCode.Unauthorized && !_refreshing)
+        // If 401 or 403 and not already refreshing, try to refresh token
+        if ((response.StatusCode == HttpStatusCode.Unauthorized || response.StatusCode == HttpStatusCode.Forbidden) && !_refreshing)
         {
             _refreshing = true;
             try

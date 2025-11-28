@@ -1,0 +1,64 @@
+﻿using ChatApp.Blazor.Client.Models.Common;
+using ChatApp.Blazor.Client.Models.Messages;
+
+namespace ChatApp.Blazor.Client.Features.Messages.Services
+{
+    public interface IChannelService
+    {
+        Task<Result<List<ChannelDto>>> GetMyChannelsAsync();
+
+        
+        Task<Result<List<ChannelDto>>> GetPublicChannelsAsync();
+
+
+        Task<Result<ChannelDetailsDto>> GetChannelAsync(Guid channelId);
+
+
+        Task<Result<List<ChannelDto>>> SearchChannelsAsync(string query);
+
+
+        Task<Result<Guid>> CreateChannelAsync(CreateChannelRequest request);
+
+
+        Task<Result> UpdateChannelAsync(Guid channelId, UpdateChannelRequest request);
+
+
+        Task<Result> DeleteChannelAsync(Guid channelId);
+
+
+        Task<Result<List<ChannelMessageDto>>> GetMessagesAsync(Guid channelId, int pageSize = 50, DateTime? before = null);
+
+
+        Task<Result<List<ChannelMessageDto>>> GetPinnedMessagesAsync(Guid channelId);
+
+
+        Task<Result<int>> GetUnreadCountAsync(Guid channelId);
+
+
+        Task<Result<Guid>> SendMessageAsync(Guid channelId, string content, string? fileId = null);
+
+
+        Task<Result> EditMessageAsync(Guid channelId, Guid messageId, string newContent);
+
+
+        Task<Result> DeleteMessageAsync(Guid channelId, Guid messageId);
+
+
+        Task<Result> PinMessageAsync(Guid channelId, Guid messageId);
+
+
+        Task<Result> UnPinMessageAsync(Guid channelId, Guid messageId);
+
+
+        Task<Result> AddReactionAsync(Guid channelId, Guid messageId, string reaction);
+
+
+        Task<Result> RemoveReactionAsync(Guid channelId, Guid messageId, string reaction);
+
+
+        Task<Result> JoinChannelAsync(Guid channelId);
+
+
+        Task<Result> LeaveChannelAsync(Guid channelId);
+    }
+}

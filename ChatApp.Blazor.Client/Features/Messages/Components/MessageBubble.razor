@@ -1,0 +1,201 @@
+﻿<div class="message-wrapper @(IsOwn ? "own" :"other") @(IsDeleted ? "deleted" : "")">
+    @if(!IsOwn && ShowAvatar)
+    {
+        <div class="message-avatar">
+            @if (!string.IsNullOrEmpty(AvatarUrl))
+            {
+                <img src="@AvatarUrl" alt="@SenderName" />
+            }
+            else
+            {
+                <div class="avatar-placeholder">@GetInitials(SenderName)</div>
+            }
+        </div>
+    }
+
+    <div class="message-content-wrapper">
+        @if(!IsOwn && ShowSenderName)
+        {
+            <div class="message-sender">@SenderName</div>
+        }
+        <div class="message-bubble @(IsOwn? "own-bubble" : "other-bubble")">
+            @if (IsDeleted)
+            {
+                <div class="deleted-message">
+                    <MudIcon Icon="@Icons.Material.Filled.Block" Size="Size.Small" />
+                    <span>This message was deleted</span>
+                </div>
+            }
+            else
+            {
+                <div class="message-text">@Content</div>
+
+                @if (IsEdited)
+                {
+                    <span class="edited-label">(edited)</span>
+                }
+
+                <!-- Message Actions (visible on hover) -->
+                <div class="message-actions">
+                    @if(IsOwn && !IsDeleted)
+                    {
+                        <button class="action-btn" title="Edit" @onclick="OnEditClick"
+                                @onclick:stopPropagation="true">
+                                <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" />
+                        </button>
+                        <button class="action-btn delete" title="Delete" @onclick="OnDeleteClick"
+                                @onclick:stopPropagation="true">
+                                <MudIcon Icon="@Icons.Material.Filled.Delete" Size="Size.Small"/>
+                        </button>
+                    }
+                    <button class="action-btn" title="React" @onclick="ToggleReactionPicker"
+                            @onclick:stopPropagation="true">
+                            <MudIcon Icon="@Icons.Material.Filled.EmojiEmotions" Size="Size.Small"/>
+                    </button>
+                </div>
+            }
+        </div>
+
+        <div class="message-meta">
+            <span class="message-time">@FormatTime(CreatedAt)</span>
+            @if(IsOwn && !IsDeleted && IsDirectMessage)
+            {
+                <span class="read-status">
+                    @if (IsRead)
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.DoneAll" Size="Size.Small" Class="read"/>
+                    }
+                    else
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.Done" Size="Size.Small" />
+                    }
+                </span>
+            }
+            @if (IsPinned)
+            {
+                <MudIcon Icon="@Icons.Material.Filled.PushPin" Size="Size.Small" Class="pinned-icon" />
+            }
+        </div>
+        @if(ReactionCount > 0 && !IsDeleted)
+        {
+            <div class="message-reactions">
+                <span class="reaction-badge">
+                    <MudIcon Icon="@Icons.Material.Filled.ThumbUp" Size="Size.Small" /> @ReactionCount
+                </span>
+            </div>
+        }
+    </div>
+
+    @if(IsOwn && ShowAvatar)
+    {
+        <div class="message-avatar own-avatar">
+            @if (!string.IsNullOrEmpty(AvatarUrl))
+            {
+                <img src="@AvatarUrl" alt="@SenderName" />
+            }
+            else
+            {
+                <div class="avatar-placeholder">@GetInitials(SenderName)</div>
+            }
+        </div>
+    }
+</div>
+<!-- Reaction Picker Group -->
+@if (showReactionPicker)
+{
+    <div class="reaction-picker-overlay" @onclick="CloseReactionPicker">
+        <div class="reaction-picker" @onclick:stopPropagation="true">
+            @foreach(var emoji in CommonReactions)
+            {
+                <button class="reaction-btn" @onclick="()=>SelectReaction(emoji)">@emoji</button>
+            }
+        </div>
+    </div>
+}
+
+@code{
+    [Parameter] public Guid MessageId{ get; set; }
+    [Parameter] public string Content { get; set; } = "";
+    [Parameter] public string SenderName { get; set; } = "";
+    [Parameter] public string? AvatarUrl { get; set; }
+    [Parameter] public DateTime CreatedAt{ get; set; }
+    [Parameter] public bool IsOwn { get; set; }
+    [Parameter] public bool IsEdited { get; set; }
+    [Parameter] public bool IsDeleted { get; set; }
+    [Parameter] public bool IsRead { get; set; }
+    [Parameter] public bool IsPinned { get; set; }
+    [Parameter] public int ReactionCount { get; set; }
+    [Parameter] public bool ShowAvatar { get; set; }
+    [Parameter] public bool ShowSenderName { get; set; }
+    [Parameter] public bool IsDirectMessage { get; set; }
+    [Parameter] public EventCallback OnEdit { get; set; }
+    [Parameter] public EventCallback OnDelete { get; set; }
+    [Parameter] public EventCallback<string> OnReaction { get; set; }
+
+    private bool showReactionPicker=false;
+    private readonly string[] CommonReactions = { "👍", "❤️", "😂", "😮", "😢", "🎉" };
+
+    private string GetInitials(string name)
+    {
+        if(string.IsNullOrEmpty(name)) return "?";
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length >= 2
+            ? $"{parts[0][0]}{parts[1][0]}".ToUpper()
+            : name[0].ToString().ToUpper();
+    }
+
+
+    private string FormatTime(DateTime dateTime)
+    {
+        var localTime = dateTime.ToLocalTime();
+        var now = DateTime.Now;
+
+        if (localTime.Date == now.Date)
+        {
+            return localTime.ToString("HH:mm");
+        }
+        else if (localTime.Date == now.Date.AddDays(-1))
+        {
+            return $"Yesterday {localTime:HH:mm}";
+        }
+        else if ((now - localTime).TotalDays < 7)
+        {
+            return localTime.ToString("ddd HH:mm");
+        }
+        else
+        {
+            return localTime.ToString("MMM d,HH:mm");
+        }
+    }
+
+    private async Task OnEditClick()
+    {
+        await OnEdit.InvokeAsync();
+    }
+
+    private async Task OnDeleteClick()
+    {
+        await OnDelete.InvokeAsync();
+    }
+
+    private async Task OnDeleteAsync()
+    {
+        await OnDelete.InvokeAsync();
+    }
+
+    private void ToggleReactionPicker()
+    {
+        showReactionPicker = !showReactionPicker;
+    }
+
+    private void CloseReactionPicker()
+    {
+        showReactionPicker = false;
+    }
+
+    private async Task SelectReaction(string emoji)
+    {
+        showReactionPicker = false;
+        await OnReaction.InvokeAsync(emoji);
+    }
+}
