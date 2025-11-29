@@ -113,7 +113,7 @@ namespace ChatApp.Modules.Files.Api.Controllers
 
                 if (!isAdmin)
                 {
-                    return StatusCode(StatusCodes.Status403Forbidden, new { error = "Only administrators can upload avatars for other users" });
+                    return StatusCode(StatusCodes.Status403Forbidden, new { Error = "Only administrators can upload avatars for other users" });
                 }
             }
 

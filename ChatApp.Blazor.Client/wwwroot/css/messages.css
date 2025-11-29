@@ -30,55 +30,141 @@
     height: 100%;
 }
 
-/* Tabs */
-.conversation-tabs {
-    display: flex;
-    padding: 12px;
-    gap: 8px;
-    border-bottom: 1px solid var(--gray-200);
-    background: var(--gray-50);
-}
-
-.conversation-tab {
-    flex: 1;
+/* Conversation List Header */
+.conversation-list-header {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 10px 16px;
-    border: none;
-    background: transparent;
-    border-radius: var(--radius-md);
-    color: var(--gray-600);
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all var(--transition-base);
+    justify-content: space-between;
+    padding: 16px 16px 12px;
+    background: var(--white);
+}
+
+.conversation-list-header h2 {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin: 0;
+}
+
+.new-chat-wrapper {
     position: relative;
 }
 
-    .conversation-tab:hover {
-        background: var(--gray-100);
-        color: var(--gray-900);
-    }
+.new-chat-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: var(--primary-light);
+    border: none;
+    border-radius: 50%;
+    color: var(--primary-color);
+    cursor: pointer;
+    transition: all var(--transition-base);
+}
 
-
-    .conversation-tab.active {
-        background: var(--white);
-        color: var(--primary-color);
-        box-shadow: var(--shadow-sm);
-    }
-
-
-.tab-badge {
+.new-chat-btn:hover {
     background: var(--primary-color);
     color: var(--white);
-    font-size: 10px;
+    transform: scale(1.05);
+}
+
+.new-menu-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 99;
+}
+
+.new-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 8px;
+    min-width: 240px;
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl);
+    z-index: 100;
+    overflow: hidden;
+    animation: menuSlideDown 0.15s ease-out;
+}
+
+@keyframes menuSlideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.new-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 14px 16px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    text-align: left;
+}
+
+.new-menu-item:hover {
+    background: var(--gray-50);
+}
+
+.new-menu-item .mud-icon-root {
+    color: var(--primary-color);
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+}
+
+.new-menu-item-text {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    flex: 1;
+    min-width: 0;
+}
+
+.new-menu-item-title {
+    font-size: 14px;
     font-weight: 600;
-    padding: 2px 6px;
-    border-radius: 10px;
-    min-width: 18px;
-    text-align: center;
+    color: var(--gray-900);
+}
+
+.new-menu-item-desc {
+    font-size: 12px;
+    color: var(--gray-500);
+    margin-top: 2px;
+}
+
+/* Group Avatar */
+.conversation-avatar.group-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark, #4338ca));
+    border-radius: 12px;
+}
+
+.conversation-avatar.group-avatar .group-icon {
+    color: var(--white);
+    font-size: 22px;
+}
+
+.conversation-item.selected .conversation-avatar.group-avatar {
+    background: var(--white);
+}
+
+.conversation-item.selected .conversation-avatar.group-avatar .group-icon {
+    color: var(--primary-color);
 }
 
 /* Search */
@@ -154,37 +240,14 @@
 
 
 
-/* Actions */
-
+/* Legacy Actions - kept for backwards compatibility */
 .conversation-actions {
-    padding: 8px 12px;
+    display: none;
 }
-
-
 
 .new-conversation-btn {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 10px 16px;
-    background: var(--primary-gradient);
-    color: var(--white);
-    border: none;
-    border-radius: var(--radius-md);
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all var(--transition-base);
+    display: none;
 }
-
-
-
-    .new-conversation-btn:hover {
-        transform: translateY(-1px);
-        box-shadow: var(--shadow-md);
-    }
 
 
 
@@ -357,8 +420,7 @@
 
 
 
-/* Channel Items */
-
+/* Channel Items - Legacy styles kept for compatibility */
 .channel-icon-wrapper {
     width: 48px;
     height: 48px;
@@ -370,17 +432,19 @@
     color: var(--gray-600);
 }
 
-
-
 .channel-item.selected .channel-icon-wrapper {
     background: var(--primary-color);
     color: var(--white);
 }
 
-
-
 .channel-members {
     color: var(--gray-400);
+}
+
+/* Group avatar inherits conversation-avatar size */
+.conversation-avatar.group-avatar {
+    width: 48px;
+    height: 48px;
 }
 
 

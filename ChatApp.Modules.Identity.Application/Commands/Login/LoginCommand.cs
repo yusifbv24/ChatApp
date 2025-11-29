@@ -54,6 +54,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.Login
                 logger?.LogInformation("Login attempt for username: {Username}", command.Username);
 
                 var user = await unitOfWork.Users
+                    .Include(u => u.UserRoles)
                     .FirstOrDefaultAsync(u => u.Username == command.Username,cancellationToken);
 
                 if (user == null)

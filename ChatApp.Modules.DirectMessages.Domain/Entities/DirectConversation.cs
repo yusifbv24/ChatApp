@@ -10,6 +10,18 @@ namespace ChatApp.Modules.DirectMessages.Domain.Entities
         public bool IsUser1Active { get; private set; }
         public bool IsUser2Active { get; private set; }
 
+        /// <summary>
+        /// The user who initiated/created this conversation.
+        /// Used to hide empty conversations from the recipient until a message is sent.
+        /// </summary>
+        public Guid InitiatedByUserId { get; private set; }
+
+        /// <summary>
+        /// Indicates if any message has been sent in this conversation.
+        /// Used to determine visibility for non-initiator.
+        /// </summary>
+        public bool HasMessages { get; private set; }
+
 
         // Navigation properties
         public ICollection<DirectMessage> Messages { get; private set; } = [];
@@ -18,7 +30,7 @@ namespace ChatApp.Modules.DirectMessages.Domain.Entities
         private DirectConversation() { }
 
 
-        public DirectConversation(Guid user1Id,Guid user2Id)
+        public DirectConversation(Guid user1Id, Guid user2Id, Guid initiatedByUserId)
         {
             // Always store users in consistent order (smaller GUID first) for easy lookups
             if (user1Id < user2Id)
@@ -32,9 +44,20 @@ namespace ChatApp.Modules.DirectMessages.Domain.Entities
                 User2Id = user1Id;
             }
 
+            InitiatedByUserId = initiatedByUserId;
+            HasMessages = false;
             LastMessageAtUtc=DateTime.UtcNow;
             IsUser1Active = true;
             IsUser2Active = true;
+        }
+
+        /// <summary>
+        /// Mark that the conversation has messages (called when first message is sent)
+        /// </summary>
+        public void MarkAsHasMessages()
+        {
+            HasMessages = true;
+            UpdateTimestamp();
         }
 
 

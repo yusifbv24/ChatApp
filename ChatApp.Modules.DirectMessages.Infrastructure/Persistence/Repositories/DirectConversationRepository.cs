@@ -74,9 +74,13 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
             CancellationToken cancellationToken = default)
         {
             // Get conversations with other user details and last message
+            // Only show conversations where:
+            // 1. User is the initiator (can always see their own initiated conversations), OR
+            // 2. User is NOT the initiator AND the conversation has messages
             var conversationsQuery = await (from conv in _context.DirectConversations
-                                       where (conv.User1Id == userId && conv.IsUser1Active) ||
-                                              (conv.User2Id == userId && conv.IsUser2Active)
+                                       where ((conv.User1Id == userId && conv.IsUser1Active) ||
+                                              (conv.User2Id == userId && conv.IsUser2Active))
+                                             && (conv.InitiatedByUserId == userId || conv.HasMessages)
                                        let otherUserId = conv.User1Id == userId ? conv.User2Id : conv.User1Id
                                        join user in _context.Set<UserReadModel>() on otherUserId equals user.Id
                                        let lastMessage = _context.DirectMessages

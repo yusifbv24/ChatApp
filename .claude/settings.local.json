@@ -20,7 +20,9 @@
       "Bash(Stop-Process -Id 11928 -Force)",
       "Bash(curl:*)",
       "Bash(powershell -Command:*)",
-      "Bash(netstat:*)"
+      "Bash(netstat:*)",
+      "Bash(dir /b \"C:\\Users\\Joseph\\Desktop\\ChatApp\")",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

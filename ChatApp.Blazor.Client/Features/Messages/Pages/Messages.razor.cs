@@ -39,6 +39,10 @@ public partial class Messages : IAsyncDisposable
     private Guid recipientUserId;
     private bool isRecipientOnline;
 
+    // Pending conversation (user selected but conversation not created yet)
+    private bool isPendingConversation;
+    private UserDto? pendingUser;
+
     // Channel state
     private string selectedChannelName = "";
     private string? selectedChannelDescription;
@@ -58,8 +62,8 @@ public partial class Messages : IAsyncDisposable
     private DateTime? oldestMessageDate;
 
     // Typing
-    private List<string> typingUsers = new();
-    private Dictionary<Guid, string> typingUserNames = new();
+    private List<string> typingUsers = [];
+    private Dictionary<Guid, string> typingUserNames = [];
 
     // Dialogs
     private bool showNewConversationDialog;
@@ -69,7 +73,8 @@ public partial class Messages : IAsyncDisposable
 
     // Search
     private string userSearchQuery = "";
-    private List<UserDto> userSearchResults = new();
+    private List<UserDto> userSearchResults = [];
+    private CancellationTokenSource? _searchCts;
 
     // New channel
     private CreateChannelRequest newChannelRequest = new();
@@ -77,7 +82,7 @@ public partial class Messages : IAsyncDisposable
     // Error handling
     private string? errorMessage;
 
-    private bool IsEmpty => !selectedConversationId.HasValue && !selectedChannelId.HasValue;
+    private bool IsEmpty => !selectedConversationId.HasValue && !selectedChannelId.HasValue && !isPendingConversation;
     protected override async Task OnInitializedAsync()
     {
         if (UserState.CurrentUser != null)
@@ -191,6 +196,10 @@ public partial class Messages : IAsyncDisposable
 
     private async Task SelectConversation(DirectConversationDto conversation)
     {
+        // Clear pending conversation state
+        isPendingConversation = false;
+        pendingUser = null;
+
         // Leave previous groups
         if (selectedConversationId.HasValue)
         {
@@ -231,6 +240,10 @@ public partial class Messages : IAsyncDisposable
     }
     private async Task SelectChannel(ChannelDto channel)
     {
+        // Clear pending conversation state
+        isPendingConversation = false;
+        pendingUser = null;
+
         // Leave previous groups
         if (selectedConversationId.HasValue)
         {
@@ -401,10 +414,54 @@ public partial class Messages : IAsyncDisposable
 
         try
         {
+            // Handle pending conversation - create it first
+            if (isPendingConversation && pendingUser != null)
+            {
+                var createResult = await ConversationService.StartConversationAsync(pendingUser.Id);
+                if (!createResult.IsSuccess)
+                {
+                    ShowError(createResult.Error ?? "Failed to create conversation");
+                    return;
+                }
+
+                // Set the conversation ID and clear pending state
+                selectedConversationId = createResult.Value;
+                isPendingConversation = false;
+                pendingUser = null;
+
+                // Join the SignalR group
+                await SignalRService.JoinConversationAsync(selectedConversationId.Value);
+            }
+
             if (isDirectMessage && selectedConversationId.HasValue)
             {
                 var result = await ConversationService.SendMessageAsync(selectedConversationId.Value, content);
-                if (!result.IsSuccess)
+                if (result.IsSuccess)
+                {
+                    // Add message locally (optimistic UI) - don't wait for SignalR
+                    var newMessage = new DirectMessageDto(
+                        result.Value,
+                        selectedConversationId.Value,
+                        currentUserId,
+                        UserState.CurrentUser?.Username ?? "",
+                        UserState.CurrentUser?.DisplayName ?? "",
+                        UserState.CurrentUser?.AvatarUrl,
+                        recipientUserId,
+                        content,
+                        null,
+                        false,
+                        false,
+                        false,
+                        0,
+                        DateTime.UtcNow,
+                        null,
+                        null);
+                    directMessages.Add(newMessage);
+
+                    // Reload conversations to update the list
+                    await LoadConversationsAndChannels();
+                }
+                else
                 {
                     ShowError(result.Error ?? "Failed to send message");
                 }
@@ -412,7 +469,28 @@ public partial class Messages : IAsyncDisposable
             else if (!isDirectMessage && selectedChannelId.HasValue)
             {
                 var result = await ChannelService.SendMessageAsync(selectedChannelId.Value, content);
-                if (!result.IsSuccess)
+                if (result.IsSuccess)
+                {
+                    // Add message locally (optimistic UI)
+                    var newMessage = new ChannelMessageDto(
+                        result.Value,
+                        selectedChannelId.Value,
+                        currentUserId,
+                        UserState.CurrentUser?.Username ?? "",
+                        UserState.CurrentUser?.DisplayName ?? "",
+                        UserState.CurrentUser?.AvatarUrl,
+                        content,
+                        null,
+                        false,
+                        false,
+                        false,
+                        0,
+                        DateTime.UtcNow,
+                        null,
+                        null);
+                    channelMessages.Add(newMessage);
+                }
+                else
                 {
                     ShowError(result.Error ?? "Failed to send message");
                 }
@@ -611,8 +689,12 @@ public partial class Messages : IAsyncDisposable
         {
             if (message.ConversationId == selectedConversationId)
             {
-                directMessages.Add(message);
-                StateHasChanged();
+                // Check if message already exists (prevent duplicates from optimistic UI)
+                if (!directMessages.Any(m => m.Id == message.Id))
+                {
+                    directMessages.Add(message);
+                    StateHasChanged();
+                }
             }
 
             // Update conversation list
@@ -630,6 +712,11 @@ public partial class Messages : IAsyncDisposable
                 };
                 StateHasChanged();
             }
+            else if (message.SenderId != currentUserId)
+            {
+                // New conversation from someone else - reload the list
+                _ = LoadConversationsAndChannels();
+            }
         });
     }
 
@@ -639,8 +726,12 @@ public partial class Messages : IAsyncDisposable
         {
             if (message.ChannelId == selectedChannelId)
             {
-                channelMessages.Add(message);
-                StateHasChanged();
+                // Check if message already exists (prevent duplicates from optimistic UI)
+                if (!channelMessages.Any(m => m.Id == message.Id))
+                {
+                    channelMessages.Add(message);
+                    StateHasChanged();
+                }
             }
         });
     }
@@ -817,34 +908,114 @@ public partial class Messages : IAsyncDisposable
     private void CloseNewConversationDialog()
     {
         showNewConversationDialog = false;
+        _searchCts?.Cancel();
         StateHasChanged();
     }
 
-    private async Task StartConversationWithUser(Guid userId)
+    private async Task OnUserSearchInput(ChangeEventArgs e)
     {
+        userSearchQuery = e.Value?.ToString() ?? "";
+
+        // Cancel previous search
+        _searchCts?.Cancel();
+        _searchCts = new CancellationTokenSource();
+        var token = _searchCts.Token;
+
+        // Clear results if query is too short
+        if (string.IsNullOrWhiteSpace(userSearchQuery) || userSearchQuery.Length < 2)
+        {
+            userSearchResults.Clear();
+            isSearchingUsers = false;
+            StateHasChanged();
+            return;
+        }
+
+        // Debounce - wait 300ms before searching
         try
         {
-            var result = await ConversationService.StartConversationAsync(userId);
+            await Task.Delay(300, token);
+        }
+        catch (TaskCanceledException)
+        {
+            return;
+        }
+
+        await SearchUsers(token);
+    }
+
+    private async Task SearchUsers(CancellationToken token)
+    {
+        if (token.IsCancellationRequested) return;
+
+        isSearchingUsers = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await UserService.SearchUsersAsync(userSearchQuery);
+
+            if (token.IsCancellationRequested) return;
+
             if (result.IsSuccess)
             {
-                CloseNewConversationDialog();
-                await LoadConversationsAndChannels();
-
-                var conversation = conversations.FirstOrDefault(c => c.Id == result.Value);
-                if (conversation != null)
-                {
-                    await SelectConversation(conversation);
-                }
+                userSearchResults = result.Value ?? new List<UserDto>();
             }
             else
             {
-                ShowError(result.Error ?? "Failed to start conversation");
+                userSearchResults.Clear();
             }
         }
         catch (Exception ex)
         {
-            ShowError("Failed to start conversation: " + ex.Message);
+            Console.WriteLine($"Search error: {ex.Message}");
+            userSearchResults.Clear();
         }
+        finally
+        {
+            if (!token.IsCancellationRequested)
+            {
+                isSearchingUsers = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task StartConversationWithUser(Guid userId)
+    {
+        // Check if conversation already exists
+        var existingConversation = conversations.FirstOrDefault(c => c.OtherUserId == userId);
+        if (existingConversation != null)
+        {
+            // Conversation exists, just select it
+            CloseNewConversationDialog();
+            await SelectConversation(existingConversation);
+            return;
+        }
+
+        // Get user info from search results
+        var user = userSearchResults.FirstOrDefault(u => u.Id == userId);
+        if (user == null) return;
+
+        // Set up pending conversation (don't create yet)
+        isPendingConversation = true;
+        pendingUser = user;
+        selectedConversationId = null;
+        selectedChannelId = null;
+        isDirectMessage = true;
+
+        // Set up chat area UI
+        recipientUserId = user.Id;
+        recipientName = user.DisplayName;
+        recipientAvatarUrl = user.AvatarUrl;
+        isRecipientOnline = false; // Will be updated via SignalR
+
+        // Clear messages since this is a new conversation
+        directMessages.Clear();
+        hasMoreMessages = false;
+        oldestMessageDate = null;
+
+        CloseNewConversationDialog();
+        StateHasChanged();
     }
 
     private void OpenNewChannelDialog()

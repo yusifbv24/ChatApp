@@ -58,5 +58,19 @@ window.chatAppUtils = {
         return {
             dispose: () => window.removeEventListener('closeUserMenu', handler)
         };
+    },
+
+    // Scroll element to bottom (used for chat messages)
+    scrollToBottom: (element) => {
+        if (element) {
+            element.scrollTop = element.scrollHeight;
+        }
+    },
+
+    // Scroll element into view
+    scrollIntoView: (element) => {
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }
     }
 };

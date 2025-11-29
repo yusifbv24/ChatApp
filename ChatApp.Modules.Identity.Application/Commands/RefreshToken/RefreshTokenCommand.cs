@@ -41,6 +41,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.RefreshToken
                 }
 
                 var user = await unitOfWork.Users
+                    .Include(u => u.UserRoles)
                     .FirstOrDefaultAsync(r => r.Id == refreshToken.UserId, cancellationToken);
 
                 if(user==null || !user.IsActive)

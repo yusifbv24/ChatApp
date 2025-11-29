@@ -1,4 +1,5 @@
 ﻿@implements IDisposable
+@inject IJSRuntime JS
 
 <div class="chat-area">
     @if (IsEmpty)
@@ -277,6 +278,44 @@
     private bool isEditing = false;
     private Guid editingMessageId;
     private string editingContent = "";
+    private int _previousMessageCount;
+    private bool _shouldScrollToBottom;
+
+    protected override void OnParametersSet()
+    {
+        // Check if new messages were added
+        var currentCount = DirectMessages.Count + ChannelMessages.Count;
+        if (currentCount > _previousMessageCount)
+        {
+            _shouldScrollToBottom = true;
+        }
+        _previousMessageCount = currentCount;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_shouldScrollToBottom)
+        {
+            _shouldScrollToBottom = false;
+            await ScrollToBottomAsync();
+        }
+        else if (firstRender && (DirectMessages.Any() || ChannelMessages.Any()))
+        {
+            await ScrollToBottomAsync();
+        }
+    }
+
+    private async Task ScrollToBottomAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("chatAppUtils.scrollToBottom", messagesContainerRef);
+        }
+        catch
+        {
+            // Ignore scroll errors (component may be disposed)
+        }
+    }
 
 
     private IEnumerable<IGrouping<DateTime, DirectMessageDto>> GroupedDirectMessages =>

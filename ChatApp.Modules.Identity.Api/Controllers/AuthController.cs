@@ -112,6 +112,26 @@ namespace ChatApp.Modules.Identity.Api.Controllers
 
 
 
+        /// <summary>
+        /// Returns the access token for SignalR connection (required because WebSocket doesn't send cookies)
+        /// This endpoint requires authentication via cookie, so it's secure - the token is only returned
+        /// to authenticated users for establishing SignalR connections.
+        /// </summary>
+        [HttpGet("signalr-token")]
+        [Authorize]
+        [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public IActionResult GetSignalRToken()
+        {
+            var accessToken = Request.Cookies["accessToken"];
+
+            if (string.IsNullOrEmpty(accessToken))
+                return Unauthorized(new { error = "No access token found" });
+
+            return Ok(new { token = accessToken });
+        }
+
+
         [HttpPost("logout")]
         [Authorize]
         [ProducesResponseType(StatusCodes.Status200OK)]

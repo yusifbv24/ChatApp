@@ -97,8 +97,12 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectMessages
 
                 await _unitOfWork.Messages.AddAsync(message, cancellationToken);
 
-                // Update conversation last message time
+                // Update conversation last message time and mark as having messages
                 conversation.UpdateLastMessageTime();
+                if (!conversation.HasMessages)
+                {
+                    conversation.MarkAsHasMessages();
+                }
                 await _unitOfWork.Conversations.UpdateAsync(conversation, cancellationToken);
 
                 await _unitOfWork.SaveChangesAsync(cancellationToken);

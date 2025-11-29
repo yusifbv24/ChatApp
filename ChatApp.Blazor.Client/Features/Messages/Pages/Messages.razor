@@ -70,8 +70,8 @@
                         <input type="text"
                                class="form-input"
                                placeholder="Type a username..."
-                               @bind="userSearchQuery"
-                               @bind:event="oninput" />
+                               value="@userSearchQuery"
+                               @oninput="OnUserSearchInput" />
                     </div>
                     @if (isSearchingUsers)
                     {

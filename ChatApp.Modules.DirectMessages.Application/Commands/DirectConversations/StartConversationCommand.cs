@@ -68,8 +68,8 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectConversation
                     return Result.Success(existingConversation.Id);
                 }
 
-                // Create new conversation
-                var conversation = new DirectConversation(request.User1Id, request.User2Id);
+                // Create new conversation - User1Id is the initiator
+                var conversation = new DirectConversation(request.User1Id, request.User2Id, request.User1Id);
 
                 await _unitOfWork.Conversations.AddAsync(conversation, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);

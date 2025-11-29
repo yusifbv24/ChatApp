@@ -3,6 +3,7 @@ using ChatApp.Modules.Identity.Application.DTOs.Requests;
 using ChatApp.Modules.Identity.Application.DTOs.Responses;
 using ChatApp.Modules.Identity.Application.Queries.GetUser;
 using ChatApp.Modules.Identity.Application.Queries.GetUsers;
+using ChatApp.Modules.Identity.Application.Queries.SearchUsers;
 using ChatApp.Shared.Infrastructure.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -71,6 +72,36 @@ namespace ChatApp.Modules.Identity.Api.Controllers
         }
 
 
+
+
+        /// <summary>
+        /// Searches users by username or display name
+        /// Any authenticated user can search for other users (for messaging purposes)
+        /// </summary>
+        [HttpGet("search")]
+        [ProducesResponseType(typeof(List<UserDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> SearchUsers(
+            [FromQuery(Name = "q")] string searchTerm,
+            CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(searchTerm) || searchTerm.Length < 2)
+            {
+                return Ok(new List<UserDto>());
+            }
+
+            var result = await _mediator.Send(new SearchUsersQuery(searchTerm), cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            // Exclude current user from results
+            var currentUserId = GetCurrentUserId();
+            var filteredUsers = result.Value?.Where(u => u.Id != currentUserId).ToList() ?? new List<UserDto>();
+
+            return Ok(filteredUsers);
+        }
 
 
         /// <summary>

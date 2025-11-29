@@ -143,4 +143,18 @@ public class UserService : IUserService
     {
         return await _apiClient.DeleteAsync($"/api/users/{userId}/roles/{roleId}");
     }
+
+
+    /// <summary>
+    /// Searches users by username or display name - GET /api/users/search
+    /// Any authenticated user can search for other users
+    /// </summary>
+    public async Task<Result<List<UserDto>>> SearchUsersAsync(string searchTerm)
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm) || searchTerm.Length < 2)
+        {
+            return Result<List<UserDto>>.Success(new List<UserDto>());
+        }
+        return await _apiClient.GetAsync<List<UserDto>>($"/api/users/search?q={Uri.EscapeDataString(searchTerm)}");
+    }
 }

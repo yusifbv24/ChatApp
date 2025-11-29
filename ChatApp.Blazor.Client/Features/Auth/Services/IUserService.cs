@@ -21,4 +21,5 @@ public interface IUserService
     Task<Result> ChangeUserPasswordAsync(AdminChangePasswordRequest request);
     Task<Result> AssignRoleAsync(Guid userId, Guid roleId);
     Task<Result> RemoveRoleAsync(Guid userId, Guid roleId);
+    Task<Result<List<UserDto>>> SearchUsersAsync(string searchTerm);
 }
