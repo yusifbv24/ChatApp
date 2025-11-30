@@ -8,6 +8,7 @@ public class AppState
     private bool _isDarkMode;
     private List<Guid> _onlineUsers = new();
     private int _unreadNotificationCount;
+    private int _unreadMessageCount;
 
     public event Action? OnChange;
 
@@ -45,6 +46,31 @@ public class AppState
                 NotifyStateChanged();
             }
         }
+    }
+
+    public int UnreadMessageCount
+    {
+        get => _unreadMessageCount;
+        set
+        {
+            if (_unreadMessageCount != value)
+            {
+                _unreadMessageCount = value;
+                NotifyStateChanged();
+            }
+        }
+    }
+
+    public void IncrementUnreadMessages()
+    {
+        _unreadMessageCount++;
+        NotifyStateChanged();
+    }
+
+    public void DecrementUnreadMessages(int count = 1)
+    {
+        _unreadMessageCount = Math.Max(0, _unreadMessageCount - count);
+        NotifyStateChanged();
     }
 
     public void AddOnlineUser(Guid userId)

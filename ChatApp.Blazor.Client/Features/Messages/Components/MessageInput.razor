@@ -93,6 +93,8 @@
     </div>
 }
 
+@inject IJSRuntime JS
+
 @code{
     [Parameter] public string Placeholder { get; set; } = "Type a message...";
     [Parameter] public bool IsEditing { get; set; }
@@ -104,12 +106,14 @@
     [Parameter] public EventCallback OnCancelEdit { get; set; }
     [Parameter] public EventCallback<bool> OnTyping { get; set; }
     [Parameter] public EventCallback OnAttach { get; set; }
+    [Parameter] public Guid? ConversationId { get; set; }
 
     private ElementReference textAreaRef;
     private string MessageText { get; set; } = "";
     private bool showEmojiPicker=false;
     private bool isTyping = false;
     private System.Timers.Timer? typingTimer;
+    private Guid? previousConversationId;
 
     private readonly string[] CommonEmojis = {
 
@@ -132,6 +136,7 @@
     };
 
     private bool CanSend => !string.IsNullOrWhiteSpace(MessageText) && !IsSending;
+    private bool shouldFocus = false;
 
     protected override void OnInitialized()
     {
@@ -145,6 +150,29 @@
         if(IsEditing && !string.IsNullOrEmpty(EditingContent))
         {
             MessageText = EditingContent;
+        }
+
+        // Focus when conversation changes
+        if (ConversationId != previousConversationId)
+        {
+            previousConversationId = ConversationId;
+            shouldFocus = true;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (shouldFocus || firstRender)
+        {
+            shouldFocus = false;
+            try
+            {
+                await textAreaRef.FocusAsync();
+            }
+            catch
+            {
+                // Element may not be available yet
+            }
         }
     }
 

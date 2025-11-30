@@ -157,3 +157,61 @@ Building a modern messaging UI similar to WhatsApp Web.
 - Files modified:
   - `wwwroot/js/app.js` - Added scrollToBottom and scrollIntoView functions
   - `ChatArea.razor` - Added OnParametersSet/OnAfterRenderAsync for auto-scroll
+
+### Session 4 (2025-11-30)
+**Implemented Remember Me auto-refresh token flow:**
+- When user logs in with "Remember Me" checked, preference saved to localStorage
+- On page load, if access token expired but RememberMe=true, auto-refresh using refresh token
+- If RememberMe=false, redirect to login (no auto-refresh)
+- On logout, RememberMe flag is cleared
+- Files modified:
+  - `Login.razor` - Save rememberMe to localStorage
+  - `CustomAuthStateProvider.cs` - Added TryGetCurrentUserAsync with auto-refresh logic
+
+**Fixed duplicate message issue when sending:**
+- Problem: Sender saw message twice (optimistic UI + SignalR broadcast)
+- Solution: Skip sender's own messages in SignalR handlers (already added via optimistic UI)
+- Files modified:
+  - `Messages.razor.cs` - HandleNewDirectMessage/HandleNewChannelMessage skip currentUserId
+
+**Reset notification icon for future use:**
+- Changed from hardcoded `notificationCount = 3` to use `AppState.UnreadNotificationCount`
+- Notification count now starts at 0, ready for future notification feature
+
+**Added unread message badge to Messages nav icon:**
+- Added `UnreadMessageCount` property to `AppState`
+- Messages nav icon shows red badge with unread count
+- Badge updates in real-time via AppState.OnChange subscription
+- Files modified:
+  - `AppState.cs` - Added UnreadMessageCount property and helper methods
+  - `MainLayout.razor` - Added MudBadge to Messages nav, injected AppState
+
+**Mark as read when entering conversation/channel:**
+- When selecting a conversation/channel with unread messages:
+  - Global unread count decrements by conversation's unread count
+  - Conversation's local unread count set to 0
+- When receiving new message from others (not in current conversation):
+  - Global unread count increments
+  - Conversation's local unread count increments
+- Added `UnreadCount` property to `ChannelDto` (default 0)
+- Files modified:
+  - `Messages.razor.cs` - SelectConversation/SelectChannel update counts
+  - `ChannelDto.cs` - Added UnreadCount parameter
+
+**Auto-mark messages as read in real-time:**
+- When viewing a conversation and a new message arrives via SignalR:
+  - Message is automatically marked as read on the server
+  - Message is displayed with IsRead = true
+- Previously, messages were only marked as read when re-selecting the conversation
+- Files modified:
+  - `Messages.razor.cs` - HandleNewDirectMessage calls MarkAsReadAsync immediately
+
+**Auto-focus message input when entering conversation:**
+- When entering a conversation/channel, the message input textarea is automatically focused
+- User can start typing immediately without clicking on the input
+- Focus also triggers when switching between conversations
+- Added ConversationId parameter to track conversation changes
+- Files modified:
+  - `MessageInput.razor` - Added ConversationId parameter, OnAfterRenderAsync for focus
+  - `ChatArea.razor` - Added ConversationId parameter, passed to MessageInput
+  - `Messages.razor` - Passed selectedConversationId/selectedChannelId to ChatArea

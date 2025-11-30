@@ -1,6 +1,7 @@
 @inherits LayoutComponentBase
 @using ChatApp.Blazor.Client.Features.Auth.Services
 @inject UserState UserState
+@inject AppState AppState
 @inject IAuthService AuthService
 @inject IUserService UserService
 @inject NavigationManager Navigation
@@ -103,7 +104,9 @@
         <!-- Navigation -->
         <nav class="sidebar-nav">
             <a href="/messages" class="nav-item @(IsActive("/messages"))">
-                <MudIcon Icon="@Icons.Material.Filled.Chat" />
+                <MudBadge Content="@AppState.UnreadMessageCount" Color="Color.Error" Overlap="true" Visible="@(AppState.UnreadMessageCount > 0)">
+                    <MudIcon Icon="@Icons.Material.Filled.Chat" />
+                </MudBadge>
                 @if (isSidebarOpen)
                 {
                     <span>Messages</span>
@@ -182,9 +185,9 @@
 
             <!-- Right Side -->
             <div class="header-right">
-                <!-- Notifications -->
+                <!-- Notifications (placeholder for future use) -->
                 <button class="header-icon-btn" @onclick="OpenNotifications">
-                    <MudBadge Content="@notificationCount" Color="Color.Error" Overlap="true" Visible="@(notificationCount > 0)">
+                    <MudBadge Content="@AppState.UnreadNotificationCount" Color="Color.Error" Overlap="true" Visible="@(AppState.UnreadNotificationCount > 0)">
                         <MudIcon Icon="@Icons.Material.Filled.Notifications" />
                     </MudBadge>
                 </button>
@@ -256,7 +259,6 @@
     private bool isProfilePanelOpen = false;
     private DateTime currentTime = DateTime.Now;
     private System.Threading.Timer? timer;
-    private int notificationCount = 3;
 
     protected override async Task OnInitializedAsync()
     {
@@ -272,6 +274,7 @@
         }
 
         UserState.OnChange += StateHasChanged;
+        AppState.OnChange += StateHasChanged;
 
         // Update clock every second
         timer = new System.Threading.Timer(async _ =>
@@ -360,5 +363,6 @@
     {
         timer?.Dispose();
         UserState.OnChange -= StateHasChanged;
+        AppState.OnChange -= StateHasChanged;
     }
 }

@@ -9,7 +9,8 @@
         int MemberCount,
         bool IsArchived,
         DateTime CreatedAtUtc,
-        DateTime? ArchivedAtUtc);
+        DateTime? ArchivedAtUtc,
+        int UnreadCount = 0);
 
 
 

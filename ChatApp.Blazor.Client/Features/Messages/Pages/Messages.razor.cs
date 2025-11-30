@@ -182,6 +182,9 @@ public partial class Messages : IAsyncDisposable
             {
                 channels = channelsResult.Value ?? new List<ChannelDto>();
             }
+
+            // Update global unread message count
+            UpdateGlobalUnreadCount();
         }
         catch (Exception ex)
         {
@@ -192,6 +195,12 @@ public partial class Messages : IAsyncDisposable
             isLoadingList = false;
             StateHasChanged();
         }
+    }
+
+    private void UpdateGlobalUnreadCount()
+    {
+        var totalUnread = conversations.Sum(c => c.UnreadCount) + channels.Sum(c => c.UnreadCount);
+        AppState.UnreadMessageCount = totalUnread;
     }
 
     private async Task SelectConversation(DirectConversationDto conversation)
@@ -208,6 +217,19 @@ public partial class Messages : IAsyncDisposable
         if (selectedChannelId.HasValue)
         {
             await SignalRService.LeaveChannelAsync(selectedChannelId.Value);
+        }
+
+        // Mark conversation as read and update global unread count
+        if (conversation.UnreadCount > 0)
+        {
+            AppState.DecrementUnreadMessages(conversation.UnreadCount);
+
+            // Update local conversation list to show 0 unread
+            var index = conversations.IndexOf(conversation);
+            if (index >= 0)
+            {
+                conversations[index] = conversation with { UnreadCount = 0 };
+            }
         }
 
         selectedConversationId = conversation.Id;
@@ -252,6 +274,19 @@ public partial class Messages : IAsyncDisposable
         if (selectedChannelId.HasValue)
         {
             await SignalRService.LeaveChannelAsync(selectedChannelId.Value);
+        }
+
+        // Mark channel as read and update global unread count
+        if (channel.UnreadCount > 0)
+        {
+            AppState.DecrementUnreadMessages(channel.UnreadCount);
+
+            // Update local channel list to show 0 unread
+            var index = channels.IndexOf(channel);
+            if (index >= 0)
+            {
+                channels[index] = channel with { UnreadCount = 0 };
+            }
         }
 
         selectedChannelId = channel.Id;
@@ -685,34 +720,50 @@ public partial class Messages : IAsyncDisposable
     // SignalR Event Handlers
     private void HandleNewDirectMessage(DirectMessageDto message)
     {
-        InvokeAsync(() =>
+        InvokeAsync(async () =>
         {
+            // Skip our own messages - they're already added via optimistic UI
+            if (message.SenderId == currentUserId)
+            {
+                return;
+            }
+
             if (message.ConversationId == selectedConversationId)
             {
-                // Check if message already exists (prevent duplicates from optimistic UI)
+                // Check if message already exists (prevent duplicates)
                 if (!directMessages.Any(m => m.Id == message.Id))
                 {
-                    directMessages.Add(message);
+                    // Add with IsRead = true since user is viewing this conversation
+                    directMessages.Add(message with { IsRead = true });
                     StateHasChanged();
+
+                    // Mark as read on the server
+                    await ConversationService.MarkAsReadAsync(message.ConversationId, message.Id);
                 }
             }
 
-            // Update conversation list
+            // Update conversation list for messages from others
             var conversation = conversations.FirstOrDefault(c => c.Id == message.ConversationId);
             if (conversation != null)
             {
                 var index = conversations.IndexOf(conversation);
+                var isCurrentConversation = message.ConversationId == selectedConversationId;
                 conversations[index] = conversation with
                 {
                     LastMessageContent = message.Content,
                     LastMessageAtUtc = message.CreatedAtUtc,
-                    UnreadCount = message.ConversationId == selectedConversationId
-                        ? 0
-                        : conversation.UnreadCount + 1
+                    UnreadCount = isCurrentConversation ? 0 : conversation.UnreadCount + 1
                 };
+
+                // Increment global unread count if not in this conversation
+                if (!isCurrentConversation)
+                {
+                    AppState.IncrementUnreadMessages();
+                }
+
                 StateHasChanged();
             }
-            else if (message.SenderId != currentUserId)
+            else
             {
                 // New conversation from someone else - reload the list
                 _ = LoadConversationsAndChannels();
@@ -724,9 +775,15 @@ public partial class Messages : IAsyncDisposable
     {
         InvokeAsync(() =>
         {
+            // Skip our own messages - they're already added via optimistic UI
+            if (message.SenderId == currentUserId)
+            {
+                return;
+            }
+
             if (message.ChannelId == selectedChannelId)
             {
-                // Check if message already exists (prevent duplicates from optimistic UI)
+                // Check if message already exists (prevent duplicates)
                 if (!channelMessages.Any(m => m.Id == message.Id))
                 {
                     channelMessages.Add(message);

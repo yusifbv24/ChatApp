@@ -180,6 +180,7 @@
                       EditingContent="@editingContent"
                       IsSending="@IsSending"
                       TypingUsers="@TypingUsers"
+                      ConversationId="@ConversationId"
                       OnSend="SendMessage"
                       OnEdit="EditMessage"
                       OnCancelEdit="CancelEdit"
@@ -237,6 +238,7 @@
     [Parameter] public bool IsEmpty { get; set; } = true;
     [Parameter] public bool IsDirectMessage { get; set; } = true;
     [Parameter] public Guid CurrentUserId { get; set; }
+    [Parameter] public Guid? ConversationId { get; set; }
 
     // Direct Message Parameters
     [Parameter] public List<DirectMessageDto> DirectMessages { get; set; } = new();

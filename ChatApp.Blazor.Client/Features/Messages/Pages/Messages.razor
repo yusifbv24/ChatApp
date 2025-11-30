@@ -28,6 +28,7 @@
         <ChatArea IsEmpty="@IsEmpty"
                   IsDirectMessage="@isDirectMessage"
                   CurrentUserId="@currentUserId"
+                  ConversationId="@(selectedConversationId ?? selectedChannelId)"
                   DirectMessages="@directMessages"
                   RecipientName="@recipientName"
                   RecipientAvatarUrl="@recipientAvatarUrl"
