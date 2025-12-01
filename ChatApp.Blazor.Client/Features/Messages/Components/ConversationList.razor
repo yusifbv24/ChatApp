@@ -1,31 +1,40 @@
-@using ChatApp.Blazor.Client.Models
+@inject UserState UserState
 
 <div class="conversation-list">
     <!-- Header with New Button -->
     <div class="conversation-list-header">
         <h2>Chats</h2>
         <div class="new-chat-wrapper">
-            <button class="new-chat-btn" @onclick="ToggleNewMenu">
-                <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" />
-            </button>
+            @if(UserState.HasPermission("Messages.Send") || UserState.HasPermission("Groups.Create"))
+            {
+                <button class="new-chat-btn" @onclick="ToggleNewMenu">
+                    <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" />
+                </button>   
+            }
             @if (showNewMenu)
             {
                 <div class="new-menu-overlay" @onclick="CloseNewMenu"></div>
                 <div class="new-menu">
-                    <button class="new-menu-item" @onclick="OnNewConversationClick">
-                        <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" />
-                        <div class="new-menu-item-text">
-                            <span class="new-menu-item-title">New Message</span>
-                            <span class="new-menu-item-desc">Start a private conversation</span>
-                        </div>
-                    </button>
-                    <button class="new-menu-item" @onclick="OnNewChannelClick">
-                        <MudIcon Icon="@Icons.Material.Filled.Group" Size="Size.Small" />
-                        <div class="new-menu-item-text">
-                            <span class="new-menu-item-title">New Group</span>
-                            <span class="new-menu-item-desc">Create a group chat</span>
-                        </div>
-                    </button>
+                    @if (UserState.HasPermission("Messages.Send"))
+                    {
+                        <button class="new-menu-item" @onclick="OnNewConversationClick">
+                            <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" />
+                            <div class="new-menu-item-text">
+                                <span class="new-menu-item-title">New Message</span>
+                                <span class="new-menu-item-desc">Start a private conversation</span>
+                            </div>
+                        </button>
+                    }
+                    @if (UserState.HasPermission("Groups.Create"))
+                    {
+                        <button class="new-menu-item" @onclick="OnNewChannelClick">
+                            <MudIcon Icon="@Icons.Material.Filled.Group" Size="Size.Small" />
+                            <div class="new-menu-item-text">
+                                <span class="new-menu-item-title">New Group</span>
+                                <span class="new-menu-item-desc">Create a group chat</span>
+                            </div>
+                        </button>
+                    }
                 </div>
             }
         </div>
@@ -58,7 +67,7 @@
                 <span>Loading...</span>
             </div>
         }
-        else if (UnifiedList.Any())
+        else if (UnifiedList.Any() && UserState.HasPermission("Messages.Read"))
         {
             @foreach(var item in UnifiedList)
             {

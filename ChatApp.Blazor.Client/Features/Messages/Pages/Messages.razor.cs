@@ -22,11 +22,11 @@ public partial class Messages : IAsyncDisposable
 
     // State
     private Guid currentUserId;
-    private List<DirectConversationDto> conversations = new();
-    private List<ChannelDto> channels = new();
-    private List<DirectMessageDto> directMessages = new();
-    private List<ChannelMessageDto> channelMessages = new();
-    private List<ChannelMessageDto> pinnedMessages = new();
+    private List<DirectConversationDto> conversations = [];
+    private List<ChannelDto> channels = [];
+    private List<DirectMessageDto> directMessages = [];
+    private List<ChannelMessageDto> channelMessages = [];
+    private List<ChannelMessageDto> pinnedMessages = [];
 
     // Selection
     private Guid? selectedConversationId;

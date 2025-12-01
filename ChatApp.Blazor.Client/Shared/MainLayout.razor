@@ -1,5 +1,4 @@
 @inherits LayoutComponentBase
-@using ChatApp.Blazor.Client.Features.Auth.Services
 @inject UserState UserState
 @inject AppState AppState
 @inject IAuthService AuthService
@@ -76,10 +75,6 @@
                     <div class="user-info">
                         <div class="user-display-name">@UserState.CurrentUser.DisplayName</div>
                         <div class="user-username">@("@" + UserState.CurrentUser.Username)</div>
-                        <div class="user-status-text">
-                            <span class="status-dot @(UserState.CurrentUser.IsActive ? "active" : "inactive")"></span>
-                            @(UserState.CurrentUser.IsActive ? "Active" : "Inactive")
-                        </div>
                     </div>
                 }
                 else

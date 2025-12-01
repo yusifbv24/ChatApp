@@ -39,7 +39,7 @@ public class UserState
         {
             if (_currentUser == null)
             {
-                return new List<string>();
+                return [];
             }
 
             return _currentUser.Roles

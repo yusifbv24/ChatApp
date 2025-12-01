@@ -34,42 +34,54 @@
         </div>
     }
 
-    <div class="input-row">
-        <button class="input-action-btn attach-btn" title="Attach file" @onclick="OnAttachClick" disabled="@IsSending">
-            <MudIcon Icon="@Icons.Material.Filled.AttachFile" />
-        </button>
-
-        <div class="input-wrapper">
-            <textarea @ref="textAreaRef"
-                      class="message-textarea"
-                      placeholder="@Placeholder"
-                      @bind="MessageText"
-                      @bind:event="oninput"
-                      @onkeydown="HandleKeyDown"
-                      @onfocus="HandleFocus"
-                      @onblur="HandleBlur"
-                      disabled="@IsSending"
-                      rows="1"></textarea>
+    @if (!UserState.HasPermission("Messages.Send"))
+    {
+        <div class="input-row disabled-input">
+            <div class="permission-denied-message">
+                <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" />
+                <span>You don't have permission to send messages</span>
+            </div>
         </div>
+    }
+    else
+    {
+        <div class="input-row">
+            <button class="input-action-btn attach-btn" title="Attach file" @onclick="OnAttachClick" disabled="@IsSending">
+                <MudIcon Icon="@Icons.Material.Filled.AttachFile" />
+            </button>
 
-        <button class="input-action-btn emoji-btn" title="Emoji" @onclick="ToggleEmojiPicker" disabled="@IsSending">
-            <MudIcon Icon="@Icons.Material.Filled.EmojiEmotions"/>
-        </button>
+            <div class="input-wrapper">
+                <textarea @ref="textAreaRef"
+                          class="message-textarea"
+                          placeholder="@Placeholder"
+                          @bind="MessageText"
+                          @bind:event="oninput"
+                          @onkeydown="HandleKeyDown"
+                          @onfocus="HandleFocus"
+                          @onblur="HandleBlur"
+                          disabled="@IsSending"
+                          rows="1"></textarea>
+            </div>
 
-        <button class="send-btn @(CanSend ? "active" : "")"
-                title="@(IsEditing ? "Save" : "Send")"
-                @onclick="SendMessage"
-                disabled="@(!CanSend || IsSending)">
-            @if (IsSending)
-            {
-                <div class="send-spinner"></div>
-            }
-            else
-            {
-                <MudIcon Icon="@(IsEditing ? Icons.Material.Filled.Check : Icons.Material.Filled.Send)" />
-            }
-        </button>
-    </div>
+            <button class="input-action-btn emoji-btn" title="Emoji" @onclick="ToggleEmojiPicker" disabled="@IsSending">
+                <MudIcon Icon="@Icons.Material.Filled.EmojiEmotions"/>
+            </button>
+
+            <button class="send-btn @(CanSend ? "active" : "")"
+                    title="@(IsEditing ? "Save" : "Send")"
+                    @onclick="SendMessage"
+                    disabled="@(!CanSend || IsSending)">
+                @if (IsSending)
+                {
+                    <div class="send-spinner"></div>
+                }
+                else
+                {
+                    <MudIcon Icon="@(IsEditing ? Icons.Material.Filled.Check : Icons.Material.Filled.Send)" />
+                }
+            </button>
+        </div>
+    }
 </div>
 
 <!-- Emoji Picker -->
@@ -94,6 +106,7 @@
 }
 
 @inject IJSRuntime JS
+@inject UserState UserState
 
 @code{
     [Parameter] public string Placeholder { get; set; } = "Type a message...";
