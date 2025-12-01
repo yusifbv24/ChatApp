@@ -224,7 +224,7 @@
         color: var(--gray-600);
     }
 
-/* Legacy Actions - kept for backwards compatibility */
+/* Legacy Actions */
 .conversation-actions {
     display: none;
 }
@@ -363,7 +363,7 @@
     margin-left: 8px;
 }
 
-/* Channel Items - Legacy styles kept for compatibility */
+/* Channel Items */
 .channel-icon-wrapper {
     width: 48px;
     height: 48px;
@@ -384,7 +384,6 @@
     color: var(--gray-400);
 }
 
-/* Group avatar inherits conversation-avatar size */
 .conversation-avatar.group-avatar {
     width: 48px;
     height: 48px;
@@ -807,12 +806,10 @@
         object-fit: cover;
     }
 
-    /* Avatar spacer reserves space but doesn't show avatar */
     .message-avatar.avatar-spacer {
         visibility: hidden;
     }
 
-/* Group message styling to ensure proper alignment */
 .message-wrapper.group-message {
     align-items: flex-start;
 }
@@ -860,7 +857,6 @@
     box-shadow: 0 1px 2px rgba(99, 102, 241, 0.15);
 }
 
-/* Message content block positions text and meta */
 .message-content-block {
     display: flex;
     flex-direction: column;
@@ -879,7 +875,6 @@
     color: var(--white);
 }
 
-/* Time and read status inside bubble - bottom right */
 .message-meta-inline {
     display: flex;
     align-items: center;
@@ -922,7 +917,6 @@
     opacity: 1 !important;
 }
 
-/* Edited label */
 .edited-label {
     font-size: 10px;
     font-style: italic;
@@ -951,7 +945,10 @@
     font-size: 13px;
 }
 
-/* Message Actions - positioned relative to wrapper for hover on entire row */
+/* ===================================
+   MESSAGE ACTIONS - Hover on row
+   =================================== */
+
 .message-actions {
     position: absolute;
     top: 50%;
@@ -963,9 +960,9 @@
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-md);
     z-index: 10;
+    border: 1px solid var(--gray-200);
 }
 
-/* Position actions on the opposite side of the message */
 .message-wrapper.other .message-actions {
     right: -70px;
 }
@@ -974,7 +971,6 @@
     left: -70px;
 }
 
-/* Show actions when hovering anywhere on the message row */
 .message-wrapper:hover .message-actions {
     display: flex;
 }
@@ -998,12 +994,7 @@
         color: var(--primary-color);
     }
 
-    .action-btn.delete:hover {
-        background: #FEE2E2;
-        color: var(--error-color);
-    }
-
-/* Old message-meta outside bubble - hide it */
+/* Hide old message-meta */
 .message-meta {
     display: none;
 }
@@ -1050,10 +1041,13 @@
     color: var(--gray-600);
 }
 
-/* Reaction Picker Popup - positioned relative to wrapper */
+/* ===================================
+   REACTION PICKER POPUP
+   =================================== */
+
 .reaction-picker-popup {
     position: absolute;
-    top: -45px;
+    top: -50px;
     display: flex;
     gap: 4px;
     padding: 8px;
@@ -1062,6 +1056,7 @@
     box-shadow: var(--shadow-xl);
     z-index: 100;
     animation: fadeInUp 0.15s ease-out;
+    border: 1px solid var(--gray-200);
 }
 
 .message-wrapper.other .reaction-picker-popup {
@@ -1070,79 +1065,7 @@
 
 .message-wrapper.own .reaction-picker-popup {
     right: 0;
-}
-
-/* More Menu Popup - 3-dot menu positioned relative to wrapper */
-.more-menu-popup {
-    position: absolute;
-    top: 0;
-    min-width: 160px;
-    background: var(--white);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-xl);
-    z-index: 100;
-    animation: fadeInUp 0.15s ease-out;
-    overflow: hidden;
-}
-
-.message-wrapper.other .more-menu-popup {
-    left: 0;
-}
-
-.message-wrapper.own .more-menu-popup {
-    right: 0;
-}
-
-.menu-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    width: 100%;
-    padding: 10px 16px;
-    background: transparent;
-    border: none;
-    text-align: left;
-    font-size: 14px;
-    color: var(--gray-700);
-    cursor: pointer;
-    transition: background var(--transition-fast);
-}
-
-    .menu-item:hover {
-        background: var(--gray-100);
-    }
-
-    .menu-item.delete-item {
-        color: var(--error-color);
-    }
-
-        .menu-item.delete-item:hover {
-            background: #FEE2E2;
-        }
-
-    .menu-item .mud-icon-root {
-        font-size: 18px !important;
-    }
-
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(4px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* Popup Overlay - click outside to close */
-.popup-overlay {
-    position: fixed;
-    inset: 0;
-    background: transparent;
-    z-index: 99;
-    cursor: default;
+    left: auto;
 }
 
 .reaction-btn {
@@ -1163,6 +1086,114 @@
         background: var(--gray-100);
         transform: scale(1.2);
     }
+
+/* ===================================
+   MORE MENU POPUP - Fixed styling
+   =================================== */
+
+.more-menu-popup {
+    position: absolute;
+    min-width: 180px;
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl);
+    z-index: 100;
+    overflow: hidden;
+    border: 1px solid var(--gray-200);
+    animation: fadeInUp 0.15s ease-out;
+}
+
+    /* Position below message (default) */
+    .more-menu-popup.position-below {
+        top: 100%;
+        margin-top: 4px;
+    }
+
+    /* Position above message when not enough space below */
+    .more-menu-popup.position-above {
+        bottom: 100%;
+        top: auto;
+        margin-bottom: 4px;
+    }
+
+.message-wrapper.other .more-menu-popup {
+    left: 0;
+}
+
+.message-wrapper.own .more-menu-popup {
+    right: 0;
+    left: auto;
+}
+
+/* Menu Item - Fixed horizontal layout */
+.menu-item {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 10px 16px;
+    background: transparent;
+    border: none;
+    text-align: left;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--gray-700);
+    cursor: pointer;
+    transition: background var(--transition-fast);
+}
+
+    .menu-item:hover {
+        background: var(--gray-100);
+    }
+
+    .menu-item .mud-icon-root {
+        font-size: 18px !important;
+        flex-shrink: 0;
+        color: var(--gray-500);
+    }
+
+    .menu-item:hover .mud-icon-root {
+        color: var(--primary-color);
+    }
+
+    .menu-item span {
+        flex: 1;
+        white-space: nowrap;
+    }
+
+    .menu-item.delete-item {
+        color: var(--error-color);
+    }
+
+        .menu-item.delete-item .mud-icon-root {
+            color: var(--error-color);
+        }
+
+        .menu-item.delete-item:hover {
+            background: #FEE2E2;
+        }
+
+/* Popup Overlay */
+.popup-overlay {
+    position: fixed;
+    inset: 0;
+    background: transparent;
+    z-index: 99;
+    cursor: default;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
 
 /* ===================================
    MESSAGE INPUT
@@ -2002,7 +2033,6 @@
         max-width: 85%;
     }
 
-        /* On mobile, show actions below the message instead */
         .message-wrapper .message-actions {
             position: static;
             display: none;

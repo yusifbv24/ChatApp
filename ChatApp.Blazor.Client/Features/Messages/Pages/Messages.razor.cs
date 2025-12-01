@@ -175,12 +175,12 @@ public partial class Messages : IAsyncDisposable
             var channelsResult = await channelsTask;
             if (conversationsResult.IsSuccess)
             {
-                conversations = conversationsResult.Value ?? new List<DirectConversationDto>();
+                conversations = conversationsResult.Value ?? [];
             }
 
             if (channelsResult.IsSuccess)
             {
-                channels = channelsResult.Value ?? new List<ChannelDto>();
+                channels = channelsResult.Value ?? [];
             }
 
             // Update global unread message count

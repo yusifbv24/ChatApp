@@ -1,5 +1,7 @@
-﻿<div class="message-wrapper @(IsOwn ? "own" :"other") @(IsDeleted ? "deleted" : "") @(!IsDirectMessage && !IsOwn ? "group-message" : "")">
-    @if(!IsOwn && !IsDirectMessage)
+﻿@inject IJSRuntime JS
+
+<div class="message-wrapper @(IsOwn ? "own" : "other") @(IsDeleted ? "deleted" : "") @(!IsDirectMessage && !IsOwn ? "group-message" : "")" @ref="messageWrapperRef">
+    @if (!IsOwn && !IsDirectMessage)
     {
         <!-- Always show avatar space for group messages to maintain alignment -->
         <div class="message-avatar @(!ShowAvatar ? "avatar-spacer" : "")">
@@ -87,8 +89,8 @@
         </div>
     }
 
-    <!-- Message Actions (visible on hover) - Now outside bubble for better hover behavior -->
-    @if (!IsDeleted)
+    <!-- Message Actions (visible on hover, hidden when popup is open) -->
+    @if (!IsDeleted && !showReactionPicker && !showMoreMenu)
     {
         <div class="message-actions">
             <button class="action-btn" title="React" @onclick="ToggleReactionPicker"
@@ -100,69 +102,65 @@
                 <MudIcon Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" />
             </button>
         </div>
+    }
 
-        <!-- Reaction Picker (positioned near message) -->
-        @if (showReactionPicker)
-        {
-            <div class="popup-overlay" @onclick="CloseReactionPicker"></div>
-            <div class="reaction-picker-popup" @onclick:stopPropagation="true">
-                @foreach (var emoji in CommonReactions)
-                {
-                    <button class="reaction-btn" @onclick="() => SelectReaction(emoji)">@emoji</button>
-                }
-            </div>
-        }
+    <!-- Reaction Picker (positioned near message) -->
+    @if (showReactionPicker)
+    {
+        <div class="popup-overlay" @onclick="CloseReactionPicker"></div>
+        <div class="reaction-picker-popup" @onclick:stopPropagation="true">
+            @foreach (var emoji in CommonReactions)
+            {
+                <button class="reaction-btn" @onclick="() => SelectReaction(emoji)">@emoji</button>
+            }
+        </div>
+    }
 
-        <!-- More Menu (3-dot menu) -->
-        @if (showMoreMenu)
-        {
-            <div class="popup-overlay" @onclick="CloseMoreMenu"></div>
-            <div class="more-menu-popup" @onclick:stopPropagation="true">
-                @if (!IsOwn)
-                {
-                    <button class="menu-item" @onclick="OnReplyClick">
-                        <MudIcon Icon="@Icons.Material.Filled.Reply" Size="Size.Small" />
-                        <span>Reply</span>
-                    </button>
-                }
-                <button class="menu-item" @onclick="OnCopyClick">
-                    <MudIcon Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small" />
-                    <span>Copy</span>
+    <!-- More Menu (3-dot menu) -->
+    @if (showMoreMenu)
+    {
+        <div class="popup-overlay" @onclick="CloseMoreMenu"></div>
+        <div class="more-menu-popup @(menuPositionAbove ? "position-above" : "position-below")" @onclick:stopPropagation="true">
+            <button class="menu-item" @onclick="OnReplyClick">
+                <MudIcon Icon="@Icons.Material.Filled.Reply" Size="Size.Small" />
+                <span>Reply</span>
+            </button>
+            <button class="menu-item" @onclick="OnCopyClick">
+                <MudIcon Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small" />
+                <span>Copy</span>
+            </button>
+            <button class="menu-item" @onclick="OnForwardClick">
+                <MudIcon Icon="@Icons.Material.Filled.Forward" Size="Size.Small" />
+                <span>Forward</span>
+            </button>
+            @if (!IsDirectMessage)
+            {
+                <button class="menu-item" @onclick="OnPinClick">
+                    <MudIcon Icon="@Icons.Material.Filled.PushPin" Size="Size.Small" />
+                    <span>@(IsPinned ? "Unpin" : "Pin")</span>
                 </button>
-                <button class="menu-item" @onclick="OnForwardClick">
-                    <MudIcon Icon="@Icons.Material.Filled.Forward" Size="Size.Small" />
-                    <span>Forward</span>
+            }
+            @if (IsOwn && !IsDeleted)
+            {
+                <button class="menu-item" @onclick="OnEditClick">
+                    <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" />
+                    <span>Edit</span>
                 </button>
-                @if (!IsDirectMessage)
-                {
-                    <button class="menu-item" @onclick="OnPinClick">
-                        <MudIcon Icon="@Icons.Material.Filled.PushPin" Size="Size.Small" />
-                        <span>@(IsPinned ? "Unpin" : "Pin")</span>
-                    </button>
-                }
-                @if (IsOwn && !IsDeleted)
-                {
-                    <button class="menu-item" @onclick="OnEditClick">
-                        <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" />
-                        <span>Edit</span>
-                    </button>
-                    <button class="menu-item delete-item" @onclick="OnDeleteClick">
-                        <MudIcon Icon="@Icons.Material.Filled.Delete" Size="Size.Small" />
-                        <span>Delete</span>
-                    </button>
-                }
-            </div>
-        }
+                <button class="menu-item delete-item" @onclick="OnDeleteClick">
+                    <MudIcon Icon="@Icons.Material.Filled.Delete" Size="Size.Small" />
+                    <span>Delete</span>
+                </button>
+            }
+        </div>
     }
 </div>
 
-
-@code{
-    [Parameter] public Guid MessageId{ get; set; }
+@code {
+    [Parameter] public Guid MessageId { get; set; }
     [Parameter] public string Content { get; set; } = "";
     [Parameter] public string SenderName { get; set; } = "";
     [Parameter] public string? AvatarUrl { get; set; }
-    [Parameter] public DateTime CreatedAt{ get; set; }
+    [Parameter] public DateTime CreatedAt { get; set; }
     [Parameter] public bool IsOwn { get; set; }
     [Parameter] public bool IsEdited { get; set; }
     [Parameter] public bool IsDeleted { get; set; }
@@ -179,19 +177,20 @@
     [Parameter] public EventCallback OnPin { get; set; }
     [Parameter] public EventCallback OnForward { get; set; }
 
-    private bool showReactionPicker=false;
+    private ElementReference messageWrapperRef;
+    private bool showReactionPicker = false;
     private bool showMoreMenu = false;
+    private bool menuPositionAbove = false;
     private readonly string[] CommonReactions = { "👍", "❤️", "😂", "😮", "😢", "🎉" };
 
     private string GetInitials(string name)
     {
-        if(string.IsNullOrEmpty(name)) return "?";
+        if (string.IsNullOrEmpty(name)) return "?";
         var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         return parts.Length >= 2
             ? $"{parts[0][0]}{parts[1][0]}".ToUpper()
             : name[0].ToString().ToUpper();
     }
-
 
     private string FormatTime(DateTime dateTime)
     {
@@ -218,16 +217,13 @@
 
     private async Task OnEditClick()
     {
+        CloseMoreMenu();
         await OnEdit.InvokeAsync();
     }
 
     private async Task OnDeleteClick()
     {
-        await OnDelete.InvokeAsync();
-    }
-
-    private async Task OnDeleteAsync()
-    {
+        CloseMoreMenu();
         await OnDelete.InvokeAsync();
     }
 
@@ -242,10 +238,34 @@
         showReactionPicker = false;
     }
 
-    private void ToggleMoreMenu()
+    private async Task ToggleMoreMenu()
     {
+        if (!showMoreMenu)
+        {
+            // Check if menu should appear above or below
+            await CheckMenuPosition();
+        }
         showMoreMenu = !showMoreMenu;
         showReactionPicker = false;
+    }
+
+    private async Task CheckMenuPosition()
+    {
+        try
+        {
+            var position = await JS.InvokeAsync<MenuPositionInfo>("chatAppUtils.getElementPosition", messageWrapperRef);
+            if (position != null)
+            {
+                // Menu height is approximately 200px (6 items * ~33px each)
+                var menuHeight = 200;
+                var spaceBelow = position.ViewportHeight - position.Bottom;
+                menuPositionAbove = spaceBelow < menuHeight && position.Top > menuHeight;
+            }
+        }
+        catch
+        {
+            menuPositionAbove = false;
+        }
     }
 
     private void CloseMoreMenu()
@@ -261,13 +281,13 @@
 
     private async Task OnReplyClick()
     {
-        showMoreMenu = false;
+        CloseMoreMenu();
         await OnReply.InvokeAsync();
     }
 
     private async Task OnCopyClick()
     {
-        showMoreMenu = false;
+        CloseMoreMenu();
         try
         {
             await JS.InvokeVoidAsync("navigator.clipboard.writeText", Content);
@@ -280,15 +300,20 @@
 
     private async Task OnForwardClick()
     {
-        showMoreMenu = false;
+        CloseMoreMenu();
         await OnForward.InvokeAsync();
     }
 
     private async Task OnPinClick()
     {
-        showMoreMenu = false;
+        CloseMoreMenu();
         await OnPin.InvokeAsync();
     }
-}
 
-@inject IJSRuntime JS
+    private record MenuPositionInfo
+    {
+        public double Top { get; set; }
+        public double Bottom { get; set; }
+        public double ViewportHeight { get; set; }
+    }
+}

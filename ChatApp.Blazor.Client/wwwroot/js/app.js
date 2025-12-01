@@ -72,5 +72,19 @@ window.chatAppUtils = {
         if (element) {
             element.scrollIntoView({ behavior: 'smooth', block: 'end' });
         }
+    },
+
+    // Get element position for smart menu positioning
+    getElementPosition: (element) => {
+        if (!element) return null;
+        const rect = element.getBoundingClientRect();
+        return {
+            top: rect.top,
+            bottom: rect.bottom,
+            left: rect.left,
+            right: rect.right,
+            viewportHeight: window.innerHeight,
+            viewportWidth: window.innerWidth
+        };
     }
 };
