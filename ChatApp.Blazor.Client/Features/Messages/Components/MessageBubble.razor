@@ -1,14 +1,18 @@
-﻿<div class="message-wrapper @(IsOwn ? "own" :"other") @(IsDeleted ? "deleted" : "")">
-    @if(!IsOwn && ShowAvatar)
+﻿<div class="message-wrapper @(IsOwn ? "own" :"other") @(IsDeleted ? "deleted" : "") @(!IsDirectMessage && !IsOwn ? "group-message" : "")">
+    @if(!IsOwn && !IsDirectMessage)
     {
-        <div class="message-avatar">
-            @if (!string.IsNullOrEmpty(AvatarUrl))
+        <!-- Always show avatar space for group messages to maintain alignment -->
+        <div class="message-avatar @(!ShowAvatar ? "avatar-spacer" : "")">
+            @if (ShowAvatar)
             {
-                <img src="@AvatarUrl" alt="@SenderName" />
-            }
-            else
-            {
-                <div class="avatar-placeholder">@GetInitials(SenderName)</div>
+                @if (!string.IsNullOrEmpty(AvatarUrl))
+                {
+                    <img src="@AvatarUrl" alt="@SenderName" />
+                }
+                else
+                {
+                    <div class="avatar-placeholder">@GetInitials(SenderName)</div>
+                }
             }
         </div>
     }

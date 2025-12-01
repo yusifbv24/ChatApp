@@ -248,6 +248,10 @@
         {
             await OnSend.InvokeAsync(message);
         }
+
+        // Re-focus after sending message
+        shouldFocus = true;
+        StateHasChanged();
     }
 
     private async Task CancelEdit()

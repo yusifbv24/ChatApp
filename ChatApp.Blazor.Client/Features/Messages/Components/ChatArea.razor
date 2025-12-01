@@ -126,7 +126,7 @@
                                        IsRead="@message.IsRead"
                                        ReactionCount="@message.ReactionCount"
                                        IsDirectMessage="true"
-                                       ShowAvatar="@ShouldShowAvatar(message,group)"
+                                       ShowAvatar="false"
                                        ShowSenderName="false"
                                        OnEdit="()=>StartEditMessage(message.Id,message.Content)"
                                        OnDelete="()=>DeleteMessage(message.Id)"

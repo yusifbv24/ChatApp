@@ -974,6 +974,7 @@
     width: 36px;
     height: 36px;
     flex-shrink: 0;
+    align-self: flex-start;
 }
 
 
@@ -985,6 +986,20 @@
         border-radius: 50%;
         object-fit: cover;
     }
+
+    /* Avatar spacer reserves space but doesn't show avatar */
+    .message-avatar.avatar-spacer {
+        visibility: hidden;
+    }
+
+/* Group message styling to ensure proper alignment */
+.message-wrapper.group-message {
+    align-items: flex-start;
+}
+
+.message-wrapper.group-message .message-avatar {
+    margin-top: 4px;
+}
 
 
 
