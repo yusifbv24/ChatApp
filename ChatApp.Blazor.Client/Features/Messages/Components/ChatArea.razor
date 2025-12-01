@@ -130,7 +130,10 @@
                                        ShowSenderName="false"
                                        OnEdit="()=>StartEditMessage(message.Id,message.Content)"
                                        OnDelete="()=>DeleteMessage(message.Id)"
-                                       OnReaction="(emoji)=>AddReaction(message.Id,emoji)" />
+                                       OnReaction="(emoji)=>AddReaction(message.Id,emoji)"
+                                       OnReply="()=>ReplyToMessage(message.Id)"
+                                       OnPin="()=>{}"
+                                       OnForward="()=>ForwardMessage(message.Id)" />
                     }
                 }
             }
@@ -158,7 +161,10 @@
                                        ShowSenderName="@ShouldShowSenderName(message, group)"
                                        OnEdit="() => StartEditMessage(message.Id, message.Content)"
                                        OnDelete="() => DeleteMessage(message.Id)"
-                                       OnReaction="(emoji) => AddReaction(message.Id, emoji)" />
+                                       OnReaction="(emoji) => AddReaction(message.Id, emoji)"
+                                       OnReply="()=>ReplyToMessage(message.Id)"
+                                       OnPin="()=>PinMessage(message.Id)"
+                                       OnForward="()=>ForwardMessage(message.Id)" />
                     }
                 }
             }
@@ -451,6 +457,25 @@
     {
         // File attachment will be implemented later
         Console.WriteLine("Attach file clicked");
+    }
+
+    private void ReplyToMessage(Guid messageId)
+    {
+        // TODO: Implement reply functionality
+        Console.WriteLine($"Reply to message: {messageId}");
+    }
+
+    private void ForwardMessage(Guid messageId)
+    {
+        // TODO: Implement forward functionality
+        Console.WriteLine($"Forward message: {messageId}");
+    }
+
+    private async Task PinMessage(Guid messageId)
+    {
+        // TODO: Implement pin/unpin functionality
+        Console.WriteLine($"Pin message: {messageId}");
+        await Task.CompletedTask;
     }
 
     public void Dispose()

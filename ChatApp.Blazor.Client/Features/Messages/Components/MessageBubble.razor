@@ -32,52 +32,100 @@
             }
             else
             {
-                <div class="message-text">@Content</div>
+                <div class="message-content-block">
+                    <div class="message-text">@Content</div>
 
-                @if (IsEdited)
-                {
-                    <span class="edited-label">(edited)</span>
-                }
+                    <!-- Time and Read Status in bottom right corner of bubble -->
+                    <div class="message-meta-inline">
+                        @if (IsEdited)
+                        {
+                            <span class="edited-label">Edited</span>
+                        }
+                        @if (IsPinned)
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.PushPin" Size="Size.Small" Class="pinned-icon-inline" />
+                        }
+                        <span class="message-time-inline">@FormatTime(CreatedAt)</span>
+                        @if(IsOwn && !IsDeleted && IsDirectMessage)
+                        {
+                            <span class="read-status-inline">
+                                @if (IsRead)
+                                {
+                                    <MudIcon Icon="@Icons.Material.Filled.DoneAll" Size="Size.Small" Class="read-icon"/>
+                                }
+                                else
+                                {
+                                    <MudIcon Icon="@Icons.Material.Filled.Done" Size="Size.Small" />
+                                }
+                            </span>
+                        }
+                    </div>
+                </div>
 
                 <!-- Message Actions (visible on hover) -->
                 <div class="message-actions">
-                    @if(IsOwn && !IsDeleted)
-                    {
-                        <button class="action-btn" title="Edit" @onclick="OnEditClick"
-                                @onclick:stopPropagation="true">
-                                <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" />
-                        </button>
-                        <button class="action-btn delete" title="Delete" @onclick="OnDeleteClick"
-                                @onclick:stopPropagation="true">
-                                <MudIcon Icon="@Icons.Material.Filled.Delete" Size="Size.Small"/>
-                        </button>
-                    }
                     <button class="action-btn" title="React" @onclick="ToggleReactionPicker"
                             @onclick:stopPropagation="true">
                             <MudIcon Icon="@Icons.Material.Filled.EmojiEmotions" Size="Size.Small"/>
                     </button>
+                    <button class="action-btn" title="More" @onclick="ToggleMoreMenu"
+                            @onclick:stopPropagation="true">
+                            <MudIcon Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"/>
+                    </button>
                 </div>
-            }
-        </div>
 
-        <div class="message-meta">
-            <span class="message-time">@FormatTime(CreatedAt)</span>
-            @if(IsOwn && !IsDeleted && IsDirectMessage)
-            {
-                <span class="read-status">
-                    @if (IsRead)
-                    {
-                        <MudIcon Icon="@Icons.Material.Filled.DoneAll" Size="Size.Small" Class="read"/>
-                    }
-                    else
-                    {
-                        <MudIcon Icon="@Icons.Material.Filled.Done" Size="Size.Small" />
-                    }
-                </span>
-            }
-            @if (IsPinned)
-            {
-                <MudIcon Icon="@Icons.Material.Filled.PushPin" Size="Size.Small" Class="pinned-icon" />
+                <!-- Reaction Picker (positioned near message) -->
+                @if (showReactionPicker)
+                {
+                    <div class="popup-overlay" @onclick="CloseReactionPicker"></div>
+                    <div class="reaction-picker-popup" @onclick:stopPropagation="true">
+                        @foreach(var emoji in CommonReactions)
+                        {
+                            <button class="reaction-btn" @onclick="()=>SelectReaction(emoji)">@emoji</button>
+                        }
+                    </div>
+                }
+
+                <!-- More Menu (3-dot menu) -->
+                @if (showMoreMenu)
+                {
+                    <div class="popup-overlay" @onclick="CloseMoreMenu"></div>
+                    <div class="more-menu-popup" @onclick:stopPropagation="true">
+                        @if (!IsOwn)
+                        {
+                            <button class="menu-item" @onclick="OnReplyClick">
+                                <MudIcon Icon="@Icons.Material.Filled.Reply" Size="Size.Small" />
+                                <span>Reply</span>
+                            </button>
+                        }
+                        <button class="menu-item" @onclick="OnCopyClick">
+                            <MudIcon Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small" />
+                            <span>Copy</span>
+                        </button>
+                        <button class="menu-item" @onclick="OnForwardClick">
+                            <MudIcon Icon="@Icons.Material.Filled.Forward" Size="Size.Small" />
+                            <span>Forward</span>
+                        </button>
+                        @if (!IsDirectMessage)
+                        {
+                            <button class="menu-item" @onclick="OnPinClick">
+                                <MudIcon Icon="@Icons.Material.Filled.PushPin" Size="Size.Small" />
+                                <span>@(IsPinned ? "Unpin" : "Pin")</span>
+                            </button>
+                        }
+                        @if (IsOwn && !IsDeleted)
+                        {
+                            <button class="menu-item" @onclick="OnEditClick">
+                                <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" />
+                                <span>Edit</span>
+                            </button>
+                            <button class="menu-item delete-item" @onclick="OnDeleteClick">
+                                <MudIcon Icon="@Icons.Material.Filled.Delete" Size="Size.Small" />
+                                <span>Delete</span>
+                            </button>
+                        }
+                    </div>
+                }
             }
         </div>
         @if(ReactionCount > 0 && !IsDeleted)
@@ -104,18 +152,6 @@
         </div>
     }
 </div>
-<!-- Reaction Picker Group -->
-@if (showReactionPicker)
-{
-    <div class="reaction-picker-overlay" @onclick="CloseReactionPicker">
-        <div class="reaction-picker" @onclick:stopPropagation="true">
-            @foreach(var emoji in CommonReactions)
-            {
-                <button class="reaction-btn" @onclick="()=>SelectReaction(emoji)">@emoji</button>
-            }
-        </div>
-    </div>
-}
 
 @code{
     [Parameter] public Guid MessageId{ get; set; }
@@ -135,8 +171,12 @@
     [Parameter] public EventCallback OnEdit { get; set; }
     [Parameter] public EventCallback OnDelete { get; set; }
     [Parameter] public EventCallback<string> OnReaction { get; set; }
+    [Parameter] public EventCallback OnReply { get; set; }
+    [Parameter] public EventCallback OnPin { get; set; }
+    [Parameter] public EventCallback OnForward { get; set; }
 
     private bool showReactionPicker=false;
+    private bool showMoreMenu = false;
     private readonly string[] CommonReactions = { "👍", "❤️", "😂", "😮", "😢", "🎉" };
 
     private string GetInitials(string name)
@@ -190,6 +230,7 @@
     private void ToggleReactionPicker()
     {
         showReactionPicker = !showReactionPicker;
+        showMoreMenu = false;
     }
 
     private void CloseReactionPicker()
@@ -197,9 +238,53 @@
         showReactionPicker = false;
     }
 
+    private void ToggleMoreMenu()
+    {
+        showMoreMenu = !showMoreMenu;
+        showReactionPicker = false;
+    }
+
+    private void CloseMoreMenu()
+    {
+        showMoreMenu = false;
+    }
+
     private async Task SelectReaction(string emoji)
     {
         showReactionPicker = false;
         await OnReaction.InvokeAsync(emoji);
     }
+
+    private async Task OnReplyClick()
+    {
+        showMoreMenu = false;
+        await OnReply.InvokeAsync();
+    }
+
+    private async Task OnCopyClick()
+    {
+        showMoreMenu = false;
+        try
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", Content);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Copy failed: {ex.Message}");
+        }
+    }
+
+    private async Task OnForwardClick()
+    {
+        showMoreMenu = false;
+        await OnForward.InvokeAsync();
+    }
+
+    private async Task OnPinClick()
+    {
+        showMoreMenu = false;
+        await OnPin.InvokeAsync();
+    }
 }
+
+@inject IJSRuntime JS

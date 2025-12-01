@@ -203,6 +203,28 @@ public partial class Messages : IAsyncDisposable
         AppState.UnreadMessageCount = totalUnread;
     }
 
+    private void UpdateConversationLocally(Guid conversationId, string lastMessage, DateTime messageTime)
+    {
+        var conversation = conversations.FirstOrDefault(c => c.Id == conversationId);
+        if (conversation != null)
+        {
+            var index = conversations.IndexOf(conversation);
+
+            // Create updated conversation with new last message
+            var updatedConversation = conversation with
+            {
+                LastMessageContent = lastMessage,
+                LastMessageAtUtc = messageTime
+            };
+
+            // Replace in the same position to avoid reordering
+            conversations[index] = updatedConversation;
+
+            // Trigger UI update
+            StateHasChanged();
+        }
+    }
+
     private async Task SelectConversation(DirectConversationDto conversation)
     {
         // Clear pending conversation state
@@ -473,6 +495,8 @@ public partial class Messages : IAsyncDisposable
                 var result = await ConversationService.SendMessageAsync(selectedConversationId.Value, content);
                 if (result.IsSuccess)
                 {
+                    var messageTime = DateTime.UtcNow;
+
                     // Add message locally (optimistic UI) - don't wait for SignalR
                     var newMessage = new DirectMessageDto(
                         result.Value,
@@ -488,13 +512,13 @@ public partial class Messages : IAsyncDisposable
                         false,
                         false,
                         0,
-                        DateTime.UtcNow,
+                        messageTime,
                         null,
                         null);
                     directMessages.Add(newMessage);
 
-                    // Reload conversations to update the list
-                    await LoadConversationsAndChannels();
+                    // Update conversation locally without reloading
+                    UpdateConversationLocally(selectedConversationId.Value, content, messageTime);
                 }
                 else
                 {
