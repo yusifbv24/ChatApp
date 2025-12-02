@@ -22,7 +22,9 @@
       "Bash(powershell -Command:*)",
       "Bash(netstat:*)",
       "Bash(dir /b \"C:\\Users\\Joseph\\Desktop\\ChatApp\")",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(del \"C:\\Users\\ybaghiyev\\Desktop\\ChatApp\\ChatApp.Blazor.Client\\wwwroot\\service-worker.js\")",
+      "Bash(del \"C:\\Users\\ybaghiyev\\Desktop\\ChatApp\\ChatApp.Blazor.Client\\wwwroot\\service-worker.published.js\")"
     ],
     "deny": [],
     "ask": []

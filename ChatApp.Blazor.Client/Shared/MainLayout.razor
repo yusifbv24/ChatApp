@@ -1,3 +1,4 @@
+@using ChatApp.Blazor.Client.Infrastructure.SignalR
 @inherits LayoutComponentBase
 @inject UserState UserState
 @inject AppState AppState
@@ -5,6 +6,7 @@
 @inject IUserService UserService
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
+@inject ISignalRService SignalRService
 @implements IDisposable
 
 <div class="main-layout">
@@ -254,6 +256,7 @@
     private bool isProfilePanelOpen = false;
     private DateTime currentTime = DateTime.Now;
     private System.Threading.Timer? timer;
+    private bool signalRInitialized = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -265,6 +268,21 @@
             if (result.IsSuccess && result.Value != null)
             {
                 UserState.CurrentUser = result.Value;
+            }
+        }
+
+        // Initialize SignalR connection immediately after user is loaded
+        // This fixes Problem 1: User appears online to others immediately after login
+        if (UserState.CurrentUser != null && !signalRInitialized)
+        {
+            try
+            {
+                await SignalRService.InitializeAsync();
+                signalRInitialized = true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to initialize SignalR: {ex.Message}");
             }
         }
 
@@ -332,6 +350,18 @@
     private async Task HandleLogout()
     {
         CloseUserMenu();
+
+        // Disconnect SignalR before logout
+        if (signalRInitialized)
+        {
+            try
+            {
+                await SignalRService.DisconnectAsync();
+                signalRInitialized = false;
+            }
+            catch { }
+        }
+
         await AuthService.LogoutAsync();
         Navigation.NavigateTo("/login", forceLoad: true);
     }
@@ -359,5 +389,15 @@
         timer?.Dispose();
         UserState.OnChange -= StateHasChanged;
         AppState.OnChange -= StateHasChanged;
+
+        // Disconnect SignalR on dispose
+        if (signalRInitialized)
+        {
+            try
+            {
+                _ = SignalRService.DisconnectAsync();
+            }
+            catch { }
+        }
     }
 }

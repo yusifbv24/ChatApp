@@ -20,7 +20,10 @@ var apiBaseAddress = builder.Configuration["ApiBaseAddress"] ?? "http://localhos
 // Register cookie handler to ensure credentials (cookies) are sent with requests
 builder.Services.AddTransient<CookieHandler>();
 
-// Default HttpClient with cookie support
+// Register JWT authorization handler for automatic token refresh
+builder.Services.AddTransient<JwtAuthorizationMessageHandler>();
+
+// Default HttpClient with cookie support (no JWT handler to avoid circular calls during refresh)
 builder.Services.AddHttpClient("Default", client =>
 {
     client.BaseAddress = new Uri(apiBaseAddress);
@@ -49,7 +52,7 @@ builder.Services.AddScoped<CustomAuthStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(sp =>
     sp.GetRequiredService<CustomAuthStateProvider>());
 
-// HTTP Client with Authentication and Cookie support
+// HTTP Client with Authentication, JWT refresh, and Cookie support
 builder.Services.AddTransient<AuthenticationDelegatingHandler>();
 builder.Services.AddHttpClient("ChatApp.Api", client =>
 {
@@ -57,6 +60,7 @@ builder.Services.AddHttpClient("ChatApp.Api", client =>
     client.Timeout = TimeSpan.FromSeconds(30);
 })
 .AddHttpMessageHandler<CookieHandler>()
+.AddHttpMessageHandler<JwtAuthorizationMessageHandler>()  // Add JWT handler for auto token refresh
 .AddHttpMessageHandler<AuthenticationDelegatingHandler>();
 
 builder.Services.AddScoped(sp =>
