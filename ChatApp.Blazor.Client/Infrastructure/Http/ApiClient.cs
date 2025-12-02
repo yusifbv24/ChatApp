@@ -153,8 +153,5 @@ public class ApiClient : IApiClient
         }
     }
 
-    private class ErrorResponse
-    {
-        public string? Error { get; set; }
-    }
+    private record ErrorResponse(string? Error);
 }

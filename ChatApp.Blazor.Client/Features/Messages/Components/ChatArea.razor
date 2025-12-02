@@ -33,7 +33,14 @@
                     </div>
                     <div class="header-details">
                         <h3 class="header-name">@RecipientName</h3>
-                        <span class="header-status">@(IsRecipientOnline ? "Online" : "Offline")</span>
+                        @if (TypingUsers?.Any() ?? false)
+                        {
+                            <span class="header-status typing">typing...</span>
+                        }
+                        else
+                        {
+                            <span class="header-status">@(IsRecipientOnline ? "Online" : "Offline")</span>
+                        }
                     </div>
                 }
                 else
@@ -185,7 +192,6 @@
                       IsEditing="@isEditing"
                       EditingContent="@editingContent"
                       IsSending="@IsSending"
-                      TypingUsers="@TypingUsers"
                       ConversationId="@ConversationId"
                       OnSend="SendMessage"
                       OnEdit="EditMessage"
@@ -298,6 +304,9 @@
             _shouldScrollToBottom = true;
         }
         _previousMessageCount = currentCount;
+
+        // Force re-render when parameters change
+        StateHasChanged();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

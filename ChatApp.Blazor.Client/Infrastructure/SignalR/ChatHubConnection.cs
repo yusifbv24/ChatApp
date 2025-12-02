@@ -10,17 +10,19 @@ namespace ChatApp.Blazor.Client.Infrastructure.SignalR;
 public class ChatHubConnection : IChatHubConnection, IAsyncDisposable
 {
     private HubConnection? _hubConnection;
-    private readonly CustomAuthStateProvider _authStateProvider;
     private readonly HttpClient _httpClient;
     private readonly string _hubUrl;
     private string? _cachedToken;
 
+    // Connection lifecycle events
+    public event Func<Exception?, Task>? Reconnecting;
+    public event Func<string?, Task>? Reconnected;
+    public event Func<Exception?, Task>? Closed;
+
     public ChatHubConnection(
-        CustomAuthStateProvider authStateProvider,
         HttpClient httpClient,
         IConfiguration configuration)
     {
-        _authStateProvider = authStateProvider;
         _httpClient = httpClient;
         var apiBaseUrl = configuration["ApiBaseAddress"] ?? "http://localhost:7000";
         _hubUrl = $"{apiBaseUrl}/hubs/chat";
@@ -42,7 +44,7 @@ public class ChatHubConnection : IChatHubConnection, IAsyncDisposable
                 // Provide access token for authentication
                 options.AccessTokenProvider = () => Task.FromResult(_cachedToken);
             })
-            .WithAutomaticReconnect(new[] { TimeSpan.Zero, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(10) })
+            .WithAutomaticReconnect([TimeSpan.Zero, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(10)])
             .Build();
 
         // Handle reconnection - refresh token when reconnecting
@@ -50,18 +52,28 @@ public class ChatHubConnection : IChatHubConnection, IAsyncDisposable
         {
             Console.WriteLine($"SignalR reconnecting: {error?.Message}");
             _cachedToken = await GetAccessTokenAsync();
+
+            // Propagate event to subscribers
+            if (Reconnecting != null)
+                await Reconnecting(error);
         };
 
-        _hubConnection.Reconnected += (connectionId) =>
+        _hubConnection.Reconnected += async (connectionId) =>
         {
             Console.WriteLine($"SignalR reconnected with ID: {connectionId}");
-            return Task.CompletedTask;
+
+            // Propagate event to subscribers
+            if (Reconnected != null)
+                await Reconnected(connectionId);
         };
 
-        _hubConnection.Closed += (error) =>
+        _hubConnection.Closed += async (error) =>
         {
             Console.WriteLine($"SignalR connection closed: {error?.Message}");
-            return Task.CompletedTask;
+
+            // Propagate event to subscribers
+            if (Closed != null)
+                await Closed(error);
         };
 
         await _hubConnection.StartAsync();
@@ -85,10 +97,7 @@ public class ChatHubConnection : IChatHubConnection, IAsyncDisposable
         }
     }
 
-    private class SignalRTokenResponse
-    {
-        public string? Token { get; set; }
-    }
+    private record SignalRTokenResponse(string? Token);
 
     public async Task StopAsync()
     {
@@ -115,6 +124,17 @@ public class ChatHubConnection : IChatHubConnection, IAsyncDisposable
 
         // Use SendCoreAsync to properly spread the arguments (fire-and-forget)
         await _hubConnection.SendCoreAsync(method, args);
+    }
+
+    public async Task<TResult> InvokeAsync<TResult>(string methodName, params object?[] args)
+    {
+        if (_hubConnection == null)
+        {
+            throw new InvalidOperationException("Hub connection not started");
+        }
+
+        // Use InvokeAsync to call server method and wait for result
+        return await _hubConnection.InvokeCoreAsync<TResult>(methodName, args);
     }
 
     public IDisposable On<T>(string methodName, Action<T> handler)

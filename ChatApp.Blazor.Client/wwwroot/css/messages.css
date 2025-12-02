@@ -353,6 +353,11 @@
     flex: 1;
 }
 
+    .preview-text.typing-preview {
+        color: var(--primary-color);
+        font-style: italic;
+    }
+
 .unread-badge {
     background: var(--primary-color);
     color: var(--white);
@@ -573,6 +578,11 @@
     font-size: 12px;
     color: var(--gray-500);
 }
+
+    .header-status.typing {
+        color: var(--primary-color);
+        font-style: italic;
+    }
 
 .chat-header-actions {
     display: flex;

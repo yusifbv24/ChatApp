@@ -31,8 +31,8 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
 
     // Direct message events
     public event Action<DirectMessageDto>? OnNewDirectMessage;
-    public event Action<Guid, Guid>? OnDirectMessageEdited;
-    public event Action<Guid, Guid>? OnDirectMessageDeleted;
+    public event Action<Guid, Guid>? OnDirectMessageEdited; // Not yet implemented on backend
+    public event Action<Guid, Guid>? OnDirectMessageDeleted; // Not yet implemented on backend
     public event Action<Guid, Guid, Guid, DateTime>? OnMessageRead;
 
 
@@ -60,9 +60,31 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
         _isInitialized=true;
 
         RegisterEventHandlers();
+        RegisterConnectionEvents();
         OnConnected?.Invoke();
     }
 
+    private void RegisterConnectionEvents()
+    {
+        // Register connection lifecycle events from the hub connection
+        hubConnection.Reconnecting += async (error) =>
+        {
+            IsConnected = false;
+            await Task.Run(() => OnReconnecting?.Invoke());
+        };
+
+        hubConnection.Reconnected += async (connectionId) =>
+        {
+            IsConnected = true;
+            await Task.Run(() => OnReconnected?.Invoke());
+        };
+
+        hubConnection.Closed += async (error) =>
+        {
+            IsConnected = false;
+            await Task.Run(() => OnDisconnected?.Invoke());
+        };
+    }
 
     private void RegisterEventHandlers()
     {
@@ -113,7 +135,7 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
             }
         }));
 
-        // Message edited events
+        // Message edited events (supports both channel and direct messages)
         _subscriptions.Add(hubConnection.On<object>("MessageEdited", data =>
         {
             try
@@ -122,12 +144,21 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
                 using var doc = JsonDocument.Parse(json);
                 var root = doc.RootElement;
 
+                // Check if it's a channel message
                 if (root.TryGetProperty("channelId", out var channelIdProp) &&
                    root.TryGetProperty("messageId", out var messageIdProp))
                 {
                     var channelId = channelIdProp.GetGuid();
                     var messageId = messageIdProp.GetGuid();
                     OnChannelMessageEdited?.Invoke(channelId, messageId);
+                }
+                // Check if it's a direct message
+                else if (root.TryGetProperty("conversationId", out var conversationIdProp) &&
+                         root.TryGetProperty("messageId", out messageIdProp))
+                {
+                    var conversationId = conversationIdProp.GetGuid();
+                    var messageId = messageIdProp.GetGuid();
+                    OnDirectMessageEdited?.Invoke(conversationId, messageId);
                 }
             }
             catch (Exception ex)
@@ -136,7 +167,7 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
             }
         }));
 
-        // Message deleted events
+        // Message deleted events (supports both channel and direct messages)
         _subscriptions.Add(hubConnection.On<object>("MessageDeleted", data =>
         {
             try
@@ -144,12 +175,22 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
                 var json = JsonSerializer.Serialize(data);
                 using var doc = JsonDocument.Parse(json);
                 var root = doc.RootElement;
+
+                // Check if it's a channel message
                 if (root.TryGetProperty("channelId", out var channelIdProp) &&
                    root.TryGetProperty("messageId", out var messageIdProp))
                 {
                     var channelId = channelIdProp.GetGuid();
                     var messageId = messageIdProp.GetGuid();
                     OnChannelMessageDeleted?.Invoke(channelId, messageId);
+                }
+                // Check if it's a direct message
+                else if (root.TryGetProperty("conversationId", out var conversationIdProp) &&
+                         root.TryGetProperty("messageId", out messageIdProp))
+                {
+                    var conversationId = conversationIdProp.GetGuid();
+                    var messageId = messageIdProp.GetGuid();
+                    OnDirectMessageDeleted?.Invoke(conversationId, messageId);
                 }
             }
             catch (Exception ex)
@@ -321,8 +362,20 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
 
     public async Task<Dictionary<Guid, bool>> GetOnlineStatusAsync(List<Guid> userIds)
     {
-        // For now, return empty - this would require invoke support
-        return await Task.FromResult(new Dictionary<Guid, bool>());
+        if (!_isInitialized)
+        {
+            return new Dictionary<Guid, bool>();
+        }
+
+        try
+        {
+            return await hubConnection.InvokeAsync<Dictionary<Guid, bool>>("GetOnlineStatus", userIds);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error getting online status: {ex.Message}");
+            return new Dictionary<Guid, bool>();
+        }
     }
 
     public async ValueTask DisposeAsync()

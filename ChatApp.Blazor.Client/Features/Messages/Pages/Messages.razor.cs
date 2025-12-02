@@ -64,6 +64,8 @@ public partial class Messages : IAsyncDisposable
     // Typing
     private List<string> typingUsers = [];
     private Dictionary<Guid, string> typingUserNames = [];
+    private Dictionary<Guid, bool> conversationTypingState = []; // conversationId -> isTyping
+    private Dictionary<Guid, bool> channelTypingState = []; // channelId -> isTyping
 
     // Dialogs
     private bool showNewConversationDialog;
@@ -354,7 +356,7 @@ public partial class Messages : IAsyncDisposable
             if (result.IsSuccess && result.Value != null)
             {
                 var messages = result.Value;
-                if (messages.Any())
+                if (messages.Count != 0)
                 {
                     directMessages.InsertRange(0, messages.OrderBy(m => m.CreatedAtUtc));
                     oldestMessageDate = messages.Min(m => m.CreatedAtUtc);
@@ -399,7 +401,7 @@ public partial class Messages : IAsyncDisposable
             if (result.IsSuccess && result.Value != null)
             {
                 var messages = result.Value;
-                if (messages.Any())
+                if (messages.Count != 0)
                 {
                     channelMessages.InsertRange(0, messages.OrderBy(m => m.CreatedAtUtc));
                     oldestMessageDate = messages.Min(m => m.CreatedAtUtc);
@@ -894,47 +896,77 @@ public partial class Messages : IAsyncDisposable
 
     private void HandleTypingInConversation(Guid conversationId, Guid userId, bool isTyping)
     {
-        InvokeAsync(() =>
+        // Only track typing state for OTHER users, not yourself
+        if (userId != currentUserId)
         {
-            if (conversationId == selectedConversationId && userId != currentUserId)
+            // Update typing state for this conversation
+            if (isTyping)
             {
-                if (isTyping)
-                {
-                    if (!typingUsers.Contains(recipientName))
-                    {
-                        typingUsers.Add(recipientName);
-                    }
-                }
-                else
-                {
-                    typingUsers.Remove(recipientName);
-                }
-                StateHasChanged();
+                conversationTypingState[conversationId] = true;
             }
-        });
+            else
+            {
+                conversationTypingState.Remove(conversationId);
+            }
+
+            if (conversationId == selectedConversationId && isDirectMessage && !string.IsNullOrEmpty(recipientName))
+            {
+                InvokeAsync(() =>
+                {
+                    if (isTyping)
+                    {
+                        if (!typingUsers.Contains(recipientName))
+                        {
+                            typingUsers = new List<string>(typingUsers) { recipientName };
+                        }
+                    }
+                    else
+                    {
+                        typingUsers = typingUsers.Where(u => u != recipientName).ToList();
+                    }
+
+                    StateHasChanged();
+                });
+            }
+        }
     }
 
     private void HandleTypingInChannel(Guid channelId, Guid userId, bool isTyping)
     {
-        InvokeAsync(() =>
+        // Only track typing state for OTHER users, not yourself
+        if (userId != currentUserId)
         {
-            if (channelId == selectedChannelId && userId != currentUserId)
+            // Update typing state for this channel
+            if (isTyping)
             {
-                var userName = typingUserNames.GetValueOrDefault(userId, "Someone");
-                if (isTyping)
-                {
-                    if (!typingUsers.Contains(userName))
-                    {
-                        typingUsers.Add(userName);
-                    }
-                }
-                else
-                {
-                    typingUsers.Remove(userName);
-                }
-                StateHasChanged();
+                channelTypingState[channelId] = true;
             }
-        });
+            else
+            {
+                channelTypingState.Remove(channelId);
+            }
+
+            if (channelId == selectedChannelId)
+            {
+                InvokeAsync(() =>
+                {
+                    var userName = typingUserNames.GetValueOrDefault(userId, "Someone");
+                    if (isTyping)
+                    {
+                        if (!typingUsers.Contains(userName))
+                        {
+                            typingUsers = new List<string>(typingUsers) { userName };
+                        }
+                    }
+                    else
+                    {
+                        typingUsers = typingUsers.Where(u => u != userName).ToList();
+                    }
+
+                    StateHasChanged();
+                });
+            }
+        }
     }
 
     private void HandleUserOnline(Guid userId)

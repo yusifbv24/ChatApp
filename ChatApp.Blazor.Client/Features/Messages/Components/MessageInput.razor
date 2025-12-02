@@ -9,30 +9,6 @@
             </button>
         </div>
     }
-    @if (TypingUsers.Any())
-    {
-        <div class="typing-indicator">
-            <div class="typing-dots">
-                <span></span>
-                <span></span>
-                <span></span>
-            </div>
-            <span class="typing-text">
-                @if (TypingUsers.Count == 1)
-                {
-                    @($"{TypingUsers.First()} is typing...")
-                }
-                else if (TypingUsers.Count == 2)
-                {
-                    @($"{TypingUsers[0]} and {TypingUsers[1]} are typing...")
-                }
-                else
-                {
-                    @($"{TypingUsers.Count} people are typing...")
-                }
-            </span>
-        </div>
-    }
 
     @if (!UserState.HasPermission("Messages.Send"))
     {
@@ -54,8 +30,8 @@
                 <textarea @ref="textAreaRef"
                           class="message-textarea"
                           placeholder="@Placeholder"
-                          @bind="MessageText"
-                          @bind:event="oninput"
+                          value="@MessageText"
+                          @oninput="HandleInput"
                           @onkeydown="HandleKeyDown"
                           @onfocus="HandleFocus"
                           @onblur="HandleBlur"
@@ -113,7 +89,6 @@
     [Parameter] public bool IsEditing { get; set; }
     [Parameter] public string? EditingContent { get; set; }
     [Parameter] public bool IsSending { get; set; }
-    [Parameter] public List<string> TypingUsers { get; set; } = [];
     [Parameter] public EventCallback<string> OnSend { get; set; }
     [Parameter] public EventCallback<string> OnEdit { get; set; }
     [Parameter] public EventCallback OnCancelEdit { get; set; }
@@ -189,15 +164,17 @@
         }
     }
 
+    private async Task HandleInput(ChangeEventArgs e)
+    {
+        MessageText = e.Value?.ToString() ?? "";
+        await StartTyping();
+    }
+
     private async Task HandleKeyDown(KeyboardEventArgs e)
     {
         if(e.Key == "Enter" && !e.ShiftKey)
         {
             await SendMessage();
-        }
-        else
-        {
-            await StartTyping();
         }
     }
 
