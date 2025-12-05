@@ -24,12 +24,12 @@ public partial class Users
     private string? errorMessage;
 
     // Available roles
-    private List<RoleDto> availableRoles = new();
+    private List<RoleDto> availableRoles = [];
 
     // Create User Dialog
     private bool showCreateUserDialog = false;
     private CreateUserRequest createUserModel = new();
-    private List<Guid> createUserSelectedRoleIds = new();
+    private List<Guid> createUserSelectedRoleIds = [];
     private bool isCreatingUser = false;
     private string? createUserMessage;
     private bool createUserSuccess = false;
@@ -56,7 +56,7 @@ public partial class Users
     // Manage Roles Dialog
     private bool showManageRolesDialog = false;
     private UserDto? managingRolesUser;
-    private List<Guid> selectedRoleIds = new();
+    private List<Guid> selectedRoleIds = [];
     private bool isUpdatingRoles = false;
     private string? rolesMessage;
     private bool rolesSuccess = false;
@@ -269,11 +269,7 @@ public partial class Users
     {
         var administratorRoleId = Guid.Parse("11111111-1111-1111-1111-111111111111");
 
-        if (createUserSelectedRoleIds.Contains(roleId))
-        {
-            createUserSelectedRoleIds.Remove(roleId);
-        }
-        else
+        if (!createUserSelectedRoleIds.Remove(roleId))
         {
             // Administrator exclusivity check
             if (roleId == administratorRoleId)
@@ -285,10 +281,7 @@ public partial class Users
             else
             {
                 // If Administrator is already selected, remove it before adding other role
-                if (createUserSelectedRoleIds.Contains(administratorRoleId))
-                {
-                    createUserSelectedRoleIds.Remove(administratorRoleId);
-                }
+                createUserSelectedRoleIds.Remove(administratorRoleId);
                 createUserSelectedRoleIds.Add(roleId);
             }
         }
@@ -303,66 +296,76 @@ public partial class Users
 
         try
         {
-            // Upload avatar first if selected
+            // Create user first without avatar
+            createUserModel.CreatedBy = UserState.CurrentUser?.Id ?? Guid.Empty;
+            createUserModel.RoleIds = createUserSelectedRoleIds;
+            createUserModel.AvatarUrl = null; // Clear avatar URL, will set it after upload
+
+            var result = await UserService.CreateUserAsync(createUserModel);
+
+            if (!result.IsSuccess || result.Value == null)
+            {
+                createUserSuccess = false;
+                createUserMessage = !string.IsNullOrEmpty(result.Error)
+                    ? result.Error
+                    : "Failed to create user. Please check your input and try again.";
+                return;
+            }
+
+            var newUserId = result.Value.UserId;
+
+            // Upload avatar to the new user's folder if selected
             if (selectedAvatarFileData != null && !string.IsNullOrEmpty(selectedAvatarFileName) && !string.IsNullOrEmpty(selectedAvatarContentType))
             {
                 isUploadingAvatar = true;
                 StateHasChanged();
 
-                // Note: For new user creation, we don't have a userId yet, so upload to current admin's folder
-                // The avatar will be moved to the new user's folder after user creation if needed
                 var uploadResult = await FileService.UploadProfilePictureAsync(
                     selectedAvatarFileData,
                     selectedAvatarFileName,
                     selectedAvatarContentType,
-                    null); // Upload to current user's folder for now
+                    newUserId); // Upload to the new user's folder
 
                 if (uploadResult.IsSuccess && uploadResult.Value != null)
                 {
-                    // Use thumbnail URL for performance, fall back to download URL if no thumbnail
-                    createUserModel.AvatarUrl = uploadResult.Value.ThumbnailUrl ?? uploadResult.Value.DownloadUrl;
+                    // Update user with avatar URL
+                    var avatarUrl = uploadResult.Value.ThumbnailUrl ?? uploadResult.Value.DownloadUrl;
+                    var updateRequest = new UpdateUserRequest
+                    {
+                        Email = createUserModel.Email,
+                        DisplayName = createUserModel.DisplayName,
+                        Notes = createUserModel.Notes,
+                        AvatarUrl = avatarUrl
+                    };
+
+                    var updateResult = await UserService.UpdateUserAsync(newUserId, updateRequest);
+
+                    if (!updateResult.IsSuccess)
+                    {
+                        // User created but avatar update failed - still show success
+                        Console.WriteLine($"Warning: User created but avatar update failed: {updateResult.Error}");
+                    }
                 }
                 else
                 {
-                    createUserSuccess = false;
-                    createUserMessage = !string.IsNullOrEmpty(uploadResult.Error)
-                        ? uploadResult.Error
-                        : "Failed to upload avatar. Please try again.";
-                    isUploadingAvatar = false;
-                    isCreatingUser = false;
-                    return;
+                    // User created but avatar upload failed - still show success with warning
+                    Console.WriteLine($"Warning: User created but avatar upload failed: {uploadResult.Error}");
                 }
 
                 isUploadingAvatar = false;
             }
 
-            // Create user
-            createUserModel.CreatedBy = UserState.CurrentUser?.Id ?? Guid.Empty;
-            createUserModel.RoleIds = createUserSelectedRoleIds;
-            var result = await UserService.CreateUserAsync(createUserModel);
+            createUserSuccess = true;
+            createUserMessage = result.Value.Message ?? "User created successfully!";
 
-            if (result.IsSuccess && result.Value != null)
-            {
-                createUserSuccess = true;
-                createUserMessage = result.Value.Message ?? "User created successfully!";
+            // Load users first
+            await LoadUsers();
 
-                // Load users first
-                await LoadUsers();
-
-                // Then show success message and close dialog
-                StateHasChanged();
-                await Task.Delay(1500);
-                showCreateUserDialog = false;
-                createUserMessage = null;
-            }
-            else
-            {
-                createUserSuccess = false;
-                // Show detailed error message from API
-                createUserMessage = !string.IsNullOrEmpty(result.Error)
-                    ? result.Error
-                    : "Failed to create user. Please check your input and try again.";
-            }
+            // Then show success message and close dialog
+            StateHasChanged();
+            await Task.Delay(1500);
+            showCreateUserDialog = false;
+            createUserMessage = null;
         }
         catch (Exception ex)
         {

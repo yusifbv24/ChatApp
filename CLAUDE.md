@@ -215,3 +215,15 @@ Building a modern messaging UI similar to WhatsApp Web.
   - `MessageInput.razor` - Added ConversationId parameter, OnAfterRenderAsync for focus
   - `ChatArea.razor` - Added ConversationId parameter, passed to MessageInput
   - `Messages.razor` - Passed selectedConversationId/selectedChannelId to ChatArea
+
+### Session 5 (2025-12-05)
+**Fixed avatar upload for new users created by admin:**
+- **Problem:** When admin created a user with an avatar, the file was saved to the admin's folder instead of the new user's folder
+- **Root cause:** Avatar was uploaded BEFORE user creation, passing `null` as targetUserId
+- **Solution:** Refactored user creation flow:
+  1. Create user first (without avatar)
+  2. Upload avatar to the new user's folder (using new user's ID)
+  3. Update user with avatar URL
+- **Backend:** Already supported `targetUserId` parameter in `/api/files/upload/profile-picture` endpoint
+- Files modified:
+  - `Users.razor.cs` - Refactored HandleCreateUser() method to upload avatar after user creation
