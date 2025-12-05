@@ -2,6 +2,7 @@
 using ChatApp.Blazor.Client.Features.Messages.Services;
 using ChatApp.Blazor.Client.Infrastructure.SignalR;
 using ChatApp.Blazor.Client.Models.Auth;
+using ChatApp.Blazor.Client.Models.Common;
 using ChatApp.Blazor.Client.Models.Messages;
 using ChatApp.Blazor.Client.State;
 using Microsoft.AspNetCore.Components;
@@ -92,8 +93,8 @@ public partial class Messages : IAsyncDisposable
             currentUserId = UserState.CurrentUser.Id;
         }
 
-        // Initialize SignalR
-        await InitializeSignalR();
+        // Subscribe to SignalR events (SignalR is already initialized in MainLayout)
+        SubscribeToSignalREvents();
 
         // Load conversations and channels
         await LoadConversationsAndChannels();
@@ -137,29 +138,20 @@ public partial class Messages : IAsyncDisposable
             }
         }
     }
-    private async Task InitializeSignalR()
+    private void SubscribeToSignalREvents()
     {
-        try
-        {
-            await SignalRService.InitializeAsync();
-
-            // Subscribe to events
-            SignalRService.OnNewDirectMessage += HandleNewDirectMessage;
-            SignalRService.OnNewChannelMessage += HandleNewChannelMessage;
-            SignalRService.OnDirectMessageEdited += HandleDirectMessageEdited;
-            SignalRService.OnDirectMessageDeleted += HandleDirectMessageDeleted;
-            SignalRService.OnChannelMessageEdited += HandleChannelMessageEdited;
-            SignalRService.OnChannelMessageDeleted += HandleChannelMessageDeleted;
-            SignalRService.OnMessageRead += HandleMessageRead;
-            SignalRService.OnUserTypingInConversation += HandleTypingInConversation;
-            SignalRService.OnUserTypingInChannel += HandleTypingInChannel;
-            SignalRService.OnUserOnline += HandleUserOnline;
-            SignalRService.OnUserOffline += HandleUserOffline;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Failed to initialize SignalR: {ex.Message}");
-        }
+        // SignalR is already initialized in MainLayout, just subscribe to events here
+        SignalRService.OnNewDirectMessage += HandleNewDirectMessage;
+        SignalRService.OnNewChannelMessage += HandleNewChannelMessage;
+        SignalRService.OnDirectMessageEdited += HandleDirectMessageEdited;
+        SignalRService.OnDirectMessageDeleted += HandleDirectMessageDeleted;
+        SignalRService.OnChannelMessageEdited += HandleChannelMessageEdited;
+        SignalRService.OnChannelMessageDeleted += HandleChannelMessageDeleted;
+        SignalRService.OnMessageRead += HandleMessageRead;
+        SignalRService.OnUserTypingInConversation += HandleTypingInConversation;
+        SignalRService.OnUserTypingInChannel += HandleTypingInChannel;
+        SignalRService.OnUserOnline += HandleUserOnline;
+        SignalRService.OnUserOffline += HandleUserOffline;
     }
 
     private async Task LoadConversationsAndChannels()
