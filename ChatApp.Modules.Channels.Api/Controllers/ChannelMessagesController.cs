@@ -146,7 +146,13 @@ namespace ChatApp.Modules.Channels.Api.Controllers
                 return Unauthorized();
 
             var result = await _mediator.Send(
-                new SendChannelMessageCommand(channelId, userId, request.Content, request.FileId),
+                new SendChannelMessageCommand(
+                    channelId,
+                    userId,
+                    request.Content,
+                    request.FileId,
+                    request.ReplyToMessageId,
+                    request.IsForwarded),
                 cancellationToken);
 
             if (result.IsFailure)

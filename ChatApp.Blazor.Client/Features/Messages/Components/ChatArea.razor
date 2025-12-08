@@ -122,7 +122,8 @@
                     </div>
                     @foreach(var message in group)
                     {
-                        <MessageBubble MessageId="message.Id"
+                        <MessageBubble @key="message.Id"
+                                       MessageId="message.Id"
                                        Content="@message.Content"
                                        SenderName="@message.SenderDisplayName"
                                        AvatarUrl="@message.SenderAvatarUrl"
@@ -138,12 +139,14 @@
                                        ReplyToMessageId="@message.ReplyToMessageId"
                                        ReplyToContent="@message.ReplyToContent"
                                        ReplyToSenderName="@message.ReplyToSenderName"
+                                       IsForwarded="@message.IsForwarded"
                                        OnEdit="()=>StartEditMessage(message.Id,message.Content)"
                                        OnDelete="()=>DeleteMessage(message.Id)"
                                        OnReaction="(emoji)=>AddReaction(message.Id,emoji)"
                                        OnReply="()=>OnReply.InvokeAsync(message.Id)"
                                        OnPin="()=>{}"
-                                       OnForward="()=>OnForward.InvokeAsync(message.Id)" />
+                                       OnForward="()=>OnForward.InvokeAsync(message.Id)"
+                                       OnReplyClick="HandleReplyClick" />
                     }
                 }
             }
@@ -156,7 +159,8 @@
                     </div>
                     @foreach (var message in group)
                     {
-                        <MessageBubble MessageId="message.Id"
+                        <MessageBubble @key="message.Id"
+                                       MessageId="message.Id"
                                        Content="@message.Content"
                                        SenderName="@message.SenderDisplayName"
                                        AvatarUrl="@message.SenderAvatarUrl"
@@ -172,12 +176,14 @@
                                        ReplyToMessageId="@message.ReplyToMessageId"
                                        ReplyToContent="@message.ReplyToContent"
                                        ReplyToSenderName="@message.ReplyToSenderName"
+                                       IsForwarded="@message.IsForwarded"
                                        OnEdit="() => StartEditMessage(message.Id, message.Content)"
                                        OnDelete="() => DeleteMessage(message.Id)"
                                        OnReaction="(emoji) => AddReaction(message.Id, emoji)"
                                        OnReply="()=>OnReply.InvokeAsync(message.Id)"
                                        OnPin="()=>PinMessage(message.Id)"
-                                       OnForward="()=>OnForward.InvokeAsync(message.Id)" />
+                                       OnForward="()=>OnForward.InvokeAsync(message.Id)"
+                                       OnReplyClick="HandleReplyClick" />
                     }
                 }
             }
@@ -314,12 +320,14 @@
     private string editingContent = "";
     private int _previousMessageCount;
     private bool _shouldScrollToBottom;
+    private bool _isLoadingMore = false;
+    private object? _savedScrollPosition = null;
 
     protected override void OnParametersSet()
     {
-        // Check if new messages were added
+        // Check if new messages were added (but not from load more)
         var currentCount = DirectMessages.Count + ChannelMessages.Count;
-        if (currentCount > _previousMessageCount)
+        if (currentCount > _previousMessageCount && !_isLoadingMore && !isEditing && !IsReplying)
         {
             _shouldScrollToBottom = true;
         }
@@ -331,7 +339,14 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (_shouldScrollToBottom)
+        if (_isLoadingMore && _savedScrollPosition != null)
+        {
+            // Restore scroll position after loading more messages
+            await JS.InvokeVoidAsync("chatAppUtils.restoreScrollPosition", messagesContainerRef, _savedScrollPosition);
+            _isLoadingMore = false;
+            _savedScrollPosition = null;
+        }
+        else if (_shouldScrollToBottom)
         {
             _shouldScrollToBottom = false;
             await ScrollToBottomAsync();
@@ -439,6 +454,9 @@
 
     private async Task LoadMoreMessages()
     {
+        // Save scroll position before loading
+        _savedScrollPosition = await JS.InvokeAsync<object>("chatAppUtils.saveScrollPosition", messagesContainerRef);
+        _isLoadingMore = true;
         await OnLoadMore.InvokeAsync();
     }
 
@@ -452,11 +470,13 @@
         isEditing = true;
         editingMessageId = messageId;
         editingContent = content;
+        StateHasChanged();
     }
 
     private async Task EditMessage(string newContent)
     {
         await OnEditMessage.InvokeAsync((editingMessageId, newContent));
+        // Content will be cleared by CancelEdit, but we call it to reset state
         CancelEdit();
     }
 
@@ -484,15 +504,26 @@
 
     private void HandleAttach()
     {
-        // File attachment will be implemented later
-        Console.WriteLine("Attach file clicked");
+        // File attachment feature not implemented yet
     }
 
     private async Task PinMessage(Guid messageId)
     {
-        // TODO: Implement pin/unpin functionality
-        Console.WriteLine($"Pin message: {messageId}");
+        // Pin/unpin functionality will be implemented when needed
         await Task.CompletedTask;
+    }
+
+    private async Task HandleReplyClick(Guid repliedMessageId)
+    {
+        try
+        {
+            // Use querySelector to find the message by ID
+            await JS.InvokeVoidAsync("chatAppUtils.scrollToMessageById", $"message-{repliedMessageId}");
+        }
+        catch
+        {
+            // Message not loaded yet or element not found
+        }
     }
 
     public void Dispose()

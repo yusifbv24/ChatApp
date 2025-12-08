@@ -223,13 +223,20 @@
             // Add channels
             foreach (var channel in Channels)
             {
+                // Format last message as "SenderName: Message" if available
+                string? lastMessage = null;
+                if (!string.IsNullOrEmpty(channel.LastMessageContent) && !string.IsNullOrEmpty(channel.LastMessageSenderName))
+                {
+                    lastMessage = $"{channel.LastMessageSenderName}: {channel.LastMessageContent}";
+                }
+
                 items.Add(new UnifiedChatItem
                 {
                     Id = channel.Id,
                     Name = channel.Name,
-                    LastMessage = null, // Channels don't have last message in DTO yet
-                    LastActivityTime = channel.CreatedAtUtc, // Use creation date for now
-                    UnreadCount = 0, // Channels don't have unread in DTO yet
+                    LastMessage = lastMessage,
+                    LastActivityTime = channel.LastMessageAtUtc ?? channel.CreatedAtUtc,
+                    UnreadCount = channel.UnreadCount,
                     IsChannel = true,
                     IsPrivate = channel.Type == ChannelType.Private,
                     MemberCount = channel.MemberCount,

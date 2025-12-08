@@ -11,6 +11,10 @@ namespace ChatApp.Modules.Channels.Application.DTOs.Responses
         int MemberCount,
         bool IsArchived,
         DateTime CreatedAtUtc,
-        DateTime? ArchivedAtUtc
+        DateTime? ArchivedAtUtc,
+        string? LastMessageContent = null,
+        string? LastMessageSenderName = null,
+        DateTime? LastMessageAtUtc = null,
+        int UnreadCount = 0
     );
 }

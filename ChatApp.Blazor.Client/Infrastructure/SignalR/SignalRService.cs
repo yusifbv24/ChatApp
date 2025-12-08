@@ -31,14 +31,14 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
 
     // Direct message events
     public event Action<DirectMessageDto>? OnNewDirectMessage;
-    public event Action<Guid, Guid>? OnDirectMessageEdited; // Not yet implemented on backend
-    public event Action<Guid, Guid>? OnDirectMessageDeleted; // Not yet implemented on backend
+    public event Action<DirectMessageDto>? OnDirectMessageEdited;
+    public event Action<Guid, Guid>? OnDirectMessageDeleted;
     public event Action<Guid, Guid, Guid, DateTime>? OnMessageRead;
 
 
     // Channel message events
     public event Action<ChannelMessageDto>? OnNewChannelMessage;
-    public event Action<Guid, Guid>? OnChannelMessageEdited;
+    public event Action<ChannelMessageDto>? OnChannelMessageEdited;
     public event Action<Guid, Guid>? OnChannelMessageDeleted;
 
 
@@ -135,35 +135,39 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
             }
         }));
 
-        // Message edited events (supports both channel and direct messages)
-        _subscriptions.Add(hubConnection.On<object>("MessageEdited", data =>
+        // Direct message edited event
+        _subscriptions.Add(hubConnection.On<object>("DirectMessageEdited", messageObj =>
         {
             try
             {
-                var json = JsonSerializer.Serialize(data);
-                using var doc = JsonDocument.Parse(json);
-                var root = doc.RootElement;
-
-                // Check if it's a channel message
-                if (root.TryGetProperty("channelId", out var channelIdProp) &&
-                   root.TryGetProperty("messageId", out var messageIdProp))
+                var json = JsonSerializer.Serialize(messageObj);
+                var message = JsonSerializer.Deserialize<DirectMessageDto>(json, _jsonOptions);
+                if (message != null)
                 {
-                    var channelId = channelIdProp.GetGuid();
-                    var messageId = messageIdProp.GetGuid();
-                    OnChannelMessageEdited?.Invoke(channelId, messageId);
-                }
-                // Check if it's a direct message
-                else if (root.TryGetProperty("conversationId", out var conversationIdProp) &&
-                         root.TryGetProperty("messageId", out messageIdProp))
-                {
-                    var conversationId = conversationIdProp.GetGuid();
-                    var messageId = messageIdProp.GetGuid();
-                    OnDirectMessageEdited?.Invoke(conversationId, messageId);
+                    OnDirectMessageEdited?.Invoke(message);
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error processing message edited: {ex.Message}");
+                Console.WriteLine($"Error deserializing edited direct message: {ex.Message}");
+            }
+        }));
+
+        // Channel message edited event
+        _subscriptions.Add(hubConnection.On<object>("ChannelMessageEdited", messageObj =>
+        {
+            try
+            {
+                var json = JsonSerializer.Serialize(messageObj);
+                var message = JsonSerializer.Deserialize<ChannelMessageDto>(json, _jsonOptions);
+                if (message != null)
+                {
+                    OnChannelMessageEdited?.Invoke(message);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error deserializing edited channel message: {ex.Message}");
             }
         }));
 

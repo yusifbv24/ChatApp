@@ -86,5 +86,57 @@ window.chatAppUtils = {
             viewportHeight: window.innerHeight,
             viewportWidth: window.innerWidth
         };
+    },
+
+    // Save scroll position before loading more messages
+    saveScrollPosition: (element) => {
+        if (!element) return null;
+        return {
+            scrollHeight: element.scrollHeight,
+            scrollTop: element.scrollTop
+        };
+    },
+
+    // Restore scroll position after loading more messages
+    restoreScrollPosition: (element, previousState) => {
+        if (!element || !previousState) return;
+        const heightDifference = element.scrollHeight - previousState.scrollHeight;
+        element.scrollTop = previousState.scrollTop + heightDifference;
+    },
+
+    // Scroll to a specific message and highlight it
+    scrollToMessage: (messageElement) => {
+        if (!messageElement) return;
+
+        // Scroll the message into view
+        messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        // Add highlight class
+        messageElement.classList.add('highlighted');
+
+        // Remove highlight after animation completes
+        setTimeout(() => {
+            messageElement.classList.remove('highlighted');
+        }, 2000);
+    },
+
+    // Scroll to a message by ID and highlight it
+    scrollToMessageById: (messageId) => {
+        const messageElement = document.getElementById(messageId);
+        if (messageElement) {
+            // Scroll the message into view
+            messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            // Add highlight class to the bubble inside
+            const bubble = messageElement.querySelector('.message-bubble');
+            if (bubble) {
+                bubble.classList.add('highlighted');
+
+                // Remove highlight after animation completes
+                setTimeout(() => {
+                    bubble.classList.remove('highlighted');
+                }, 2000);
+            }
+        }
     }
 };

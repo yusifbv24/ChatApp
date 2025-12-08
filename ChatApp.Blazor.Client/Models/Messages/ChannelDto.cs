@@ -10,6 +10,9 @@
         bool IsArchived,
         DateTime CreatedAtUtc,
         DateTime? ArchivedAtUtc,
+        string? LastMessageContent = null,
+        string? LastMessageSenderName = null,
+        DateTime? LastMessageAtUtc = null,
         int UnreadCount = 0);
 
 

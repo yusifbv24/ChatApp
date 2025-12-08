@@ -12,6 +12,7 @@ namespace ChatApp.Modules.Channels.Application.Interfaces
         Task<ChannelDetailsDto?> GetChannelDetailsByIdAsync(Guid id, CancellationToken cancellationToken = default);
         Task<Channel?> GetByNameAsync(string name, CancellationToken cancellationToken = default);
         Task<List<Channel>> GetUserChannelsAsync(Guid userId, CancellationToken cancellationToken = default);
+        Task<List<ChannelDto>> GetUserChannelDtosAsync(Guid userId, CancellationToken cancellationToken = default);
         Task<List<Channel>> GetPublicChannelsAsync(CancellationToken cancellationToken = default);
         Task<bool> IsUserMemberAsync(Guid channelId, Guid userId, CancellationToken cancellationToken = default);
         Task<bool> ExistsAsync(Expression<Func<Channel, bool>> predicate, CancellationToken cancellationToken = default);

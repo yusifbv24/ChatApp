@@ -889,6 +889,26 @@
    REPLY PREVIEW STYLES
    =================================== */
 
+/* Forwarded label */
+.forwarded-label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 6px;
+    font-size: 12px;
+    font-style: italic;
+    color: rgba(0, 0, 0, 0.5);
+}
+
+.own-bubble .forwarded-label {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.forwarded-label .mud-icon-root {
+    font-size: 14px;
+}
+
+/* Reply preview */
 .reply-preview {
     display: flex;
     gap: 8px;
@@ -897,6 +917,19 @@
     background-color: rgba(0, 0, 0, 0.05);
     border-radius: 6px;
     font-size: 13px;
+}
+
+.reply-preview.clickable {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.reply-preview.clickable:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+.own-bubble .reply-preview.clickable:hover {
+    background-color: rgba(255, 255, 255, 0.25);
 }
 
 .own-bubble .reply-preview {
@@ -936,6 +969,20 @@
 
 .own-bubble .reply-text {
     color: rgba(255, 255, 255, 0.75);
+}
+
+/* Message highlight animation (WhatsApp style) */
+@keyframes messageHighlight {
+    0% {
+        background-color: rgba(0, 123, 255, 0.3);
+    }
+    100% {
+        background-color: transparent;
+    }
+}
+
+.message-bubble.highlighted {
+    animation: messageHighlight 2s ease-out;
 }
 
 .message-meta-inline {

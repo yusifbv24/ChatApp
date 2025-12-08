@@ -673,6 +673,9 @@ public partial class Messages : IAsyncDisposable
                     {
                         var index = directMessages.IndexOf(message);
                         directMessages[index] = message with { Content = edit.content, IsEdited = true };
+
+                        // Update conversation list to show edited content
+                        await LoadConversationsAndChannels();
                         StateHasChanged();
                     }
                 }
@@ -695,6 +698,9 @@ public partial class Messages : IAsyncDisposable
                     {
                         var index = channelMessages.IndexOf(message);
                         channelMessages[index] = message with { Content = edit.content, IsEdited = true };
+
+                        // Update channel list to show edited content
+                        await LoadConversationsAndChannels();
                         StateHasChanged();
                     }
                 }
@@ -985,16 +991,24 @@ public partial class Messages : IAsyncDisposable
             }
         });
     }
-    private void HandleDirectMessageEdited(Guid conversationId, Guid messageId)
+    private void HandleDirectMessageEdited(DirectMessageDto editedMessage)
     {
         InvokeAsync(async () =>
         {
-            if (conversationId == selectedConversationId)
+            // Update the message in the list if it's in the current conversation
+            if (editedMessage.ConversationId == selectedConversationId)
             {
-                // Reload the specific message
-                var result = await ConversationService.GetMessagesAsync(conversationId, 1);
-                StateHasChanged();
+                var message = directMessages.FirstOrDefault(m => m.Id == editedMessage.Id);
+                if (message != null)
+                {
+                    var index = directMessages.IndexOf(message);
+                    directMessages[index] = editedMessage;
+                    StateHasChanged();
+                }
             }
+
+            // Update conversation list to show edited content
+            await LoadConversationsAndChannels();
         });
     }
 
@@ -1015,14 +1029,24 @@ public partial class Messages : IAsyncDisposable
         });
     }
 
-    private void HandleChannelMessageEdited(Guid channelId, Guid messageId)
+    private void HandleChannelMessageEdited(ChannelMessageDto editedMessage)
     {
-        InvokeAsync(() =>
+        InvokeAsync(async () =>
         {
-            if (channelId == selectedChannelId)
+            // Update the message in the list if it's in the current channel
+            if (editedMessage.ChannelId == selectedChannelId)
             {
-                StateHasChanged();
+                var message = channelMessages.FirstOrDefault(m => m.Id == editedMessage.Id);
+                if (message != null)
+                {
+                    var index = channelMessages.IndexOf(message);
+                    channelMessages[index] = editedMessage;
+                    StateHasChanged();
+                }
             }
+
+            // Update channel list to show edited content
+            await LoadConversationsAndChannels();
         });
     }
 
@@ -1418,8 +1442,9 @@ public partial class Messages : IAsyncDisposable
                 isForwarded: true);
             if (result.IsSuccess)
             {
+                // Update conversation list to show the forwarded message
+                await LoadConversationsAndChannels();
                 CancelForward();
-                Console.WriteLine("Message forwarded successfully!");
             }
             else
             {
@@ -1447,8 +1472,9 @@ public partial class Messages : IAsyncDisposable
                 isForwarded: true);
             if (result.IsSuccess)
             {
+                // Update channel list to show the forwarded message
+                await LoadConversationsAndChannels();
                 CancelForward();
-                Console.WriteLine("Message forwarded successfully!");
             }
             else
             {

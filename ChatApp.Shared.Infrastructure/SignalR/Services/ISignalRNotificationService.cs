@@ -23,6 +23,15 @@
         /// </summary>
         Task NotifyMessageEditedAsync(Guid channelId, Guid messageId);
 
+        /// <summary>
+        /// Notify about direct message edit with updated content
+        /// </summary>
+        Task NotifyDirectMessageEditedAsync(Guid conversationId, Guid receiverId, object messageDto);
+
+        /// <summary>
+        /// Notify about channel message edit with updated content
+        /// </summary>
+        Task NotifyChannelMessageEditedAsync(Guid channelId, object messageDto);
 
         /// <summary>
         /// Notify about message deletion

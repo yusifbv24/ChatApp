@@ -29,25 +29,10 @@ namespace ChatApp.Modules.Channels.Application.Queries.GetUserChannels
         {
             try
             {
-                var channels = await _unitOfWork.Channels.GetUserChannelsAsync(
+                // Use the new method that includes last message info
+                var channelDtos = await _unitOfWork.Channels.GetUserChannelDtosAsync(
                     request.UserId,
                     cancellationToken);
-
-                var channelDtos = channels
-                    .Where(c => !c.IsArchived)
-                    .Select(c => new ChannelDto(
-                        c.Id,
-                        c.Name,
-                        c.Description,
-                        c.Type,
-                        c.CreatedBy,
-                        c.Members.Count(m => m.IsActive),
-                        c.IsArchived,
-                        c.CreatedAtUtc,
-                        c.ArchivedAtUtc
-                    ))
-                    .OrderByDescending(c => c.CreatedAtUtc)
-                    .ToList();
 
                 return Result.Success(channelDtos);
             }

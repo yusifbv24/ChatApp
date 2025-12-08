@@ -81,8 +81,20 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMessages
                 await _unitOfWork.ChannelMessages.UpdateAsync(message, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                // Send real-time notification
-                await _signalRNotificationService.NotifyMessageEditedAsync(channelId, request.MessageId);
+                // Get updated message DTO
+                var messages = await _unitOfWork.ChannelMessages.GetChannelMessagesAsync(
+                    channelId,
+                    pageSize: 1,
+                    beforeUtc: null,
+                    cancellationToken);
+
+                var messageDto = messages.FirstOrDefault(m => m.Id == request.MessageId);
+
+                if (messageDto != null)
+                {
+                    // Send real-time notification with edited message
+                    await _signalRNotificationService.NotifyChannelMessageEditedAsync(channelId, messageDto);
+                }
 
                 _logger?.LogInformation("Message {MessageId} edited successfully", request.MessageId);
 

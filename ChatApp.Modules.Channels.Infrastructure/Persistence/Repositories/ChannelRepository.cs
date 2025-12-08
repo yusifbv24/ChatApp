@@ -98,6 +98,59 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 .ToListAsync(cancellationToken);
         }
 
+        public async Task<List<ChannelDto>> GetUserChannelDtosAsync(Guid userId, CancellationToken cancellationToken = default)
+        {
+            // Get channels where user is a member with last message info
+            var channelsWithLastMessage = await (
+                from channel in _context.Channels
+                join member in _context.ChannelMembers on channel.Id equals member.ChannelId
+                where member.UserId == userId && member.IsActive && !channel.IsArchived
+                // Get last message for each channel (LEFT JOIN)
+                let lastMessage = (from msg in _context.ChannelMessages
+                                   join sender in _context.Set<UserReadModel>() on msg.SenderId equals sender.Id
+                                   where msg.ChannelId == channel.Id && !msg.IsDeleted
+                                   orderby msg.CreatedAtUtc descending
+                                   select new
+                                   {
+                                       msg.Content,
+                                       sender.DisplayName,
+                                       msg.CreatedAtUtc
+                                   }).FirstOrDefault()
+                // Get member count
+                let memberCount = _context.ChannelMembers.Count(m => m.ChannelId == channel.Id && m.IsActive)
+                // Get unread count (messages after user's last read)
+                let lastReadTime = (from read in _context.ChannelMessageReads
+                                    join msg in _context.ChannelMessages on read.MessageId equals msg.Id
+                                    where read.UserId == userId && msg.ChannelId == channel.Id
+                                    orderby read.ReadAtUtc descending
+                                    select (DateTime?)read.ReadAtUtc).FirstOrDefault()
+                let unreadCount = _context.ChannelMessages.Count(m =>
+                    m.ChannelId == channel.Id &&
+                    !m.IsDeleted &&
+                    m.SenderId != userId &&
+                    (lastReadTime == null || m.CreatedAtUtc > lastReadTime.Value))
+                select new ChannelDto(
+                    channel.Id,
+                    channel.Name,
+                    channel.Description,
+                    channel.Type,
+                    channel.CreatedBy,
+                    memberCount,
+                    channel.IsArchived,
+                    channel.CreatedAtUtc,
+                    channel.ArchivedAtUtc,
+                    lastMessage != null ? lastMessage.Content : null,
+                    lastMessage != null ? lastMessage.DisplayName : null,
+                    lastMessage != null ? lastMessage.CreatedAtUtc : (DateTime?)null,
+                    unreadCount
+                )
+            ).ToListAsync(cancellationToken);
+
+            return channelsWithLastMessage
+                .OrderByDescending(c => c.LastMessageAtUtc ?? c.CreatedAtUtc)
+                .ToList();
+        }
+
         public async Task<List<Channel>> GetPublicChannelsAsync(CancellationToken cancellationToken = default)
         {
             return await _context.Channels

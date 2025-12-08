@@ -113,7 +113,13 @@ namespace ChatApp.Modules.DirectMessages.Api.Controllers
                 return Unauthorized();
 
             var result = await _mediator.Send(
-                new SendDirectMessageCommand(conversationId, userId, request.Content, request.FileId),
+                new SendDirectMessageCommand(
+                    conversationId,
+                    userId,
+                    request.Content,
+                    request.FileId,
+                    request.ReplyToMessageId,
+                    request.IsForwarded),
                 cancellationToken);
 
             if (result.IsFailure)

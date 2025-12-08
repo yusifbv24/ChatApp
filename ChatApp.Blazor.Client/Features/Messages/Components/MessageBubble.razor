@@ -1,6 +1,6 @@
 ﻿@inject IJSRuntime JS
 
-<div class="message-wrapper @(IsOwn ? "own" : "other") @(IsDeleted ? "deleted" : "") @(!IsDirectMessage && !IsOwn ? "group-message" : "")" @ref="messageWrapperRef">
+<div id="message-@MessageId" class="message-wrapper @(IsOwn ? "own" : "other") @(IsDeleted ? "deleted" : "") @(!IsDirectMessage && !IsOwn ? "group-message" : "")" @ref="messageWrapperRef">
     @if (!IsOwn && !IsDirectMessage)
     {
         <!-- Always show avatar space for group messages to maintain alignment -->
@@ -35,10 +35,19 @@
             else
             {
                 <div class="message-content-block">
+                    @* Show forwarded indicator *@
+                    @if (IsForwarded)
+                    {
+                        <div class="forwarded-label">
+                            <MudIcon Icon="@Icons.Material.Filled.Forward" Size="Size.Small" />
+                            <span>Forwarded</span>
+                        </div>
+                    }
+
                     @* Show replied message preview if this is a reply *@
                     @if (!string.IsNullOrEmpty(ReplyToContent))
                     {
-                        <div class="reply-preview">
+                        <div class="reply-preview clickable" @onclick="HandleReplyClick">
                             <div class="reply-bar"></div>
                             <div class="reply-content">
                                 <div class="reply-sender">@ReplyToSenderName</div>
@@ -133,7 +142,7 @@
     {
         <div class="popup-overlay" @onclick="CloseMoreMenu"></div>
         <div class="more-menu-popup @(menuPositionAbove ? "position-above" : "position-below")" @onclick:stopPropagation="true">
-            <button class="menu-item" @onclick="OnReplyClick">
+            <button class="menu-item" @onclick="HandleReplyButtonClick">
                 <MudIcon Icon="@Icons.Material.Filled.Reply" Size="Size.Small" />
                 <span>Reply</span>
             </button>
@@ -187,12 +196,14 @@
     [Parameter] public Guid? ReplyToMessageId { get; set; }
     [Parameter] public string? ReplyToContent { get; set; }
     [Parameter] public string? ReplyToSenderName { get; set; }
+    [Parameter] public bool IsForwarded { get; set; }
     [Parameter] public EventCallback OnEdit { get; set; }
     [Parameter] public EventCallback OnDelete { get; set; }
     [Parameter] public EventCallback<string> OnReaction { get; set; }
     [Parameter] public EventCallback OnReply { get; set; }
     [Parameter] public EventCallback OnPin { get; set; }
     [Parameter] public EventCallback OnForward { get; set; }
+    [Parameter] public EventCallback<Guid> OnReplyClick { get; set; }
 
     private ElementReference messageWrapperRef;
     private bool showReactionPicker = false;
@@ -303,7 +314,7 @@
         await OnReaction.InvokeAsync(emoji);
     }
 
-    private async Task OnReplyClick()
+    private async Task HandleReplyButtonClick()
     {
         CloseMoreMenu();
         await OnReply.InvokeAsync();
@@ -332,6 +343,14 @@
     {
         CloseMoreMenu();
         await OnPin.InvokeAsync();
+    }
+
+    private async Task HandleReplyClick()
+    {
+        if (ReplyToMessageId.HasValue)
+        {
+            await OnReplyClick.InvokeAsync(ReplyToMessageId.Value);
+        }
     }
 
     private record MenuPositionInfo

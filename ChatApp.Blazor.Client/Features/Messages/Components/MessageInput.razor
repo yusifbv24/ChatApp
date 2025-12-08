@@ -123,6 +123,8 @@
     private bool isTyping = false;
     private System.Timers.Timer? typingTimer;
     private Guid? previousConversationId;
+    private bool wasEditing = false;
+    private bool wasReplying = false;
 
     private readonly string[] CommonEmojis = {
 
@@ -156,9 +158,28 @@
 
     protected override void OnParametersSet()
     {
+        // Handle editing mode
         if(IsEditing && !string.IsNullOrEmpty(EditingContent))
         {
             MessageText = EditingContent;
+            wasEditing = true;
+        }
+        else if (wasEditing && !IsEditing)
+        {
+            // Editing was cancelled or completed - clear the text
+            MessageText = "";
+            wasEditing = false;
+        }
+
+        // Handle reply mode - auto-focus when replying starts
+        if (IsReplying && !wasReplying)
+        {
+            shouldFocus = true;
+            wasReplying = true;
+        }
+        else if (!IsReplying && wasReplying)
+        {
+            wasReplying = false;
         }
 
         // Focus when conversation changes

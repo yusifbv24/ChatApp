@@ -74,6 +74,36 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Services
                 .SendAsync("MessageEdited", new { channelId, messageId });
         }
 
+        public async Task NotifyDirectMessageEditedAsync(Guid conversationId, Guid receiverId, object messageDto)
+        {
+            _logger?.LogDebug(
+                "Sending edited direct message notification to user {ReceiverId} in conversation {ConversationId}",
+                receiverId,
+                conversationId);
+
+            // Send to conversation group
+            await _hubContext.Clients
+                .Group($"conversation_{conversationId}")
+                .SendAsync("DirectMessageEdited", messageDto);
+
+            // Also send directly to receiver's connections
+            var receiverConnections = await _connectionManager.GetUserConnectionsAsync(receiverId);
+            if (receiverConnections.Any())
+            {
+                await _hubContext.Clients
+                    .Clients(receiverConnections)
+                    .SendAsync("DirectMessageEdited", messageDto);
+            }
+        }
+
+        public async Task NotifyChannelMessageEditedAsync(Guid channelId, object messageDto)
+        {
+            _logger?.LogDebug("Broadcasting edited channel message to channel {ChannelId}", channelId);
+
+            await _hubContext.Clients
+                .Group($"channel_{channelId}")
+                .SendAsync("ChannelMessageEdited", messageDto);
+        }
 
         public async Task NotifyMessageReadAsync(Guid conversationId, Guid messageId, Guid readBy)
         {
