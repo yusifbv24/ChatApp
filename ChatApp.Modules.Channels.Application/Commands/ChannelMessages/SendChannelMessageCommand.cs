@@ -15,7 +15,9 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMessages
         Guid ChannelId,
         Guid SenderId,
         string Content,
-        string? FileId = null
+        string? FileId = null,
+        Guid? ReplyToMessageId = null,
+        bool IsForwarded = false
     ) : IRequest<Result<Guid>>;
 
 
@@ -95,7 +97,9 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMessages
                     request.ChannelId,
                     request.SenderId,
                     request.Content,
-                    request.FileId);
+                    request.FileId,
+                    request.ReplyToMessageId,
+                    request.IsForwarded);
 
                 await _unitOfWork.ChannelMessages.AddAsync(message, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);

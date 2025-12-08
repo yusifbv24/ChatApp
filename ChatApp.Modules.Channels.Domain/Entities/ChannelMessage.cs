@@ -15,6 +15,8 @@ namespace ChatApp.Modules.Channels.Domain.Entities
         public DateTime? DeletedAtUtc { get; private set; }
         public DateTime? PinnedAtUtc { get; private set; }
         public Guid? PinnedBy { get; private set; }
+        public Guid? ReplyToMessageId { get; private set; }
+        public bool IsForwarded { get; private set; }
 
         // Navigation properties
         public Channel Channel { get; private set; } = null!;
@@ -31,7 +33,9 @@ namespace ChatApp.Modules.Channels.Domain.Entities
             Guid channelId,
             Guid senderId,
             string content,
-            string? fileId = null) : base()
+            string? fileId = null,
+            Guid? replyToMessageId = null,
+            bool isForwarded = false) : base()
         {
             if (string.IsNullOrWhiteSpace(content) && string.IsNullOrWhiteSpace(fileId))
                 throw new ArgumentException("Message must have content or file attachment");
@@ -46,6 +50,8 @@ namespace ChatApp.Modules.Channels.Domain.Entities
             IsEdited = false;
             IsDeleted = false;
             IsPinned = false;
+            ReplyToMessageId = replyToMessageId;
+            IsForwarded = isForwarded;
         }
 
         public void Edit(string newContent)

@@ -15,6 +15,10 @@
         int ReactionCount,
         DateTime CreatedAtUtc,
         DateTime? EditedAtUtc,
-        DateTime? PinnedAtUtc
+        DateTime? PinnedAtUtc,
+        Guid? ReplyToMessageId,
+        string? ReplyToContent,
+        string? ReplyToSenderName,
+        bool IsForwarded
     );
 }

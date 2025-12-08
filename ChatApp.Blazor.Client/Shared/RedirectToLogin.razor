@@ -1,8 +1,37 @@
 @inject NavigationManager Navigation
+@inject CustomAuthStateProvider AuthStateProvider
+@inject IJSRuntime JS
 
 @code {
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
+        // Give the auth state provider a chance to refresh the token if RememberMe is set
+        // Check if RememberMe preference is enabled
+        try
+        {
+            var rememberMe = await JS.InvokeAsync<string?>("localStorage.getItem", "rememberMe");
+
+            if (rememberMe == "true")
+            {
+                // Wait a bit for the auth state to refresh
+                await Task.Delay(500);
+
+                // Try to get auth state again after potential refresh
+                var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+
+                if (authState.User.Identity?.IsAuthenticated == true)
+                {
+                    // Token was refreshed successfully, no need to redirect
+                    return;
+                }
+            }
+        }
+        catch
+        {
+            // If anything fails, proceed with redirect
+        }
+
+        // Token refresh failed or RememberMe not set, redirect to login
         Navigation.NavigateTo("/login", forceLoad: true);
     }
 }

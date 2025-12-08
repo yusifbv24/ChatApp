@@ -52,6 +52,10 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
             // Real database join with users table
             var query = from message in _context.DirectMessages
                         join sender in _context.Set<UserReadModel>() on message.SenderId equals sender.Id
+                        join repliedMessage in _context.DirectMessages on message.ReplyToMessageId equals repliedMessage.Id into replyJoin
+                        from repliedMessage in replyJoin.DefaultIfEmpty()
+                        join repliedSender in _context.Set<UserReadModel>() on repliedMessage.SenderId equals repliedSender.Id into repliedSenderJoin
+                        from repliedSender in repliedSenderJoin.DefaultIfEmpty()
                         where message.ConversationId == conversationId && !message.IsDeleted
                         select new
                         {
@@ -70,7 +74,11 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                             message.CreatedAtUtc,
                             message.EditedAtUtc,
                             message.ReadAtUtc,
-                            ReactionCount = _context.DirectMessageReactions.Count(r => r.MessageId == message.Id)
+                            ReactionCount = _context.DirectMessageReactions.Count(r => r.MessageId == message.Id),
+                            message.ReplyToMessageId,
+                            ReplyToContent = repliedMessage != null ? repliedMessage.Content : null,
+                            ReplyToSenderName = repliedSender != null ? repliedSender.DisplayName : null,
+                            message.IsForwarded
                         };
 
             if (beforeUtc.HasValue)
@@ -99,7 +107,11 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 r.ReactionCount,
                 r.CreatedAtUtc,
                 r.EditedAtUtc,
-                r.ReadAtUtc
+                r.ReadAtUtc,
+                r.ReplyToMessageId,
+                r.ReplyToContent,
+                r.ReplyToSenderName,
+                r.IsForwarded
             )).ToList();
         }
 

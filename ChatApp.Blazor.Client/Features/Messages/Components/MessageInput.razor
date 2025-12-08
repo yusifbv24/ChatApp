@@ -1,4 +1,4 @@
-﻿<div class="message-input-container @(IsEditing ? "editing" : "")">
+﻿<div class="message-input-container @(IsEditing ? "editing" : "") @(IsReplying ? "replying" : "")">
     @if (IsEditing)
     {
         <div class="edit-indicator">
@@ -6,6 +6,20 @@
             <span>Editing message</span>
             <button class="cancel-edit-btn" @onclick="CancelEdit">
                 <MudIcon  Icon="@Icons.Material.Filled.Close" Size="Size.Small" />
+            </button>
+        </div>
+    }
+
+    @if (IsReplying && !string.IsNullOrEmpty(ReplyToSenderName))
+    {
+        <div class="reply-indicator">
+            <MudIcon Icon="@Icons.Material.Filled.Reply" Size="Size.Small" />
+            <div class="reply-info">
+                <span class="reply-to-name">Replying to @ReplyToSenderName</span>
+                <span class="reply-to-preview">@TruncateText(ReplyToContent, 60)</span>
+            </div>
+            <button class="cancel-reply-btn" @onclick="CancelReply">
+                <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" />
             </button>
         </div>
     }
@@ -95,6 +109,13 @@
     [Parameter] public EventCallback<bool> OnTyping { get; set; }
     [Parameter] public EventCallback OnAttach { get; set; }
     [Parameter] public Guid? ConversationId { get; set; }
+
+    // Reply-related parameters
+    [Parameter] public bool IsReplying { get; set; }
+    [Parameter] public Guid? ReplyToMessageId { get; set; }
+    [Parameter] public string? ReplyToSenderName { get; set; }
+    [Parameter] public string? ReplyToContent { get; set; }
+    [Parameter] public EventCallback OnCancelReply { get; set; }
 
     private ElementReference textAreaRef;
     private string MessageText { get; set; } = "";
@@ -235,6 +256,18 @@
     {
         MessageText = "";
         await OnCancelEdit.InvokeAsync();
+    }
+
+    private async Task CancelReply()
+    {
+        await OnCancelReply.InvokeAsync();
+    }
+
+    private string TruncateText(string? text, int maxLength)
+    {
+        if (string.IsNullOrEmpty(text)) return "";
+        if (text.Length <= maxLength) return text;
+        return text.Substring(0, maxLength) + "...";
     }
 
     private async Task OnAttachClick()

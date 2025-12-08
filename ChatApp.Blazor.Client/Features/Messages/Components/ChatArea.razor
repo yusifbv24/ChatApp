@@ -135,12 +135,15 @@
                                        IsDirectMessage="true"
                                        ShowAvatar="false"
                                        ShowSenderName="false"
+                                       ReplyToMessageId="@message.ReplyToMessageId"
+                                       ReplyToContent="@message.ReplyToContent"
+                                       ReplyToSenderName="@message.ReplyToSenderName"
                                        OnEdit="()=>StartEditMessage(message.Id,message.Content)"
                                        OnDelete="()=>DeleteMessage(message.Id)"
                                        OnReaction="(emoji)=>AddReaction(message.Id,emoji)"
-                                       OnReply="()=>ReplyToMessage(message.Id)"
+                                       OnReply="()=>OnReply.InvokeAsync(message.Id)"
                                        OnPin="()=>{}"
-                                       OnForward="()=>ForwardMessage(message.Id)" />
+                                       OnForward="()=>OnForward.InvokeAsync(message.Id)" />
                     }
                 }
             }
@@ -166,12 +169,15 @@
                                        IsDirectMessage="false"
                                        ShowAvatar="@ShouldShowChannelAvatar(message, group)"
                                        ShowSenderName="@ShouldShowSenderName(message, group)"
+                                       ReplyToMessageId="@message.ReplyToMessageId"
+                                       ReplyToContent="@message.ReplyToContent"
+                                       ReplyToSenderName="@message.ReplyToSenderName"
                                        OnEdit="() => StartEditMessage(message.Id, message.Content)"
                                        OnDelete="() => DeleteMessage(message.Id)"
                                        OnReaction="(emoji) => AddReaction(message.Id, emoji)"
-                                       OnReply="()=>ReplyToMessage(message.Id)"
+                                       OnReply="()=>OnReply.InvokeAsync(message.Id)"
                                        OnPin="()=>PinMessage(message.Id)"
-                                       OnForward="()=>ForwardMessage(message.Id)" />
+                                       OnForward="()=>OnForward.InvokeAsync(message.Id)" />
                     }
                 }
             }
@@ -193,9 +199,14 @@
                       EditingContent="@editingContent"
                       IsSending="@IsSending"
                       ConversationId="@ConversationId"
+                      IsReplying="@IsReplying"
+                      ReplyToMessageId="@ReplyToMessageId"
+                      ReplyToSenderName="@ReplyToSenderName"
+                      ReplyToContent="@ReplyToContent"
                       OnSend="SendMessage"
                       OnEdit="EditMessage"
                       OnCancelEdit="CancelEdit"
+                      OnCancelReply="OnCancelReply"
                       OnTyping="HandleTyping"
                       OnAttach="HandleAttach" />
     }
@@ -282,6 +293,15 @@
     [Parameter] public EventCallback<bool> OnTyping { get; set; }
     [Parameter] public EventCallback OnLoadMore { get; set; }
     [Parameter] public EventCallback OnShowPinnedMessages { get; set; }
+    [Parameter] public EventCallback<Guid> OnReply { get; set; }
+    [Parameter] public EventCallback<Guid> OnForward { get; set; }
+
+    // Reply state parameters
+    [Parameter] public bool IsReplying { get; set; }
+    [Parameter] public Guid? ReplyToMessageId { get; set; }
+    [Parameter] public string? ReplyToSenderName { get; set; }
+    [Parameter] public string? ReplyToContent { get; set; }
+    [Parameter] public EventCallback OnCancelReply { get; set; }
 
 
     private ElementReference messagesContainerRef;
@@ -466,18 +486,6 @@
     {
         // File attachment will be implemented later
         Console.WriteLine("Attach file clicked");
-    }
-
-    private void ReplyToMessage(Guid messageId)
-    {
-        // TODO: Implement reply functionality
-        Console.WriteLine($"Reply to message: {messageId}");
-    }
-
-    private void ForwardMessage(Guid messageId)
-    {
-        // TODO: Implement forward functionality
-        Console.WriteLine($"Forward message: {messageId}");
     }
 
     private async Task PinMessage(Guid messageId)

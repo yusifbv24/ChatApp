@@ -16,5 +16,9 @@
         int ReactionCount,
         DateTime CreatedAtUtc,
         DateTime? EditedAtUtc,
-        DateTime? ReadAtUtc);
+        DateTime? ReadAtUtc,
+        Guid? ReplyToMessageId,
+        string? ReplyToContent,
+        string? ReplyToSenderName,
+        bool IsForwarded);
 }

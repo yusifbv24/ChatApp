@@ -17,7 +17,7 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
         Task<Result<int>> GetUnreadCountAsync(Guid conversationId);
 
 
-        Task<Result<Guid>> SendMessageAsync(Guid conversationId,string content,string? fileId=null);
+        Task<Result<Guid>> SendMessageAsync(Guid conversationId, string content, string? fileId = null, Guid? replyToMessageId = null, bool isForwarded = false);
 
 
         Task<Result> EditMessageAsync(Guid conversationId, Guid messageId, string newContent);

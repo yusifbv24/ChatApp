@@ -36,6 +36,10 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
             // Real database join with users table
             var query = from message in _context.ChannelMessages
                         join user in _context.Set<UserReadModel>() on message.SenderId equals user.Id
+                        join repliedMessage in _context.ChannelMessages on message.ReplyToMessageId equals repliedMessage.Id into replyJoin
+                        from repliedMessage in replyJoin.DefaultIfEmpty()
+                        join repliedSender in _context.Set<UserReadModel>() on repliedMessage.SenderId equals repliedSender.Id into repliedSenderJoin
+                        from repliedSender in repliedSenderJoin.DefaultIfEmpty()
                         where message.ChannelId == channelId && !message.IsDeleted
                         select new
                         {
@@ -53,7 +57,11 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                             message.CreatedAtUtc,
                             message.EditedAtUtc,
                             message.PinnedAtUtc,
-                            ReactionCount = _context.ChannelMessageReactions.Count(r => r.MessageId == message.Id)
+                            ReactionCount = _context.ChannelMessageReactions.Count(r => r.MessageId == message.Id),
+                            message.ReplyToMessageId,
+                            ReplyToContent = repliedMessage != null ? repliedMessage.Content : null,
+                            ReplyToSenderName = repliedSender != null ? repliedSender.DisplayName : null,
+                            message.IsForwarded
                         };
 
             if (beforeUtc.HasValue)
@@ -81,7 +89,11 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 r.ReactionCount,
                 r.CreatedAtUtc,
                 r.EditedAtUtc,
-                r.PinnedAtUtc
+                r.PinnedAtUtc,
+                r.ReplyToMessageId,
+                r.ReplyToContent,
+                r.ReplyToSenderName,
+                r.IsForwarded
             )).ToList();
         }
 
@@ -90,6 +102,10 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
             // Database join to get pinned messages with user details
             return await (from message in _context.ChannelMessages
                           join user in _context.Set<UserReadModel>() on message.SenderId equals user.Id
+                          join repliedMessage in _context.ChannelMessages on message.ReplyToMessageId equals repliedMessage.Id into replyJoin
+                          from repliedMessage in replyJoin.DefaultIfEmpty()
+                          join repliedSender in _context.Set<UserReadModel>() on repliedMessage.SenderId equals repliedSender.Id into repliedSenderJoin
+                          from repliedSender in repliedSenderJoin.DefaultIfEmpty()
                           where message.ChannelId == channelId
                              && message.IsPinned
                              && !message.IsDeleted
@@ -109,7 +125,11 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                               _context.ChannelMessageReactions.Count(r => r.MessageId == message.Id),
                               message.CreatedAtUtc,
                               message.EditedAtUtc,
-                              message.PinnedAtUtc
+                              message.PinnedAtUtc,
+                              message.ReplyToMessageId,
+                              repliedMessage != null ? repliedMessage.Content : null,
+                              repliedSender != null ? repliedSender.DisplayName : null,
+                              message.IsForwarded
                           ))
                          .ToListAsync(cancellationToken);
         }

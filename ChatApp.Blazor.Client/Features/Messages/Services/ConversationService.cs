@@ -87,11 +87,17 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
 
 
 
-        public async Task<Result<Guid>> SendMessageAsync(Guid conversationId, string content, string? fileId = null)
+        public async Task<Result<Guid>> SendMessageAsync(Guid conversationId, string content, string? fileId = null, Guid? replyToMessageId = null, bool isForwarded = false)
         {
             var response = await _apiClient.PostAsync<SendMessageResponse>(
                 $"/api/conversations/{conversationId}/messages",
-                new SendMessageRequests { Content = content, FileId = fileId });
+                new SendMessageRequests
+                {
+                    Content = content,
+                    FileId = fileId,
+                    ReplyToMessageId = replyToMessageId,
+                    IsForwarded = isForwarded
+                });
 
             if(response.IsSuccess && response.Value != null)
             {

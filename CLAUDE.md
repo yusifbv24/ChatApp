@@ -227,3 +227,86 @@ Building a modern messaging UI similar to WhatsApp Web.
 - **Backend:** Already supported `targetUserId` parameter in `/api/files/upload/profile-picture` endpoint
 - Files modified:
   - `Users.razor.cs` - Refactored HandleCreateUser() method to upload avatar after user creation
+
+**Fixed 4 critical real-time messaging issues:**
+
+1. **New conversation not appearing in list:**
+   - **Problem:** When starting a new conversation from user search, it didn't appear in the conversation list until page refresh
+   - **Solution:** Reload conversation list after creating pending conversation and sending first message
+   - Files modified: `Messages.razor.cs` - Added `await LoadConversationsAndChannels()` after conversation creation
+
+2. **Mark as read not working in real-time (Race Condition):**
+   - **Problem:** When both users were messaging, sender didn't see double checkmark (read receipt) until page refresh (intermittent)
+   - **Root cause:** Race condition! SignalR `MessageRead` event arrives BEFORE the sender's HTTP POST completes
+     - Timeline: User A sends message → Backend broadcasts to User B → User B marks as read → SignalR sends `MessageRead` to User A ⚡ → User A's HTTP response completes
+     - Result: `MessageRead` event arrives but message isn't in `directMessages` list yet, so read receipt is lost
+   - **Solution:** Pending read receipts pattern
+     - Added `pendingReadReceipts` dictionary to store read receipts for messages that don't exist yet
+     - When `MessageRead` event arrives and message not found, store it as pending
+     - When message is added optimistically in `SendMessage`, check for pending read receipt and apply immediately
+     - Clear pending receipts when changing conversations to prevent memory leaks
+   - Files modified: `Messages.razor.cs` - Added pendingReadReceipts, updated HandleMessageRead and SendMessage
+
+3. **JWT refresh mechanism redirecting to login:**
+   - **Problem:** When access token expired, app immediately redirected to login instead of auto-refreshing with refresh token
+   - **Root cause:** `RedirectToLogin` component redirected immediately without waiting for auth state provider to attempt token refresh
+   - **Solution:** Modified `RedirectToLogin` to:
+     - Check if RememberMe preference is set
+     - Wait 500ms for auth state provider to refresh token
+     - Only redirect if refresh fails or RememberMe not enabled
+   - Files modified: `RedirectToLogin.razor` - Added async initialization with token refresh wait logic
+
+4. **Online/offline status inconsistent:**
+   - **Problem:** User online/offline status displayed inconsistently when navigating between pages
+   - **Root cause:** Online status from backend was stale/cached, not refreshed when returning to Messages page
+   - **Solution:** Query current online status from SignalR hub after loading conversations:
+     - Added `RefreshOnlineStatus()` method that queries `GetOnlineStatus` for all conversation participants
+     - Updates conversation list and current recipient status with real-time data
+   - Files modified: `Messages.razor.cs` - Added RefreshOnlineStatus method, called from LoadConversationsAndChannels
+
+**Implemented Reply and Forward features (WhatsApp-style):**
+
+1. **Reply Feature:**
+   - **UI Components:**
+     - Added reply preview in MessageBubble showing replied-to message with sender name and truncated content
+     - Added reply indicator banner in MessageInput showing "Replying to..." with cancel button
+     - Green background color for reply mode input area
+   - **Data Flow:**
+     - Updated DTOs: Added `ReplyToMessageId`, `ReplyToContent`, `ReplyToSenderName` to DirectMessageDto and ChannelMessageDto
+     - Messages.razor.cs manages reply state (isReplying, replyToMessageId, replyToSenderName, replyToContent)
+     - HandleReply method sets reply state when user clicks Reply button
+     - CancelReply method clears reply state
+     - SendMessage includes reply data in new messages and clears reply state after sending
+   - **Visual Design:**
+     - Reply preview in bubbles: Gray box with blue left border, sender name in blue, content truncated to 50 chars
+     - Reply indicator: White box with blue left border, close button on right
+   - Files modified:
+     - DTOs: `DirectMessageDto.cs`, `ChannelMessageDto.cs` - Added reply fields
+     - Components: `MessageBubble.razor`, `MessageInput.razor`, `ChatArea.razor`
+     - Logic: `Messages.razor.cs` - Added HandleReply, CancelReply, reply state
+     - Styles: `messages.css` - Added reply-preview and reply-indicator styles
+
+2. **Forward Feature:**
+   - **UI Components:**
+     - Created Forward dialog showing all available conversations and channels
+     - Grouped by "Direct Messages" and "Groups" sections
+     - Shows message preview at top of dialog
+     - Hover effect on destination items with send icon
+   - **Data Flow:**
+     - Messages.razor.cs manages forward state (showForwardDialog, forwardingDirectMessage, forwardingChannelMessage)
+     - HandleForward method opens dialog with selected message
+     - ForwardToConversation and ForwardToChannel methods send message content to selected destination
+     - CancelForward method closes dialog and clears state
+   - **Visual Design:**
+     - Modal dialog with message preview banner
+     - List of destinations with avatars and names
+     - Send icon appears on hover
+   - Files modified:
+     - UI: `Messages.razor` - Added forward dialog markup
+     - Logic: `Messages.razor.cs` - Added HandleForward, ForwardToConversation, ForwardToChannel, CancelForward
+     - Styles: `messages.css` - Added forward dialog styles
+
+**Notes:**
+- Reply and Forward are frontend-only implementations - backend currently accepts reply fields but doesn't persist them
+- To fully enable Reply feature, backend needs to add ReplyToMessageId fields to database entities
+- Both features work for Direct Messages and Channels

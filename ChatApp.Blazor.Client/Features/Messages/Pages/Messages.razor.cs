@@ -68,6 +68,9 @@ public partial class Messages : IAsyncDisposable
     private Dictionary<Guid, bool> conversationTypingState = []; // conversationId -> isTyping
     private Dictionary<Guid, bool> channelTypingState = []; // channelId -> isTyping
 
+    // Pending read receipts (for race condition: MessageRead arrives before message is added)
+    private Dictionary<Guid, (Guid readBy, DateTime readAtUtc)> pendingReadReceipts = []; // messageId -> (readBy, readAtUtc)
+
     // Dialogs
     private bool showNewConversationDialog;
     private bool showNewChannelDialog;
@@ -84,6 +87,17 @@ public partial class Messages : IAsyncDisposable
 
     // Error handling
     private string? errorMessage;
+
+    // Reply state
+    private bool isReplying;
+    private Guid? replyToMessageId;
+    private string? replyToSenderName;
+    private string? replyToContent;
+
+    // Forward state
+    private bool showForwardDialog;
+    private DirectMessageDto? forwardingDirectMessage;
+    private ChannelMessageDto? forwardingChannelMessage;
 
     private bool IsEmpty => !selectedConversationId.HasValue && !selectedChannelId.HasValue && !isPendingConversation;
     protected override async Task OnInitializedAsync()
@@ -177,6 +191,9 @@ public partial class Messages : IAsyncDisposable
                 channels = channelsResult.Value ?? [];
             }
 
+            // Refresh online status for all conversation participants
+            await RefreshOnlineStatus();
+
             // Update global unread message count
             UpdateGlobalUnreadCount();
         }
@@ -188,6 +205,45 @@ public partial class Messages : IAsyncDisposable
         {
             isLoadingList = false;
             StateHasChanged();
+        }
+    }
+
+    private async Task RefreshOnlineStatus()
+    {
+        try
+        {
+            // Get all unique user IDs from conversations
+            var userIds = conversations
+                .Select(c => c.OtherUserId)
+                .Distinct()
+                .ToList();
+
+            if (userIds.Any())
+            {
+                // Query online status from SignalR hub
+                var onlineStatus = await SignalRService.GetOnlineStatusAsync(userIds);
+
+                // Update conversation list with current online status
+                for (int i = 0; i < conversations.Count; i++)
+                {
+                    var conversation = conversations[i];
+                    if (onlineStatus.TryGetValue(conversation.OtherUserId, out var isOnline))
+                    {
+                        conversations[i] = conversation with { IsOtherUserOnline = isOnline };
+                    }
+                }
+
+                // Update current recipient online status if viewing a conversation
+                if (recipientUserId != Guid.Empty && onlineStatus.TryGetValue(recipientUserId, out var recipientOnline))
+                {
+                    isRecipientOnline = recipientOnline;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to refresh online status: {ex.Message}");
+            // Don't show error to user, this is not critical
         }
     }
 
@@ -263,6 +319,7 @@ public partial class Messages : IAsyncDisposable
         hasMoreMessages = true;
         oldestMessageDate = null;
         typingUsers.Clear();
+        pendingReadReceipts.Clear(); // Clear pending read receipts when changing conversations
 
         // Join SignalR group
         await SignalRService.JoinConversationAsync(conversation.Id);
@@ -319,6 +376,7 @@ public partial class Messages : IAsyncDisposable
         hasMoreMessages = true;
         oldestMessageDate = null;
         typingUsers.Clear();
+        pendingReadReceipts.Clear(); // Clear pending read receipts when changing channels
 
         // Join SignalR group
         await SignalRService.JoinChannelAsync(channel.Id);
@@ -482,18 +540,30 @@ public partial class Messages : IAsyncDisposable
 
                 // Join the SignalR group
                 await SignalRService.JoinConversationAsync(selectedConversationId.Value);
+
+                // Reload conversations to include the new one in the list
+                await LoadConversationsAndChannels();
             }
 
             if (isDirectMessage && selectedConversationId.HasValue)
             {
-                var result = await ConversationService.SendMessageAsync(selectedConversationId.Value, content);
+                var result = await ConversationService.SendMessageAsync(
+                    selectedConversationId.Value,
+                    content,
+                    fileId: null,
+                    replyToMessageId: replyToMessageId,
+                    isForwarded: false);
                 if (result.IsSuccess)
                 {
                     var messageTime = DateTime.UtcNow;
+                    var messageId = result.Value;
+
+                    // Check if there's a pending read receipt for this message (race condition fix)
+                    bool hasReadReceipt = pendingReadReceipts.TryGetValue(messageId, out var readReceipt);
 
                     // Add message locally (optimistic UI) - don't wait for SignalR
                     var newMessage = new DirectMessageDto(
-                        result.Value,
+                        messageId,
                         selectedConversationId.Value,
                         currentUserId,
                         UserState.CurrentUser?.Username ?? "",
@@ -502,14 +572,27 @@ public partial class Messages : IAsyncDisposable
                         recipientUserId,
                         content,
                         null,
-                        false,
+                        hasReadReceipt, // Apply pending read receipt if exists
                         false,
                         false,
                         0,
                         messageTime,
                         null,
-                        null);
+                        hasReadReceipt ? readReceipt.readAtUtc : null,
+                        replyToMessageId,
+                        replyToContent,
+                        replyToSenderName,
+                        false); // IsForwarded
                     directMessages.Add(newMessage);
+
+                    // Remove from pending if applied
+                    if (hasReadReceipt)
+                    {
+                        pendingReadReceipts.Remove(messageId);
+                    }
+
+                    // Clear reply state after sending
+                    CancelReply();
 
                     // Update conversation locally without reloading
                     UpdateConversationLocally(selectedConversationId.Value, content, messageTime);
@@ -521,7 +604,12 @@ public partial class Messages : IAsyncDisposable
             }
             else if (!isDirectMessage && selectedChannelId.HasValue)
             {
-                var result = await ChannelService.SendMessageAsync(selectedChannelId.Value, content);
+                var result = await ChannelService.SendMessageAsync(
+                    selectedChannelId.Value,
+                    content,
+                    fileId: null,
+                    replyToMessageId: replyToMessageId,
+                    isForwarded: false);
                 if (result.IsSuccess)
                 {
                     // Add message locally (optimistic UI)
@@ -540,8 +628,15 @@ public partial class Messages : IAsyncDisposable
                         0,
                         DateTime.UtcNow,
                         null,
-                        null);
+                        null,
+                        replyToMessageId,
+                        replyToContent,
+                        replyToSenderName,
+                        false); // IsForwarded
                     channelMessages.Add(newMessage);
+
+                    // Clear reply state after sending
+                    CancelReply();
                 }
                 else
                 {
@@ -667,6 +762,79 @@ public partial class Messages : IAsyncDisposable
         }
     }
 
+    private void HandleReply(Guid messageId)
+    {
+        // Find the message to reply to
+        if (isDirectMessage)
+        {
+            var message = directMessages.FirstOrDefault(m => m.Id == messageId);
+            if (message != null)
+            {
+                isReplying = true;
+                replyToMessageId = messageId;
+                replyToSenderName = message.SenderDisplayName;
+                replyToContent = message.Content;
+                StateHasChanged();
+            }
+        }
+        else
+        {
+            var message = channelMessages.FirstOrDefault(m => m.Id == messageId);
+            if (message != null)
+            {
+                isReplying = true;
+                replyToMessageId = messageId;
+                replyToSenderName = message.SenderDisplayName;
+                replyToContent = message.Content;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private void CancelReply()
+    {
+        isReplying = false;
+        replyToMessageId = null;
+        replyToSenderName = null;
+        replyToContent = null;
+        StateHasChanged();
+    }
+
+    private void HandleForward(Guid messageId)
+    {
+        // Find the message to forward
+        if (isDirectMessage)
+        {
+            var message = directMessages.FirstOrDefault(m => m.Id == messageId);
+            if (message != null)
+            {
+                forwardingDirectMessage = message;
+                forwardingChannelMessage = null;
+                showForwardDialog = true;
+                StateHasChanged();
+            }
+        }
+        else
+        {
+            var message = channelMessages.FirstOrDefault(m => m.Id == messageId);
+            if (message != null)
+            {
+                forwardingChannelMessage = message;
+                forwardingDirectMessage = null;
+                showForwardDialog = true;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private void CancelForward()
+    {
+        showForwardDialog = false;
+        forwardingDirectMessage = null;
+        forwardingChannelMessage = null;
+        StateHasChanged();
+    }
+
     private async Task AddReaction((Guid messageId, string emoji) reaction)
     {
         try
@@ -756,7 +924,14 @@ public partial class Messages : IAsyncDisposable
                     StateHasChanged();
 
                     // Mark as read on the server
-                    await ConversationService.MarkAsReadAsync(message.ConversationId, message.Id);
+                    try
+                    {
+                        await ConversationService.MarkAsReadAsync(message.ConversationId, message.Id);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Failed to mark message as read: {ex.Message}");
+                    }
                 }
             }
 
@@ -873,6 +1048,7 @@ public partial class Messages : IAsyncDisposable
     {
         InvokeAsync(() =>
         {
+            // Only update if we're viewing this conversation
             if (conversationId == selectedConversationId)
             {
                 var message = directMessages.FirstOrDefault(m => m.Id == messageId);
@@ -881,6 +1057,11 @@ public partial class Messages : IAsyncDisposable
                     var index = directMessages.IndexOf(message);
                     directMessages[index] = message with { IsRead = true, ReadAtUtc = readAtUtc };
                     StateHasChanged();
+                }
+                else
+                {
+                    // Store pending read receipt - will be applied when message is added (race condition fix)
+                    pendingReadReceipts[messageId] = (readBy, readAtUtc);
                 }
             }
         });
@@ -1214,6 +1395,70 @@ public partial class Messages : IAsyncDisposable
         return parts.Length >= 2
             ? $"{parts[0][0]}{parts[1][0]}".ToUpper()
             : name[0].ToString().ToUpper();
+    }
+
+    private string GetForwardMessagePreview()
+    {
+        var content = forwardingDirectMessage?.Content ?? forwardingChannelMessage?.Content ?? "";
+        return content.Length > 60 ? content.Substring(0, 60) + "..." : content;
+    }
+
+    private async Task ForwardToConversation(Guid conversationId)
+    {
+        try
+        {
+            var content = forwardingDirectMessage?.Content ?? forwardingChannelMessage?.Content;
+            if (string.IsNullOrEmpty(content)) return;
+
+            var result = await ConversationService.SendMessageAsync(
+                conversationId,
+                content,
+                fileId: null,
+                replyToMessageId: null,
+                isForwarded: true);
+            if (result.IsSuccess)
+            {
+                CancelForward();
+                Console.WriteLine("Message forwarded successfully!");
+            }
+            else
+            {
+                ShowError(result.Error ?? "Failed to forward message");
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowError("Failed to forward message: " + ex.Message);
+        }
+    }
+
+    private async Task ForwardToChannel(Guid channelId)
+    {
+        try
+        {
+            var content = forwardingDirectMessage?.Content ?? forwardingChannelMessage?.Content;
+            if (string.IsNullOrEmpty(content)) return;
+
+            var result = await ChannelService.SendMessageAsync(
+                channelId,
+                content,
+                fileId: null,
+                replyToMessageId: null,
+                isForwarded: true);
+            if (result.IsSuccess)
+            {
+                CancelForward();
+                Console.WriteLine("Message forwarded successfully!");
+            }
+            else
+            {
+                ShowError(result.Error ?? "Failed to forward message");
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowError("Failed to forward message: " + ex.Message);
+        }
     }
 
     public async ValueTask DisposeAsync()

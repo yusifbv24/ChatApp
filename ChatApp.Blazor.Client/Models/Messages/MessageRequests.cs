@@ -9,6 +9,10 @@ namespace ChatApp.Blazor.Client.Models.Messages
         public string Content { get; set; } = string.Empty;
 
         public string? FileId { get; set; }
+
+        public Guid? ReplyToMessageId { get; set; }
+
+        public bool IsForwarded { get; set; }
     }
 
 

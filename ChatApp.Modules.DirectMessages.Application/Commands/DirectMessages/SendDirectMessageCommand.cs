@@ -15,7 +15,9 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectMessages
         Guid ConversationId,
         Guid SenderId,
         string Content,
-        string? FileId=null
+        string? FileId = null,
+        Guid? ReplyToMessageId = null,
+        bool IsForwarded = false
     ):IRequest<Result<Guid>>;
 
 
@@ -93,7 +95,9 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectMessages
                     request.SenderId,
                     receiverId,
                     request.Content,
-                    request.FileId);
+                    request.FileId,
+                    request.ReplyToMessageId,
+                    request.IsForwarded);
 
                 await _unitOfWork.Messages.AddAsync(message, cancellationToken);
 

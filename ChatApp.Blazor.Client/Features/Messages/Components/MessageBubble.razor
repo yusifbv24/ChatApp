@@ -35,6 +35,18 @@
             else
             {
                 <div class="message-content-block">
+                    @* Show replied message preview if this is a reply *@
+                    @if (!string.IsNullOrEmpty(ReplyToContent))
+                    {
+                        <div class="reply-preview">
+                            <div class="reply-bar"></div>
+                            <div class="reply-content">
+                                <div class="reply-sender">@ReplyToSenderName</div>
+                                <div class="reply-text">@TruncateText(ReplyToContent, 50)</div>
+                            </div>
+                        </div>
+                    }
+
                     <div class="message-text">@Content</div>
 
                     <!-- Time and Read Status in bottom right corner of bubble -->
@@ -170,6 +182,11 @@
     [Parameter] public bool ShowAvatar { get; set; }
     [Parameter] public bool ShowSenderName { get; set; }
     [Parameter] public bool IsDirectMessage { get; set; }
+
+    // Reply-related parameters
+    [Parameter] public Guid? ReplyToMessageId { get; set; }
+    [Parameter] public string? ReplyToContent { get; set; }
+    [Parameter] public string? ReplyToSenderName { get; set; }
     [Parameter] public EventCallback OnEdit { get; set; }
     [Parameter] public EventCallback OnDelete { get; set; }
     [Parameter] public EventCallback<string> OnReaction { get; set; }
@@ -213,6 +230,13 @@
         {
             return localTime.ToString("MMM d,HH:mm");
         }
+    }
+
+    private string TruncateText(string? text, int maxLength)
+    {
+        if (string.IsNullOrEmpty(text)) return "";
+        if (text.Length <= maxLength) return text;
+        return text.Substring(0, maxLength) + "...";
     }
 
     private async Task OnEditClick()

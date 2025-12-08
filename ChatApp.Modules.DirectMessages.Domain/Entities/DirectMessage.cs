@@ -18,6 +18,8 @@ namespace ChatApp.Modules.DirectMessages.Domain.Entities
         public DateTime? EditedAtUtc {  get; private set; }
         public DateTime? DeletedAtUtc { get; private set; }
         public DateTime? ReadAtUtc { get; private set; }
+        public Guid? ReplyToMessageId { get; private set; }
+        public bool IsForwarded { get; private set; }
 
         // Navigation properties
         public DirectConversation Conversation { get; private set; } = null!;
@@ -30,7 +32,9 @@ namespace ChatApp.Modules.DirectMessages.Domain.Entities
             Guid senderId,
             Guid receiverId,
             string content,
-            string? fileId = null)
+            string? fileId = null,
+            Guid? replyToMessageId = null,
+            bool isForwarded = false)
         {
             if(string.IsNullOrWhiteSpace(content) && string.IsNullOrWhiteSpace(fileId))
                 throw new ArgumentException("Message must have content or file attachment");
@@ -46,6 +50,8 @@ namespace ChatApp.Modules.DirectMessages.Domain.Entities
             IsEdited= false;
             IsDeleted= false;
             IsRead= false;
+            ReplyToMessageId = replyToMessageId;
+            IsForwarded = isForwarded;
         }
 
 
