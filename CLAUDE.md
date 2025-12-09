@@ -357,8 +357,112 @@ Building a modern messaging UI similar to WhatsApp Web.
   1. Added public `FocusAsync()` method to MessageInput component
   2. ChatArea component has a reference to MessageInput
   3. Added click handler on messages-container div that calls `FocusAsync()`
-  4. Textarea remains focused at all times, providing seamless typing experience
+  4. Added `OnActionCompleted` callback parameter to MessageBubble
+  5. All MessageBubble actions (edit, delete, reply, forward, copy, pin, reaction, reply click) call `OnActionCompleted` after completing
+  6. ChatArea passes `RefocusInput` method to MessageBubble's `OnActionCompleted` parameter
+  7. Textarea remains focused at all times, providing seamless typing experience
 - **Files modified:**
   - `MessageInput.razor` - Added public `FocusAsync()` method
-  - `ChatArea.razor` - Added `@ref="messageInputRef"` to MessageInput, added `@onclick="HandleChatAreaClick"` to messages-container, added `HandleChatAreaClick()` method
-- **User Experience:** User can click anywhere in the chat area (messages, load more button, etc.) and the textarea automatically refocuses, allowing immediate typing without manual focus
+  - `ChatArea.razor` - Added `@ref="messageInputRef"` to MessageInput, added `@onclick="HandleChatAreaClick"` to messages-container, added `HandleChatAreaClick()` and `RefocusInput()` methods, passed `OnActionCompleted="RefocusInput"` to all MessageBubble components
+  - `MessageBubble.razor` - Added `OnActionCompleted` EventCallback parameter, called it in all action methods: `OnEditClick`, `OnDeleteClick`, `SelectReaction`, `HandleReplyButtonClick`, `OnCopyClick`, `OnForwardClick`, `OnPinClick`, `HandleReplyClick`
+- **User Experience:**
+  - User can click anywhere in the chat area (messages, load more button, etc.) and the textarea automatically refocuses
+  - After any message action (copy, edit, reply, forward, add reaction, etc.), the textarea immediately refocuses
+  - Allows seamless, uninterrupted typing without manual focus - just like WhatsApp Web
+
+**WhatsApp-style hover menu (final design):**
+- **Problem 1:** Message action buttons were hard to access for large messages
+- **Problem 2:** More menu opened below messages at the bottom of the page, hiding edit/delete buttons
+- **Solution:** Implemented WhatsApp-exact design with chevron dropdown and external react button
+- **Final Design (WhatsApp-style):**
+  1. **More Button (Chevron):**
+     - Small chevron-down button (▼) in the upper right corner inside the bubble
+     - Only visible on hover over message
+     - Semi-transparent with subtle shadow
+     - Opens dropdown menu with Reply, Copy, Forward, Edit, Delete, Pin options
+  2. **React Button:**
+     - Emoji button outside the bubble (left for own messages, right for others)
+     - Visible on hover over message
+     - Circular white button with shadow
+     - Opens reaction picker directly at button location
+     - Turns primary color on hover
+  3. **Smart Menu Positioning:**
+     - Dynamically calculates menu height based on number of items
+     - Opens above if not enough space below AND more space above
+     - Added max-height constraint (viewport height - 100px)
+     - Enables vertical scrolling if menu exceeds available space
+  4. **Hover State Management:**
+     - Both buttons appear on mouse enter
+     - Stay visible while menus are open
+     - Hide on mouse leave (unless menu is open)
+- **Files modified:**
+  - `MessageBubble.razor`:
+    - Added single `bubble-more-btn` with chevron icon inside bubble
+    - Added `message-react-btn` outside bubble (like before)
+    - Uses `KeyboardArrowDown` icon for more button (WhatsApp-style)
+    - Enhanced `CheckMenuPosition()` with dynamic height calculation
+    - Updated close methods to hide hover actions
+  - `messages.css`:
+    - New `.bubble-more-btn` styles (small chevron button)
+    - New `.message-react-btn` styles (external emoji button)
+    - Added `max-height` and `overflow-y: auto` to `.more-menu-popup`
+    - Removed old `.bubble-hover-actions` styles
+- **User Experience:**
+  - Hover over message → see small chevron ▼ in top-right corner + emoji button outside ✅
+  - Click chevron → dropdown menu opens (always fully visible) ✅
+  - Click emoji button → reaction picker opens at button location ✅
+  - Exact WhatsApp Web design and behavior ✅
+  - Works perfectly for messages of any size ✅
+
+**Message bubble layout refinement:**
+- **Change:** Improved message bubble structure with proper spacing
+- **New Layout:**
+  1. **Message Content** - Text, replies, forwarded indicator
+  2. **Spacing Area (20px)** - Empty space with More button (chevron) positioned here on hover
+  3. **Message Footer** - Time, edited label, pinned icon, read status (double check)
+- **Implementation:**
+  - Restructured bubble into three sections: content → spacing → footer
+  - `.message-spacing` div provides 20px gap between content and footer
+  - More button (chevron) now positioned in the spacing area (on right side)
+  - `.message-footer` shows time and status below the spacing
+  - Removed old `.message-meta-inline` and `.message-time-inline` styles
+- **Files modified:**
+  - `MessageBubble.razor` - Restructured layout with `message-spacing` and `message-footer` divs
+  - `messages.css` - Added `.message-spacing` and `.message-footer` styles, removed old inline styles
+- **User Experience:**
+  - Clean separation between message content and metadata ✅
+  - More button appears in the spacing (not overlapping content) ✅
+  - Time always at bottom in consistent position ✅
+  - Better visual hierarchy and WhatsApp-like appearance ✅
+
+**Fixed message bubble hover and layout issues (FINAL FIX):**
+- **Problem 1:** React button appeared on hover but was not clickable/interactable
+  - **Root cause:** Mouse handlers were on the bubble element, but react button is outside the bubble. When mouse moved from bubble to react button, `HandleMouseLeave` fired immediately
+  - **Solution:** Moved `@onmouseover` and `@onmouseout` handlers from bubble to the outermost `message-wrapper` div. Now hovering anywhere in the message area (including react button) keeps hover state active
+- **Problem 2:** Need proper layout with space below content, chevron at top of space, time/status at bottom
+  - **Solution:** Created new `.message-meta-section` that combines spacing and footer:
+    - Container uses `flex-direction: column` and `align-items: flex-end` (right-aligned)
+    - Chevron button positioned at top of section
+    - Time/status footer positioned at bottom of section
+    - Creates visual spacing between content and metadata
+- **Files modified:**
+  - `MessageBubble.razor`:
+    - Moved mouse handlers to `message-wrapper` (line 3)
+    - Removed handlers from bubble and react button
+    - Replaced `.message-spacing` + `.message-footer` with single `.message-meta-section` containing both
+  - `messages.css`:
+    - Added `.message-meta-section` styles (right-aligned column)
+    - Updated `.bubble-more-btn` to work within meta section
+    - Updated `.message-footer` to work within meta section
+- **Final Layout:**
+  ```
+  Message content text here
+                            ▼  ← chevron (on hover, top of meta section)
+               Time • Edited • ✓✓  ← footer (bottom of meta section)
+  ```
+- **User Experience:**
+  - React button fully clickable and interactive ✅
+  - Chevron appears at top-right of metadata space on hover ✅
+  - Time and status always visible at bottom-right ✅
+  - Bubble maintains consistent size (no jumping) ✅
+  - All elements right-aligned as in WhatsApp ✅

@@ -204,6 +204,8 @@
     [Parameter] public EventCallback OnPin { get; set; }
     [Parameter] public EventCallback OnForward { get; set; }
     [Parameter] public EventCallback<Guid> OnReplyClick { get; set; }
+    [Parameter] public EventCallback OnActionCompleted{ get; set; }
+    [Parameter] public EventCallback ScrollToBottom{ get; set; }
 
     private ElementReference messageWrapperRef;
     private bool showReactionPicker = false;
@@ -254,12 +256,15 @@
     {
         CloseMoreMenu();
         await OnEdit.InvokeAsync();
+        await OnActionCompleted.InvokeAsync();
+        await ScrollToBottom.InvokeAsync();
     }
 
     private async Task OnDeleteClick()
     {
         CloseMoreMenu();
         await OnDelete.InvokeAsync();
+        await OnActionCompleted.InvokeAsync();
     }
 
     private void ToggleReactionPicker()
@@ -318,6 +323,7 @@
     {
         CloseMoreMenu();
         await OnReply.InvokeAsync();
+        await OnActionCompleted.InvokeAsync();
     }
 
     private async Task OnCopyClick()
@@ -331,18 +337,21 @@
         {
             Console.WriteLine($"Copy failed: {ex.Message}");
         }
+        await OnActionCompleted.InvokeAsync();
     }
 
     private async Task OnForwardClick()
     {
         CloseMoreMenu();
         await OnForward.InvokeAsync();
+        await OnActionCompleted.InvokeAsync();
     }
 
     private async Task OnPinClick()
     {
         CloseMoreMenu();
         await OnPin.InvokeAsync();
+        await OnActionCompleted.InvokeAsync();
     }
 
     private async Task HandleReplyClick()
@@ -351,6 +360,7 @@
         {
             await OnReplyClick.InvokeAsync(ReplyToMessageId.Value);
         }
+        await OnActionCompleted.InvokeAsync();
     }
 
     private record MenuPositionInfo
