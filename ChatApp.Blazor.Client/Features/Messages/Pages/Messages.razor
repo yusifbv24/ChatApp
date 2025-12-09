@@ -6,7 +6,7 @@
 
 <div class="messages-page">
     <!-- Left Panel : Conversation List -->
-    <div class="messages-sidebar @(isMobileSidebarOpen ? "mobile-open" : "")">
+    <div class="messages-sidebar">
         <ConversationList Conversations="conversations"
                           Channels="channels"
                           SelectedConversationId="@selectedConversationId"
@@ -19,11 +19,6 @@
                           OnNewConversation="OpenNewConversationDialog"
                           OnNewChannel="OpenNewChannelDialog" />
     </div>
-
-    <!-- Mobile Sidebar Toggle -->
-    <button class="mobile-sidebar-toggle" @onclick="ToggleMobileSidebar">
-        <MudIcon Icon="@(isMobileSidebarOpen ? Icons.Material.Filled.Close : Icons.Material.Filled.Menu)" />
-    </button>
 
     <!-- Main Panel: Chat Area -->
     <div class="messages-main">

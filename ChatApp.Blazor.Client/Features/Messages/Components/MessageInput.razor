@@ -60,7 +60,7 @@
             <button class="send-btn @(CanSend ? "active" : "")"
                     title="@(IsEditing ? "Save" : "Send")"
                     @onclick="SendMessage"
-                    disabled="@(!CanSend || IsSending)">
+                    disabled="@SendButtonDisabled" >   
                 @if (IsSending)
                 {
                     <div class="send-spinner"></div>
@@ -95,6 +95,7 @@
     </div>
 }
 
+
 @inject IJSRuntime JS
 @inject UserState UserState
 
@@ -118,7 +119,7 @@
     [Parameter] public EventCallback OnCancelReply { get; set; }
 
     private ElementReference textAreaRef;
-    private string MessageText { get; set; } = "";
+    private string MessageText { get; set; } = string.Empty;
     private bool showEmojiPicker=false;
     private bool isTyping = false;
     private System.Timers.Timer? typingTimer;
@@ -147,6 +148,7 @@
     };
 
     private bool CanSend => !string.IsNullOrWhiteSpace(MessageText) && !IsSending;
+    private bool SendButtonDisabled => !CanSend || IsSending;
     private bool shouldFocus = false;
 
     protected override void OnInitialized()
@@ -167,7 +169,7 @@
         else if (wasEditing && !IsEditing)
         {
             // Editing was cancelled or completed - clear the text
-            MessageText = "";
+            MessageText = string.Empty;
             wasEditing = false;
         }
 
@@ -256,7 +258,7 @@
         if (!CanSend) return;
 
         var message = MessageText.Trim();
-        MessageText = "";
+        MessageText = string.Empty;
         await StopTyping();
 
         if (IsEditing)
@@ -275,7 +277,7 @@
 
     private async Task CancelEdit()
     {
-        MessageText = "";
+        MessageText = string.Empty;
         await OnCancelEdit.InvokeAsync();
     }
 
@@ -309,7 +311,6 @@
     private void InsertEmoji(string emoji)
     {
         MessageText += emoji;
-        showEmojiPicker = false;
     }
 
     public void Dispose()

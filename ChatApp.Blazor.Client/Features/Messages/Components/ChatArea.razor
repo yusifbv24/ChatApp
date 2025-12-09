@@ -112,7 +112,6 @@
                     </button>
                 </div>
             }
-
             @if (DirectMessages.Any())
             {
                 @foreach(var group in GroupedDirectMessages)
@@ -271,13 +270,13 @@
 
     // Direct Message Parameters
     [Parameter] public List<DirectMessageDto> DirectMessages { get; set; } = new();
-    [Parameter] public string RecipientName { get; set; } = "";
+    [Parameter] public string RecipientName { get; set; } = string.Empty;
     [Parameter] public string? RecipientAvatarUrl { get; set; }
     [Parameter] public bool IsRecipientOnline { get; set; }
 
     // Channel Parameters
     [Parameter] public List<ChannelMessageDto> ChannelMessages { get; set; } = new();
-    [Parameter] public string ChannelName { get; set; } = "";
+    [Parameter] public string ChannelName { get; set; } = string.Empty;
     [Parameter] public string? ChannelDescription { get; set; }
     [Parameter] public ChannelType ChannelType { get; set; }
     [Parameter] public int MemberCount { get; set; }
@@ -301,23 +300,23 @@
     [Parameter] public EventCallback OnShowPinnedMessages { get; set; }
     [Parameter] public EventCallback<Guid> OnReply { get; set; }
     [Parameter] public EventCallback<Guid> OnForward { get; set; }
+    [Parameter] public EventCallback OnCancelReply { get; set; }
 
     // Reply state parameters
     [Parameter] public bool IsReplying { get; set; }
     [Parameter] public Guid? ReplyToMessageId { get; set; }
     [Parameter] public string? ReplyToSenderName { get; set; }
     [Parameter] public string? ReplyToContent { get; set; }
-    [Parameter] public EventCallback OnCancelReply { get; set; }
 
 
     private ElementReference messagesContainerRef;
     private ElementReference scrollAnchorRef;
     private bool showSearch = false;
     private bool showInfoPanel = false;
-    private string SearchQuery { get; set; } = "";
+    private string SearchQuery { get; set; } = string.Empty;
     private bool isEditing = false;
     private Guid editingMessageId;
-    private string editingContent = "";
+    private string editingContent = string.Empty;
     private int _previousMessageCount;
     private bool _shouldScrollToBottom;
     private bool _isLoadingMore = false;
@@ -380,7 +379,7 @@
             .OrderBy(m => m.CreatedAtUtc)
             .GroupBy(m => m.CreatedAtUtc.Date);
 
-    private string GetInitials(string name)
+    private static string GetInitials(string name)
     {
         if (string.IsNullOrWhiteSpace(name)) return "?";
         var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -433,7 +432,7 @@
     private void ToggleSearch()
     {
         showSearch = !showSearch;
-        if (!showSearch) SearchQuery = "";
+        if (!showSearch) SearchQuery = string.Empty;
     }
 
     private void ToggleInfoPanel()
@@ -450,7 +449,6 @@
     {
         await OnShowPinnedMessages.InvokeAsync();
     }
-
 
     private async Task LoadMoreMessages()
     {
@@ -476,7 +474,6 @@
     private async Task EditMessage(string newContent)
     {
         await OnEditMessage.InvokeAsync((editingMessageId, newContent));
-        // Content will be cleared by CancelEdit, but we call it to reset state
         CancelEdit();
     }
 

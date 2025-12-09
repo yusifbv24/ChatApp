@@ -2,7 +2,6 @@
 using ChatApp.Blazor.Client.Features.Messages.Services;
 using ChatApp.Blazor.Client.Infrastructure.SignalR;
 using ChatApp.Blazor.Client.Models.Auth;
-using ChatApp.Blazor.Client.Models.Common;
 using ChatApp.Blazor.Client.Models.Messages;
 using ChatApp.Blazor.Client.State;
 using Microsoft.AspNetCore.Components;
@@ -75,7 +74,6 @@ public partial class Messages : IAsyncDisposable
     private bool showNewConversationDialog;
     private bool showNewChannelDialog;
     private bool showPinnedMessagesDialog;
-    private bool isMobileSidebarOpen;
 
     // Search
     private string userSearchQuery = "";
@@ -100,6 +98,7 @@ public partial class Messages : IAsyncDisposable
     private ChannelMessageDto? forwardingChannelMessage;
 
     private bool IsEmpty => !selectedConversationId.HasValue && !selectedChannelId.HasValue && !isPendingConversation;
+
     protected override async Task OnInitializedAsync()
     {
         if (UserState.CurrentUser != null)
@@ -152,6 +151,10 @@ public partial class Messages : IAsyncDisposable
             }
         }
     }
+
+
+    #region SignalR Event Handlers
+
     private void SubscribeToSignalREvents()
     {
         // SignalR is already initialized in MainLayout, just subscribe to events here
@@ -168,327 +171,332 @@ public partial class Messages : IAsyncDisposable
         SignalRService.OnUserOffline += HandleUserOffline;
     }
 
-    private async Task LoadConversationsAndChannels()
+    private void HandleNewDirectMessage(DirectMessageDto message)
     {
-        isLoadingList = true;
-        StateHasChanged();
-        try
+        InvokeAsync(async () =>
         {
-            var conversationsTask = ConversationService.GetConversationsAsync();
-            var channelsTask = ChannelService.GetMyChannelsAsync();
+            // Skip our own messages - they're already added via optimistic UI
+            if (message.SenderId == currentUserId) return;
 
-            await Task.WhenAll(conversationsTask, channelsTask);
-
-            var conversationsResult = await conversationsTask;
-            var channelsResult = await channelsTask;
-            if (conversationsResult.IsSuccess)
+            if (message.ConversationId == selectedConversationId)
             {
-                conversations = conversationsResult.Value ?? [];
-            }
-
-            if (channelsResult.IsSuccess)
-            {
-                channels = channelsResult.Value ?? [];
-            }
-
-            // Refresh online status for all conversation participants
-            await RefreshOnlineStatus();
-
-            // Update global unread message count
-            UpdateGlobalUnreadCount();
-        }
-        catch (Exception ex)
-        {
-            ShowError("Failed to load conversations: " + ex.Message);
-        }
-        finally
-        {
-            isLoadingList = false;
-            StateHasChanged();
-        }
-    }
-
-    private async Task RefreshOnlineStatus()
-    {
-        try
-        {
-            // Get all unique user IDs from conversations
-            var userIds = conversations
-                .Select(c => c.OtherUserId)
-                .Distinct()
-                .ToList();
-
-            if (userIds.Any())
-            {
-                // Query online status from SignalR hub
-                var onlineStatus = await SignalRService.GetOnlineStatusAsync(userIds);
-
-                // Update conversation list with current online status
-                for (int i = 0; i < conversations.Count; i++)
+                // Check if message already exists (prevent duplicates)
+                if (!directMessages.Any(m => m.Id == message.Id))
                 {
-                    var conversation = conversations[i];
-                    if (onlineStatus.TryGetValue(conversation.OtherUserId, out var isOnline))
+                    // Add with IsRead = true since user is viewing this conversation
+                    directMessages.Add(message with { IsRead = true });
+                    StateHasChanged();
+
+                    // Mark as read on the server
+                    try
                     {
-                        conversations[i] = conversation with { IsOtherUserOnline = isOnline };
+                        await ConversationService.MarkAsReadAsync(message.ConversationId, message.Id);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Failed to mark message as read: {ex.Message}");
                     }
                 }
+            }
 
-                // Update current recipient online status if viewing a conversation
-                if (recipientUserId != Guid.Empty && onlineStatus.TryGetValue(recipientUserId, out var recipientOnline))
+            // Update conversation list for messages from others
+            var conversation = conversations.FirstOrDefault(c => c.Id == message.ConversationId);
+            if (conversation != null)
+            {
+                var index = conversations.IndexOf(conversation);
+                var isCurrentConversation = message.ConversationId == selectedConversationId;
+                conversations[index] = conversation with
                 {
-                    isRecipientOnline = recipientOnline;
+                    LastMessageContent = message.Content,
+                    LastMessageAtUtc = message.CreatedAtUtc,
+                    UnreadCount = isCurrentConversation ? 0 : conversation.UnreadCount + 1
+                };
+
+                // Increment global unread count if not in this conversation
+                if (!isCurrentConversation)
+                {
+                    AppState.IncrementUnreadMessages();
+                }
+
+                StateHasChanged();
+            }
+            else
+            {
+                // New conversation from someone else - reload the list
+                _ = LoadConversationsAndChannels();
+            }
+        });
+    }
+
+    private void HandleNewChannelMessage(ChannelMessageDto message)
+    {
+        InvokeAsync(() =>
+        {
+            // Skip our own messages - they're already added via optimistic UI
+            if (message.SenderId == currentUserId) return;
+
+            if (message.ChannelId == selectedChannelId)
+            {
+                // Check if message already exists (prevent duplicates)
+                if (!channelMessages.Any(m => m.Id == message.Id))
+                {
+                    channelMessages.Add(message);
+                    StateHasChanged();
                 }
             }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Failed to refresh online status: {ex.Message}");
-            // Don't show error to user, this is not critical
-        }
+        });
     }
 
-    private void UpdateGlobalUnreadCount()
+    private void HandleDirectMessageEdited(DirectMessageDto editedMessage)
     {
-        var totalUnread = conversations.Sum(c => c.UnreadCount) + channels.Sum(c => c.UnreadCount);
-        AppState.UnreadMessageCount = totalUnread;
-    }
-
-    private void UpdateConversationLocally(Guid conversationId, string lastMessage, DateTime messageTime)
-    {
-        var conversation = conversations.FirstOrDefault(c => c.Id == conversationId);
-        if (conversation != null)
+        InvokeAsync(async () =>
         {
-            var index = conversations.IndexOf(conversation);
-
-            // Create updated conversation with new last message
-            var updatedConversation = conversation with
+            // Update the message in the list if it's in the current conversation
+            if (editedMessage.ConversationId == selectedConversationId)
             {
-                LastMessageContent = lastMessage,
-                LastMessageAtUtc = messageTime
-            };
-
-            // Replace in the same position to avoid reordering
-            conversations[index] = updatedConversation;
-
-            // Trigger UI update
-            StateHasChanged();
-        }
-    }
-
-    private async Task SelectConversation(DirectConversationDto conversation)
-    {
-        // Clear pending conversation state
-        isPendingConversation = false;
-        pendingUser = null;
-
-        // Leave previous groups
-        if (selectedConversationId.HasValue)
-        {
-            await SignalRService.LeaveConversationAsync(selectedConversationId.Value);
-        }
-        if (selectedChannelId.HasValue)
-        {
-            await SignalRService.LeaveChannelAsync(selectedChannelId.Value);
-        }
-
-        // Mark conversation as read and update global unread count
-        if (conversation.UnreadCount > 0)
-        {
-            AppState.DecrementUnreadMessages(conversation.UnreadCount);
-
-            // Update local conversation list to show 0 unread
-            var index = conversations.IndexOf(conversation);
-            if (index >= 0)
-            {
-                conversations[index] = conversation with { UnreadCount = 0 };
-            }
-        }
-
-        selectedConversationId = conversation.Id;
-        selectedChannelId = null;
-        isDirectMessage = true;
-
-        recipientName = conversation.OtherUserDisplayName;
-        recipientAvatarUrl = conversation.OtherUserAvatarUrl;
-        recipientUserId = conversation.OtherUserId;
-        isRecipientOnline = conversation.IsOtherUserOnline;
-
-        // Reset messages
-        directMessages.Clear();
-        channelMessages.Clear();
-        hasMoreMessages = true;
-        oldestMessageDate = null;
-        typingUsers.Clear();
-        pendingReadReceipts.Clear(); // Clear pending read receipts when changing conversations
-
-        // Join SignalR group
-        await SignalRService.JoinConversationAsync(conversation.Id);
-
-        // Load messages
-        await LoadDirectMessages();
-
-        // Update URL
-        NavigationManager.NavigateTo($"/messages/conversation/{conversation.Id}", false);
-
-        isMobileSidebarOpen = false;
-        StateHasChanged();
-    }
-    private async Task SelectChannel(ChannelDto channel)
-    {
-        // Clear pending conversation state
-        isPendingConversation = false;
-        pendingUser = null;
-
-        // Leave previous groups
-        if (selectedConversationId.HasValue)
-        {
-            await SignalRService.LeaveConversationAsync(selectedConversationId.Value);
-        }
-        if (selectedChannelId.HasValue)
-        {
-            await SignalRService.LeaveChannelAsync(selectedChannelId.Value);
-        }
-
-        // Mark channel as read and update global unread count
-        if (channel.UnreadCount > 0)
-        {
-            AppState.DecrementUnreadMessages(channel.UnreadCount);
-
-            // Update local channel list to show 0 unread
-            var index = channels.IndexOf(channel);
-            if (index >= 0)
-            {
-                channels[index] = channel with { UnreadCount = 0 };
-            }
-        }
-
-        selectedChannelId = channel.Id;
-        selectedConversationId = null;
-        isDirectMessage = false;
-        selectedChannelName = channel.Name;
-        selectedChannelDescription = channel.Description;
-        selectedChannelType = channel.Type;
-        selectedChannelMemberCount = channel.MemberCount;
-
-        // Reset messages
-        directMessages.Clear();
-        channelMessages.Clear();
-        hasMoreMessages = true;
-        oldestMessageDate = null;
-        typingUsers.Clear();
-        pendingReadReceipts.Clear(); // Clear pending read receipts when changing channels
-
-        // Join SignalR group
-        await SignalRService.JoinChannelAsync(channel.Id);
-
-        // Load messages and pinned count
-        await LoadChannelMessages();
-        await LoadPinnedMessageCount();
-
-        // Update URL
-        NavigationManager.NavigateTo($"/messages/channel/{channel.Id}", false);
-
-        isMobileSidebarOpen = false;
-        StateHasChanged();
-    }
-    private async Task LoadDirectMessages()
-    {
-        isLoadingMessages = true;
-        StateHasChanged();
-
-        try
-        {
-            var result = await ConversationService.GetMessagesAsync(
-                selectedConversationId!.Value,
-                50,
-                oldestMessageDate);
-
-            if (result.IsSuccess && result.Value != null)
-            {
-                var messages = result.Value;
-                if (messages.Count != 0)
+                var message = directMessages.FirstOrDefault(m => m.Id == editedMessage.Id);
+                if (message != null)
                 {
-                    directMessages.InsertRange(0, messages.OrderBy(m => m.CreatedAtUtc));
-                    oldestMessageDate = messages.Min(m => m.CreatedAtUtc);
-                    hasMoreMessages = messages.Count >= 50;
+                    var index = directMessages.IndexOf(message);
+                    directMessages[index] = editedMessage;
+                    StateHasChanged();
+                }
+            }
+
+            // Update conversation list to show edited content
+            await LoadConversationsAndChannels();
+        });
+    }
+
+    private void HandleDirectMessageDeleted(Guid conversationId, Guid messageId)
+    {
+        InvokeAsync(() =>
+        {
+            if (conversationId == selectedConversationId)
+            {
+                var message = directMessages.FirstOrDefault(m => m.Id == messageId);
+                if (message != null)
+                {
+                    var index = directMessages.IndexOf(message);
+                    directMessages[index] = message with { IsDeleted = true, Content = "" };
+                    StateHasChanged();
+                }
+            }
+        });
+    }
+
+    private void HandleChannelMessageEdited(ChannelMessageDto editedMessage)
+    {
+        InvokeAsync(async () =>
+        {
+            // Update the message in the list if it's in the current channel
+            if (editedMessage.ChannelId == selectedChannelId)
+            {
+                var message = channelMessages.FirstOrDefault(m => m.Id == editedMessage.Id);
+                if (message != null)
+                {
+                    var index = channelMessages.IndexOf(message);
+                    channelMessages[index] = editedMessage;
+                    StateHasChanged();
+                }
+            }
+
+            // Update channel list to show edited content
+            await LoadConversationsAndChannels();
+        });
+    }
+
+    private void HandleChannelMessageDeleted(Guid channelId, Guid messageId)
+    {
+        InvokeAsync(() =>
+        {
+            if (channelId == selectedChannelId)
+            {
+                var message = channelMessages.FirstOrDefault(m => m.Id == messageId);
+                if (message != null)
+                {
+                    var index = channelMessages.IndexOf(message);
+                    channelMessages[index] = message with { IsDeleted = true, Content = "" };
+                    StateHasChanged();
+                }
+            }
+        });
+    }
+
+    private void HandleMessageRead(Guid conversationId, Guid messageId, Guid readBy, DateTime readAtUtc)
+    {
+        InvokeAsync(() =>
+        {
+            // Only update if we're viewing this conversation
+            if (conversationId == selectedConversationId)
+            {
+                var message = directMessages.FirstOrDefault(m => m.Id == messageId);
+                if (message != null)
+                {
+                    var index = directMessages.IndexOf(message);
+                    directMessages[index] = message with { IsRead = true, ReadAtUtc = readAtUtc };
+                    StateHasChanged();
                 }
                 else
                 {
-                    hasMoreMessages = false;
-                }
-
-                // Mark messages as read
-                var unreadMessages = messages.Where(m => !m.IsRead && m.SenderId != currentUserId);
-                foreach (var msg in unreadMessages)
-                {
-                    await ConversationService.MarkAsReadAsync(selectedConversationId!.Value, msg.Id);
+                    // Store pending read receipt - will be applied when message is added
+                    pendingReadReceipts[messageId] = (readBy, readAtUtc);
                 }
             }
-        }
-        catch (Exception ex)
+        });
+    }
+
+    private void HandleTypingInConversation(Guid conversationId, Guid userId, bool isTyping)
+    {
+        // Only track typing state for OTHER users, not yourself
+        if (userId != currentUserId)
         {
-            ShowError("Failed to load messages: " + ex.Message);
-        }
-        finally
-        {
-            isLoadingMessages = false;
-            StateHasChanged();
+            // Update typing state for this conversation
+            if (isTyping)
+            {
+                conversationTypingState[conversationId] = true;
+            }
+            else
+            {
+                conversationTypingState.Remove(conversationId);
+            }
+
+            if (conversationId == selectedConversationId && isDirectMessage && !string.IsNullOrEmpty(recipientName))
+            {
+                InvokeAsync(() =>
+                {
+                    if (isTyping)
+                    {
+                        if (!typingUsers.Contains(recipientName))
+                        {
+                            typingUsers = new List<string>(typingUsers) { recipientName };
+                        }
+                    }
+                    else
+                    {
+                        typingUsers = typingUsers.Where(u => u != recipientName).ToList();
+                    }
+
+                    StateHasChanged();
+                });
+            }
         }
     }
 
-    private async Task LoadChannelMessages()
+    private void HandleTypingInChannel(Guid channelId, Guid userId, bool isTyping)
     {
-        isLoadingMessages = true;
+        // Only track typing state for OTHER users, not yourself
+        if (userId != currentUserId)
+        {
+            // Update typing state for this channel
+            if (isTyping)
+            {
+                channelTypingState[channelId] = true;
+            }
+            else
+            {
+                channelTypingState.Remove(channelId);
+            }
+
+            if (channelId == selectedChannelId)
+            {
+                InvokeAsync(() =>
+                {
+                    var userName = typingUserNames.GetValueOrDefault(userId, "Someone");
+                    if (isTyping)
+                    {
+                        if (!typingUsers.Contains(userName))
+                        {
+                            typingUsers = new List<string>(typingUsers) { userName };
+                        }
+                    }
+                    else
+                    {
+                        typingUsers = typingUsers.Where(u => u != userName).ToList();
+                    }
+
+                    StateHasChanged();
+                });
+            }
+        }
+    }
+
+    private void HandleUserOnline(Guid userId)
+    {
+        InvokeAsync(() =>
+        {
+            if (userId == recipientUserId)
+            {
+                isRecipientOnline = true;
+            }
+
+            var conversation = conversations.FirstOrDefault(c => c.OtherUserId == userId);
+            if (conversation != null)
+            {
+                var index = conversations.IndexOf(conversation);
+                conversations[index] = conversation with { IsOtherUserOnline = true };
+            }
+
+            StateHasChanged();
+        });
+    }
+
+    private void HandleUserOffline(Guid userId)
+    {
+        InvokeAsync(() =>
+        {
+            if (userId == recipientUserId)
+            {
+                isRecipientOnline = false;
+            }
+
+            var conversation = conversations.FirstOrDefault(c => c.OtherUserId == userId);
+            if (conversation != null)
+            {
+                var index = conversations.IndexOf(conversation);
+                conversations[index] = conversation with { IsOtherUserOnline = false };
+            }
+
+            StateHasChanged();
+        });
+    }
+
+    #endregion
+
+    #region Dialog Mehtods
+    private void OpenNewConversationDialog()
+    {
+        showNewConversationDialog = true;
+        userSearchQuery = "";
+        userSearchResults.Clear();
         StateHasChanged();
-
-        try
-        {
-            var result = await ChannelService.GetMessagesAsync(
-                selectedChannelId!.Value,
-                50,
-                oldestMessageDate);
-
-            if (result.IsSuccess && result.Value != null)
-            {
-                var messages = result.Value;
-                if (messages.Count != 0)
-                {
-                    channelMessages.InsertRange(0, messages.OrderBy(m => m.CreatedAtUtc));
-                    oldestMessageDate = messages.Min(m => m.CreatedAtUtc);
-                    hasMoreMessages = messages.Count >= 50;
-                }
-                else
-                {
-                    hasMoreMessages = false;
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            ShowError("Failed to load messages: " + ex.Message);
-        }
-        finally
-        {
-            isLoadingMessages = false;
-            StateHasChanged();
-        }
     }
-    private async Task LoadPinnedMessageCount()
+    private void CloseNewConversationDialog()
     {
-        try
-        {
-            var result = await ChannelService.GetPinnedMessagesAsync(selectedChannelId!.Value);
-            if (result.IsSuccess && result.Value != null)
-            {
-                pinnedMessageCount = result.Value.Count;
-            }
-        }
-        catch
-        {
-            pinnedMessageCount = 0;
-        }
+        showNewConversationDialog = false;
+        _searchCts?.Cancel();
+        StateHasChanged();
+    }
+    private void OpenNewChannelDialog()
+    {
+        showNewChannelDialog = true;
+        newChannelRequest = new CreateChannelRequest();
+        StateHasChanged();
+    }
+    private void CloseNewChannelDialog()
+    {
+        showNewChannelDialog = false;
+        StateHasChanged();
+    }
+    private void ClosePinnedMessagesDialog()
+    {
+        showPinnedMessagesDialog = false;
+        StateHasChanged();
     }
 
+    #endregion
+
+    #region Messages
     private async Task LoadMoreMessages()
     {
         if (isLoadingMoreMessages || !hasMoreMessages) return;
@@ -513,7 +521,6 @@ public partial class Messages : IAsyncDisposable
             StateHasChanged();
         }
     }
-
     private async Task SendMessage(string content)
     {
         if (string.IsNullOrWhiteSpace(content)) return;
@@ -553,12 +560,13 @@ public partial class Messages : IAsyncDisposable
                     fileId: null,
                     replyToMessageId: replyToMessageId,
                     isForwarded: false);
+
                 if (result.IsSuccess)
                 {
                     var messageTime = DateTime.UtcNow;
                     var messageId = result.Value;
 
-                    // Check if there's a pending read receipt for this message (race condition fix)
+                    // Check if there's a pending read receipt for this message
                     bool hasReadReceipt = pendingReadReceipts.TryGetValue(messageId, out var readReceipt);
 
                     // Add message locally (optimistic UI) - don't wait for SignalR
@@ -582,7 +590,8 @@ public partial class Messages : IAsyncDisposable
                         replyToMessageId,
                         replyToContent,
                         replyToSenderName,
-                        false); // IsForwarded
+                        false);
+
                     directMessages.Add(newMessage);
 
                     // Remove from pending if applied
@@ -610,6 +619,7 @@ public partial class Messages : IAsyncDisposable
                     fileId: null,
                     replyToMessageId: replyToMessageId,
                     isForwarded: false);
+
                 if (result.IsSuccess)
                 {
                     // Add message locally (optimistic UI)
@@ -632,7 +642,8 @@ public partial class Messages : IAsyncDisposable
                         replyToMessageId,
                         replyToContent,
                         replyToSenderName,
-                        false); // IsForwarded
+                        false);
+
                     channelMessages.Add(newMessage);
 
                     // Clear reply state after sending
@@ -767,80 +778,6 @@ public partial class Messages : IAsyncDisposable
             ShowError("Failed to delete message: " + ex.Message);
         }
     }
-
-    private void HandleReply(Guid messageId)
-    {
-        // Find the message to reply to
-        if (isDirectMessage)
-        {
-            var message = directMessages.FirstOrDefault(m => m.Id == messageId);
-            if (message != null)
-            {
-                isReplying = true;
-                replyToMessageId = messageId;
-                replyToSenderName = message.SenderDisplayName;
-                replyToContent = message.Content;
-                StateHasChanged();
-            }
-        }
-        else
-        {
-            var message = channelMessages.FirstOrDefault(m => m.Id == messageId);
-            if (message != null)
-            {
-                isReplying = true;
-                replyToMessageId = messageId;
-                replyToSenderName = message.SenderDisplayName;
-                replyToContent = message.Content;
-                StateHasChanged();
-            }
-        }
-    }
-
-    private void CancelReply()
-    {
-        isReplying = false;
-        replyToMessageId = null;
-        replyToSenderName = null;
-        replyToContent = null;
-        StateHasChanged();
-    }
-
-    private void HandleForward(Guid messageId)
-    {
-        // Find the message to forward
-        if (isDirectMessage)
-        {
-            var message = directMessages.FirstOrDefault(m => m.Id == messageId);
-            if (message != null)
-            {
-                forwardingDirectMessage = message;
-                forwardingChannelMessage = null;
-                showForwardDialog = true;
-                StateHasChanged();
-            }
-        }
-        else
-        {
-            var message = channelMessages.FirstOrDefault(m => m.Id == messageId);
-            if (message != null)
-            {
-                forwardingChannelMessage = message;
-                forwardingDirectMessage = null;
-                showForwardDialog = true;
-                StateHasChanged();
-            }
-        }
-    }
-
-    private void CancelForward()
-    {
-        showForwardDialog = false;
-        forwardingDirectMessage = null;
-        forwardingChannelMessage = null;
-        StateHasChanged();
-    }
-
     private async Task AddReaction((Guid messageId, string emoji) reaction)
     {
         try
@@ -865,431 +802,181 @@ public partial class Messages : IAsyncDisposable
             ShowError("Failed to add reaction: " + ex.Message);
         }
     }
-
     private async Task HandleTyping(bool isTyping)
     {
-        try
+        if (isDirectMessage && selectedConversationId.HasValue)
         {
-            if (isDirectMessage && selectedConversationId.HasValue)
-            {
-                await SignalRService.SendTypingInConversationAsync(selectedConversationId.Value, isTyping);
-            }
-            else if (!isDirectMessage && selectedChannelId.HasValue)
-            {
-                await SignalRService.SendTypingInChannelAsync(selectedChannelId.Value, isTyping);
-            }
+            await SignalRService.SendTypingInConversationAsync(selectedConversationId.Value, isTyping);
         }
-        catch
+        else if (!isDirectMessage && selectedChannelId.HasValue)
         {
-            // Ignore typing errors
+            await SignalRService.SendTypingInChannelAsync(selectedChannelId.Value, isTyping);
         }
     }
+    #endregion
 
-    private async Task ShowPinnedMessages()
+    #region Conversation
+    private void UpdateConversationLocally(Guid conversationId, string lastMessage, DateTime messageTime)
     {
-        showPinnedMessagesDialog = true;
-        isLoadingPinnedMessages = true;
+        var conversation = conversations.FirstOrDefault(c => c.Id == conversationId);
+        if (conversation != null)
+        {
+            var index = conversations.IndexOf(conversation);
+
+            // Create updated conversation with new last message
+            var updatedConversation = conversation with
+            {
+                LastMessageContent = lastMessage,
+                LastMessageAtUtc = messageTime
+            };
+
+            // Replace in the same position to avoid reordering
+            conversations[index] = updatedConversation;
+
+            // Trigger UI update
+            StateHasChanged();
+        }
+    }
+    private async Task LoadDirectMessages()
+    {
+        isLoadingMessages = true;
         StateHasChanged();
 
         try
         {
-            if (selectedChannelId.HasValue)
+            var result = await ConversationService.GetMessagesAsync(
+                selectedConversationId!.Value,
+                50,
+                oldestMessageDate);
+
+            if (result.IsSuccess && result.Value != null)
             {
-                var result = await ChannelService.GetPinnedMessagesAsync(selectedChannelId.Value);
-                if (result.IsSuccess)
+                var messages = result.Value;
+                if (messages.Count != 0)
                 {
-                    pinnedMessages = result.Value ?? new List<ChannelMessageDto>();
-                }
-            }
-        }
-        finally
-        {
-            isLoadingPinnedMessages = false;
-            StateHasChanged();
-        }
-    }
-
-    // SignalR Event Handlers
-    private void HandleNewDirectMessage(DirectMessageDto message)
-    {
-        InvokeAsync(async () =>
-        {
-            // Skip our own messages - they're already added via optimistic UI
-            if (message.SenderId == currentUserId)
-            {
-                return;
-            }
-
-            if (message.ConversationId == selectedConversationId)
-            {
-                // Check if message already exists (prevent duplicates)
-                if (!directMessages.Any(m => m.Id == message.Id))
-                {
-                    // Add with IsRead = true since user is viewing this conversation
-                    directMessages.Add(message with { IsRead = true });
-                    StateHasChanged();
-
-                    // Mark as read on the server
-                    try
-                    {
-                        await ConversationService.MarkAsReadAsync(message.ConversationId, message.Id);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Failed to mark message as read: {ex.Message}");
-                    }
-                }
-            }
-
-            // Update conversation list for messages from others
-            var conversation = conversations.FirstOrDefault(c => c.Id == message.ConversationId);
-            if (conversation != null)
-            {
-                var index = conversations.IndexOf(conversation);
-                var isCurrentConversation = message.ConversationId == selectedConversationId;
-                conversations[index] = conversation with
-                {
-                    LastMessageContent = message.Content,
-                    LastMessageAtUtc = message.CreatedAtUtc,
-                    UnreadCount = isCurrentConversation ? 0 : conversation.UnreadCount + 1
-                };
-
-                // Increment global unread count if not in this conversation
-                if (!isCurrentConversation)
-                {
-                    AppState.IncrementUnreadMessages();
-                }
-
-                StateHasChanged();
-            }
-            else
-            {
-                // New conversation from someone else - reload the list
-                _ = LoadConversationsAndChannels();
-            }
-        });
-    }
-
-    private void HandleNewChannelMessage(ChannelMessageDto message)
-    {
-        InvokeAsync(() =>
-        {
-            // Skip our own messages - they're already added via optimistic UI
-            if (message.SenderId == currentUserId)
-            {
-                return;
-            }
-
-            if (message.ChannelId == selectedChannelId)
-            {
-                // Check if message already exists (prevent duplicates)
-                if (!channelMessages.Any(m => m.Id == message.Id))
-                {
-                    channelMessages.Add(message);
-                    StateHasChanged();
-                }
-            }
-        });
-    }
-    private void HandleDirectMessageEdited(DirectMessageDto editedMessage)
-    {
-        InvokeAsync(async () =>
-        {
-            // Update the message in the list if it's in the current conversation
-            if (editedMessage.ConversationId == selectedConversationId)
-            {
-                var message = directMessages.FirstOrDefault(m => m.Id == editedMessage.Id);
-                if (message != null)
-                {
-                    var index = directMessages.IndexOf(message);
-                    directMessages[index] = editedMessage;
-                    StateHasChanged();
-                }
-            }
-
-            // Update conversation list to show edited content
-            await LoadConversationsAndChannels();
-        });
-    }
-
-    private void HandleDirectMessageDeleted(Guid conversationId, Guid messageId)
-    {
-        InvokeAsync(() =>
-        {
-            if (conversationId == selectedConversationId)
-            {
-                var message = directMessages.FirstOrDefault(m => m.Id == messageId);
-                if (message != null)
-                {
-                    var index = directMessages.IndexOf(message);
-                    directMessages[index] = message with { IsDeleted = true, Content = "" };
-                    StateHasChanged();
-                }
-            }
-        });
-    }
-
-    private void HandleChannelMessageEdited(ChannelMessageDto editedMessage)
-    {
-        InvokeAsync(async () =>
-        {
-            // Update the message in the list if it's in the current channel
-            if (editedMessage.ChannelId == selectedChannelId)
-            {
-                var message = channelMessages.FirstOrDefault(m => m.Id == editedMessage.Id);
-                if (message != null)
-                {
-                    var index = channelMessages.IndexOf(message);
-                    channelMessages[index] = editedMessage;
-                    StateHasChanged();
-                }
-            }
-
-            // Update channel list to show edited content
-            await LoadConversationsAndChannels();
-        });
-    }
-
-
-    private void HandleChannelMessageDeleted(Guid channelId, Guid messageId)
-    {
-        InvokeAsync(() =>
-        {
-            if (channelId == selectedChannelId)
-            {
-                var message = channelMessages.FirstOrDefault(m => m.Id == messageId);
-                if (message != null)
-                {
-                    var index = channelMessages.IndexOf(message);
-                    channelMessages[index] = message with { IsDeleted = true, Content = "" };
-                    StateHasChanged();
-                }
-            }
-        });
-    }
-
-    private void HandleMessageRead(Guid conversationId, Guid messageId, Guid readBy, DateTime readAtUtc)
-    {
-        InvokeAsync(() =>
-        {
-            // Only update if we're viewing this conversation
-            if (conversationId == selectedConversationId)
-            {
-                var message = directMessages.FirstOrDefault(m => m.Id == messageId);
-                if (message != null)
-                {
-                    var index = directMessages.IndexOf(message);
-                    directMessages[index] = message with { IsRead = true, ReadAtUtc = readAtUtc };
-                    StateHasChanged();
+                    directMessages.InsertRange(0, messages.OrderBy(m => m.CreatedAtUtc));
+                    oldestMessageDate = messages.Min(m => m.CreatedAtUtc);
+                    hasMoreMessages = messages.Count >= 50;
                 }
                 else
                 {
-                    // Store pending read receipt - will be applied when message is added (race condition fix)
-                    pendingReadReceipts[messageId] = (readBy, readAtUtc);
+                    hasMoreMessages = false;
                 }
-            }
-        });
-    }
 
-    private void HandleTypingInConversation(Guid conversationId, Guid userId, bool isTyping)
-    {
-        // Only track typing state for OTHER users, not yourself
-        if (userId != currentUserId)
-        {
-            // Update typing state for this conversation
-            if (isTyping)
-            {
-                conversationTypingState[conversationId] = true;
-            }
-            else
-            {
-                conversationTypingState.Remove(conversationId);
-            }
-
-            if (conversationId == selectedConversationId && isDirectMessage && !string.IsNullOrEmpty(recipientName))
-            {
-                InvokeAsync(() =>
+                // Mark messages as read
+                var unreadMessages = messages.Where(m => !m.IsRead && m.SenderId != currentUserId);
+                foreach (var msg in unreadMessages)
                 {
-                    if (isTyping)
-                    {
-                        if (!typingUsers.Contains(recipientName))
-                        {
-                            typingUsers = new List<string>(typingUsers) { recipientName };
-                        }
-                    }
-                    else
-                    {
-                        typingUsers = typingUsers.Where(u => u != recipientName).ToList();
-                    }
-
-                    StateHasChanged();
-                });
-            }
-        }
-    }
-
-    private void HandleTypingInChannel(Guid channelId, Guid userId, bool isTyping)
-    {
-        // Only track typing state for OTHER users, not yourself
-        if (userId != currentUserId)
-        {
-            // Update typing state for this channel
-            if (isTyping)
-            {
-                channelTypingState[channelId] = true;
-            }
-            else
-            {
-                channelTypingState.Remove(channelId);
-            }
-
-            if (channelId == selectedChannelId)
-            {
-                InvokeAsync(() =>
-                {
-                    var userName = typingUserNames.GetValueOrDefault(userId, "Someone");
-                    if (isTyping)
-                    {
-                        if (!typingUsers.Contains(userName))
-                        {
-                            typingUsers = new List<string>(typingUsers) { userName };
-                        }
-                    }
-                    else
-                    {
-                        typingUsers = typingUsers.Where(u => u != userName).ToList();
-                    }
-
-                    StateHasChanged();
-                });
-            }
-        }
-    }
-
-    private void HandleUserOnline(Guid userId)
-    {
-        InvokeAsync(() =>
-        {
-            if (userId == recipientUserId)
-            {
-                isRecipientOnline = true;
-            }
-
-            var conversation = conversations.FirstOrDefault(c => c.OtherUserId == userId);
-            if (conversation != null)
-            {
-                var index = conversations.IndexOf(conversation);
-                conversations[index] = conversation with { IsOtherUserOnline = true };
-            }
-
-            StateHasChanged();
-        });
-    }
-
-    private void HandleUserOffline(Guid userId)
-    {
-        InvokeAsync(() =>
-        {
-            if (userId == recipientUserId)
-            {
-                isRecipientOnline = false;
-            }
-
-            var conversation = conversations.FirstOrDefault(c => c.OtherUserId == userId);
-            if (conversation != null)
-            {
-                var index = conversations.IndexOf(conversation);
-                conversations[index] = conversation with { IsOtherUserOnline = false };
-            }
-
-            StateHasChanged();
-        });
-    }
-
-    // Dialog Methods
-    private void OpenNewConversationDialog()
-    {
-        showNewConversationDialog = true;
-        userSearchQuery = "";
-        userSearchResults.Clear();
-        StateHasChanged();
-    }
-
-    private void CloseNewConversationDialog()
-    {
-        showNewConversationDialog = false;
-        _searchCts?.Cancel();
-        StateHasChanged();
-    }
-
-    private async Task OnUserSearchInput(ChangeEventArgs e)
-    {
-        userSearchQuery = e.Value?.ToString() ?? "";
-
-        // Cancel previous search
-        _searchCts?.Cancel();
-        _searchCts = new CancellationTokenSource();
-        var token = _searchCts.Token;
-
-        // Clear results if query is too short
-        if (string.IsNullOrWhiteSpace(userSearchQuery) || userSearchQuery.Length < 2)
-        {
-            userSearchResults.Clear();
-            isSearchingUsers = false;
-            StateHasChanged();
-            return;
-        }
-
-        // Debounce - wait 300ms before searching
-        try
-        {
-            await Task.Delay(300, token);
-        }
-        catch (TaskCanceledException)
-        {
-            return;
-        }
-
-        await SearchUsers(token);
-    }
-
-    private async Task SearchUsers(CancellationToken token)
-    {
-        if (token.IsCancellationRequested) return;
-
-        isSearchingUsers = true;
-        StateHasChanged();
-
-        try
-        {
-            var result = await UserService.SearchUsersAsync(userSearchQuery);
-
-            if (token.IsCancellationRequested) return;
-
-            if (result.IsSuccess)
-            {
-                userSearchResults = result.Value ?? new List<UserDto>();
-            }
-            else
-            {
-                userSearchResults.Clear();
+                    await ConversationService.MarkAsReadAsync(selectedConversationId!.Value, msg.Id);
+                }
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Search error: {ex.Message}");
-            userSearchResults.Clear();
+            ShowError("Failed to load messages: " + ex.Message);
         }
         finally
         {
-            if (!token.IsCancellationRequested)
-            {
-                isSearchingUsers = false;
-                StateHasChanged();
-            }
+            isLoadingMessages = false;
+            StateHasChanged();
         }
     }
+    private async Task SelectConversation(DirectConversationDto conversation)
+    {
+        // Clear pending conversation state
+        isPendingConversation = false;
+        pendingUser = null;
 
+        // Leave previous groups
+        if (selectedConversationId.HasValue)
+        {
+            await SignalRService.LeaveConversationAsync(selectedConversationId.Value);
+        }
+        if (selectedChannelId.HasValue)
+        {
+            await SignalRService.LeaveChannelAsync(selectedChannelId.Value);
+        }
+
+        // Mark conversation as read and update global unread count
+        if (conversation.UnreadCount > 0)
+        {
+            AppState.DecrementUnreadMessages(conversation.UnreadCount);
+
+            // Update local conversation list to show 0 unread
+            var index = conversations.IndexOf(conversation);
+            if (index >= 0)
+            {
+                conversations[index] = conversation with { UnreadCount = 0 };
+            }
+        }
+
+        selectedConversationId = conversation.Id;
+        selectedChannelId = null;
+        isDirectMessage = true;
+
+        recipientName = conversation.OtherUserDisplayName;
+        recipientAvatarUrl = conversation.OtherUserAvatarUrl;
+        recipientUserId = conversation.OtherUserId;
+        isRecipientOnline = conversation.IsOtherUserOnline;
+
+        // Reset messages
+        directMessages.Clear();
+        channelMessages.Clear();
+        hasMoreMessages = true;
+        oldestMessageDate = null;
+        typingUsers.Clear();
+        pendingReadReceipts.Clear(); // Clear pending read receipts when changing conversations
+
+        // Join SignalR group
+        await SignalRService.JoinConversationAsync(conversation.Id);
+
+        // Load messages
+        await LoadDirectMessages();
+
+        // Update URL
+        NavigationManager.NavigateTo($"/messages/conversation/{conversation.Id}", false);
+
+        StateHasChanged();
+    }
+    private async Task LoadConversationsAndChannels()
+    {
+        isLoadingList = true;
+        StateHasChanged();
+        try
+        {
+            var conversationsTask = ConversationService.GetConversationsAsync();
+            var channelsTask = ChannelService.GetMyChannelsAsync();
+
+            await Task.WhenAll(conversationsTask, channelsTask);
+
+            var conversationsResult = await conversationsTask;
+            var channelsResult = await channelsTask;
+            if (conversationsResult.IsSuccess)
+            {
+                conversations = conversationsResult.Value ?? [];
+            }
+
+            if (channelsResult.IsSuccess)
+            {
+                channels = channelsResult.Value ?? [];
+            }
+
+            // Refresh online status for all conversation participants
+            await RefreshOnlineStatus();
+
+            // Update global unread message count
+            UpdateGlobalUnreadCount();
+        }
+        catch (Exception ex)
+        {
+            ShowError("Failed to load conversations: " + ex.Message);
+        }
+        finally
+        {
+            isLoadingList = false;
+            StateHasChanged();
+        }
+    }
     private async Task StartConversationWithUser(Guid userId)
     {
         // Check if conversation already exists
@@ -1328,19 +1015,103 @@ public partial class Messages : IAsyncDisposable
         StateHasChanged();
     }
 
-    private void OpenNewChannelDialog()
+    #endregion
+
+    #region Channel
+    private async Task LoadChannelMessages()
     {
-        showNewChannelDialog = true;
-        newChannelRequest = new CreateChannelRequest();
+        isLoadingMessages = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await ChannelService.GetMessagesAsync(
+                selectedChannelId!.Value,
+                50,
+                oldestMessageDate);
+
+            if (result.IsSuccess && result.Value != null)
+            {
+                var messages = result.Value;
+                if (messages.Count != 0)
+                {
+                    channelMessages.InsertRange(0, messages.OrderBy(m => m.CreatedAtUtc));
+                    oldestMessageDate = messages.Min(m => m.CreatedAtUtc);
+                    hasMoreMessages = messages.Count >= 50;
+                }
+                else
+                {
+                    hasMoreMessages = false;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowError("Failed to load messages: " + ex.Message);
+        }
+        finally
+        {
+            isLoadingMessages = false;
+            StateHasChanged();
+        }
+    }
+    private async Task SelectChannel(ChannelDto channel)
+    {
+        // Clear pending conversation state
+        isPendingConversation = false;
+        pendingUser = null;
+
+        // Leave previous groups
+        if (selectedConversationId.HasValue)
+        {
+            await SignalRService.LeaveConversationAsync(selectedConversationId.Value);
+        }
+        if (selectedChannelId.HasValue)
+        {
+            await SignalRService.LeaveChannelAsync(selectedChannelId.Value);
+        }
+
+        // Mark channel as read and update global unread count
+        if (channel.UnreadCount > 0)
+        {
+            AppState.DecrementUnreadMessages(channel.UnreadCount);
+
+            // Update local channel list to show 0 unread
+            var index = channels.IndexOf(channel);
+            if (index >= 0)
+            {
+                channels[index] = channel with { UnreadCount = 0 };
+            }
+        }
+
+        selectedChannelId = channel.Id;
+        selectedConversationId = null;
+        isDirectMessage = false;
+        selectedChannelName = channel.Name;
+        selectedChannelDescription = channel.Description;
+        selectedChannelType = channel.Type;
+        selectedChannelMemberCount = channel.MemberCount;
+
+        // Reset messages
+        directMessages.Clear();
+        channelMessages.Clear();
+        hasMoreMessages = true;
+        oldestMessageDate = null;
+        typingUsers.Clear();
+        pendingReadReceipts.Clear(); // Clear pending read receipts when changing channels
+
+        // Join SignalR group
+        await SignalRService.JoinChannelAsync(channel.Id);
+
+        // Load messages and pinned count
+        await LoadChannelMessages();
+        await LoadPinnedMessageCount();
+
+        // Update URL
+        NavigationManager.NavigateTo($"/messages/channel/{channel.Id}", false);
+
         StateHasChanged();
     }
-
-    private void CloseNewChannelDialog()
-    {
-        showNewChannelDialog = false;
-        StateHasChanged();
-    }
-
     private async Task CreateChannel()
     {
         isCreatingChannel = true;
@@ -1375,18 +1146,304 @@ public partial class Messages : IAsyncDisposable
             StateHasChanged();
         }
     }
-    private void ClosePinnedMessagesDialog()
+
+    #endregion
+
+    #region Pinned Messages
+    private async Task ShowPinnedMessages()
     {
-        showPinnedMessagesDialog = false;
+        showPinnedMessagesDialog = true;
+        isLoadingPinnedMessages = true;
+        StateHasChanged();
+
+        try
+        {
+            if (selectedChannelId.HasValue)
+            {
+                var result = await ChannelService.GetPinnedMessagesAsync(selectedChannelId.Value);
+                if (result.IsSuccess)
+                {
+                    pinnedMessages = result.Value ?? [];
+                }
+            }
+        }
+        finally
+        {
+            isLoadingPinnedMessages = false;
+            StateHasChanged();
+        }
+    }
+    private async Task LoadPinnedMessageCount()
+    {
+        try
+        {
+            var result = await ChannelService.GetPinnedMessagesAsync(selectedChannelId!.Value);
+            if (result.IsSuccess && result.Value != null)
+            {
+                pinnedMessageCount = result.Value.Count;
+            }
+        }
+        catch
+        {
+            pinnedMessageCount = 0;
+        }
+    }
+    #endregion
+
+    #region Forward Feature
+    private void HandleForward(Guid messageId)
+    {
+        // Find the message to forward
+        if (isDirectMessage)
+        {
+            var message = directMessages.FirstOrDefault(m => m.Id == messageId);
+            if (message != null)
+            {
+                forwardingDirectMessage = message;
+                forwardingChannelMessage = null;
+                showForwardDialog = true;
+                StateHasChanged();
+            }
+        }
+        else
+        {
+            var message = channelMessages.FirstOrDefault(m => m.Id == messageId);
+            if (message != null)
+            {
+                forwardingChannelMessage = message;
+                forwardingDirectMessage = null;
+                showForwardDialog = true;
+                StateHasChanged();
+            }
+        }
+    }
+    private void CancelForward()
+    {
+        showForwardDialog = false;
+        forwardingDirectMessage = null;
+        forwardingChannelMessage = null;
+        StateHasChanged();
+    }
+    private string GetForwardMessagePreview()
+    {
+        var content = forwardingDirectMessage?.Content ?? forwardingChannelMessage?.Content ?? "";
+        return content.Length > 60 ? content.Substring(0, 60) + "..." : content;
+    }
+    private async Task ForwardToConversation(Guid conversationId)
+    {
+        try
+        {
+            var content = forwardingDirectMessage?.Content ?? forwardingChannelMessage?.Content;
+            if (string.IsNullOrEmpty(content)) return;
+
+            var result = await ConversationService.SendMessageAsync(
+                conversationId,
+                content,
+                fileId: null,
+                replyToMessageId: null,
+                isForwarded: true);
+
+            if (result.IsSuccess)
+            {
+                // Update conversation list to show the forwarded message
+                await LoadConversationsAndChannels();
+                CancelForward();
+            }
+            else
+            {
+                ShowError(result.Error ?? "Failed to forward message");
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowError("Failed to forward message: " + ex.Message);
+        }
+    }
+    private async Task ForwardToChannel(Guid channelId)
+    {
+        try
+        {
+            var content = forwardingDirectMessage?.Content ?? forwardingChannelMessage?.Content;
+            if (string.IsNullOrEmpty(content)) return;
+
+            var result = await ChannelService.SendMessageAsync(
+                channelId,
+                content,
+                fileId: null,
+                replyToMessageId: null,
+                isForwarded: true);
+
+            if (result.IsSuccess)
+            {
+                // Update channel list to show the forwarded message
+                await LoadConversationsAndChannels();
+                CancelForward();
+            }
+            else
+            {
+                ShowError(result.Error ?? "Failed to forward message");
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowError("Failed to forward message: " + ex.Message);
+        }
+    }
+    #endregion
+
+    #region Reply Feature
+    private void HandleReply(Guid messageId)
+    {
+        // Find the message to reply to
+        if (isDirectMessage)
+        {
+            var message = directMessages.FirstOrDefault(m => m.Id == messageId);
+            if (message != null)
+            {
+                isReplying = true;
+                replyToMessageId = messageId;
+                replyToSenderName = message.SenderDisplayName;
+                replyToContent = message.Content;
+                StateHasChanged();
+            }
+        }
+        else
+        {
+            var message = channelMessages.FirstOrDefault(m => m.Id == messageId);
+            if (message != null)
+            {
+                isReplying = true;
+                replyToMessageId = messageId;
+                replyToSenderName = message.SenderDisplayName;
+                replyToContent = message.Content;
+                StateHasChanged();
+            }
+        }
+    }
+    private void CancelReply()
+    {
+        isReplying = false;
+        replyToMessageId = null;
+        replyToSenderName = null;
+        replyToContent = null;
         StateHasChanged();
     }
 
-    private void ToggleMobileSidebar()
-    {
-        isMobileSidebarOpen = !isMobileSidebarOpen;
-        StateHasChanged();
-    }
+    #endregion
 
+    #region Searching 
+    private async Task OnUserSearchInput(ChangeEventArgs e)
+    {
+        userSearchQuery = e.Value?.ToString() ?? "";
+
+        // Cancel previous search
+        _searchCts?.Cancel();
+        _searchCts = new CancellationTokenSource();
+        var token = _searchCts.Token;
+
+        // Clear results if query is too short
+        if (string.IsNullOrWhiteSpace(userSearchQuery) || userSearchQuery.Length < 2)
+        {
+            userSearchResults.Clear();
+            isSearchingUsers = false;
+            StateHasChanged();
+            return;
+        }
+
+        // Debounce - wait 300ms before searching
+        try
+        {
+            await Task.Delay(300, token);
+        }
+        catch (TaskCanceledException)
+        {
+            return;
+        }
+
+        await SearchUsers(token);
+    }
+    private async Task SearchUsers(CancellationToken token)
+    {
+        if (token.IsCancellationRequested) return;
+
+        isSearchingUsers = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await UserService.SearchUsersAsync(userSearchQuery);
+
+            if (token.IsCancellationRequested) return;
+
+            if (result.IsSuccess)
+            {
+                userSearchResults = result.Value ?? [];
+            }
+            else
+            {
+                userSearchResults.Clear();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Search error: {ex.Message}");
+            userSearchResults.Clear();
+        }
+        finally
+        {
+            if (!token.IsCancellationRequested)
+            {
+                isSearchingUsers = false;
+                StateHasChanged();
+            }
+        }
+    }
+    #endregion
+
+    #region Helpers
+    private async Task RefreshOnlineStatus()
+    {
+        try
+        {
+            // Get all unique user IDs from conversations
+            var userIds = conversations
+                .Select(c => c.OtherUserId)
+                .Distinct()
+                .ToList();
+
+            if (userIds.Count != 0)
+            {
+                // Query online status from SignalR hub
+                var onlineStatus = await SignalRService.GetOnlineStatusAsync(userIds);
+
+                // Update conversation list with current online status
+                for (int i = 0; i < conversations.Count; i++)
+                {
+                    var conversation = conversations[i];
+                    if (onlineStatus.TryGetValue(conversation.OtherUserId, out var isOnline))
+                    {
+                        conversations[i] = conversation with { IsOtherUserOnline = isOnline };
+                    }
+                }
+
+                // Update current recipient online status if viewing a conversation
+                if (recipientUserId != Guid.Empty && onlineStatus.TryGetValue(recipientUserId, out var recipientOnline))
+                {
+                    isRecipientOnline = recipientOnline;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to refresh online status: {ex.Message}");
+            // Don't show error to user, this is not critical
+        }
+    }
+    private void UpdateGlobalUnreadCount()
+    {
+        var totalUnread = conversations.Sum(c => c.UnreadCount) + channels.Sum(c => c.UnreadCount);
+        AppState.UnreadMessageCount = totalUnread;
+    }
     private void ShowError(string message)
     {
         errorMessage = message;
@@ -1405,14 +1462,12 @@ public partial class Messages : IAsyncDisposable
             });
         });
     }
-
     private void ClearError()
     {
         errorMessage = null;
         StateHasChanged();
     }
-
-    private string GetInitials(string name)
+    private static string GetInitials(string name)
     {
         if (string.IsNullOrWhiteSpace(name)) return "?";
         var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -1420,73 +1475,6 @@ public partial class Messages : IAsyncDisposable
             ? $"{parts[0][0]}{parts[1][0]}".ToUpper()
             : name[0].ToString().ToUpper();
     }
-
-    private string GetForwardMessagePreview()
-    {
-        var content = forwardingDirectMessage?.Content ?? forwardingChannelMessage?.Content ?? "";
-        return content.Length > 60 ? content.Substring(0, 60) + "..." : content;
-    }
-
-    private async Task ForwardToConversation(Guid conversationId)
-    {
-        try
-        {
-            var content = forwardingDirectMessage?.Content ?? forwardingChannelMessage?.Content;
-            if (string.IsNullOrEmpty(content)) return;
-
-            var result = await ConversationService.SendMessageAsync(
-                conversationId,
-                content,
-                fileId: null,
-                replyToMessageId: null,
-                isForwarded: true);
-            if (result.IsSuccess)
-            {
-                // Update conversation list to show the forwarded message
-                await LoadConversationsAndChannels();
-                CancelForward();
-            }
-            else
-            {
-                ShowError(result.Error ?? "Failed to forward message");
-            }
-        }
-        catch (Exception ex)
-        {
-            ShowError("Failed to forward message: " + ex.Message);
-        }
-    }
-
-    private async Task ForwardToChannel(Guid channelId)
-    {
-        try
-        {
-            var content = forwardingDirectMessage?.Content ?? forwardingChannelMessage?.Content;
-            if (string.IsNullOrEmpty(content)) return;
-
-            var result = await ChannelService.SendMessageAsync(
-                channelId,
-                content,
-                fileId: null,
-                replyToMessageId: null,
-                isForwarded: true);
-            if (result.IsSuccess)
-            {
-                // Update channel list to show the forwarded message
-                await LoadConversationsAndChannels();
-                CancelForward();
-            }
-            else
-            {
-                ShowError(result.Error ?? "Failed to forward message");
-            }
-        }
-        catch (Exception ex)
-        {
-            ShowError("Failed to forward message: " + ex.Message);
-        }
-    }
-
     public async ValueTask DisposeAsync()
     {
         // Unsubscribe from SignalR events
@@ -1512,4 +1500,5 @@ public partial class Messages : IAsyncDisposable
             await SignalRService.LeaveChannelAsync(selectedChannelId.Value);
         }
     }
+    #endregion
 }

@@ -9,8 +9,9 @@
             {
                 <button class="new-chat-btn" @onclick="ToggleNewMenu">
                     <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" />
-                </button>   
+                </button>
             }
+            
             @if (showNewMenu)
             {
                 <div class="new-menu-overlay" @onclick="CloseNewMenu"></div>
@@ -25,6 +26,7 @@
                             </div>
                         </button>
                     }
+                    
                     @if (UserState.HasPermission("Groups.Create"))
                     {
                         <button class="new-menu-item" @onclick="OnNewChannelClick">
@@ -35,10 +37,13 @@
                             </div>
                         </button>
                     }
+                
                 </div>
             }
+        
         </div>
     </div>
+
 
     <!-- Search Bar -->
     <div class="conversation-search">
@@ -49,6 +54,7 @@
                    placeholder="Search or start new chat"
                    @bind="SearchTerm"
                    @bind:event="oninput" />
+
             @if (!string.IsNullOrEmpty(SearchTerm))
             {
                 <button class="search-clear" @onclick="ClearSearch">
@@ -57,6 +63,7 @@
             }
         </div>
     </div>
+
 
     <!-- Unified Conversation List -->
     <div class="conversation-items">
@@ -175,7 +182,7 @@
     [Parameter] public EventCallback OnNewConversation { get; set; }
     [Parameter] public EventCallback OnNewChannel { get; set; }
 
-    private string SearchTerm { get; set; } = "";
+    private string SearchTerm { get; set; } = string.Empty;
     private bool showNewMenu = false;
 
     // Unified list item model
@@ -300,7 +307,7 @@
         await OnNewChannel.InvokeAsync();
     }
 
-    private string GetInitials(string name)
+    private static string GetInitials(string name)
     {
         if (string.IsNullOrWhiteSpace(name)) return "?";
         var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);

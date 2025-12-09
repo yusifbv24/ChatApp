@@ -2151,27 +2151,6 @@
         background: rgba(255, 255, 255, 0.3);
     }
 
-/* Mobile Toggle */
-.mobile-sidebar-toggle {
-    display: none;
-    position: fixed;
-    bottom: 24px;
-    left: 24px;
-    width: 56px;
-    height: 56px;
-    background: var(--primary-gradient);
-    border: none;
-    border-radius: 50%;
-    color: var(--white);
-    box-shadow: var(--shadow-lg);
-    z-index: 999;
-    cursor: pointer;
-    transition: all var(--transition-base);
-}
-
-    .mobile-sidebar-toggle:hover {
-        transform: scale(1.05);
-    }
 
 /* ===================================
    RESPONSIVE DESIGN
@@ -2186,16 +2165,6 @@
         transform: translateX(-100%);
         z-index: 100;
         box-shadow: var(--shadow-xl);
-    }
-
-        .messages-sidebar.mobile-open {
-            transform: translateX(0);
-        }
-
-    .mobile-sidebar-toggle {
-        display: flex;
-        align-items: center;
-        justify-content: center;
     }
 
     .message-wrapper {
