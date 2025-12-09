@@ -306,6 +306,19 @@
         MessageText += emoji;
     }
 
+    // Public method to focus the textarea from parent components
+    public async Task FocusAsync()
+    {
+        try
+        {
+            await textAreaRef.FocusAsync();
+        }
+        catch
+        {
+            // Element may not be available yet
+        }
+    }
+
     public void Dispose()
     {
         typingTimer?.Dispose();

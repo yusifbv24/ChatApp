@@ -349,3 +349,16 @@ Building a modern messaging UI similar to WhatsApp Web.
   - If they're viewing a conversation, all unread messages in that conversation are automatically marked as read
   - Implemented in `MarkUnreadMessagesAsRead()` method called from `OnVisibilityChanged` when visibility changes from hidden to visible
   - This ensures messages that arrived while the user was away get marked as read when they return
+
+**Auto-refocus textarea after any interaction:**
+- **Problem:** When clicking on the chat area or messages (for edit, reply, etc.), the textarea loses focus and user must manually click it again
+- **Solution:** Textarea now automatically refocuses after any interaction except during message sending
+- **How it works:**
+  1. Added public `FocusAsync()` method to MessageInput component
+  2. ChatArea component has a reference to MessageInput
+  3. Added click handler on messages-container div that calls `FocusAsync()`
+  4. Textarea remains focused at all times, providing seamless typing experience
+- **Files modified:**
+  - `MessageInput.razor` - Added public `FocusAsync()` method
+  - `ChatArea.razor` - Added `@ref="messageInputRef"` to MessageInput, added `@onclick="HandleChatAreaClick"` to messages-container, added `HandleChatAreaClick()` method
+- **User Experience:** User can click anywhere in the chat area (messages, load more button, etc.) and the textarea automatically refocuses, allowing immediate typing without manual focus

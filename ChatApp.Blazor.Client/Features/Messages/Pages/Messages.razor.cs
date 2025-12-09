@@ -36,7 +36,7 @@ public partial class Messages : IAsyncDisposable
     private bool isDirectMessage = true;
 
     // Direct message state
-    private string recipientName = "";
+    private string recipientName = string.Empty;
     private string? recipientAvatarUrl;
     private Guid recipientUserId;
     private bool isRecipientOnline;
@@ -46,7 +46,7 @@ public partial class Messages : IAsyncDisposable
     private UserDto? pendingUser;
 
     // Channel state
-    private string selectedChannelName = "";
+    private string selectedChannelName = string.Empty;
     private string? selectedChannelDescription;
     private ChannelType selectedChannelType;
     private int selectedChannelMemberCount;

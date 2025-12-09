@@ -89,7 +89,7 @@
         }
 
         <!-- Messages Area -->
-        <div class="messages-container" @ref="messagesContainerRef">
+        <div class="messages-container" @ref="messagesContainerRef" @onclick="HandleChatAreaClick">
             @if (IsLoading)
             {
                 <div class="messages-loading">
@@ -199,7 +199,8 @@
         </div>
 
         <!-- Message Input -->
-        <MessageInput Placeholder="@GetInputPlaceholder()"
+        <MessageInput @ref="messageInputRef"
+                      Placeholder="@GetInputPlaceholder()"
                       IsEditing="@isEditing"
                       EditingContent="@editingContent"
                       IsSending="@IsSending"
@@ -311,6 +312,7 @@
 
     private ElementReference messagesContainerRef;
     private ElementReference scrollAnchorRef;
+    private MessageInput? messageInputRef;
     private bool showSearch = false;
     private bool showInfoPanel = false;
     private string SearchQuery { get; set; } = string.Empty;
@@ -502,6 +504,15 @@
     private void HandleAttach()
     {
         // File attachment feature not implemented yet
+    }
+
+    private async Task HandleChatAreaClick()
+    {
+        // Refocus the textarea when clicking anywhere in the chat area
+        if (messageInputRef != null)
+        {
+            await messageInputRef.FocusAsync();
+        }
     }
 
     private async Task PinMessage(Guid messageId)
