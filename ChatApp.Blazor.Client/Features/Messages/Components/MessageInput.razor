@@ -47,7 +47,6 @@
                           value="@MessageText"
                           @oninput="HandleInput"
                           @onkeydown="HandleKeyDown"
-                          @onfocus="HandleFocus"
                           @onblur="HandleBlur"
                           disabled="@IsSending"
                           rows="1"></textarea>
@@ -220,12 +219,6 @@
         {
             await SendMessage();
         }
-    }
-
-    private async Task HandleFocus()
-    {
-        // Focus handling if needed
-        await Task.CompletedTask;
     }
 
     private async Task HandleBlur()

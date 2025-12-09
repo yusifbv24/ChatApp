@@ -378,7 +378,7 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
         catch (Exception ex)
         {
             Console.WriteLine($"Error getting online status: {ex.Message}");
-            return new Dictionary<Guid, bool>();
+            return [];
         }
     }
 

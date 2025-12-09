@@ -5,6 +5,7 @@ using ChatApp.Blazor.Client.Models.Auth;
 using ChatApp.Blazor.Client.Models.Messages;
 using ChatApp.Blazor.Client.State;
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 
 namespace ChatApp.Blazor.Client.Features.Messages.Pages;
 
@@ -17,6 +18,7 @@ public partial class Messages : IAsyncDisposable
     [Inject] private UserState UserState { get; set; } = default!;
     [Inject] private AppState AppState { get; set; } = default!;
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
+    [Inject] private IJSRuntime JS { get; set; } = default!;
     [Parameter] public Guid? ConversationId { get; set; }
     [Parameter] public Guid? ChannelId { get; set; }
 
@@ -70,13 +72,18 @@ public partial class Messages : IAsyncDisposable
     // Pending read receipts (for race condition: MessageRead arrives before message is added)
     private Dictionary<Guid, (Guid readBy, DateTime readAtUtc)> pendingReadReceipts = []; // messageId -> (readBy, readAtUtc)
 
+    // Page visibility tracking
+    private bool isPageVisible = true;
+    private IJSObjectReference? visibilitySubscription;
+    private DotNetObjectReference<Messages>? dotNetReference;
+
     // Dialogs
     private bool showNewConversationDialog;
     private bool showNewChannelDialog;
     private bool showPinnedMessagesDialog;
 
     // Search
-    private string userSearchQuery = "";
+    private string userSearchQuery = string.Empty;
     private List<UserDto> userSearchResults = [];
     private CancellationTokenSource? _searchCts;
 
@@ -152,6 +159,68 @@ public partial class Messages : IAsyncDisposable
         }
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Subscribe to page visibility changes
+            dotNetReference = DotNetObjectReference.Create(this);
+            visibilitySubscription = await JS.InvokeAsync<IJSObjectReference>(
+                "chatAppUtils.subscribeToVisibilityChange",
+                dotNetReference);
+
+            // Get initial visibility state
+            isPageVisible = await JS.InvokeAsync<bool>("chatAppUtils.isPageVisible");
+        }
+    }
+
+    [JSInvokable]
+    public void OnVisibilityChanged(bool isVisible)
+    {
+        var wasHidden = !isPageVisible;
+        isPageVisible = isVisible;
+
+        // When user returns to the page (becomes visible), mark unread messages as read
+        if (wasHidden && isVisible)
+        {
+            InvokeAsync(async () =>
+            {
+                await MarkUnreadMessagesAsRead();
+            });
+        }
+    }
+
+    private async Task MarkUnreadMessagesAsRead()
+    {
+        // Mark unread direct messages as read if viewing a conversation
+        if (selectedConversationId.HasValue)
+        {
+            var unreadMessages = directMessages.Where(m => !m.IsRead && m.SenderId != currentUserId).ToList();
+            if (unreadMessages.Count != 0)
+            {
+                foreach (var message in unreadMessages)
+                {
+                    try
+                    {
+                        await ConversationService.MarkAsReadAsync(message.ConversationId, message.Id);
+
+                        // Update local state
+                        var index = directMessages.IndexOf(message);
+                        if (index >= 0)
+                        {
+                            directMessages[index] = message with { IsRead = true };
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Failed to mark message as read: {ex.Message}");
+                    }
+                }
+                StateHasChanged();
+            }
+        }
+    }
+
 
     #region SignalR Event Handlers
 
@@ -183,18 +252,23 @@ public partial class Messages : IAsyncDisposable
                 // Check if message already exists (prevent duplicates)
                 if (!directMessages.Any(m => m.Id == message.Id))
                 {
-                    // Add with IsRead = true since user is viewing this conversation
-                    directMessages.Add(message with { IsRead = true });
+                    // Only mark as read if the page is visible (user is actually viewing the messages)
+                    bool shouldMarkAsRead = isPageVisible;
+
+                    directMessages.Add(message with { IsRead = shouldMarkAsRead });
                     StateHasChanged();
 
-                    // Mark as read on the server
-                    try
+                    // Mark as read on the server only if page is visible
+                    if (shouldMarkAsRead)
                     {
-                        await ConversationService.MarkAsReadAsync(message.ConversationId, message.Id);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Failed to mark message as read: {ex.Message}");
+                        try
+                        {
+                            await ConversationService.MarkAsReadAsync(message.ConversationId, message.Id);
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Failed to mark message as read: {ex.Message}");
+                        }
                     }
                 }
             }
@@ -1489,6 +1563,22 @@ public partial class Messages : IAsyncDisposable
         SignalRService.OnUserTypingInChannel -= HandleTypingInChannel;
         SignalRService.OnUserOnline -= HandleUserOnline;
         SignalRService.OnUserOffline -= HandleUserOffline;
+
+        // Dispose page visibility subscription
+        if (visibilitySubscription != null)
+        {
+            try
+            {
+                await visibilitySubscription.InvokeVoidAsync("dispose");
+                await visibilitySubscription.DisposeAsync();
+            }
+            catch
+            {
+                // Ignore errors during disposal
+            }
+        }
+
+        dotNetReference?.Dispose();
 
         // Leave groups
         if (selectedConversationId.HasValue)

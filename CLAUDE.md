@@ -310,3 +310,42 @@ Building a modern messaging UI similar to WhatsApp Web.
 - Reply and Forward are frontend-only implementations - backend currently accepts reply fields but doesn't persist them
 - To fully enable Reply feature, backend needs to add ReplyToMessageId fields to database entities
 - Both features work for Direct Messages and Channels
+
+### Session 6 (2025-12-09)
+**Implemented real-time message editing feature:**
+- When a user edits a message, the other party receives the updated content immediately in real-time
+- The edited message appears instantly in their chat area with the "(edited)" label
+- The conversation list automatically refreshes to show the updated last message for both users
+- Backend changes:
+  - Updated `EditDirectMessageCommand.cs` and `EditChannelMessageCommand.cs` to fetch edited message DTO and broadcast it
+  - Added new SignalR notification methods in `SignalRNotificationService.cs` that send complete message DTOs
+- Frontend changes:
+  - Updated SignalR event signatures from `Action<Guid, Guid>` to `Action<DirectMessageDto>` and `Action<ChannelMessageDto>`
+  - Added new event listeners for "DirectMessageEdited" and "ChannelMessageEdited" that deserialize full message DTOs
+  - Removed deprecated "MessageEdited" handler
+  - Updated `HandleDirectMessageEdited` and `HandleChannelMessageEdited` to receive full DTOs and refresh conversation list
+
+**Implemented Page Visibility API for smart read receipts:**
+- **Problem:** Messages were marked as read even when user was on a different browser tab, not actually viewing the messages
+- **Solution:** Use Page Visibility API to only mark messages as read when the browser tab is visible and active
+- **How it works:**
+  1. JavaScript tracks browser tab visibility state using `document.hidden`
+  2. Blazor component subscribes to visibility changes via JavaScript interop
+  3. Messages are only auto-marked as read when:
+     - User is viewing the conversation (already checked)
+     - AND the browser tab is visible/active (new check)
+  4. If tab is hidden, messages arrive but remain unread until user returns to the tab
+- **Files modified:**
+  - `wwwroot/js/app.js` - Added `isPageVisible()` and `subscribeToVisibilityChange()` functions
+  - `MessageInput.razor` - Removed unused `HandleFocus` method and `@onfocus` binding
+  - `Messages.razor.cs` - Added:
+    - Page visibility state tracking (`isPageVisible`, `visibilitySubscription`, `dotNetReference`)
+    - `OnAfterRenderAsync` to subscribe to visibility changes
+    - `OnVisibilityChanged` method (called by JavaScript when visibility changes)
+    - Updated `HandleNewDirectMessage` to only mark as read when `isPageVisible` is true
+    - Disposal of visibility subscription in `DisposeAsync`
+- **User Experience:** Messages now only show as "read" (double checkmark) when the recipient actually views them with the tab active
+- **Additional Fix:** When user returns to the page (tab becomes visible again):
+  - If they're viewing a conversation, all unread messages in that conversation are automatically marked as read
+  - Implemented in `MarkUnreadMessagesAsRead()` method called from `OnVisibilityChanged` when visibility changes from hidden to visible
+  - This ensures messages that arrived while the user was away get marked as read when they return

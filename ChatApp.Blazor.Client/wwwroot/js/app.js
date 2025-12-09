@@ -138,5 +138,22 @@ window.chatAppUtils = {
                 }, 2000);
             }
         }
+    },
+
+    // Page Visibility API - Check if page is currently visible
+    isPageVisible: () => {
+        return !document.hidden;
+    },
+
+    // Subscribe to page visibility changes
+    subscribeToVisibilityChange: (dotNetHelper) => {
+        const handler = () => {
+            const isVisible = !document.hidden;
+            dotNetHelper.invokeMethodAsync('OnVisibilityChanged', isVisible);
+        };
+        document.addEventListener('visibilitychange', handler);
+        return {
+            dispose: () => document.removeEventListener('visibilitychange', handler)
+        };
     }
 };
