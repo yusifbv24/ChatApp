@@ -108,6 +108,31 @@
                 </span>
             </div>
         }
+
+        <!-- Message Actions (visible on hover) -->
+        @if (!IsDeleted)
+        {
+            <div class="message-actions @(showReactionPicker || showMoreMenu ? "" : "")">
+                @if (!showReactionPicker && !showMoreMenu)
+                {
+                    <button class="action-btn" title="React" @onclick="ToggleReactionPicker"
+                            @onclick:stopPropagation="true">
+                        <MudIcon Icon="@Icons.Material.Filled.EmojiEmotions" Size="Size.Small" />
+                    </button>
+                }
+
+                <!-- Reaction Picker (positioned above react button) -->
+                @if (showReactionPicker)
+                {
+                    <div class="reaction-picker-popup" @onclick:stopPropagation="true">
+                        @foreach (var emoji in CommonReactions)
+                        {
+                            <button class="reaction-btn" @onclick="() => SelectReaction(emoji)">@emoji</button>
+                        }
+                    </div>
+                }
+            </div>
+        }
     </div>
 
     @if (IsOwn && ShowAvatar)
@@ -124,27 +149,10 @@
         </div>
     }
 
-    <!-- Message Actions (visible on hover, hidden when popup is open) -->
-    @if (!IsDeleted && !showReactionPicker && !showMoreMenu)
-    {
-        <div class="message-actions">
-            <button class="action-btn" title="React" @onclick="ToggleReactionPicker"
-                    @onclick:stopPropagation="true">
-                <MudIcon Icon="@Icons.Material.Filled.EmojiEmotions" Size="Size.Small" />
-            </button>
-        </div>
-    }
-
-    <!-- Reaction Picker (positioned near message) -->
+    <!-- Reaction Picker Overlay -->
     @if (showReactionPicker)
     {
         <div class="popup-overlay" @onclick="CloseReactionPicker"></div>
-        <div class="reaction-picker-popup" @onclick:stopPropagation="true">
-            @foreach (var emoji in CommonReactions)
-            {
-                <button class="reaction-btn" @onclick="() => SelectReaction(emoji)">@emoji</button>
-            }
-        </div>
     }
 
     <!-- More Menu (positioned relative to chevron button inside bubble) -->

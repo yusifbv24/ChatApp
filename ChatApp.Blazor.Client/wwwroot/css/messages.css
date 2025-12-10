@@ -770,10 +770,10 @@
 .message-wrapper {
     display: flex;
     gap: 10px;
-    max-width: 70%;
     animation: messageSlideIn 0.2s ease-out;
     position: relative;
     align-items: flex-start;
+    width: 100%;
 }
 
 @keyframes messageSlideIn {
@@ -789,12 +789,12 @@
 }
 
 .message-wrapper.own {
-    margin-left: auto;
     flex-direction: row-reverse;
+    justify-content: flex-start;
 }
 
 .message-wrapper.other {
-    margin-right: auto;
+    justify-content: flex-start;
 }
 
 .message-wrapper.deleted {
@@ -835,6 +835,8 @@
 .message-content-wrapper {
     display: flex;
     flex-direction: column;
+    max-width: 70%;
+    position: relative;
 }
 
 .message-sender {
@@ -1098,8 +1100,8 @@
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
 
-/* Show chevron on hover or when menu is open */
-.message-wrapper:hover .chevron-more-btn,
+/* Show chevron only when hovering over the bubble or when menu is open */
+.message-bubble:hover .chevron-more-btn,
 .chevron-more-btn.visible {
     display: flex !important;
 }
@@ -1156,14 +1158,20 @@
 }
 
 .message-wrapper.other .message-actions {
-    right: -70px;
+    right: -48px;
 }
 
 .message-wrapper.own .message-actions {
-    left: -70px;
+    left: -48px;
 }
 
-.message-wrapper:hover .message-actions {
+/* Position relative to allow reaction picker to be positioned relative to this */
+.message-actions {
+    position: absolute;
+}
+
+.message-wrapper:hover .message-actions,
+.message-actions:hover {
     display: flex;
 }
 
@@ -1239,7 +1247,8 @@
 
 .reaction-picker-popup {
     position: absolute;
-    top: -50px;
+    bottom: 100%;
+    margin-bottom: 8px;
     display: flex;
     gap: 4px;
     padding: 8px;
@@ -1252,12 +1261,13 @@
 }
 
 .message-wrapper.other .reaction-picker-popup {
-    left: 0;
+    left: 50%;
+    transform: translateX(-50%);
 }
 
 .message-wrapper.own .reaction-picker-popup {
-    right: 0;
-    left: auto;
+    left: 50%;
+    transform: translateX(-50%);
 }
 
 .reaction-btn {
