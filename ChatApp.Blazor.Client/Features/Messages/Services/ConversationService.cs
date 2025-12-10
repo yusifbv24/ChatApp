@@ -71,18 +71,11 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
         }
 
 
-        public async Task<Result> AddReactionAsync(Guid conversationId, Guid messageId, string reaction)
+        public async Task<Result<ReactionToggleResponse>> ToggleReactionAsync(Guid conversationId, Guid messageId, string reaction)
         {
-            return await _apiClient.PostAsync(
-                $"/api/conversations/{conversationId}/messages/{messageId}/reactions",
+            return await _apiClient.PutAsync<ReactionToggleResponse>(
+                $"/api/conversations/{conversationId}/messages/{messageId}/reactions/toggle",
                 new ReactionRequest { Reaction = reaction });
-        }
-
-
-        public async Task<Result> RemoveReactionAsync(Guid conversationId, Guid messageId, string reaction)
-        {
-            return await _apiClient.DeleteAsync(
-                $"/api/conversations/{conversationId}/messages/{messageId}/reactions");
         }
 
 

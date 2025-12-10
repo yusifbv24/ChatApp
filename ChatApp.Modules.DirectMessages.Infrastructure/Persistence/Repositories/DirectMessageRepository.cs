@@ -91,6 +91,25 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 .Take(pageSize)
                 .ToListAsync(cancellationToken);
 
+            // Get message IDs for reactions lookup
+            var messageIds = results.Select(r => r.Id).ToList();
+
+            // Load reactions grouped by message
+            var reactions = await _context.DirectMessageReactions
+                .Where(r => messageIds.Contains(r.MessageId))
+                .GroupBy(r => r.MessageId)
+                .Select(g => new
+                {
+                    MessageId = g.Key,
+                    Reactions = g.GroupBy(r => r.Reaction)
+                        .Select(rg => new DirectMessageReactionDto(
+                            rg.Key,
+                            rg.Count(),
+                            rg.Select(r => r.UserId).ToList()
+                        )).ToList()
+                })
+                .ToDictionaryAsync(x => x.MessageId, x => x.Reactions, cancellationToken);
+
             return results.Select(r => new DirectMessageDto(
                 r.Id,
                 r.ConversationId,
@@ -111,7 +130,8 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 r.ReplyToMessageId,
                 r.ReplyToContent,
                 r.ReplyToSenderName,
-                r.IsForwarded
+                r.IsForwarded,
+                reactions.ContainsKey(r.Id) ? reactions[r.Id] : null
             )).ToList();
         }
 

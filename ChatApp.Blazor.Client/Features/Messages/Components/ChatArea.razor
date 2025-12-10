@@ -132,6 +132,8 @@
                                        IsDeleted="@message.IsDeleted"
                                        IsRead="@message.IsRead"
                                        ReactionCount="@message.ReactionCount"
+                                       Reactions="@message.Reactions"
+                                       CurrentUserId="@CurrentUserId"
                                        IsDirectMessage="true"
                                        ShowAvatar="false"
                                        ShowSenderName="false"
@@ -146,7 +148,7 @@
                                        OnPin="()=>{}"
                                        OnForward="()=>OnForward.InvokeAsync(message.Id)"
                                        OnReplyClick="HandleReplyClick"
-                                       OnActionCompleted="RefocusInput" 
+                                       OnActionCompleted="RefocusInput"
                                        ScrollToBottom="ScrollToBottomAsync" />
                     }
                 }

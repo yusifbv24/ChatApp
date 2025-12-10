@@ -50,6 +50,7 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
     // Reaction events
     public event Action<Guid, Guid, Guid, string>? OnReactionAdded;
     public event Action<Guid, Guid, Guid, string>? OnReactionRemoved;
+    public event Action<Guid, Guid, List<ReactionSummary>>? OnDirectMessageReactionToggled;
 
     public async Task InitializeAsync()
     {
@@ -293,6 +294,57 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
             catch (Exception ex)
             {
                 Console.WriteLine($"Error processing reaction removed: {ex.Message}");
+            }
+        }));
+
+        _subscriptions.Add(hubConnection.On<object>("DirectMessageReactionToggled", data =>
+        {
+            try
+            {
+                var json = JsonSerializer.Serialize(data);
+                using var doc = JsonDocument.Parse(json);
+                var root = doc.RootElement;
+
+                if (root.TryGetProperty("conversationId", out var conversationIdProp) &&
+                   root.TryGetProperty("messageId", out var messageIdProp) &&
+                   root.TryGetProperty("reactions", out var reactionsProp))
+                {
+                    var conversationId = conversationIdProp.GetGuid();
+                    var messageId = messageIdProp.GetGuid();
+
+                    var reactions = new List<ReactionSummary>();
+                    if (reactionsProp.ValueKind == JsonValueKind.Array)
+                    {
+                        foreach (var reactionElement in reactionsProp.EnumerateArray())
+                        {
+                            var emoji = reactionElement.GetProperty("emoji").GetString() ?? "";
+                            var count = reactionElement.GetProperty("count").GetInt32();
+                            var userIds = new List<Guid>();
+
+                            if (reactionElement.TryGetProperty("userIds", out var userIdsProp) &&
+                                userIdsProp.ValueKind == JsonValueKind.Array)
+                            {
+                                foreach (var userIdElement in userIdsProp.EnumerateArray())
+                                {
+                                    userIds.Add(userIdElement.GetGuid());
+                                }
+                            }
+
+                            reactions.Add(new ReactionSummary
+                            {
+                                Emoji = emoji,
+                                Count = count,
+                                UserIds = userIds
+                            });
+                        }
+                    }
+
+                    OnDirectMessageReactionToggled?.Invoke(conversationId, messageId, reactions);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error processing reaction toggled: {ex.Message}");
             }
         }));
     }

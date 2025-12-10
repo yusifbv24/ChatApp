@@ -41,6 +41,7 @@ public interface ISignalRService
     // Reaction events
     event Action<Guid, Guid, Guid, string>? OnReactionAdded;
     event Action<Guid, Guid, Guid, string>? OnReactionRemoved;
+    event Action<Guid, Guid, List<ReactionSummary>>? OnDirectMessageReactionToggled;
 
 
     // Connection management

@@ -20,5 +20,11 @@
         Guid? ReplyToMessageId,
         string? ReplyToContent,
         string? ReplyToSenderName,
-        bool IsForwarded);
+        bool IsForwarded,
+        List<DirectMessageReactionDto>? Reactions = null);
+
+    public record DirectMessageReactionDto(
+        string Emoji,
+        int Count,
+        List<Guid> UserIds);
 }

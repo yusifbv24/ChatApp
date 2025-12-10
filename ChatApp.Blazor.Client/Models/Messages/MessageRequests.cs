@@ -42,6 +42,26 @@ namespace ChatApp.Blazor.Client.Models.Messages
 
 
 
+    public class ReactionToggleResponse
+    {
+        public bool WasAdded { get; set; }
+        public bool WasRemoved { get; set; }
+        public bool WasReplaced { get; set; }
+        public string Reaction { get; set; } = string.Empty;
+        public List<ReactionSummary> Reactions { get; set; } = new();
+    }
+
+
+
+    public class ReactionSummary
+    {
+        public string Emoji { get; set; } = string.Empty;
+        public int Count { get; set; }
+        public List<Guid> UserIds { get; set; } = new();
+    }
+
+
+
 
     public class CreateChannelRequest
     {

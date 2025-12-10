@@ -1,4 +1,5 @@
 ﻿@inject IJSRuntime JS
+@using ChatApp.Blazor.Client.Models.Messages
 
 <div id="message-@MessageId" class="message-wrapper @(IsOwn ? "own" : "other") @(IsDeleted ? "deleted" : "") @(!IsDirectMessage && !IsOwn ? "group-message" : "")" @ref="messageWrapperRef">
     @if (!IsOwn && !IsDirectMessage)
@@ -101,12 +102,18 @@
             }
 
             <!-- Reactions Badge - positioned at bottom-right corner of bubble -->
-            @if (ReactionCount > 0 && !IsDeleted)
+            @if (Reactions != null && Reactions.Count > 0 && !IsDeleted)
             {
                 <div class="message-reactions">
-                    <span class="reaction-badge">
-                        <MudIcon Icon="@Icons.Material.Filled.ThumbUp" Size="Size.Small" /> @ReactionCount
-                    </span>
+                    @foreach (var reaction in Reactions)
+                    {
+                        var isOwnReaction = CurrentUserId.HasValue && reaction.UserIds.Contains(CurrentUserId.Value);
+                        var badgeClass = isOwnReaction ? "reaction-badge own-reaction" : "reaction-badge";
+                        <span class="@badgeClass" @onclick="() => SelectReaction(reaction.Emoji)" title="@GetReactionTooltip(reaction)">
+                            <span class="reaction-emoji">@reaction.Emoji</span>
+                            <span class="reaction-count">@reaction.Count</span>
+                        </span>
+                    }
                 </div>
             }
         </div>
@@ -212,6 +219,8 @@
     [Parameter] public bool IsRead { get; set; }
     [Parameter] public bool IsPinned { get; set; }
     [Parameter] public int ReactionCount { get; set; }
+    [Parameter] public List<MessageReactionDto>? Reactions { get; set; }
+    [Parameter] public Guid? CurrentUserId { get; set; }
     [Parameter] public bool ShowAvatar { get; set; }
     [Parameter] public bool ShowSenderName { get; set; }
     [Parameter] public bool IsDirectMessage { get; set; }
@@ -367,6 +376,15 @@
             await OnReplyClick.InvokeAsync(ReplyToMessageId.Value);
         }
         await OnActionCompleted.InvokeAsync();
+    }
+
+    private string GetReactionTooltip(MessageReactionDto reaction)
+    {
+        if (reaction.Count == 1)
+        {
+            return $"{reaction.Emoji} 1 person";
+        }
+        return $"{reaction.Emoji} {reaction.Count} people";
     }
 
     private record MenuPositionInfo

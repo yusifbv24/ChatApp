@@ -226,46 +226,17 @@ namespace ChatApp.Modules.DirectMessages.Api.Controllers
 
 
         /// <summary>
-        /// Adds a reaction to a message
+        /// Toggles a reaction on a message (add/remove/replace)
         /// </summary>
-        [HttpPost("{messageId:guid}/reactions")]
-        [RequirePermission("Messages.Read")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        public async Task<IActionResult> AddReaction(
-            [FromRoute] Guid conversationId,
-            [FromRoute] Guid messageId,
-            [FromBody] AddReactionRequest request,
-            CancellationToken cancellationToken)
-        {
-            var userId = GetCurrentUserId();
-            if (userId == Guid.Empty)
-                return Unauthorized();
-
-            var result = await _mediator.Send(
-                new AddReactionCommand(messageId, userId, request.Reaction), cancellationToken);
-
-            if (result.IsFailure)
-                return BadRequest(new { error = result.Error });
-
-            return Ok(new { message = "Reaction added succesfully" });
-        }
-
-
-
-        /// <summary>
-        /// Removes a reaction from a message
-        /// </summary>
-        [HttpDelete("{messageId:guid}/reactions")]
+        [HttpPut("{messageId:guid}/reactions/toggle")]
         [RequirePermission("Messages.Read")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        public async Task<IActionResult> RemoveReaction(
+        public async Task<IActionResult> ToggleReaction(
             [FromRoute] Guid conversationId,
             [FromRoute] Guid messageId,
-            [FromBody] RemoveReactionRequest request,
+            [FromBody] ToggleReactionRequest request,
             CancellationToken cancellationToken)
         {
             var userId = GetCurrentUserId();
@@ -273,13 +244,13 @@ namespace ChatApp.Modules.DirectMessages.Api.Controllers
                 return Unauthorized();
 
             var result = await _mediator.Send(
-                new RemoveReactionCommand(messageId, userId, request.Reaction),
+                new ToggleReactionCommand(messageId, userId, request.Reaction),
                 cancellationToken);
 
             if (result.IsFailure)
                 return BadRequest(new { error = result.Error });
 
-            return Ok(new { message = "Reaction removed succesfully" });
+            return Ok(result.Value);
         }
 
 

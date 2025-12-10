@@ -238,6 +238,7 @@ public partial class Messages : IAsyncDisposable
         SignalRService.OnUserTypingInChannel += HandleTypingInChannel;
         SignalRService.OnUserOnline += HandleUserOnline;
         SignalRService.OnUserOffline += HandleUserOffline;
+        SignalRService.OnDirectMessageReactionToggled += HandleReactionToggled;
     }
 
     private void HandleNewDirectMessage(DirectMessageDto message)
@@ -858,10 +859,16 @@ public partial class Messages : IAsyncDisposable
         {
             if (isDirectMessage && selectedConversationId.HasValue)
             {
-                await ConversationService.AddReactionAsync(
+                var result = await ConversationService.ToggleReactionAsync(
                     selectedConversationId.Value,
                     reaction.messageId,
                     reaction.emoji);
+
+                if (result.IsSuccess && result.Value != null)
+                {
+                    // Update the message reactions in the local list
+                    UpdateMessageReactions(reaction.messageId, result.Value.Reactions);
+                }
             }
             else if (!isDirectMessage && selectedChannelId.HasValue)
             {
@@ -873,7 +880,7 @@ public partial class Messages : IAsyncDisposable
         }
         catch (Exception ex)
         {
-            ShowError("Failed to add reaction: " + ex.Message);
+            ShowError("Failed to toggle reaction: " + ex.Message);
         }
     }
     private async Task HandleTyping(bool isTyping)
@@ -885,6 +892,34 @@ public partial class Messages : IAsyncDisposable
         else if (!isDirectMessage && selectedChannelId.HasValue)
         {
             await SignalRService.SendTypingInChannelAsync(selectedChannelId.Value, isTyping);
+        }
+    }
+
+    private void UpdateMessageReactions(Guid messageId, List<ReactionSummary> reactions)
+    {
+        var message = directMessages.FirstOrDefault(m => m.Id == messageId);
+        if (message != null)
+        {
+            var totalCount = reactions.Sum(r => r.Count);
+            var index = directMessages.IndexOf(message);
+
+            // Update the message with new reaction data
+            var updatedMessage = message with
+            {
+                ReactionCount = totalCount,
+                Reactions = reactions.Select(r => new MessageReactionDto(r.Emoji, r.Count, r.UserIds)).ToList()
+            };
+
+            directMessages[index] = updatedMessage;
+            StateHasChanged();
+        }
+    }
+
+    private void HandleReactionToggled(Guid conversationId, Guid messageId, List<ReactionSummary> reactions)
+    {
+        if (selectedConversationId.HasValue && selectedConversationId.Value == conversationId)
+        {
+            UpdateMessageReactions(messageId, reactions);
         }
     }
     #endregion
@@ -1563,6 +1598,7 @@ public partial class Messages : IAsyncDisposable
         SignalRService.OnUserTypingInChannel -= HandleTypingInChannel;
         SignalRService.OnUserOnline -= HandleUserOnline;
         SignalRService.OnUserOffline -= HandleUserOffline;
+        SignalRService.OnDirectMessageReactionToggled -= HandleReactionToggled;
 
         // Dispose page visibility subscription
         if (visibilitySubscription != null)

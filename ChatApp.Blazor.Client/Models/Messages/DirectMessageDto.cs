@@ -20,5 +20,11 @@
         Guid? ReplyToMessageId = null,
         string? ReplyToContent = null,
         string? ReplyToSenderName = null,
-        bool IsForwarded = false);
+        bool IsForwarded = false,
+        List<MessageReactionDto>? Reactions = null);
+
+    public record MessageReactionDto(
+        string Emoji,
+        int Count,
+        List<Guid> UserIds);
 }
