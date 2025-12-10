@@ -76,7 +76,7 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectMessageReact
 
                 message.RemoveReaction(request.UserId,request.Reaction);
 
-                await _unitOfWork.Messages.UpdateAsync(message, cancellationToken);
+                // EF Core change tracker will automatically detect the removed reaction
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 // Send real-time notifications to other participant

@@ -117,8 +117,8 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
 
 
         public async Task<int> GetUnreadCountAsync(
-            Guid conversationId, 
-            Guid userId, 
+            Guid conversationId,
+            Guid userId,
             CancellationToken cancellationToken = default)
         {
             return await _context.DirectMessages
@@ -127,13 +127,6 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                        !m.IsRead &&
                        !m.IsDeleted)
                 .CountAsync(cancellationToken);
-        }
-
-
-        public Task UpdateAsync(DirectMessage message, CancellationToken cancellationToken = default)
-        {
-            _context.DirectMessages.Update(message);
-            return Task.CompletedTask;
         }
     }
 }

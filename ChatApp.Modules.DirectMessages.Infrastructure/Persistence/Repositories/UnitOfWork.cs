@@ -11,12 +11,14 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
 
         public IDirectConversationRepository Conversations { get; }
         public IDirectMessageRepository Messages { get; }
+        public IDirectMessageReactionRepository Reactions { get; }
 
         public UnitOfWork(DirectMessagesDbContext context,IConnectionManager connectionManager)
         {
             _context = context;
             Conversations = new DirectConversationRepository(context,connectionManager);
             Messages = new DirectMessageRepository(context);
+            Reactions = new DirectMessageReactionRepository(context);
         }
 
         public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

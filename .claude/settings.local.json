@@ -25,7 +25,8 @@
       "Bash(find:*)",
       "Bash(del \"C:\\Users\\ybaghiyev\\Desktop\\ChatApp\\ChatApp.Blazor.Client\\wwwroot\\service-worker.js\")",
       "Bash(del \"C:\\Users\\ybaghiyev\\Desktop\\ChatApp\\ChatApp.Blazor.Client\\wwwroot\\service-worker.published.js\")",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(dotnet ef dbcontext info:*)"
     ],
     "deny": [],
     "ask": []

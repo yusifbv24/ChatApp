@@ -61,10 +61,8 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectMessageReact
 
                 var message = await _unitOfWork.Messages.GetByIdWithReactionsAsync(
                     request.MessageId,
-                    cancellationToken);
-
-                if (message == null)
-                    throw new NotFoundException($"Message with ID {request.MessageId} not found");
+                    cancellationToken) 
+                        ?? throw new NotFoundException($"Message with ID {request.MessageId} not found");
 
                 // Verify user is participant in the conversation
                 var conversation = await _unitOfWork.Conversations.GetByIdAsync(
@@ -76,14 +74,22 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectMessageReact
                     return Result.Failure("You must be a participant to react to messages");
                 }
 
+                // Check if user already reacted with this emoji
+                var existingReaction = message.Reactions.FirstOrDefault(r =>
+                    r.UserId == request.UserId &&
+                    r.Reaction == request.Reaction);
+
+                if (existingReaction != null)
+                    return Result.Failure("You have already reacted with this emoji");
+
+                // Create and add reaction directly without modifying the message entity
                 var reaction = new DirectMessageReaction(
                     request.MessageId,
                     request.UserId,
                     request.Reaction);
 
-                message.AddReaction(reaction);
-
-                await _unitOfWork.Messages.UpdateAsync(message, cancellationToken);
+                // Add reaction directly to DbContext, bypassing the message entity to avoid concurrency issues
+                await _unitOfWork.Reactions.AddAsync(reaction, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 // Send real-time notification to other participant

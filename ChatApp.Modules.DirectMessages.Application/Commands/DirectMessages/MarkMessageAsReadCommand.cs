@@ -73,9 +73,8 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectMessages
                 {
                     message.MarkAsRead();
 
-                    await _unitOfWork.Messages.UpdateAsync(message, cancellationToken);
+                    // EF Core change tracker will automatically detect the property changes
                     await _unitOfWork.SaveChangesAsync(cancellationToken);
-
 
                     // Send real-time read receipt to sender
                     await _signalRNotificationService.NotifyMessageReadAsync(

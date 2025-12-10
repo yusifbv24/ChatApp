@@ -67,7 +67,8 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectMessages
                 var receiverId = message.ReceiverId;
 
                 message.Delete();
-                await _unitOfWork.Messages.UpdateAsync(message, cancellationToken);
+
+                // EF Core change tracker will automatically detect the property changes
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 // Send real-time notification to receiver

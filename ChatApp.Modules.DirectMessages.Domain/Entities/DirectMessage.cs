@@ -103,7 +103,7 @@ namespace ChatApp.Modules.DirectMessages.Domain.Entities
                 throw new InvalidOperationException("User already reacted with this emoji");
 
             Reactions.Add(reaction);
-            UpdatedAtUtc = DateTime.UtcNow;
+            // Don't update UpdatedAtUtc - reactions are child entities and shouldn't modify parent
         }
 
         public void RemoveReaction(Guid userId,string reactionEmoji)
@@ -115,7 +115,7 @@ namespace ChatApp.Modules.DirectMessages.Domain.Entities
             if(reaction!= null)
             {
                 Reactions.Remove(reaction);
-                UpdatedAtUtc = DateTime.UtcNow;
+                // Don't update UpdatedAtUtc - reactions are child entities and shouldn't modify parent
             }
         }
     }
