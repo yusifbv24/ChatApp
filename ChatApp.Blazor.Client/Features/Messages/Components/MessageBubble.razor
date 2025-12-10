@@ -56,33 +56,47 @@
                         </div>
                     }
 
-                    <div class="message-text">@Content</div>
+                    <!-- WhatsApp-style: Text and time inline -->
+                    <div class="message-text-container">
+                        <span class="message-text">@Content</span>
 
-                    <!-- Time and Read Status in bottom right corner of bubble -->
-                    <div class="message-meta-inline">
-                        @if (IsEdited)
-                        {
-                            <span class="edited-label">Edited</span>
-                        }
-                        @if (IsPinned)
-                        {
-                            <MudIcon Icon="@Icons.Material.Filled.PushPin" Size="Size.Small" Class="pinned-icon-inline" />
-                        }
-                        <span class="message-time-inline">@FormatTime(CreatedAt)</span>
-                        @if (IsOwn && !IsDeleted && IsDirectMessage)
-                        {
-                            <span class="read-status-inline">
-                                @if (IsRead)
-                                {
-                                    <MudIcon Icon="@Icons.Material.Filled.DoneAll" Size="Size.Small" Class="read-icon" />
-                                }
-                                else
-                                {
-                                    <MudIcon Icon="@Icons.Material.Filled.Done" Size="Size.Small" />
-                                }
-                            </span>
-                        }
+                        <!-- Time and status inline at the end -->
+                        <span class="message-meta-inline">
+                            @if (IsEdited)
+                            {
+                                <span class="edited-label">Edited</span>
+                            }
+                            @if (IsPinned)
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.PushPin" Size="Size.Small" Class="pinned-icon-inline" />
+                            }
+                            <span class="message-time-inline">@FormatTime(CreatedAt)</span>
+                            @if (IsOwn && !IsDeleted && IsDirectMessage)
+                            {
+                                <span class="read-status-inline">
+                                    @if (IsRead)
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Filled.DoneAll" Size="Size.Small" Class="read-icon" />
+                                    }
+                                    else
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Filled.Done" Size="Size.Small" />
+                                    }
+                                </span>
+                            }
+                        </span>
                     </div>
+
+                    <!-- Chevron button - positioned absolutely, doesn't affect layout -->
+                    @if (!IsDeleted)
+                    {
+                        <button class="chevron-more-btn @(showMoreMenu ? "visible" : "")"
+                                title="More"
+                                @onclick="ToggleMoreMenu"
+                                @onclick:stopPropagation="true">
+                            <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" />
+                        </button>
+                    }
                 </div>
             }
         </div>
@@ -118,10 +132,6 @@
                     @onclick:stopPropagation="true">
                 <MudIcon Icon="@Icons.Material.Filled.EmojiEmotions" Size="Size.Small" />
             </button>
-            <button class="action-btn" title="More" @onclick="ToggleMoreMenu"
-                    @onclick:stopPropagation="true">
-                <MudIcon Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" />
-            </button>
         </div>
     }
 
@@ -137,11 +147,11 @@
         </div>
     }
 
-    <!-- More Menu (3-dot menu) -->
+    <!-- More Menu (positioned relative to chevron button inside bubble) -->
     @if (showMoreMenu)
     {
         <div class="popup-overlay" @onclick="CloseMoreMenu"></div>
-        <div class="more-menu-popup @(menuPositionAbove ? "position-above" : "position-below")" @onclick:stopPropagation="true">
+        <div class="chevron-more-menu @(menuPositionAbove ? "position-above" : "position-below")" @onclick:stopPropagation="true">
             <button class="menu-item" @onclick="HandleReplyButtonClick">
                 <MudIcon Icon="@Icons.Material.Filled.Reply" Size="Size.Small" />
                 <span>Reply</span>
@@ -224,25 +234,7 @@
 
     private string FormatTime(DateTime dateTime)
     {
-        var localTime = dateTime.ToLocalTime();
-        var now = DateTime.Now;
-
-        if (localTime.Date == now.Date)
-        {
-            return localTime.ToString("HH:mm");
-        }
-        else if (localTime.Date == now.Date.AddDays(-1))
-        {
-            return $"Yesterday {localTime:HH:mm}";
-        }
-        else if ((now - localTime).TotalDays < 7)
-        {
-            return localTime.ToString("ddd HH:mm");
-        }
-        else
-        {
-            return localTime.ToString("MMM d,HH:mm");
-        }
+        return dateTime.ToLocalTime().ToString("HH:mm");
     }
 
     private string TruncateText(string? text, int maxLength)

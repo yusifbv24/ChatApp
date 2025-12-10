@@ -867,10 +867,15 @@
     box-shadow: 0 1px 2px rgba(99, 102, 241, 0.15);
 }
 
+/* Message content block - WhatsApp style inline layout */
 .message-content-block {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
+    position: relative;
+    display: block;
+}
+
+/* Message text container - inline text flow */
+.message-text-container {
+    display: inline;
 }
 
 .message-text {
@@ -986,13 +991,20 @@
 }
 
 .message-meta-inline {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 4px;
-    margin-top: 2px;
+    display: inline;
+    white-space: nowrap;
+    margin-left: 6px;
     font-size: 11px;
 }
+
+    /* Add spacing between inline metadata elements */
+    .message-meta-inline > * {
+        margin-left: 4px;
+    }
+
+    .message-meta-inline > *:first-child {
+        margin-left: 0;
+    }
 
 .message-time-inline {
     font-size: 11px;
@@ -1010,7 +1022,7 @@
 .read-status-inline {
     display: inline-flex;
     align-items: center;
-    margin-left: 2px;
+    vertical-align: middle;
 }
 
     .read-status-inline .mud-icon-root {
@@ -1044,6 +1056,7 @@
 .pinned-icon-inline {
     font-size: 12px;
     opacity: 0.7;
+    vertical-align: middle;
 }
 
 .deleted-message {
@@ -1056,9 +1069,78 @@
 }
 
 /* ===================================
-   MESSAGE ACTIONS - Hover on row
+   CHEVRON MORE BUTTON (Inside bubble)
    =================================== */
 
+/* Chevron button - positioned absolutely in upper right corner */
+.chevron-more-btn {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    background: rgba(0, 0, 0, 0.08);
+    border: none;
+    border-radius: 50%;
+    color: var(--gray-700);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    z-index: 5;
+}
+
+.own-bubble .chevron-more-btn {
+    background: rgba(255, 255, 255, 0.25);
+    color: rgba(255, 255, 255, 1);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+/* Show chevron on hover or when menu is open */
+.message-wrapper:hover .chevron-more-btn,
+.chevron-more-btn.visible {
+    display: flex !important;
+}
+
+.chevron-more-btn:hover {
+    background: rgba(0, 0, 0, 0.15);
+    transform: scale(1.15);
+}
+
+.own-bubble .chevron-more-btn:hover {
+    background: rgba(255, 255, 255, 0.4);
+}
+
+.chevron-more-btn .mud-icon-root {
+    font-size: 16px !important;
+}
+
+/* Chevron more menu - positioned below/above the chevron button */
+.chevron-more-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 4px;
+    min-width: 180px;
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl);
+    z-index: 100;
+    overflow: hidden;
+    border: 1px solid var(--gray-200);
+    animation: fadeInUp 0.15s ease-out;
+}
+
+.chevron-more-menu.position-above {
+    top: auto;
+    bottom: 100%;
+    margin-top: 0;
+    margin-bottom: 4px;
+}
+
+/* React button - outside the bubble */
 .message-actions {
     position: absolute;
     top: 50%;

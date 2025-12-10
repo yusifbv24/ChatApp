@@ -435,34 +435,56 @@ Building a modern messaging UI similar to WhatsApp Web.
   - Time always at bottom in consistent position ✅
   - Better visual hierarchy and WhatsApp-like appearance ✅
 
-**Fixed message bubble hover and layout issues (FINAL FIX):**
-- **Problem 1:** React button appeared on hover but was not clickable/interactable
-  - **Root cause:** Mouse handlers were on the bubble element, but react button is outside the bubble. When mouse moved from bubble to react button, `HandleMouseLeave` fired immediately
-  - **Solution:** Moved `@onmouseover` and `@onmouseout` handlers from bubble to the outermost `message-wrapper` div. Now hovering anywhere in the message area (including react button) keeps hover state active
-- **Problem 2:** Need proper layout with space below content, chevron at top of space, time/status at bottom
-  - **Solution:** Created new `.message-meta-section` that combines spacing and footer:
-    - Container uses `flex-direction: column` and `align-items: flex-end` (right-aligned)
-    - Chevron button positioned at top of section
-    - Time/status footer positioned at bottom of section
-    - Creates visual spacing between content and metadata
+**Implemented new table-like message bubble layout:**
+- **Design Goal:** Create a 2-column layout where message content and metadata are separated
+- **New Layout Structure:**
+  ```
+  ┌──────────────────────────────┬────┐
+  │ Message content text here    │ ▼  │ ← Row 1: Chevron (on hover)
+  │ Can span multiple lines      │────│
+  │                              │Time│ ← Row 2: Date + status
+  │                              │ ✓✓ │
+  └──────────────────────────────┴────┘
+  ```
+- **Implementation:**
+  1. **`.message-content-block`** - Flex container with 2 columns (`flex-direction: row`)
+  2. **`.message-content-column`** - Left column (flex: 1) contains message text, replies, forwarded indicator
+  3. **`.message-metadata-column`** - Right column with 2 rows:
+     - **Row 1:** Chevron button (visible on hover) - opens more menu
+     - **Row 2:** Time and status (always visible)
+  4. **`.chevron-more-btn`** - Small circular button with chevron-down icon
+  5. **`.chevron-more-menu`** - Menu positioned relative to chevron button (opens below/above)
+- **Behavior:**
+  - Hover over message wrapper → Chevron appears in metadata column
+  - Click chevron → More menu opens from that point (Reply, Copy, Forward, Edit, Delete, Pin)
+  - Menu intelligently positions above/below based on available space
+  - React button remains outside bubble (unchanged from previous design)
 - **Files modified:**
   - `MessageBubble.razor`:
-    - Moved mouse handlers to `message-wrapper` (line 3)
-    - Removed handlers from bubble and react button
-    - Replaced `.message-spacing` + `.message-footer` with single `.message-meta-section` containing both
+    - Restructured bubble content into `.message-content-column` + `.message-metadata-column`
+    - Added `showHoverActions` state and `HandleMouseEnter`/`HandleMouseLeave` methods
+    - Added mouse handlers to message wrapper (`@onmouseover`/`@onmouseout`)
+    - Chevron button inside metadata column (not outside bubble)
+    - Renamed more menu class to `.chevron-more-menu` for clarity
+    - Updated `CloseReactionPicker` and `CloseMoreMenu` to hide hover actions
   - `messages.css`:
-    - Added `.message-meta-section` styles (right-aligned column)
-    - Updated `.bubble-more-btn` to work within meta section
-    - Updated `.message-footer` to work within meta section
-- **Final Layout:**
-  ```
-  Message content text here
-                            ▼  ← chevron (on hover, top of meta section)
-               Time • Edited • ✓✓  ← footer (bottom of meta section)
-  ```
+    - Added `.message-content-block` (flex row, 2 columns)
+    - Added `.message-content-column` (left column, flex: 1)
+    - Added `.message-metadata-column` (right column, flex column, 2 rows, gap: 6px for spacing)
+    - Added `.chevron-more-btn` styles (22px circular button, stronger background, box-shadow for visibility)
+    - Added `.chevron-more-menu` styles (positioned relative to chevron)
+    - Updated `.message-meta-inline` with more margin-top and padding-top for lower positioning
+    - Kept `.message-actions` for React button outside bubble
+- **Fixes applied:**
+  - **Issue 1:** Chevron not visible on hover
+    - **Fix:** Added mouse handlers to message wrapper, increased button size to 22px, stronger background colors, added box-shadow, used `!important` on visible class
+  - **Issue 2:** Time and status needed to be lower
+    - **Fix:** Increased gap in metadata column from 2px to 6px, added margin-top: 4px and padding-top: 2px to message-meta-inline
 - **User Experience:**
-  - React button fully clickable and interactive ✅
-  - Chevron appears at top-right of metadata space on hover ✅
-  - Time and status always visible at bottom-right ✅
-  - Bubble maintains consistent size (no jumping) ✅
-  - All elements right-aligned as in WhatsApp ✅
+  - Clean table-like separation between content and metadata ✅
+  - Chevron visible and clickable on hover ✅
+  - More menu opens from chevron position (not message wrapper) ✅
+  - Time and status positioned lower with better spacing ✅
+  - React button stays outside bubble and works perfectly ✅
+  - No layout shifting or jumping on hover ✅
+  - Professional, WhatsApp-inspired design ✅
