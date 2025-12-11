@@ -116,12 +116,14 @@
             {
                 @foreach(var group in GroupedDirectMessages)
                 {
-                    <div class="date-divider">
-                        <span>@FormatDateDivider(group.Key)</span>
-                    </div>
-                    @foreach(var message in group)
-                    {
-                        <MessageBubble @key="message.Id"
+                    <div class="message-group">
+                        <div class="date-divider">
+                            <span>@FormatDateDivider(group.Key)</span>
+                        </div>
+                        <div class="messages-in-group">
+                            @foreach(var message in group)
+                            {
+                                <MessageBubble @key="message.Id"
                                        MessageId="message.Id"
                                        Content="@message.Content"
                                        SenderName="@message.SenderDisplayName"
@@ -150,19 +152,23 @@
                                        OnReplyClick="HandleReplyClick"
                                        OnActionCompleted="RefocusInput"
                                        ScrollToBottom="ScrollToBottomAsync" />
-                    }
+                            }
+                        </div>
+                    </div>
                 }
             }
             else if (ChannelMessages.Any())
             {
                 @foreach(var group in GroupedChannelMessages)
                 {
-                    <div class="date-divider">
-                        <span>@FormatDateDivider(group.Key)</span>
-                    </div>
-                    @foreach (var message in group)
-                    {
-                        <MessageBubble @key="message.Id"
+                    <div class="message-group">
+                        <div class="date-divider">
+                            <span>@FormatDateDivider(group.Key)</span>
+                        </div>
+                        <div class="messages-in-group">
+                            @foreach (var message in group)
+                            {
+                                <MessageBubble @key="message.Id"
                                        MessageId="message.Id"
                                        Content="@message.Content"
                                        SenderName="@message.SenderDisplayName"
@@ -187,9 +193,11 @@
                                        OnPin="()=>PinMessage(message.Id)"
                                        OnForward="()=>OnForward.InvokeAsync(message.Id)"
                                        OnReplyClick="HandleReplyClick"
-                                       OnActionCompleted="RefocusInput" 
+                                       OnActionCompleted="RefocusInput"
                                        ScrollToBottom="ScrollToBottomAsync" />
-                    }
+                            }
+                        </div>
+                    </div>
                 }
             }
             else if (!IsLoading)

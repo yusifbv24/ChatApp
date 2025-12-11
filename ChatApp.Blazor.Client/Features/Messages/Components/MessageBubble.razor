@@ -45,59 +45,65 @@
                         </div>
                     }
 
-                    @* Show replied message preview if this is a reply *@
-                    @if (!string.IsNullOrEmpty(ReplyToContent))
-                    {
-                        <div class="reply-preview clickable" @onclick="HandleReplyClick">
-                            <div class="reply-bar"></div>
-                            <div class="reply-content">
-                                <div class="reply-sender">@ReplyToSenderName</div>
-                                <div class="reply-text">@TruncateText(ReplyToContent, 50)</div>
+                    <!-- Two-column layout: content + controls (parallel) -->
+                    <div class="message-columns">
+                        <!-- Left column: Message content -->
+                        <div class="message-content-column">
+                            @* Show replied message preview if this is a reply *@
+                            @if (!string.IsNullOrEmpty(ReplyToContent))
+                            {
+                                <div class="reply-preview clickable" @onclick="HandleReplyClick">
+                                    <div class="reply-bar"></div>
+                                    <div class="reply-content">
+                                        <div class="reply-sender">@ReplyToSenderName</div>
+                                        <div class="reply-text">@TruncateText(ReplyToContent, 50)</div>
+                                    </div>
+                                </div>
+                            }
+
+                            <div class="message-text">
+                                @Content
                             </div>
                         </div>
-                    }
 
-                    <!-- WhatsApp-style: Text and time inline -->
-                    <div class="message-text-container">
-                        <span class="message-text">@Content</span>
+                        <!-- Right column: Controls (chevron + metadata) - parallel to content -->
+                        <div class="message-controls-column">
+                            <!-- Chevron button at top - always rendered, visibility controlled by CSS -->
+                            <button class="chevron-more-btn @(showMoreMenu ? "visible" : "") @(IsDeleted ? "hidden" : "")"
+                                    title="More"
+                                    @onclick="ToggleMoreMenu"
+                                    @onclick:stopPropagation="true"
+                                    disabled="@IsDeleted">
+                                <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" />
+                            </button>
 
-                        <!-- Time and status inline at the end -->
-                        <span class="message-meta-inline">
-                            @if (IsEdited)
-                            {
-                                <span class="edited-label">Edited</span>
-                            }
-                            @if (IsPinned)
-                            {
-                                <MudIcon Icon="@Icons.Material.Filled.PushPin" Size="Size.Small" Class="pinned-icon-inline" />
-                            }
-                            <span class="message-time-inline">@FormatTime(CreatedAt)</span>
-                            @if (IsOwn && !IsDeleted && IsDirectMessage)
-                            {
-                                <span class="read-status-inline">
-                                    @if (IsRead)
-                                    {
-                                        <MudIcon Icon="@Icons.Material.Filled.DoneAll" Size="Size.Small" Class="read-icon" />
-                                    }
-                                    else
-                                    {
-                                        <MudIcon Icon="@Icons.Material.Filled.Done" Size="Size.Small" />
-                                    }
-                                </span>
-                            }
-                        </span>
+                            <!-- Metadata -->
+                            <div class="message-metadata-inline">
+                                @if (IsEdited)
+                                {
+                                    <span class="edited-label">Edited</span>
+                                }
+                                @if (IsPinned)
+                                {
+                                    <MudIcon Icon="@Icons.Material.Filled.PushPin" Size="Size.Small" Class="pinned-icon-inline" />
+                                }
+                                <span class="message-time-inline">@FormatTime(CreatedAt)</span>
+                                @if (IsOwn && !IsDeleted && IsDirectMessage)
+                                {
+                                    <span class="read-status-inline">
+                                        @if (IsRead)
+                                        {
+                                            <MudIcon Icon="@Icons.Material.Filled.DoneAll" Size="Size.Small" Class="read-icon" />
+                                        }
+                                        else
+                                        {
+                                            <MudIcon Icon="@Icons.Material.Filled.Done" Size="Size.Small" />
+                                        }
+                                    </span>
+                                }
+                            </div>
+                        </div>
                     </div>
-
-                    <!-- Chevron button - positioned absolutely, doesn't affect layout -->
-                    @if (!IsDeleted)
-                    {
-                        <button class="chevron-more-btn @(showMoreMenu ? "visible" : "")"
-                                title="More"
-                                @onclick="ToggleMoreMenu"
-                                @onclick:stopPropagation="true">
-                            <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" />
-                        </button>
-                    }
                 </div>
             }
 
