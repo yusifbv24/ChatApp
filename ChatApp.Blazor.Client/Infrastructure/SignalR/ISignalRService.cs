@@ -23,14 +23,14 @@ public interface ISignalRService
     // Direct message events
     event Action<DirectMessageDto>? OnNewDirectMessage;
     event Action<DirectMessageDto>? OnDirectMessageEdited;
-    event Action<Guid, Guid>? OnDirectMessageDeleted;
+    event Action<DirectMessageDto>? OnDirectMessageDeleted;
     event Action<Guid, Guid, Guid, DateTime>? OnMessageRead;
 
 
     // Channel message events
     event Action<ChannelMessageDto>? OnNewChannelMessage;
     event Action<ChannelMessageDto>? OnChannelMessageEdited;
-    event Action<Guid,Guid>? OnChannelMessageDeleted;
+    event Action<ChannelMessageDto>? OnChannelMessageDeleted;
 
 
     // Typing indicators

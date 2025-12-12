@@ -105,6 +105,37 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Services
                 .SendAsync("ChannelMessageEdited", messageDto);
         }
 
+        public async Task NotifyDirectMessageDeletedAsync(Guid conversationId, Guid receiverId, object messageDto)
+        {
+            _logger?.LogDebug(
+                "Sending deleted direct message notification to user {ReceiverId} in conversation {ConversationId}",
+                receiverId,
+                conversationId);
+
+            // Send to conversation group
+            await _hubContext.Clients
+                .Group($"conversation_{conversationId}")
+                .SendAsync("DirectMessageDeleted", messageDto);
+
+            // Also send directly to receiver's connections
+            var receiverConnections = await _connectionManager.GetUserConnectionsAsync(receiverId);
+            if (receiverConnections.Any())
+            {
+                await _hubContext.Clients
+                    .Clients(receiverConnections)
+                    .SendAsync("DirectMessageDeleted", messageDto);
+            }
+        }
+
+        public async Task NotifyChannelMessageDeletedAsync(Guid channelId, object messageDto)
+        {
+            _logger?.LogDebug("Broadcasting deleted channel message to channel {ChannelId}", channelId);
+
+            await _hubContext.Clients
+                .Group($"channel_{channelId}")
+                .SendAsync("ChannelMessageDeleted", messageDto);
+        }
+
         public async Task NotifyMessageReadAsync(Guid conversationId, Guid messageId, Guid readBy)
         {
             _logger?.LogDebug("Broadcasting message read for message {MessageId}", messageId);

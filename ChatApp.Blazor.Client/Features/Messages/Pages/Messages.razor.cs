@@ -343,20 +343,24 @@ public partial class Messages : IAsyncDisposable
         });
     }
 
-    private void HandleDirectMessageDeleted(Guid conversationId, Guid messageId)
+    private void HandleDirectMessageDeleted(DirectMessageDto deletedMessage)
     {
-        InvokeAsync(() =>
+        InvokeAsync(async () =>
         {
-            if (conversationId == selectedConversationId)
+            // Update the message in the list if it's in the current conversation
+            if (deletedMessage.ConversationId == selectedConversationId)
             {
-                var message = directMessages.FirstOrDefault(m => m.Id == messageId);
+                var message = directMessages.FirstOrDefault(m => m.Id == deletedMessage.Id);
                 if (message != null)
                 {
                     var index = directMessages.IndexOf(message);
-                    directMessages[index] = message with { IsDeleted = true, Content = "" };
+                    directMessages[index] = deletedMessage; // Use the deleted DTO from server
                     StateHasChanged();
                 }
             }
+
+            // Update conversation list to show last message
+            await LoadConversationsAndChannels();
         });
     }
 
@@ -381,20 +385,24 @@ public partial class Messages : IAsyncDisposable
         });
     }
 
-    private void HandleChannelMessageDeleted(Guid channelId, Guid messageId)
+    private void HandleChannelMessageDeleted(ChannelMessageDto deletedMessage)
     {
-        InvokeAsync(() =>
+        InvokeAsync(async () =>
         {
-            if (channelId == selectedChannelId)
+            // Update the message in the list if it's in the current channel
+            if (deletedMessage.ChannelId == selectedChannelId)
             {
-                var message = channelMessages.FirstOrDefault(m => m.Id == messageId);
+                var message = channelMessages.FirstOrDefault(m => m.Id == deletedMessage.Id);
                 if (message != null)
                 {
                     var index = channelMessages.IndexOf(message);
-                    channelMessages[index] = message with { IsDeleted = true, Content = "" };
+                    channelMessages[index] = deletedMessage; // Use the deleted DTO from server
                     StateHasChanged();
                 }
             }
+
+            // Update channel list to show last message
+            await LoadConversationsAndChannels();
         });
     }
 

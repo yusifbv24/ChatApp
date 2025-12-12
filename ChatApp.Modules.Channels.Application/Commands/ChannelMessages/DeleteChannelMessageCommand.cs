@@ -80,14 +80,39 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMessages
                 }
 
                 var channelId = message.ChannelId;
+                var senderId = message.SenderId;
 
+                // Delete the message (soft delete)
                 message.Delete();
 
                 await _unitOfWork.ChannelMessages.UpdateAsync(message, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                // Send real-time notification
-                await _signalRNotificationService.NotifyMessageDeletedAsync(channelId, request.MessageId);
+                // Create deleted message DTO manually (showing deleted state)
+                var messageDto = new ChatApp.Modules.Channels.Application.DTOs.Responses.ChannelMessageDto(
+                    Id: message.Id,
+                    ChannelId: message.ChannelId,
+                    SenderId: senderId,
+                    SenderUsername: string.Empty, // Will be populated by frontend from user cache
+                    SenderDisplayName: string.Empty, // Will be populated by frontend from user cache
+                    SenderAvatarUrl: null, // Will be populated by frontend from user cache
+                    Content: message.Content, // Content preserved in backend but shown as "deleted" in frontend
+                    FileId: message.FileId,
+                    IsEdited: message.IsEdited,
+                    IsDeleted: true, // Mark as deleted
+                    IsPinned: message.IsPinned,
+                    ReactionCount: 0,
+                    CreatedAtUtc: message.CreatedAtUtc,
+                    EditedAtUtc: message.EditedAtUtc,
+                    PinnedAtUtc: message.PinnedAtUtc,
+                    ReplyToMessageId: message.ReplyToMessageId,
+                    ReplyToContent: null,
+                    ReplyToSenderName: null,
+                    IsForwarded: message.IsForwarded
+                );
+
+                // Send real-time notification with deleted message DTO
+                await _signalRNotificationService.NotifyChannelMessageDeletedAsync(channelId, messageDto);
 
                 _logger?.LogInformation("Message {MessageId} deleted successfully", request.MessageId);
 

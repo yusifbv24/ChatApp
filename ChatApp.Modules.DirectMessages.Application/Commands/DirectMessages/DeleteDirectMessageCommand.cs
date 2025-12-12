@@ -1,4 +1,5 @@
-﻿using ChatApp.Modules.DirectMessages.Application.Interfaces;
+﻿using ChatApp.Modules.DirectMessages.Application.DTOs.Response;
+using ChatApp.Modules.DirectMessages.Application.Interfaces;
 using ChatApp.Shared.Infrastructure.SignalR.Services;
 using ChatApp.Shared.Kernel.Common;
 using ChatApp.Shared.Kernel.Exceptions;
@@ -63,19 +64,46 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectMessages
                     return Result.Failure("You can delete your own messages");
                 }
 
-                var conversationId=message.ConversationId;
+                var conversationId = message.ConversationId;
                 var receiverId = message.ReceiverId;
+                var senderId = message.SenderId;
 
+                // Delete the message (soft delete)
                 message.Delete();
 
                 // EF Core change tracker will automatically detect the property changes
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                // Send real-time notification to receiver
-                await _signalRNotificationService.NotifyUserAsync(
+                // Create deleted message DTO manually (showing deleted state)
+                var messageDto = new DirectMessageDto(
+                    Id: message.Id,
+                    ConversationId: message.ConversationId,
+                    SenderId: senderId,
+                    SenderUsername: string.Empty, // Will be populated by frontend from user cache
+                    SenderDisplayName: string.Empty, // Will be populated by frontend from user cache
+                    SenderAvatarUrl: null, // Will be populated by frontend from user cache
+                    ReceiverId: receiverId,
+                    Content: message.Content, // Content preserved in backend but shown as "deleted" in frontend
+                    FileId: message.FileId,
+                    IsEdited: message.IsEdited,
+                    IsDeleted: true, // Mark as deleted
+                    IsRead: message.IsRead,
+                    ReactionCount: 0,
+                    CreatedAtUtc: message.CreatedAtUtc,
+                    EditedAtUtc: message.EditedAtUtc,
+                    ReadAtUtc: message.ReadAtUtc,
+                    ReplyToMessageId: message.ReplyToMessageId,
+                    ReplyToContent: null,
+                    ReplyToSenderName: null,
+                    IsForwarded: message.IsForwarded,
+                    Reactions: new List<DirectMessageReactionDto>()
+                );
+
+                // Send real-time notification to receiver with deleted message DTO
+                await _signalRNotificationService.NotifyDirectMessageDeletedAsync(
+                    conversationId,
                     receiverId,
-                    "DirectMessageDeleted",
-                    new { conversationId, messageId = request.MessageId });
+                    messageDto);
 
                 _logger.LogInformation("Message {MessageId} deleted successfully", request.MessageId);
                 return Result.Success();

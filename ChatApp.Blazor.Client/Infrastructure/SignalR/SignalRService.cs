@@ -32,14 +32,14 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
     // Direct message events
     public event Action<DirectMessageDto>? OnNewDirectMessage;
     public event Action<DirectMessageDto>? OnDirectMessageEdited;
-    public event Action<Guid, Guid>? OnDirectMessageDeleted;
+    public event Action<DirectMessageDto>? OnDirectMessageDeleted;
     public event Action<Guid, Guid, Guid, DateTime>? OnMessageRead;
 
 
     // Channel message events
     public event Action<ChannelMessageDto>? OnNewChannelMessage;
     public event Action<ChannelMessageDto>? OnChannelMessageEdited;
-    public event Action<Guid, Guid>? OnChannelMessageDeleted;
+    public event Action<ChannelMessageDto>? OnChannelMessageDeleted;
 
 
     // Typing indicators
@@ -172,35 +172,39 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
             }
         }));
 
-        // Message deleted events (supports both channel and direct messages)
-        _subscriptions.Add(hubConnection.On<object>("MessageDeleted", data =>
+        // Direct message deleted event
+        _subscriptions.Add(hubConnection.On<object>("DirectMessageDeleted", messageObj =>
         {
             try
             {
-                var json = JsonSerializer.Serialize(data);
-                using var doc = JsonDocument.Parse(json);
-                var root = doc.RootElement;
-
-                // Check if it's a channel message
-                if (root.TryGetProperty("channelId", out var channelIdProp) &&
-                   root.TryGetProperty("messageId", out var messageIdProp))
+                var json = JsonSerializer.Serialize(messageObj);
+                var message = JsonSerializer.Deserialize<DirectMessageDto>(json, _jsonOptions);
+                if (message != null)
                 {
-                    var channelId = channelIdProp.GetGuid();
-                    var messageId = messageIdProp.GetGuid();
-                    OnChannelMessageDeleted?.Invoke(channelId, messageId);
-                }
-                // Check if it's a direct message
-                else if (root.TryGetProperty("conversationId", out var conversationIdProp) &&
-                         root.TryGetProperty("messageId", out messageIdProp))
-                {
-                    var conversationId = conversationIdProp.GetGuid();
-                    var messageId = messageIdProp.GetGuid();
-                    OnDirectMessageDeleted?.Invoke(conversationId, messageId);
+                    OnDirectMessageDeleted?.Invoke(message);
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error processing message deleted: {ex.Message}");
+                Console.WriteLine($"Error deserializing deleted direct message: {ex.Message}");
+            }
+        }));
+
+        // Channel message deleted event
+        _subscriptions.Add(hubConnection.On<object>("ChannelMessageDeleted", messageObj =>
+        {
+            try
+            {
+                var json = JsonSerializer.Serialize(messageObj);
+                var message = JsonSerializer.Deserialize<ChannelMessageDto>(json, _jsonOptions);
+                if (message != null)
+                {
+                    OnChannelMessageDeleted?.Invoke(message);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error deserializing deleted channel message: {ex.Message}");
             }
         }));
 

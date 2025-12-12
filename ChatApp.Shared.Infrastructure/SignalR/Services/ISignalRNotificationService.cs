@@ -34,9 +34,19 @@
         Task NotifyChannelMessageEditedAsync(Guid channelId, object messageDto);
 
         /// <summary>
-        /// Notify about message deletion
+        /// Notify about message deletion (old channel method - deprecated)
         /// </summary>
         Task NotifyMessageDeletedAsync(Guid channelId, Guid messageId);
+
+        /// <summary>
+        /// Notify about direct message deletion with updated DTO
+        /// </summary>
+        Task NotifyDirectMessageDeletedAsync(Guid conversationId, Guid receiverId, object messageDto);
+
+        /// <summary>
+        /// Notify about channel message deletion with updated DTO
+        /// </summary>
+        Task NotifyChannelMessageDeletedAsync(Guid channelId, object messageDto);
 
 
 

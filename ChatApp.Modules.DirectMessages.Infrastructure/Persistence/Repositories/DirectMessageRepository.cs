@@ -56,7 +56,7 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                         from repliedMessage in replyJoin.DefaultIfEmpty()
                         join repliedSender in _context.Set<UserReadModel>() on repliedMessage.SenderId equals repliedSender.Id into repliedSenderJoin
                         from repliedSender in repliedSenderJoin.DefaultIfEmpty()
-                        where message.ConversationId == conversationId && !message.IsDeleted
+                        where message.ConversationId == conversationId // Removed IsDeleted filter - show deleted messages as "This message was deleted"
                         select new
                         {
                             message.Id,

@@ -40,7 +40,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                         from repliedMessage in replyJoin.DefaultIfEmpty()
                         join repliedSender in _context.Set<UserReadModel>() on repliedMessage.SenderId equals repliedSender.Id into repliedSenderJoin
                         from repliedSender in repliedSenderJoin.DefaultIfEmpty()
-                        where message.ChannelId == channelId && !message.IsDeleted
+                        where message.ChannelId == channelId // Removed IsDeleted filter - show deleted messages as "This message was deleted"
                         select new
                         {
                             message.Id,
