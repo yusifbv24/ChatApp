@@ -410,21 +410,20 @@ public partial class Messages : IAsyncDisposable
     {
         InvokeAsync(() =>
         {
-            // Only update if we're viewing this conversation
-            if (conversationId == selectedConversationId)
+            // Update message in SENDER's view (regardless of which conversation is selected)
+            // This allows sender to see read receipt even if they switched to another conversation
+            var message = directMessages.FirstOrDefault(m => m.Id == messageId);
+            if (message != null)
             {
-                var message = directMessages.FirstOrDefault(m => m.Id == messageId);
-                if (message != null)
-                {
-                    var index = directMessages.IndexOf(message);
-                    directMessages[index] = message with { IsRead = true, ReadAtUtc = readAtUtc };
-                    StateHasChanged();
-                }
-                else
-                {
-                    // Store pending read receipt - will be applied when message is added
-                    pendingReadReceipts[messageId] = (readBy, readAtUtc);
-                }
+                var index = directMessages.IndexOf(message);
+                directMessages[index] = message with { IsRead = true, ReadAtUtc = readAtUtc };
+                StateHasChanged();
+            }
+            else if (conversationId == selectedConversationId)
+            {
+                // If message not found but we're viewing this conversation,
+                // store as pending read receipt (for race condition case)
+                pendingReadReceipts[messageId] = (readBy, readAtUtc);
             }
         });
     }
@@ -1027,6 +1026,16 @@ public partial class Messages : IAsyncDisposable
             }
         }
 
+        // IMPORTANT: Clear messages BEFORE setting selectedConversationId
+        // This prevents race condition where SignalR events arrive between setting ID and clearing messages
+        directMessages.Clear();
+        channelMessages.Clear();
+        hasMoreMessages = true;
+        oldestMessageDate = null;
+        typingUsers.Clear();
+        pendingReadReceipts.Clear(); // Clear pending read receipts when changing conversations
+
+        // Set conversation details AFTER clearing
         selectedConversationId = conversation.Id;
         selectedChannelId = null;
         isDirectMessage = true;
@@ -1035,14 +1044,6 @@ public partial class Messages : IAsyncDisposable
         recipientAvatarUrl = conversation.OtherUserAvatarUrl;
         recipientUserId = conversation.OtherUserId;
         isRecipientOnline = conversation.IsOtherUserOnline;
-
-        // Reset messages
-        directMessages.Clear();
-        channelMessages.Clear();
-        hasMoreMessages = true;
-        oldestMessageDate = null;
-        typingUsers.Clear();
-        pendingReadReceipts.Clear(); // Clear pending read receipts when changing conversations
 
         // Join SignalR group
         await SignalRService.JoinConversationAsync(conversation.Id);
@@ -1201,6 +1202,16 @@ public partial class Messages : IAsyncDisposable
             }
         }
 
+        // IMPORTANT: Clear messages BEFORE setting selectedChannelId
+        // This prevents race condition where SignalR events arrive between setting ID and clearing messages
+        directMessages.Clear();
+        channelMessages.Clear();
+        hasMoreMessages = true;
+        oldestMessageDate = null;
+        typingUsers.Clear();
+        pendingReadReceipts.Clear(); // Clear pending read receipts when changing channels
+
+        // Set channel details AFTER clearing
         selectedChannelId = channel.Id;
         selectedConversationId = null;
         isDirectMessage = false;
@@ -1208,14 +1219,6 @@ public partial class Messages : IAsyncDisposable
         selectedChannelDescription = channel.Description;
         selectedChannelType = channel.Type;
         selectedChannelMemberCount = channel.MemberCount;
-
-        // Reset messages
-        directMessages.Clear();
-        channelMessages.Clear();
-        hasMoreMessages = true;
-        oldestMessageDate = null;
-        typingUsers.Clear();
-        pendingReadReceipts.Clear(); // Clear pending read receipts when changing channels
 
         // Join SignalR group
         await SignalRService.JoinChannelAsync(channel.Id);

@@ -66,8 +66,9 @@
 
         /// <summary>
         /// Notify about message read (for direct messages)
+        /// Sends notification to both conversation group AND sender specifically
         /// </summary>
-        Task NotifyMessageReadAsync(Guid conversationId, Guid messageId, Guid readBy);
+        Task NotifyMessageReadAsync(Guid conversationId, Guid messageId, Guid readBy, Guid senderId, DateTime readAtUtc);
 
 
 

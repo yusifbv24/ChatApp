@@ -76,11 +76,16 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectMessages
                     // EF Core change tracker will automatically detect the property changes
                     await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                    // Send real-time read receipt to sender
+                    var readAtUtc = DateTime.UtcNow;
+
+                    // Send real-time read receipt to BOTH conversation group AND sender specifically
+                    // This ensures sender gets notification even if they're not in the conversation group
                     await _signalRNotificationService.NotifyMessageReadAsync(
                         message.ConversationId,
                         message.Id,
-                        request.UserId);
+                        request.UserId,
+                        message.SenderId,  // Send to sender specifically
+                        readAtUtc);
 
 
                     // Publish domain event for internal processing
@@ -89,10 +94,10 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectMessages
                             message.Id,
                             message.ConversationId,
                             request.UserId,
-                            DateTime.UtcNow),
+                            readAtUtc),
                         cancellationToken);
 
-                    _logger.LogInformation("Message {MessageId} marked as read", request.MessageId);
+                    _logger.LogInformation("Message {MessageId} marked as read by {UserId}", request.MessageId, request.UserId);
                 }
 
                 return Result.Success();

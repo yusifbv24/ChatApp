@@ -136,13 +136,26 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Services
                 .SendAsync("ChannelMessageDeleted", messageDto);
         }
 
-        public async Task NotifyMessageReadAsync(Guid conversationId, Guid messageId, Guid readBy)
+        public async Task NotifyMessageReadAsync(Guid conversationId, Guid messageId, Guid readBy, Guid senderId, DateTime readAtUtc)
         {
-            _logger?.LogDebug("Broadcasting message read for message {MessageId}", messageId);
+            _logger?.LogDebug("Broadcasting message read for message {MessageId} to sender {SenderId}", messageId, senderId);
 
+            var notification = new { conversationId, messageId, readBy, readAtUtc };
+
+            // Send to conversation group (both users if they're in the group)
             await _hubContext.Clients
                 .Group($"conversation_{conversationId}")
-                .SendAsync("MessageRead", new { conversationId, messageId, readBy, readAtUtc = DateTime.UtcNow });
+                .SendAsync("MessageRead", notification);
+
+            // ALSO send directly to sender specifically
+            // This ensures sender gets notification even if they're not actively in the conversation group
+            var senderConnections = await _connectionManager.GetUserConnectionsAsync(senderId);
+            if (senderConnections.Any())
+            {
+                await _hubContext.Clients
+                    .Clients(senderConnections)
+                    .SendAsync("MessageRead", notification);
+            }
         }
 
 
