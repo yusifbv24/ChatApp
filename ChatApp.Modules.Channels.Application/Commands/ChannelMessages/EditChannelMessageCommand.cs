@@ -75,26 +75,39 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMessages
                 }
 
                 var channelId=message.ChannelId;
+                var senderId = message.SenderId;
 
+                // Edit the message
                 message.Edit(request.NewContent);
 
                 await _unitOfWork.ChannelMessages.UpdateAsync(message, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                // Get updated message DTO
-                var messages = await _unitOfWork.ChannelMessages.GetChannelMessagesAsync(
-                    channelId,
-                    pageSize: 1,
-                    beforeUtc: null,
-                    cancellationToken);
+                // Create updated message DTO manually (since GetChannelMessagesAsync only returns latest message)
+                var messageDto = new ChatApp.Modules.Channels.Application.DTOs.Responses.ChannelMessageDto(
+                    Id: message.Id,
+                    ChannelId: message.ChannelId,
+                    SenderId: senderId,
+                    SenderUsername: string.Empty, // Will be populated by frontend from user cache
+                    SenderDisplayName: string.Empty, // Will be populated by frontend from user cache
+                    SenderAvatarUrl: null, // Will be populated by frontend from user cache
+                    Content: message.Content,
+                    FileId: message.FileId,
+                    IsEdited: message.IsEdited,
+                    IsDeleted: message.IsDeleted,
+                    IsPinned: message.IsPinned,
+                    ReactionCount: 0, // Not needed for edit notification
+                    CreatedAtUtc: message.CreatedAtUtc,
+                    EditedAtUtc: message.EditedAtUtc,
+                    PinnedAtUtc: message.PinnedAtUtc,
+                    ReplyToMessageId: message.ReplyToMessageId,
+                    ReplyToContent: null, // We don't need this for edit notification
+                    ReplyToSenderName: null,
+                    IsForwarded: message.IsForwarded
+                );
 
-                var messageDto = messages.FirstOrDefault(m => m.Id == request.MessageId);
-
-                if (messageDto != null)
-                {
-                    // Send real-time notification with edited message
-                    await _signalRNotificationService.NotifyChannelMessageEditedAsync(channelId, messageDto);
-                }
+                // Send real-time notification with edited message
+                await _signalRNotificationService.NotifyChannelMessageEditedAsync(channelId, messageDto);
 
                 _logger?.LogInformation("Message {MessageId} edited successfully", request.MessageId);
 
