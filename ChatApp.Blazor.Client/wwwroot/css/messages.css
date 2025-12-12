@@ -224,14 +224,6 @@
         color: var(--gray-600);
     }
 
-/* Legacy Actions */
-.conversation-actions {
-    display: none;
-}
-
-.new-conversation-btn {
-    display: none;
-}
 
 /* Conversation Items */
 .conversation-items {
@@ -369,25 +361,6 @@
 }
 
 /* Channel Items */
-.channel-icon-wrapper {
-    width: 48px;
-    height: 48px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--gray-100);
-    border-radius: var(--radius-md);
-    color: var(--gray-600);
-}
-
-.channel-item.selected .channel-icon-wrapper {
-    background: var(--primary-color);
-    color: var(--white);
-}
-
-.channel-members {
-    color: var(--gray-400);
-}
 
 .conversation-avatar.group-avatar {
     width: 48px;
@@ -526,7 +499,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 16px 20px;
+    padding: 8px 20px;
     background: var(--white);
     border-bottom: 1px solid var(--gray-200);
 }
@@ -929,6 +902,7 @@
     justify-content: space-between;
     align-self: stretch;
     min-width: 60px;
+    position: relative; /* For chevron menu positioning */
 }
 
 /* ===================================
@@ -1148,10 +1122,9 @@
     font-size: 16px !important;
 }
 
-/* Chevron more menu - positioned to the side of the content wrapper */
+/* Chevron more menu - positioned relative to chevron button in controls column */
 .chevron-more-menu {
     position: absolute;
-    top: 0;
     min-width: 180px;
     background: var(--white);
     border-radius: var(--radius-lg);
@@ -1159,19 +1132,29 @@
     z-index: 100;
     overflow: hidden;
     border: 1px solid var(--gray-200);
+}
+
+/* Default: Menu opens below the chevron button */
+.chevron-more-menu {
+    top: 28px; /* Position below the 22px button + 6px gap */
+    animation: fadeInDown 0.15s ease-out;
+}
+
+/* Menu opens above when needed */
+.message-controls-column.menu-above .chevron-more-menu {
+    top: auto;
+    bottom: calc(100% - 22px); /* Position above the 22px button */
     animation: fadeInUp 0.15s ease-out;
 }
 
-/* For own messages (right side) - menu appears on the LEFT side of content */
+/* For own messages (right side) - menu on left side of controls column */
 .message-wrapper.own .chevron-more-menu {
-    right: 100%;
-    margin-right: 8px;
+    right: 0;
 }
 
-/* For other messages (left side) - menu appears on the RIGHT side of content */
+/* For other messages (left side) - menu ALWAYS on right side of controls column */
 .message-wrapper.other .chevron-more-menu {
-    left: 100%;
-    margin-left: 8px;
+    left: 0;
 }
 
 /* React button - outside the bubble */
@@ -1228,32 +1211,6 @@
     }
 
 /* Hide old message-meta */
-.message-meta {
-    display: none;
-}
-
-.message-time {
-    display: none;
-}
-
-.read-status {
-    display: flex;
-    align-items: center;
-}
-
-    .read-status .mud-icon-root {
-        font-size: 14px !important;
-        color: var(--gray-400);
-    }
-
-    .read-status .read {
-        color: var(--primary-color);
-    }
-
-.pinned-icon {
-    font-size: 12px !important;
-    color: var(--warning-color);
-}
 
 /* Message Reactions - WhatsApp style */
 .message-reactions {
@@ -1466,6 +1423,18 @@
     from {
         opacity: 0;
         transform: translateY(4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
     }
 
     to {

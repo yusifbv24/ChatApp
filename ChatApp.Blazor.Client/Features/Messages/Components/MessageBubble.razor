@@ -67,7 +67,7 @@
                         </div>
 
                         <!-- Right column: Controls (chevron + metadata) - parallel to content -->
-                        <div class="message-controls-column">
+                        <div class="message-controls-column @(menuPositionAbove ? "menu-above" : "")">
                             <!-- Chevron button at top - always rendered, visibility controlled by CSS -->
                             <button class="chevron-more-btn @(showMoreMenu ? "visible" : "") @(IsDeleted ? "hidden" : "")"
                                     title="More"
@@ -76,6 +76,43 @@
                                     disabled="@IsDeleted">
                                 <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" />
                             </button>
+
+                            <!-- More Menu (positioned relative to chevron button) -->
+                            @if (showMoreMenu)
+                            {
+                                <div class="chevron-more-menu" @onclick:stopPropagation="true">
+                                <button class="menu-item" @onclick="HandleReplyButtonClick">
+                                    <MudIcon Icon="@Icons.Material.Filled.Reply" Size="Size.Small" />
+                                    <span>Reply</span>
+                                </button>
+                                <button class="menu-item" @onclick="OnCopyClick">
+                                    <MudIcon Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small" />
+                                    <span>Copy</span>
+                                </button>
+                                <button class="menu-item" @onclick="OnForwardClick">
+                                    <MudIcon Icon="@Icons.Material.Filled.Forward" Size="Size.Small" />
+                                    <span>Forward</span>
+                                </button>
+                                @if (!IsDirectMessage)
+                                {
+                                    <button class="menu-item" @onclick="OnPinClick">
+                                        <MudIcon Icon="@Icons.Material.Filled.PushPin" Size="Size.Small" />
+                                        <span>@(IsPinned ? "Unpin" : "Pin")</span>
+                                    </button>
+                                }
+                                @if (IsOwn && !IsDeleted)
+                                {
+                                    <button class="menu-item" @onclick="OnEditClick">
+                                        <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" />
+                                        <span>Edit</span>
+                                    </button>
+                                    <button class="menu-item delete-item" @onclick="OnDeleteClick">
+                                        <MudIcon Icon="@Icons.Material.Filled.Delete" Size="Size.Small" />
+                                        <span>Delete</span>
+                                    </button>
+                                }
+                                </div>
+                            }
 
                             <!-- Metadata -->
                             <div class="message-metadata-inline">
@@ -145,43 +182,6 @@
                         <button class="reaction-btn" @onclick="() => SelectReaction(emoji)">@emoji</button>
                     }
                 </div>
-            </div>
-        }
-
-        <!-- More Menu (positioned to the side of the bubble) -->
-        @if (showMoreMenu)
-        {
-            <div class="chevron-more-menu" @onclick:stopPropagation="true">
-            <button class="menu-item" @onclick="HandleReplyButtonClick">
-                <MudIcon Icon="@Icons.Material.Filled.Reply" Size="Size.Small" />
-                <span>Reply</span>
-            </button>
-            <button class="menu-item" @onclick="OnCopyClick">
-                <MudIcon Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small" />
-                <span>Copy</span>
-            </button>
-            <button class="menu-item" @onclick="OnForwardClick">
-                <MudIcon Icon="@Icons.Material.Filled.Forward" Size="Size.Small" />
-                <span>Forward</span>
-            </button>
-            @if (!IsDirectMessage)
-            {
-                <button class="menu-item" @onclick="OnPinClick">
-                    <MudIcon Icon="@Icons.Material.Filled.PushPin" Size="Size.Small" />
-                    <span>@(IsPinned ? "Unpin" : "Pin")</span>
-                </button>
-            }
-            @if (IsOwn && !IsDeleted)
-            {
-                <button class="menu-item" @onclick="OnEditClick">
-                    <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" />
-                    <span>Edit</span>
-                </button>
-                <button class="menu-item delete-item" @onclick="OnDeleteClick">
-                    <MudIcon Icon="@Icons.Material.Filled.Delete" Size="Size.Small" />
-                    <span>Delete</span>
-                </button>
-            }
             </div>
         }
     </div>
@@ -319,8 +319,28 @@
             {
                 // Menu height is approximately 200px (6 items * ~33px each)
                 var menuHeight = 200;
-                var spaceBelow = position.ViewportHeight - position.Bottom;
-                menuPositionAbove = spaceBelow < menuHeight && position.Top > menuHeight;
+
+                // Use actual space calculations from JavaScript
+                var actualSpaceBelow = position.ActualSpaceBelow;
+                var actualSpaceAbove = position.ActualSpaceAbove;
+
+                // Open towards the side with more space
+                // If both sides have enough space, prefer below (default)
+                if (actualSpaceBelow >= menuHeight)
+                {
+                    // Enough space below - open below
+                    menuPositionAbove = false;
+                }
+                else if (actualSpaceAbove >= menuHeight)
+                {
+                    // Not enough below, but enough above - open above
+                    menuPositionAbove = true;
+                }
+                else
+                {
+                    // Neither side has full space - open towards the larger side
+                    menuPositionAbove = actualSpaceAbove > actualSpaceBelow;
+                }
             }
         }
         catch
@@ -398,5 +418,11 @@
         public double Top { get; set; }
         public double Bottom { get; set; }
         public double ViewportHeight { get; set; }
+        public double ChatHeaderHeight { get; set; }
+        public double MessageInputHeight { get; set; }
+        public double MessageInputTop { get; set; }
+        public double ChatHeaderBottom { get; set; }
+        public double ActualSpaceBelow { get; set; }
+        public double ActualSpaceAbove { get; set; }
     }
 }

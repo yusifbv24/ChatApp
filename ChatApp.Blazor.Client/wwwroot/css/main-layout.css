@@ -104,7 +104,7 @@
    =================================== */
 
 .sidebar-user {
-    padding: 20px;
+    padding: 10px;
     border-bottom: 1px solid var(--gray-200);
     background: linear-gradient(135deg, #F9FAFB 0%, #FFFFFF 100%);
 }

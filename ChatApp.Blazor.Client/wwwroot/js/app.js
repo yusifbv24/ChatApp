@@ -78,13 +78,38 @@ window.chatAppUtils = {
     getElementPosition: (element) => {
         if (!element) return null;
         const rect = element.getBoundingClientRect();
+
+        // Get ChatHeader and MessageInput positions
+        const chatHeader = document.querySelector('.chat-header');
+        const messageInput = document.querySelector('.message-input-container');
+
+        const chatHeaderRect = chatHeader ? chatHeader.getBoundingClientRect() : null;
+        const messageInputRect = messageInput ? messageInput.getBoundingClientRect() : null;
+
+        const chatHeaderHeight = chatHeaderRect ? chatHeaderRect.height : 60;
+        const messageInputHeight = messageInputRect ? messageInputRect.height : 80;
+
+        // Calculate actual space below (from element bottom to MessageInput top)
+        const messageInputTop = messageInputRect ? messageInputRect.top : (window.innerHeight - 80);
+        const actualSpaceBelow = messageInputTop - rect.bottom;
+
+        // Calculate actual space above (from ChatHeader bottom to element top)
+        const chatHeaderBottom = chatHeaderRect ? chatHeaderRect.bottom : 60;
+        const actualSpaceAbove = rect.top - chatHeaderBottom;
+
         return {
             top: rect.top,
             bottom: rect.bottom,
             left: rect.left,
             right: rect.right,
             viewportHeight: window.innerHeight,
-            viewportWidth: window.innerWidth
+            viewportWidth: window.innerWidth,
+            chatHeaderHeight: chatHeaderHeight,
+            messageInputHeight: messageInputHeight,
+            messageInputTop: messageInputTop,
+            chatHeaderBottom: chatHeaderBottom,
+            actualSpaceBelow: actualSpaceBelow,
+            actualSpaceAbove: actualSpaceAbove
         };
     },
 
