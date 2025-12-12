@@ -48,8 +48,6 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
 
 
     // Reaction events
-    public event Action<Guid, Guid, Guid, string>? OnReactionAdded;
-    public event Action<Guid, Guid, Guid, string>? OnReactionRemoved;
     public event Action<Guid, Guid, List<ReactionSummary>>? OnDirectMessageReactionToggled;
 
     public async Task InitializeAsync()
@@ -100,6 +98,7 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
             OnUserOffline?.Invoke(userId);
         }));
 
+
         // Direct message events
         _subscriptions.Add(hubConnection.On<object>("NewDirectMessage", messageObj =>
         {
@@ -115,24 +114,6 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
             catch (Exception ex)
             {
                 Console.WriteLine($"Error deserializing direct message: {ex.Message}");
-            }
-        }));
-
-        // Channel message events
-        _subscriptions.Add(hubConnection.On<object>("NewChannelMessage", messageObj =>
-        {
-            try
-            {
-                var json = JsonSerializer.Serialize(messageObj);
-                var message = JsonSerializer.Deserialize<ChannelMessageDto>(json, _jsonOptions);
-                if (message != null)
-                {
-                    OnNewChannelMessage?.Invoke(message);
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error deserializing channel message: {ex.Message}");
             }
         }));
 
@@ -154,24 +135,6 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
             }
         }));
 
-        // Channel message edited event
-        _subscriptions.Add(hubConnection.On<object>("ChannelMessageEdited", messageObj =>
-        {
-            try
-            {
-                var json = JsonSerializer.Serialize(messageObj);
-                var message = JsonSerializer.Deserialize<ChannelMessageDto>(json, _jsonOptions);
-                if (message != null)
-                {
-                    OnChannelMessageEdited?.Invoke(message);
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error deserializing edited channel message: {ex.Message}");
-            }
-        }));
-
         // Direct message deleted event
         _subscriptions.Add(hubConnection.On<object>("DirectMessageDeleted", messageObj =>
         {
@@ -187,6 +150,43 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
             catch (Exception ex)
             {
                 Console.WriteLine($"Error deserializing deleted direct message: {ex.Message}");
+            }
+        }));
+
+
+        // Channel message events
+        _subscriptions.Add(hubConnection.On<object>("NewChannelMessage", messageObj =>
+        {
+            try
+            {
+                var json = JsonSerializer.Serialize(messageObj);
+                var message = JsonSerializer.Deserialize<ChannelMessageDto>(json, _jsonOptions);
+                if (message != null)
+                {
+                    OnNewChannelMessage?.Invoke(message);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error deserializing channel message: {ex.Message}");
+            }
+        }));
+
+        // Channel message edited event
+        _subscriptions.Add(hubConnection.On<object>("ChannelMessageEdited", messageObj =>
+        {
+            try
+            {
+                var json = JsonSerializer.Serialize(messageObj);
+                var message = JsonSerializer.Deserialize<ChannelMessageDto>(json, _jsonOptions);
+                if (message != null)
+                {
+                    OnChannelMessageEdited?.Invoke(message);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error deserializing edited channel message: {ex.Message}");
             }
         }));
 
@@ -207,6 +207,7 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
                 Console.WriteLine($"Error deserializing deleted channel message: {ex.Message}");
             }
         }));
+
 
         // Message read events
         _subscriptions.Add(hubConnection.On<object>("MessageRead", data =>
@@ -235,6 +236,7 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
             }
         }));
 
+
         // Typing indicators
         _subscriptions.Add(hubConnection.On<Guid, Guid, bool>("UserTypingInChannel",
             (channelId, userId, isTyping) =>
@@ -248,59 +250,8 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
                 OnUserTypingInConversation?.Invoke(conversationId, userId, IsTyping);
             }));
 
+
         // Reaction events
-        _subscriptions.Add(hubConnection.On<object>("ReactionAdded", data =>
-        {
-            try
-            {
-                var json = JsonSerializer.Serialize(data);
-                using var doc = JsonDocument.Parse(json);
-                var root = doc.RootElement;
-
-                if (root.TryGetProperty("channelId", out var channelIdProp) &&
-                   root.TryGetProperty("messageId", out var messageIdProp) &&
-                   root.TryGetProperty("userId", out var userIdProp) &&
-                   root.TryGetProperty("reaction", out var reactionProp))
-                {
-                    var channelId = channelIdProp.GetGuid();
-                    var messageId = messageIdProp.GetGuid();
-                    var userId = userIdProp.GetGuid();
-                    var reaction = reactionProp.GetString() ?? "";
-                    OnReactionAdded?.Invoke(channelId, messageId, userId, reaction);
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error processing reaction added: {ex.Message}");
-            }
-        }));
-
-        _subscriptions.Add(hubConnection.On<object>("ReactionRemoved", data =>
-        {
-            try
-            {
-                var json = JsonSerializer.Serialize(data);
-                using var doc = JsonDocument.Parse(json);
-                var root = doc.RootElement;
-
-                if (root.TryGetProperty("channelId", out var channelIdProp) &&
-                   root.TryGetProperty("messageId", out var messageIdProp) &&
-                   root.TryGetProperty("userId", out var userIdProp) &&
-                   root.TryGetProperty("reaction", out var reactionProp))
-                {
-                    var channelId = channelIdProp.GetGuid();
-                    var messageId = messageIdProp.GetGuid();
-                    var userId = userIdProp.GetGuid();
-                    var reaction = reactionProp.GetString() ?? "";
-                    OnReactionRemoved?.Invoke(channelId, messageId, userId, reaction);
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error processing reaction removed: {ex.Message}");
-            }
-        }));
-
         _subscriptions.Add(hubConnection.On<object>("DirectMessageReactionToggled", data =>
         {
             try
@@ -309,7 +260,7 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
                 using var doc = JsonDocument.Parse(json);
                 var root = doc.RootElement;
 
-                if (root.TryGetProperty("conversationId", out var conversationIdProp) &&
+                if(root.TryGetProperty("conversationId", out var conversationIdProp) &&
                    root.TryGetProperty("messageId", out var messageIdProp) &&
                    root.TryGetProperty("reactions", out var reactionsProp))
                 {
@@ -424,7 +375,7 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
     {
         if (!_isInitialized)
         {
-            return new Dictionary<Guid, bool>();
+            return [];
         }
 
         try

@@ -57,7 +57,7 @@ namespace ChatApp.Blazor.Client.Models.Messages
     {
         public string Emoji { get; set; } = string.Empty;
         public int Count { get; set; }
-        public List<Guid> UserIds { get; set; } = new();
+        public List<Guid> UserIds { get; set; } = [];
     }
 
 

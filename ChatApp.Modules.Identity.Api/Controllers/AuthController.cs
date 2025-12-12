@@ -1,5 +1,6 @@
 ﻿using ChatApp.Modules.Identity.Application.Commands.Login;
 using ChatApp.Modules.Identity.Application.Commands.RefreshToken;
+using ChatApp.Modules.Identity.Application.DTOs.Requests;
 using ChatApp.Modules.Identity.Application.DTOs.Responses;
 using ChatApp.Modules.Identity.Application.Queries.GetUser;
 using MediatR;
@@ -51,17 +52,10 @@ namespace ChatApp.Modules.Identity.Api.Controllers
                 return BadRequest(new { error = result.Error });
 
             // Set HttpOnly cookies for tokens (XSS-proof)
-            SetAuthCookies(result.Value.AccessToken, result.Value.RefreshToken, result.Value.ExpiresIn);
+            SetAuthCookies(result.Value!.AccessToken, result.Value.RefreshToken, result.Value.ExpiresIn);
 
             _logger?.LogInformation("User {Username} logged in successfully", request.Username);
             return Ok(new { success = true, message = "Login successful" });
-        }
-
-        public class LoginRequest
-        {
-            public string Username { get; set; } = string.Empty;
-            public string Password { get; set; } = string.Empty;
-            public bool RememberMe { get; set; }
         }
 
 
@@ -84,7 +78,7 @@ namespace ChatApp.Modules.Identity.Api.Controllers
                 return BadRequest(new { error = result.Error });
 
             // Set new HttpOnly cookies with rotated tokens
-            SetAuthCookies(result.Value.AccessToken, result.Value.RefreshToken, result.Value.ExpiresIn);
+            SetAuthCookies(result.Value!.AccessToken, result.Value.RefreshToken, result.Value.ExpiresIn);
 
             return Ok(new { message = "Token refreshed successfully" });
         }

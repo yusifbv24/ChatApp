@@ -443,20 +443,24 @@ public partial class Messages : IAsyncDisposable
                 conversationTypingState.Remove(conversationId);
             }
 
-            if (conversationId == selectedConversationId && isDirectMessage && !string.IsNullOrEmpty(recipientName))
+            // ONLY update typingUsers list if we're currently viewing this conversation
+            if (conversationId == selectedConversationId)
             {
                 InvokeAsync(() =>
                 {
+                    // Get user name from dictionary (populated in LoadConversationsAndChannels)
+                    var userName = typingUserNames.GetValueOrDefault(userId, "Someone");
+
                     if (isTyping)
                     {
-                        if (!typingUsers.Contains(recipientName))
+                        if (!typingUsers.Contains(userName))
                         {
-                            typingUsers = new List<string>(typingUsers) { recipientName };
+                            typingUsers = new List<string>(typingUsers) { userName };
                         }
                     }
                     else
                     {
-                        typingUsers = typingUsers.Where(u => u != recipientName).ToList();
+                        typingUsers = typingUsers.Where(u => u != userName).ToList();
                     }
 
                     StateHasChanged();
@@ -1072,6 +1076,14 @@ public partial class Messages : IAsyncDisposable
             if (conversationsResult.IsSuccess)
             {
                 conversations = conversationsResult.Value ?? [];
+
+                // Populate typingUserNames dictionary for all conversations
+                // This allows us to show correct names when typing events arrive
+                typingUserNames.Clear();
+                foreach (var conv in conversations)
+                {
+                    typingUserNames[conv.OtherUserId] = conv.OtherUserDisplayName;
+                }
             }
 
             if (channelsResult.IsSuccess)

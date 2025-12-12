@@ -18,7 +18,7 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Services
 
         private readonly object _lock = new();
 
-        public Task AddConnectionAsync(Guid userId, string connectionId, string? deviceInfo)
+        public Task AddConnectionAsync(Guid userId, string connectionId)
         {
             lock (_lock)
             {
@@ -32,7 +32,7 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Services
                     _userConnections[userId] = connections;
                 }
 
-                var userConnection=new UserConnection(userId,connectionId, deviceInfo);
+                var userConnection = new UserConnection(userId, connectionId);
                 connections.Add(userConnection);
             }
             return Task.CompletedTask;
@@ -47,12 +47,6 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Services
             }
 
             return Task.FromResult(0);
-        }
-
-
-        public Task<List<Guid>> GetOnlineUsersAsync()
-        {
-            return Task.FromResult(_userConnections.Keys.ToList());
         }
 
 
@@ -110,7 +104,7 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Services
                         connections.RemoveAll(c => c.ConnectionId == connectionId);
 
                         // If user has no more connections, remove from dictionary
-                        if (!connections.Any())
+                        if (connections.Count == 0)
                         {
                             _userConnections.TryRemove(userId, out _);
                         }
