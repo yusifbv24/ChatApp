@@ -433,20 +433,20 @@ public partial class Messages : IAsyncDisposable
         // Only track typing state for OTHER users, not yourself
         if (userId != currentUserId)
         {
-            // Update typing state for this conversation
-            if (isTyping)
+            InvokeAsync(() =>
             {
-                conversationTypingState[conversationId] = true;
-            }
-            else
-            {
-                conversationTypingState.Remove(conversationId);
-            }
+                // Update typing state for this conversation (for conversation list)
+                if (isTyping)
+                {
+                    conversationTypingState[conversationId] = true;
+                }
+                else
+                {
+                    conversationTypingState.Remove(conversationId);
+                }
 
-            // ONLY update typingUsers list if we're currently viewing this conversation
-            if (conversationId == selectedConversationId)
-            {
-                InvokeAsync(() =>
+                // ALSO update typingUsers list if we're currently viewing this conversation (for chat area)
+                if (conversationId == selectedConversationId)
                 {
                     // Get user name from dictionary (populated in LoadConversationsAndChannels)
                     var userName = typingUserNames.GetValueOrDefault(userId, "Someone");
@@ -455,17 +455,18 @@ public partial class Messages : IAsyncDisposable
                     {
                         if (!typingUsers.Contains(userName))
                         {
-                            typingUsers = new List<string>(typingUsers) { userName };
+                            typingUsers.Add(userName);
                         }
                     }
                     else
                     {
                         typingUsers = typingUsers.Where(u => u != userName).ToList();
                     }
+                }
 
-                    StateHasChanged();
-                });
-            }
+                // ALWAYS call StateHasChanged to update conversation list
+                StateHasChanged();
+            });
         }
     }
 
@@ -474,36 +475,38 @@ public partial class Messages : IAsyncDisposable
         // Only track typing state for OTHER users, not yourself
         if (userId != currentUserId)
         {
-            // Update typing state for this channel
-            if (isTyping)
+            InvokeAsync(() =>
             {
-                channelTypingState[channelId] = true;
-            }
-            else
-            {
-                channelTypingState.Remove(channelId);
-            }
+                // Update typing state for this channel
+                if (isTyping)
+                {
+                    channelTypingState[channelId] = true;
+                }
+                else
+                {
+                    channelTypingState.Remove(channelId);
+                }
 
-            if (channelId == selectedChannelId)
-            {
-                InvokeAsync(() =>
+                // ALSO update typingUsers list if we're currently viewing this channel
+                if (channelId == selectedChannelId)
                 {
                     var userName = typingUserNames.GetValueOrDefault(userId, "Someone");
                     if (isTyping)
                     {
                         if (!typingUsers.Contains(userName))
                         {
-                            typingUsers = new List<string>(typingUsers) { userName };
+                            typingUsers.Add(userName);
                         }
                     }
                     else
                     {
                         typingUsers = typingUsers.Where(u => u != userName).ToList();
                     }
+                }
 
-                    StateHasChanged();
-                });
-            }
+                // ALWAYS call StateHasChanged to update conversation list
+                StateHasChanged();
+            });
         }
     }
 
@@ -1007,15 +1010,9 @@ public partial class Messages : IAsyncDisposable
         isPendingConversation = false;
         pendingUser = null;
 
-        // Leave previous groups
-        if (selectedConversationId.HasValue)
-        {
-            await SignalRService.LeaveConversationAsync(selectedConversationId.Value);
-        }
-        if (selectedChannelId.HasValue)
-        {
-            await SignalRService.LeaveChannelAsync(selectedChannelId.Value);
-        }
+        // NOTE: We DON'T leave previous conversation/channel groups
+        // This allows us to receive typing indicators for conversation list
+        // User stays subscribed to all conversation/channel groups they've joined
 
         // Mark conversation as read and update global unread count
         if (conversation.UnreadCount > 0)
@@ -1191,15 +1188,9 @@ public partial class Messages : IAsyncDisposable
         isPendingConversation = false;
         pendingUser = null;
 
-        // Leave previous groups
-        if (selectedConversationId.HasValue)
-        {
-            await SignalRService.LeaveConversationAsync(selectedConversationId.Value);
-        }
-        if (selectedChannelId.HasValue)
-        {
-            await SignalRService.LeaveChannelAsync(selectedChannelId.Value);
-        }
+        // NOTE: We DON'T leave previous conversation/channel groups
+        // This allows us to receive typing indicators for conversation list
+        // User stays subscribed to all conversation/channel groups they've joined
 
         // Mark channel as read and update global unread count
         if (channel.UnreadCount > 0)
