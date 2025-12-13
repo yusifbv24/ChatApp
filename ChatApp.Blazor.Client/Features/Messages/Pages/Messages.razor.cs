@@ -62,6 +62,7 @@ public partial class Messages : IAsyncDisposable
     private bool isCreatingChannel;
     private bool hasMoreMessages = true;
     private DateTime? oldestMessageDate;
+    private int pageSize = 50; // İlk yükləmə 50, sonrakılar 100
 
     // Typing
     private List<string> typingUsers = [];
@@ -204,16 +205,15 @@ public partial class Messages : IAsyncDisposable
                     {
                         await ConversationService.MarkAsReadAsync(message.ConversationId, message.Id);
 
-                        // Update local state
                         var index = directMessages.IndexOf(message);
                         if (index >= 0)
                         {
                             directMessages[index] = message with { IsRead = true };
                         }
                     }
-                    catch (Exception ex)
+                    catch
                     {
-                        Console.WriteLine($"Failed to mark message as read: {ex.Message}");
+                        // Ignore errors when marking as read
                     }
                 }
                 StateHasChanged();
@@ -266,9 +266,9 @@ public partial class Messages : IAsyncDisposable
                         {
                             await ConversationService.MarkAsReadAsync(message.ConversationId, message.Id);
                         }
-                        catch (Exception ex)
+                        catch
                         {
-                            Console.WriteLine($"Failed to mark message as read: {ex.Message}");
+                            // Ignore errors when marking as read
                         }
                     }
                 }
@@ -595,6 +595,9 @@ public partial class Messages : IAsyncDisposable
 
         try
         {
+            // İlk load more-dan sonra pageSize-i 100-ə çevir
+            pageSize = 100;
+
             if (isDirectMessage && selectedConversationId.HasValue)
             {
                 await LoadDirectMessages();
@@ -969,7 +972,7 @@ public partial class Messages : IAsyncDisposable
         {
             var result = await ConversationService.GetMessagesAsync(
                 selectedConversationId!.Value,
-                50,
+                pageSize,
                 oldestMessageDate);
 
             if (result.IsSuccess && result.Value != null)
@@ -977,9 +980,13 @@ public partial class Messages : IAsyncDisposable
                 var messages = result.Value;
                 if (messages.Count != 0)
                 {
-                    directMessages.InsertRange(0, messages.OrderBy(m => m.CreatedAtUtc));
+                    // Filter out duplicates before adding to list
+                    var existingIds = directMessages.Select(m => m.Id).ToHashSet();
+                    var newMessages = messages.Where(m => !existingIds.Contains(m.Id)).OrderBy(m => m.CreatedAtUtc);
+
+                    directMessages.InsertRange(0, newMessages);
                     oldestMessageDate = messages.Min(m => m.CreatedAtUtc);
-                    hasMoreMessages = messages.Count >= 50;
+                    hasMoreMessages = messages.Count >= pageSize;
                 }
                 else
                 {
@@ -1035,6 +1042,7 @@ public partial class Messages : IAsyncDisposable
         oldestMessageDate = null;
         typingUsers.Clear();
         pendingReadReceipts.Clear(); // Clear pending read receipts when changing conversations
+        pageSize = 50; // Reset page size to 50 for new conversation
 
         // Set conversation details AFTER clearing
         selectedConversationId = conversation.Id;
@@ -1154,7 +1162,7 @@ public partial class Messages : IAsyncDisposable
         {
             var result = await ChannelService.GetMessagesAsync(
                 selectedChannelId!.Value,
-                50,
+                pageSize,
                 oldestMessageDate);
 
             if (result.IsSuccess && result.Value != null)
@@ -1162,9 +1170,13 @@ public partial class Messages : IAsyncDisposable
                 var messages = result.Value;
                 if (messages.Count != 0)
                 {
-                    channelMessages.InsertRange(0, messages.OrderBy(m => m.CreatedAtUtc));
+                    // Filter out duplicates before adding to list
+                    var existingIds = channelMessages.Select(m => m.Id).ToHashSet();
+                    var newMessages = messages.Where(m => !existingIds.Contains(m.Id)).OrderBy(m => m.CreatedAtUtc);
+
+                    channelMessages.InsertRange(0, newMessages);
                     oldestMessageDate = messages.Min(m => m.CreatedAtUtc);
-                    hasMoreMessages = messages.Count >= 50;
+                    hasMoreMessages = messages.Count >= pageSize;
                 }
                 else
                 {
@@ -1213,6 +1225,7 @@ public partial class Messages : IAsyncDisposable
         oldestMessageDate = null;
         typingUsers.Clear();
         pendingReadReceipts.Clear(); // Clear pending read receipts when changing channels
+        pageSize = 50; // Reset page size to 50 for new channel
 
         // Set channel details AFTER clearing
         selectedChannelId = channel.Id;
@@ -1507,9 +1520,8 @@ public partial class Messages : IAsyncDisposable
                 userSearchResults.Clear();
             }
         }
-        catch (Exception ex)
+        catch
         {
-            Console.WriteLine($"Search error: {ex.Message}");
             userSearchResults.Clear();
         }
         finally
@@ -1556,9 +1568,8 @@ public partial class Messages : IAsyncDisposable
                 }
             }
         }
-        catch (Exception ex)
+        catch
         {
-            Console.WriteLine($"Failed to refresh online status: {ex.Message}");
             // Don't show error to user, this is not critical
         }
     }

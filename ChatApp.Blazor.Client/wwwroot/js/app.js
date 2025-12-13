@@ -45,8 +45,7 @@ window.chatAppUtils = {
         try {
             await navigator.clipboard.writeText(text);
             return true;
-        } catch (err) {
-            console.error('Failed to copy:', err);
+        } catch {
             return false;
         }
     },
@@ -125,8 +124,10 @@ window.chatAppUtils = {
     // Restore scroll position after loading more messages
     restoreScrollPosition: (element, previousState) => {
         if (!element || !previousState) return;
+
         const heightDifference = element.scrollHeight - previousState.scrollHeight;
-        element.scrollTop = previousState.scrollTop + heightDifference;
+        const newScrollTop = previousState.scrollTop + heightDifference;
+        element.scrollTop = newScrollTop;
     },
 
     // Scroll to a specific message and highlight it
@@ -179,6 +180,36 @@ window.chatAppUtils = {
         document.addEventListener('visibilitychange', handler);
         return {
             dispose: () => document.removeEventListener('visibilitychange', handler)
+        };
+    },
+
+    // Get scroll position (for infinite scroll detection)
+    getScrollTop: (element) => {
+        if (!element) return 0;
+        return element.scrollTop;
+    },
+
+    // Intersection Observer for infinite scroll
+    observeLoadMoreTrigger: (triggerElement, dotNetHelper) => {
+        if (!triggerElement) return null;
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    // Trigger element is visible, load more messages
+                    dotNetHelper.invokeMethodAsync('OnLoadMoreTriggered');
+                }
+            });
+        }, {
+            root: null, // viewport
+            rootMargin: '50px', // trigger 50px before element is visible
+            threshold: 0.1
+        });
+
+        observer.observe(triggerElement);
+
+        return {
+            dispose: () => observer.disconnect()
         };
     }
 };

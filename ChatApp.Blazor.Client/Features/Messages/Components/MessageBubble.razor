@@ -374,9 +374,9 @@
         {
             await JS.InvokeVoidAsync("navigator.clipboard.writeText", Content);
         }
-        catch (Exception ex)
+        catch
         {
-            Console.WriteLine($"Copy failed: {ex.Message}");
+            // Ignore copy errors
         }
         await OnActionCompleted.InvokeAsync();
     }

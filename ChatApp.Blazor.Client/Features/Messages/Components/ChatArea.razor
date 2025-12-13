@@ -1,4 +1,4 @@
-﻿@implements IDisposable
+﻿@implements IAsyncDisposable
 @inject IJSRuntime JS
 
 <div class="chat-area">
@@ -89,7 +89,7 @@
         }
 
         <!-- Messages Area -->
-        <div class="messages-container" @ref="messagesContainerRef">
+        <div class="messages-container" @ref="messagesContainerRef" @onscroll="HandleScroll">
             @if (IsLoading)
             {
                 <div class="messages-loading">
@@ -97,19 +97,17 @@
                     <span>Loading messages...</span>
                 </div>
             }
-            else if (HasMoreMessages)
+            else if (HasMoreMessages && !IsLoadingMore)
+            {
+                <div class="load-more-trigger" @ref="loadMoreTriggerRef">
+                    <!-- Invisible trigger element for infinite scroll -->
+                </div>
+            }
+            else if (IsLoadingMore)
             {
                 <div class="load-more-container">
-                    <button class="load-more-btn" @onclick="LoadMoreMessages" disabled="@IsLoadingMore">
-                        @if (IsLoadingMore)
-                        {
-                            <div class="loading-spinner small"></div>
-                        }
-                        else
-                        {
-                            <span>Load earlier messages</span>
-                        }
-                    </button>
+                    <div class="loading-spinner small"></div>
+                    <span>Loading...</span>
                 </div>
             }
             @if (DirectMessages.Any())
@@ -326,6 +324,7 @@
 
     private ElementReference messagesContainerRef;
     private ElementReference scrollAnchorRef;
+    private ElementReference loadMoreTriggerRef;
     private MessageInput? messageInputRef;
     private bool showSearch = false;
     private bool showInfoPanel = false;
@@ -337,15 +336,36 @@
     private bool _shouldScrollToBottom;
     private bool _isLoadingMore = false;
     private object? _savedScrollPosition = null;
+    private DateTime _lastScrollCheck = DateTime.MinValue;
+    private int _scrollTopOnLastCheck = 0;
 
     protected override void OnParametersSet()
     {
         // Check if new messages were added (but not from load more)
         var currentCount = DirectMessages.Count + ChannelMessages.Count;
-        if (currentCount > _previousMessageCount && !_isLoadingMore && !isEditing && !IsReplying)
+
+        // If this is first time seeing messages (was 0, now > 0), scroll to bottom
+        if (_previousMessageCount == 0 && currentCount > 0)
         {
             _shouldScrollToBottom = true;
         }
+        // Otherwise, only scroll to bottom if:
+        // 1. New messages were added (currentCount increased)
+        // 2. NOT from load more operation (detected by _isLoadingMore flag)
+        // 3. NOT editing
+        // 4. NOT replying
+        // 5. The increase is small (1-5 messages = new incoming, not pagination)
+        else
+        {
+            var messageIncrease = currentCount - _previousMessageCount;
+            var isNewIncomingMessage = messageIncrease > 0 && messageIncrease <= 5;
+
+            if (isNewIncomingMessage && !_isLoadingMore && !isEditing && !IsReplying)
+            {
+                _shouldScrollToBottom = true;
+            }
+        }
+
         _previousMessageCount = currentCount;
 
         // Force re-render when parameters change
@@ -356,6 +376,9 @@
     {
         if (_isLoadingMore && _savedScrollPosition != null)
         {
+            // Wait for DOM to fully render new messages
+            await Task.Delay(100);
+
             // Restore scroll position after loading more messages
             await JS.InvokeVoidAsync("chatAppUtils.restoreScrollPosition", messagesContainerRef, _savedScrollPosition);
             _isLoadingMore = false;
@@ -548,8 +571,68 @@
         }
     }
 
-    public void Dispose()
+    private async Task HandleScroll()
+    {
+        // Don't handle scroll during loading or restore
+        if (_isLoadingMore || IsLoadingMore)
+        {
+            return;
+        }
+
+        try
+        {
+            // Get current scroll position
+            var scrollTop = await JS.InvokeAsync<int>("chatAppUtils.getScrollTop", messagesContainerRef);
+
+            // Cancel any pending scroll to bottom when user manually scrolls
+            if (_shouldScrollToBottom && scrollTop > 0)
+            {
+                _shouldScrollToBottom = false;
+            }
+
+            // Don't proceed if no more messages to load
+            if (!HasMoreMessages)
+            {
+                return;
+            }
+
+            // Throttle: Only trigger if scroll position changed significantly and enough time passed
+            var now = DateTime.UtcNow;
+            var timeSinceLastCheck = (now - _lastScrollCheck).TotalMilliseconds;
+            var scrollDifference = Math.Abs(scrollTop - _scrollTopOnLastCheck);
+
+            // Only proceed if:
+            // 1. At least 200ms passed since last check
+            // 2. Scroll position changed by at least 50px (significant scroll)
+            if (timeSinceLastCheck < 200 || scrollDifference < 50)
+            {
+                return;
+            }
+
+            _lastScrollCheck = now;
+            _scrollTopOnLastCheck = scrollTop;
+
+            // If scrolled to within 200px of the top, trigger load more
+            if (scrollTop < 200)
+            {
+                await LoadMoreMessages();
+            }
+        }
+        catch
+        {
+            // Ignore scroll errors
+        }
+    }
+
+    private async Task HandleChatAreaClick()
+    {
+        // Refocus the textarea when clicking anywhere in the chat area
+        await RefocusInput();
+    }
+
+    public async ValueTask DisposeAsync()
     {
         // Cleanup if needed
+        await Task.CompletedTask;
     }
 }
