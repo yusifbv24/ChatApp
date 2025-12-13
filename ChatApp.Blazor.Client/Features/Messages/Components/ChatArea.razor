@@ -512,6 +512,13 @@
 
     private async Task EditMessage(string newContent)
     {
+        // If content hasn't changed, just cancel - no API call needed
+        if (newContent == editingContent)
+        {
+            CancelEdit();
+            return;
+        }
+
         await OnEditMessage.InvokeAsync((editingMessageId, newContent));
         CancelEdit();
     }

@@ -324,7 +324,7 @@ public partial class Messages : IAsyncDisposable
 
     private void HandleDirectMessageEdited(DirectMessageDto editedMessage)
     {
-        InvokeAsync(async () =>
+        InvokeAsync(() =>
         {
             // Update the message in the list if it's in the current conversation
             if (editedMessage.ConversationId == selectedConversationId)
@@ -334,6 +334,12 @@ public partial class Messages : IAsyncDisposable
                 {
                     var index = directMessages.IndexOf(message);
                     directMessages[index] = editedMessage;
+
+                    // Update conversation list if this was the last message
+                    if (IsLastMessageInConversation(editedMessage.ConversationId, editedMessage))
+                    {
+                        UpdateConversationLastMessage(editedMessage.ConversationId, editedMessage.Content);
+                    }
                 }
 
                 // Update reply previews for messages that replied to this edited message
@@ -349,14 +355,13 @@ public partial class Messages : IAsyncDisposable
                 StateHasChanged();
             }
 
-            // Update conversation list to show edited content
-            await LoadConversationsAndChannels();
+            return Task.CompletedTask;
         });
     }
 
     private void HandleDirectMessageDeleted(DirectMessageDto deletedMessage)
     {
-        InvokeAsync(async () =>
+        InvokeAsync(() =>
         {
             // Update the message in the list if it's in the current conversation
             if (deletedMessage.ConversationId == selectedConversationId)
@@ -366,6 +371,12 @@ public partial class Messages : IAsyncDisposable
                 {
                     var index = directMessages.IndexOf(message);
                     directMessages[index] = deletedMessage; // Use the deleted DTO from server
+
+                    // Update conversation list if this was the last message
+                    if (IsLastMessageInConversation(deletedMessage.ConversationId, deletedMessage))
+                    {
+                        UpdateConversationLastMessage(deletedMessage.ConversationId, "This message was deleted");
+                    }
                 }
 
                 // Update reply previews for messages that replied to this deleted message
@@ -381,14 +392,13 @@ public partial class Messages : IAsyncDisposable
                 StateHasChanged();
             }
 
-            // Update conversation list to show last message
-            await LoadConversationsAndChannels();
+            return Task.CompletedTask;
         });
     }
 
     private void HandleChannelMessageEdited(ChannelMessageDto editedMessage)
     {
-        InvokeAsync(async () =>
+        InvokeAsync(() =>
         {
             // Update the message in the list if it's in the current channel
             if (editedMessage.ChannelId == selectedChannelId)
@@ -398,6 +408,12 @@ public partial class Messages : IAsyncDisposable
                 {
                     var index = channelMessages.IndexOf(message);
                     channelMessages[index] = editedMessage;
+
+                    // Update channel list if this was the last message
+                    if (IsLastMessageInChannel(editedMessage.ChannelId, editedMessage))
+                    {
+                        UpdateChannelLastMessage(editedMessage.ChannelId, editedMessage.Content, editedMessage.SenderDisplayName);
+                    }
                 }
 
                 // Update reply previews for messages that replied to this edited message
@@ -413,14 +429,13 @@ public partial class Messages : IAsyncDisposable
                 StateHasChanged();
             }
 
-            // Update channel list to show edited content
-            await LoadConversationsAndChannels();
+            return Task.CompletedTask;
         });
     }
 
     private void HandleChannelMessageDeleted(ChannelMessageDto deletedMessage)
     {
-        InvokeAsync(async () =>
+        InvokeAsync(() =>
         {
             // Update the message in the list if it's in the current channel
             if (deletedMessage.ChannelId == selectedChannelId)
@@ -430,6 +445,12 @@ public partial class Messages : IAsyncDisposable
                 {
                     var index = channelMessages.IndexOf(message);
                     channelMessages[index] = deletedMessage; // Use the deleted DTO from server
+
+                    // Update channel list if this was the last message
+                    if (IsLastMessageInChannel(deletedMessage.ChannelId, deletedMessage))
+                    {
+                        UpdateChannelLastMessage(deletedMessage.ChannelId, "This message was deleted", deletedMessage.SenderDisplayName);
+                    }
                 }
 
                 // Update reply previews for messages that replied to this deleted message
@@ -445,8 +466,7 @@ public partial class Messages : IAsyncDisposable
                 StateHasChanged();
             }
 
-            // Update channel list to show last message
-            await LoadConversationsAndChannels();
+            return Task.CompletedTask;
         });
     }
 
@@ -817,15 +837,19 @@ public partial class Messages : IAsyncDisposable
 
                 if (result.IsSuccess)
                 {
-                    // Update local message
+                    // Update local message only if content actually changed
                     var message = directMessages.FirstOrDefault(m => m.Id == edit.messageId);
-                    if (message != null)
+                    if (message != null && message.Content != edit.content)
                     {
                         var index = directMessages.IndexOf(message);
-                        directMessages[index] = message with { Content = edit.content, IsEdited = true };
+                        var updatedMessage = message with { Content = edit.content, IsEdited = true };
+                        directMessages[index] = updatedMessage;
 
-                        // Update conversation list to show edited content
-                        await LoadConversationsAndChannels();
+                        // Update conversation list locally if this is the last message
+                        if (IsLastMessageInConversation(selectedConversationId.Value, updatedMessage))
+                        {
+                            UpdateConversationLastMessage(selectedConversationId.Value, edit.content);
+                        }
                         StateHasChanged();
                     }
                 }
@@ -843,14 +867,19 @@ public partial class Messages : IAsyncDisposable
 
                 if (result.IsSuccess)
                 {
+                    // Update local message only if content actually changed
                     var message = channelMessages.FirstOrDefault(m => m.Id == edit.messageId);
-                    if (message != null)
+                    if (message != null && message.Content != edit.content)
                     {
                         var index = channelMessages.IndexOf(message);
-                        channelMessages[index] = message with { Content = edit.content, IsEdited = true };
+                        var updatedMessage = message with { Content = edit.content, IsEdited = true };
+                        channelMessages[index] = updatedMessage;
 
-                        // Update channel list to show edited content
-                        await LoadConversationsAndChannels();
+                        // Update channel list locally if this is the last message
+                        if (IsLastMessageInChannel(selectedChannelId.Value, updatedMessage))
+                        {
+                            UpdateChannelLastMessage(selectedChannelId.Value, edit.content, message.SenderDisplayName);
+                        }
                         StateHasChanged();
                     }
                 }
@@ -881,7 +910,14 @@ public partial class Messages : IAsyncDisposable
                     if (message != null)
                     {
                         var index = directMessages.IndexOf(message);
-                        directMessages[index] = message with { IsDeleted = true, Content = "" };
+                        var deletedMessage = message with { IsDeleted = true, Content = "" };
+                        directMessages[index] = deletedMessage;
+
+                        // Update conversation list locally if this was the last message
+                        if (IsLastMessageInConversation(selectedConversationId.Value, deletedMessage))
+                        {
+                            UpdateConversationLastMessage(selectedConversationId.Value, "This message was deleted");
+                        }
                         StateHasChanged();
                     }
                 }
@@ -902,7 +938,14 @@ public partial class Messages : IAsyncDisposable
                     if (message != null)
                     {
                         var index = channelMessages.IndexOf(message);
-                        channelMessages[index] = message with { IsDeleted = true, Content = "" };
+                        var deletedMessage = message with { IsDeleted = true, Content = "" };
+                        channelMessages[index] = deletedMessage;
+
+                        // Update channel list locally if this was the last message
+                        if (IsLastMessageInChannel(selectedChannelId.Value, deletedMessage))
+                        {
+                            UpdateChannelLastMessage(selectedChannelId.Value, "This message was deleted", message.SenderDisplayName);
+                        }
                         StateHasChanged();
                     }
                 }
@@ -1625,6 +1668,65 @@ public partial class Messages : IAsyncDisposable
         var totalUnread = conversations.Sum(c => c.UnreadCount) + channels.Sum(c => c.UnreadCount);
         AppState.UnreadMessageCount = totalUnread;
     }
+
+    /// <summary>
+    /// Updates the conversation's LastMessageContent locally without reloading from server
+    /// </summary>
+    private void UpdateConversationLastMessage(Guid conversationId, string newContent)
+    {
+        var convIndex = conversations.FindIndex(c => c.Id == conversationId);
+        if (convIndex >= 0)
+        {
+            var conv = conversations[convIndex];
+            conversations[convIndex] = conv with { LastMessageContent = newContent };
+        }
+    }
+
+    /// <summary>
+    /// Updates the channel's LastMessageContent locally without reloading from server
+    /// </summary>
+    private void UpdateChannelLastMessage(Guid channelId, string newContent, string? senderName = null)
+    {
+        var channelIndex = channels.FindIndex(c => c.Id == channelId);
+        if (channelIndex >= 0)
+        {
+            var channel = channels[channelIndex];
+            if (senderName != null)
+            {
+                channels[channelIndex] = channel with { LastMessageContent = newContent, LastMessageSenderName = senderName };
+            }
+            else
+            {
+                channels[channelIndex] = channel with { LastMessageContent = newContent };
+            }
+        }
+    }
+
+    /// <summary>
+    /// Checks if the given message is the last message in a conversation
+    /// </summary>
+    private bool IsLastMessageInConversation(Guid conversationId, DirectMessageDto message)
+    {
+        var conv = conversations.FirstOrDefault(c => c.Id == conversationId);
+        if (conv == null) return false;
+
+        // Check by comparing content or by checking if it's the most recent message in our list
+        var lastMessage = directMessages.OrderByDescending(m => m.CreatedAtUtc).FirstOrDefault();
+        return lastMessage?.Id == message.Id;
+    }
+
+    /// <summary>
+    /// Checks if the given message is the last message in a channel
+    /// </summary>
+    private bool IsLastMessageInChannel(Guid channelId, ChannelMessageDto message)
+    {
+        var channel = channels.FirstOrDefault(c => c.Id == channelId);
+        if (channel == null) return false;
+
+        var lastMessage = channelMessages.OrderByDescending(m => m.CreatedAtUtc).FirstOrDefault();
+        return lastMessage?.Id == message.Id;
+    }
+
     private void ShowError(string message)
     {
         errorMessage = message;

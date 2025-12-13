@@ -159,11 +159,12 @@
 
     protected override void OnParametersSet()
     {
-        // Handle editing mode
-        if(IsEditing && !string.IsNullOrEmpty(EditingContent))
+        // Handle editing mode - only set content when editing STARTS (not every render)
+        if (IsEditing && !wasEditing && !string.IsNullOrEmpty(EditingContent))
         {
             MessageText = EditingContent;
             wasEditing = true;
+            shouldFocus = true;
         }
         else if (wasEditing && !IsEditing)
         {

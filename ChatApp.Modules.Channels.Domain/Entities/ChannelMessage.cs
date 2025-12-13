@@ -65,6 +65,10 @@ namespace ChatApp.Modules.Channels.Domain.Entities
             if (newContent.Length > 4000)
                 throw new ArgumentException("Message content cannot exceed 4000 characters");
 
+            // Only mark as edited if content actually changed
+            if (Content == newContent)
+                return;
+
             Content = newContent;
             IsEdited = true;
             EditedAtUtc = DateTime.UtcNow;
