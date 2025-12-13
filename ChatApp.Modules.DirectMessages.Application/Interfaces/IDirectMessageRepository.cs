@@ -7,6 +7,7 @@ namespace ChatApp.Modules.DirectMessages.Application.Interfaces
     {
         Task<DirectMessage?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
         Task<DirectMessage?> GetByIdWithReactionsAsync(Guid id, CancellationToken cancellationToken = default);
+        Task<DirectMessageDto?> GetByIdAsDtoAsync(Guid id, CancellationToken cancellationToken = default);
         Task<List<DirectMessageDto>> GetConversationMessagesAsync(
             Guid conversationId,
             int pageSize = 50,

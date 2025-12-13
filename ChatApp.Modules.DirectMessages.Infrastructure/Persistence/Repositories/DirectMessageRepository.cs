@@ -43,6 +43,79 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
         }
 
 
+        public async Task<DirectMessageDto?> GetByIdAsDtoAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            var result = await (from message in _context.DirectMessages
+                        join sender in _context.Set<UserReadModel>() on message.SenderId equals sender.Id
+                        join repliedMessage in _context.DirectMessages on message.ReplyToMessageId equals repliedMessage.Id into replyJoin
+                        from repliedMessage in replyJoin.DefaultIfEmpty()
+                        join repliedSender in _context.Set<UserReadModel>() on repliedMessage.SenderId equals repliedSender.Id into repliedSenderJoin
+                        from repliedSender in repliedSenderJoin.DefaultIfEmpty()
+                        where message.Id == id
+                        select new
+                        {
+                            message.Id,
+                            message.ConversationId,
+                            message.SenderId,
+                            sender.Username,
+                            sender.DisplayName,
+                            sender.AvatarUrl,
+                            message.ReceiverId,
+                            message.Content,
+                            message.FileId,
+                            message.IsEdited,
+                            message.IsDeleted,
+                            message.IsRead,
+                            message.CreatedAtUtc,
+                            message.EditedAtUtc,
+                            message.ReadAtUtc,
+                            ReactionCount = _context.DirectMessageReactions.Count(r => r.MessageId == message.Id),
+                            message.ReplyToMessageId,
+                            ReplyToContent = repliedMessage != null ? repliedMessage.Content : null,
+                            ReplyToSenderName = repliedSender != null ? repliedSender.DisplayName : null,
+                            message.IsForwarded
+                        }).FirstOrDefaultAsync(cancellationToken);
+
+            if (result == null)
+                return null;
+
+            // Load reactions for this message
+            var reactions = await _context.DirectMessageReactions
+                .Where(r => r.MessageId == id)
+                .GroupBy(r => r.Reaction)
+                .Select(rg => new DirectMessageReactionDto(
+                    rg.Key,
+                    rg.Count(),
+                    rg.Select(r => r.UserId).ToList()
+                ))
+                .ToListAsync(cancellationToken);
+
+            return new DirectMessageDto(
+                result.Id,
+                result.ConversationId,
+                result.SenderId,
+                result.Username,
+                result.DisplayName,
+                result.AvatarUrl,
+                result.ReceiverId,
+                result.Content,
+                result.FileId,
+                result.IsEdited,
+                result.IsDeleted,
+                result.IsRead,
+                result.ReactionCount,
+                result.CreatedAtUtc,
+                result.EditedAtUtc,
+                result.ReadAtUtc,
+                result.ReplyToMessageId,
+                result.ReplyToContent,
+                result.ReplyToSenderName,
+                result.IsForwarded,
+                reactions.Count > 0 ? reactions : null
+            );
+        }
+
+
         public async Task<List<DirectMessageDto>> GetConversationMessagesAsync(
             Guid conversationId, 
             int pageSize = 50, 

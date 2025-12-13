@@ -662,6 +662,9 @@ public partial class Messages : IAsyncDisposable
                     bool hasReadReceipt = pendingReadReceipts.TryGetValue(messageId, out var readReceipt);
 
                     // Add message locally (optimistic UI) - don't wait for SignalR
+                    // Parameter order: Id, ConversationId, SenderId, SenderUsername, SenderDisplayName, SenderAvatarUrl,
+                    //                  ReceiverId, Content, FileId, IsEdited, IsDeleted, IsRead, ReactionCount,
+                    //                  CreatedAtUtc, EditedAtUtc, ReadAtUtc, ReplyToMessageId, ReplyToContent, ReplyToSenderName, IsForwarded
                     var newMessage = new DirectMessageDto(
                         messageId,
                         selectedConversationId.Value,
@@ -671,18 +674,18 @@ public partial class Messages : IAsyncDisposable
                         UserState.CurrentUser?.AvatarUrl,
                         recipientUserId,
                         content,
-                        null,
-                        hasReadReceipt, // Apply pending read receipt if exists
-                        false,
-                        false,
-                        0,
-                        messageTime,
-                        null,
-                        hasReadReceipt ? readReceipt.readAtUtc : null,
+                        null,                                           // FileId
+                        false,                                          // IsEdited - new message is never edited
+                        false,                                          // IsDeleted
+                        hasReadReceipt,                                 // IsRead - apply pending read receipt if exists
+                        0,                                              // ReactionCount
+                        messageTime,                                    // CreatedAtUtc
+                        null,                                           // EditedAtUtc
+                        hasReadReceipt ? readReceipt.readAtUtc : null,  // ReadAtUtc
                         replyToMessageId,
                         replyToContent,
                         replyToSenderName,
-                        false);
+                        false);                                         // IsForwarded
 
                     directMessages.Add(newMessage);
 

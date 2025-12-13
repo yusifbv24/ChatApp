@@ -111,14 +111,9 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectMessages
 
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                // Get the full message DTO with user details for real-time broadcast
-                var messages = await _unitOfWork.Messages.GetConversationMessagesAsync(
-                    request.ConversationId,
-                    pageSize: 1,
-                    beforeUtc: null,
-                    cancellationToken);
-
-                var messageDto = messages.FirstOrDefault();
+                // Get the specific message DTO by ID for real-time broadcast
+                // This ensures we send the exact message we just created, not another message from the conversation
+                var messageDto = await _unitOfWork.Messages.GetByIdAsDtoAsync(message.Id, cancellationToken);
 
                 if (messageDto != null)
                 {

@@ -921,17 +921,14 @@
     left: 50%;
     transform: translateX(-50%);
     opacity: 0;
-    pointer-events: none;
     transition: opacity 0.15s ease;
-    z-index: 2;
+    z-index: 200;
 }
 
 /* Show chevron wrapper on bubble hover or when menu is open */
 .message-bubble:hover .chevron-wrapper,
-.chevron-wrapper:has(.visible),
 .chevron-wrapper:has(.chevron-more-menu) {
     opacity: 1;
-    pointer-events: auto;
 }
 
 /* Message meta (time + status) - always visible */
@@ -1106,17 +1103,18 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 20px;
-    height: 20px;
-    background: rgba(0, 0, 0, 0.08);
+    width: 24px;
+    height: 24px;
+    background: rgba(0, 0, 0, 0.1);
     border: none;
     border-radius: 50%;
     color: var(--gray-700);
     cursor: pointer;
     transition: transform 0.15s ease, background 0.15s ease;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
     padding: 0;
     flex-shrink: 0;
+    pointer-events: auto;
 }
 
 .own-bubble .chevron-more-btn {
