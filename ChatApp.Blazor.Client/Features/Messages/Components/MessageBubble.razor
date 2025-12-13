@@ -57,84 +57,79 @@
                         </div>
                     }
 
-                    <!-- Message text with inline footer -->
-                    <div class="message-text-wrapper">
-                        <span class="message-text">@Content</span>
-                        <span class="message-footer-inline">
-                            <!-- Chevron button - appears above time on hover -->
-                            <span class="chevron-wrapper @(menuPositionAbove ? "menu-above" : "")">
-                                <button class="chevron-more-btn @(showMoreMenu ? "visible" : "") @(IsDeleted ? "hidden" : "")"
-                                        title="More"
-                                        @onclick="ToggleMoreMenu"
-                                        @onclick:stopPropagation="true"
-                                        disabled="@IsDeleted">
-                                    <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" />
-                                </button>
+                    <!-- Message text -->
+                    <div class="message-text">@Content</div>
 
-                                <!-- More Menu -->
-                                @if (showMoreMenu)
+                    <!-- Footer: Time and status -->
+                    <div class="message-footer">
+                        @if (IsEdited)
+                        {
+                            <span class="edited-label">edited</span>
+                        }
+                        @if (IsPinned)
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.PushPin" Size="Size.Small" Class="pinned-icon-inline" />
+                        }
+                        <span class="message-time">@FormatTime(CreatedAt)</span>
+                        @if (IsOwn && !IsDeleted && IsDirectMessage)
+                        {
+                            <span class="read-status">
+                                @if (IsRead)
                                 {
-                                    <div class="chevron-more-menu" @onclick:stopPropagation="true">
-                                        <button class="menu-item" @onclick="HandleReplyButtonClick">
-                                            <MudIcon Icon="@Icons.Material.Filled.Reply" Size="Size.Small" />
-                                            <span>Reply</span>
-                                        </button>
-                                        <button class="menu-item" @onclick="OnCopyClick">
-                                            <MudIcon Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small" />
-                                            <span>Copy</span>
-                                        </button>
-                                        <button class="menu-item" @onclick="OnForwardClick">
-                                            <MudIcon Icon="@Icons.Material.Filled.Forward" Size="Size.Small" />
-                                            <span>Forward</span>
-                                        </button>
-                                        @if (!IsDirectMessage)
-                                        {
-                                            <button class="menu-item" @onclick="OnPinClick">
-                                                <MudIcon Icon="@Icons.Material.Filled.PushPin" Size="Size.Small" />
-                                                <span>@(IsPinned ? "Unpin" : "Pin")</span>
-                                            </button>
-                                        }
-                                        @if (IsOwn && !IsDeleted)
-                                        {
-                                            <button class="menu-item" @onclick="OnEditClick">
-                                                <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" />
-                                                <span>Edit</span>
-                                            </button>
-                                            <button class="menu-item delete-item" @onclick="OnDeleteClick">
-                                                <MudIcon Icon="@Icons.Material.Filled.Delete" Size="Size.Small" />
-                                                <span>Delete</span>
-                                            </button>
-                                        }
-                                    </div>
+                                    <MudIcon Icon="@Icons.Material.Filled.DoneAll" Size="Size.Small" Class="read-icon" />
+                                }
+                                else
+                                {
+                                    <MudIcon Icon="@Icons.Material.Filled.Done" Size="Size.Small" />
                                 }
                             </span>
-                            <!-- Time and status -->
-                            <span class="message-meta">
-                                @if (IsEdited)
-                                {
-                                    <span class="edited-label">Edited</span>
-                                }
-                                @if (IsPinned)
-                                {
-                                    <MudIcon Icon="@Icons.Material.Filled.PushPin" Size="Size.Small" Class="pinned-icon-inline" />
-                                }
-                                <span class="message-time-inline">@FormatTime(CreatedAt)</span>
-                                @if (IsOwn && !IsDeleted && IsDirectMessage)
-                                {
-                                    <span class="read-status-inline">
-                                        @if (IsRead)
-                                        {
-                                            <MudIcon Icon="@Icons.Material.Filled.DoneAll" Size="Size.Small" Class="read-icon" />
-                                        }
-                                        else
-                                        {
-                                            <MudIcon Icon="@Icons.Material.Filled.Done" Size="Size.Small" />
-                                        }
-                                    </span>
-                                }
-                            </span>
-                        </span>
+                        }
                     </div>
+
+                    <!-- Chevron button - top right corner -->
+                    <button class="chevron-more-btn @(showMoreMenu ? "visible" : "")"
+                            title="More"
+                            @onclick="ToggleMoreMenu"
+                            @onclick:stopPropagation="true">
+                        <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" />
+                    </button>
+
+                    <!-- More Menu -->
+                    @if (showMoreMenu)
+                    {
+                        <div class="chevron-more-menu @(menuPositionAbove ? "menu-above" : "")" @onclick:stopPropagation="true">
+                            <button class="menu-item" @onclick="HandleReplyButtonClick">
+                                <MudIcon Icon="@Icons.Material.Filled.Reply" Size="Size.Small" />
+                                <span>Reply</span>
+                            </button>
+                            <button class="menu-item" @onclick="OnCopyClick">
+                                <MudIcon Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small" />
+                                <span>Copy</span>
+                            </button>
+                            <button class="menu-item" @onclick="OnForwardClick">
+                                <MudIcon Icon="@Icons.Material.Filled.Forward" Size="Size.Small" />
+                                <span>Forward</span>
+                            </button>
+                            @if (!IsDirectMessage)
+                            {
+                                <button class="menu-item" @onclick="OnPinClick">
+                                    <MudIcon Icon="@Icons.Material.Filled.PushPin" Size="Size.Small" />
+                                    <span>@(IsPinned ? "Unpin" : "Pin")</span>
+                                </button>
+                            }
+                            @if (IsOwn && !IsDeleted)
+                            {
+                                <button class="menu-item" @onclick="OnEditClick">
+                                    <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" />
+                                    <span>Edit</span>
+                                </button>
+                                <button class="menu-item delete-item" @onclick="OnDeleteClick">
+                                    <MudIcon Icon="@Icons.Material.Filled.Delete" Size="Size.Small" />
+                                    <span>Delete</span>
+                                </button>
+                            }
+                        </div>
+                    }
                 </div>
             }
 

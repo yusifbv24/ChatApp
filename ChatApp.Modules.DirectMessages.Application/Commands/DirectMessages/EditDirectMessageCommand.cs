@@ -78,7 +78,6 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectMessages
 
                 var conversationId=message.ConversationId;
                 var receiverId=message.ReceiverId;
-                var senderId = message.SenderId;
 
                 // Edit the message
                 message.Edit(request.NewContent);
@@ -86,36 +85,17 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectMessages
                 // EF Core change tracker will automatically detect the property changes
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                // Create updated message DTO manually (since GetConversationMessagesAsync only returns latest message)
-                var messageDto = new DirectMessageDto(
-                    Id: message.Id,
-                    ConversationId: message.ConversationId,
-                    SenderId: senderId,
-                    SenderUsername: string.Empty, // Will be populated by frontend from user cache
-                    SenderDisplayName: string.Empty, // Will be populated by frontend from user cache
-                    SenderAvatarUrl: null, // Will be populated by frontend from user cache
-                    ReceiverId: receiverId,
-                    Content: message.Content,
-                    FileId: message.FileId,
-                    IsEdited: message.IsEdited,
-                    IsDeleted: message.IsDeleted,
-                    IsRead: message.IsRead,
-                    ReactionCount: 0, // Not needed for edit notification
-                    CreatedAtUtc: message.CreatedAtUtc,
-                    EditedAtUtc: message.EditedAtUtc,
-                    ReadAtUtc: message.ReadAtUtc,
-                    ReplyToMessageId: message.ReplyToMessageId,
-                    ReplyToContent: null, // We don't need this for edit notification
-                    ReplyToSenderName: null,
-                    IsForwarded: message.IsForwarded,
-                    Reactions: new List<DirectMessageReactionDto>() // Empty for now
-                );
+                // Get the full message DTO including reply info
+                var messageDto = await _unitOfWork.Messages.GetByIdAsDtoAsync(message.Id, cancellationToken);
 
-                // Send real-time notification to receiver with edited message
-                await _signalRNotificationService.NotifyDirectMessageEditedAsync(
-                    conversationId,
-                    receiverId,
-                    messageDto);
+                if (messageDto != null)
+                {
+                    // Send real-time notification to receiver with edited message
+                    await _signalRNotificationService.NotifyDirectMessageEditedAsync(
+                        conversationId,
+                        receiverId,
+                        messageDto);
+                }
 
                 _logger?.LogInformation("Message {MessageId} edited succesfully", request.MessageId);
                 return Result.Success();

@@ -7,6 +7,7 @@ namespace ChatApp.Modules.Channels.Application.Interfaces
     {
         Task<ChannelMessage?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
         Task<ChannelMessage?> GetByIdWithReactionsAsync(Guid id, CancellationToken cancellationToken = default);
+        Task<ChannelMessageDto?> GetByIdAsDtoAsync(Guid id, CancellationToken cancellationToken = default);
         Task<List<ChannelMessageDto>> GetChannelMessagesAsync(
             Guid channelId,
             int pageSize = 50,

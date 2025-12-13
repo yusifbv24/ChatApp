@@ -334,8 +334,19 @@ public partial class Messages : IAsyncDisposable
                 {
                     var index = directMessages.IndexOf(message);
                     directMessages[index] = editedMessage;
-                    StateHasChanged();
                 }
+
+                // Update reply previews for messages that replied to this edited message
+                for (int i = 0; i < directMessages.Count; i++)
+                {
+                    var msg = directMessages[i];
+                    if (msg.ReplyToMessageId == editedMessage.Id && msg.ReplyToContent != editedMessage.Content)
+                    {
+                        directMessages[i] = msg with { ReplyToContent = editedMessage.Content };
+                    }
+                }
+
+                StateHasChanged();
             }
 
             // Update conversation list to show edited content
@@ -355,8 +366,19 @@ public partial class Messages : IAsyncDisposable
                 {
                     var index = directMessages.IndexOf(message);
                     directMessages[index] = deletedMessage; // Use the deleted DTO from server
-                    StateHasChanged();
                 }
+
+                // Update reply previews for messages that replied to this deleted message
+                for (int i = 0; i < directMessages.Count; i++)
+                {
+                    var msg = directMessages[i];
+                    if (msg.ReplyToMessageId == deletedMessage.Id)
+                    {
+                        directMessages[i] = msg with { ReplyToContent = "This message was deleted" };
+                    }
+                }
+
+                StateHasChanged();
             }
 
             // Update conversation list to show last message
@@ -376,8 +398,19 @@ public partial class Messages : IAsyncDisposable
                 {
                     var index = channelMessages.IndexOf(message);
                     channelMessages[index] = editedMessage;
-                    StateHasChanged();
                 }
+
+                // Update reply previews for messages that replied to this edited message
+                for (int i = 0; i < channelMessages.Count; i++)
+                {
+                    var msg = channelMessages[i];
+                    if (msg.ReplyToMessageId == editedMessage.Id && msg.ReplyToContent != editedMessage.Content)
+                    {
+                        channelMessages[i] = msg with { ReplyToContent = editedMessage.Content };
+                    }
+                }
+
+                StateHasChanged();
             }
 
             // Update channel list to show edited content
@@ -397,8 +430,19 @@ public partial class Messages : IAsyncDisposable
                 {
                     var index = channelMessages.IndexOf(message);
                     channelMessages[index] = deletedMessage; // Use the deleted DTO from server
-                    StateHasChanged();
                 }
+
+                // Update reply previews for messages that replied to this deleted message
+                for (int i = 0; i < channelMessages.Count; i++)
+                {
+                    var msg = channelMessages[i];
+                    if (msg.ReplyToMessageId == deletedMessage.Id)
+                    {
+                        channelMessages[i] = msg with { ReplyToContent = "This message was deleted" };
+                    }
+                }
+
+                StateHasChanged();
             }
 
             // Update channel list to show last message

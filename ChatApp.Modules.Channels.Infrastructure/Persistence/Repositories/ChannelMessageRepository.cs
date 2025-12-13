@@ -27,6 +27,64 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 .FirstOrDefaultAsync(m => m.Id == id, cancellationToken);
         }
 
+        public async Task<ChannelMessageDto?> GetByIdAsDtoAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            var result = await (from message in _context.ChannelMessages
+                        join user in _context.Set<UserReadModel>() on message.SenderId equals user.Id
+                        join repliedMessage in _context.ChannelMessages on message.ReplyToMessageId equals repliedMessage.Id into replyJoin
+                        from repliedMessage in replyJoin.DefaultIfEmpty()
+                        join repliedSender in _context.Set<UserReadModel>() on repliedMessage.SenderId equals repliedSender.Id into repliedSenderJoin
+                        from repliedSender in repliedSenderJoin.DefaultIfEmpty()
+                        where message.Id == id
+                        select new
+                        {
+                            message.Id,
+                            message.ChannelId,
+                            message.SenderId,
+                            user.Username,
+                            user.DisplayName,
+                            user.AvatarUrl,
+                            message.Content,
+                            message.FileId,
+                            message.IsEdited,
+                            message.IsDeleted,
+                            message.IsPinned,
+                            message.CreatedAtUtc,
+                            message.EditedAtUtc,
+                            message.PinnedAtUtc,
+                            ReactionCount = _context.ChannelMessageReactions.Count(r => r.MessageId == message.Id),
+                            message.ReplyToMessageId,
+                            ReplyToContent = repliedMessage != null ? repliedMessage.Content : null,
+                            ReplyToSenderName = repliedSender != null ? repliedSender.DisplayName : null,
+                            message.IsForwarded
+                        }).FirstOrDefaultAsync(cancellationToken);
+
+            if (result == null)
+                return null;
+
+            return new ChannelMessageDto(
+                result.Id,
+                result.ChannelId,
+                result.SenderId,
+                result.Username,
+                result.DisplayName,
+                result.AvatarUrl,
+                result.Content,
+                result.FileId,
+                result.IsEdited,
+                result.IsDeleted,
+                result.IsPinned,
+                result.ReactionCount,
+                result.CreatedAtUtc,
+                result.EditedAtUtc,
+                result.PinnedAtUtc,
+                result.ReplyToMessageId,
+                result.ReplyToContent,
+                result.ReplyToSenderName,
+                result.IsForwarded
+            );
+        }
+
         public async Task<List<ChannelMessageDto>> GetChannelMessagesAsync(
             Guid channelId,
             int pageSize = 50,

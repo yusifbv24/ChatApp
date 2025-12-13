@@ -880,15 +880,9 @@
     box-shadow: 0 1px 2px rgba(99, 102, 241, 0.15);
 }
 
-/* Message content block - WhatsApp style compact layout */
+/* Message content block */
 .message-content-block {
     position: relative;
-    display: block;
-}
-
-/* Message text wrapper - contains text + inline footer */
-.message-text-wrapper {
-    display: inline;
 }
 
 .message-text {
@@ -897,47 +891,43 @@
     white-space: pre-wrap;
     color: var(--gray-800);
     word-wrap: break-word;
+    padding-right: 24px;
 }
 
 .own-bubble .message-text {
     color: var(--white);
 }
 
-/* Inline footer - floats at bottom right of message */
-.message-footer-inline {
-    display: inline-flex;
-    flex-direction: column;
+/* Message footer - time and status */
+.message-footer {
+    display: flex;
     align-items: center;
-    float: right;
-    margin-left: 8px;
-    margin-top: 8px;
-    position: relative;
-}
-
-/* Chevron wrapper - positioned absolutely above the time (can overlap) */
-.chevron-wrapper {
-    position: absolute;
-    bottom: 50%;
-    left: 50%;
-    transform: translateX(-50%);
-    opacity: 0;
-    transition: opacity 0.15s ease;
-    z-index: 200;
-}
-
-/* Show chevron wrapper on bubble hover or when menu is open */
-.message-bubble:hover .chevron-wrapper,
-.chevron-wrapper:has(.chevron-more-menu) {
-    opacity: 1;
-}
-
-/* Message meta (time + status) - always visible */
-.message-meta {
-    display: inline-flex;
-    align-items: center;
+    justify-content: flex-end;
     gap: 4px;
+    margin-top: 4px;
     font-size: 11px;
-    white-space: nowrap;
+    color: var(--gray-500);
+}
+
+.own-bubble .message-footer {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.message-time {
+    font-size: 11px;
+}
+
+.read-status {
+    display: flex;
+    align-items: center;
+}
+
+.read-status .mud-icon-root {
+    font-size: 16px !important;
+}
+
+.read-icon {
+    color: #34B7F1 !important;
 }
 
 /* ===================================
@@ -1040,28 +1030,6 @@
     animation: messageHighlight 2s ease-out;
 }
 
-/* Message meta colors */
-.own-bubble .message-meta {
-    color: rgba(255, 255, 255, 0.85);
-}
-
-.other-bubble .message-meta {
-    color: rgba(0, 0, 0, 0.55);
-}
-
-.message-time-inline {
-    font-size: 11px;
-}
-
-.read-status-inline {
-    display: inline-flex;
-    align-items: center;
-}
-
-    .read-status-inline .mud-icon-root {
-        font-size: 14px;
-    }
-
 .read-icon {
     color: #60A5FA !important;
 }
@@ -1072,17 +1040,13 @@
 }
 
 .pinned-icon-inline {
-    font-size: 14px !important;
+    font-size: 12px;
+    opacity: 0.7;
+    vertical-align: middle;
 }
 
 .own-bubble .edited-label {
     color: var(--white);
-}
-
-.pinned-icon-inline {
-    font-size: 12px;
-    opacity: 0.7;
-    vertical-align: middle;
 }
 
 .deleted-message {
@@ -1095,82 +1059,78 @@
 }
 
 /* ===================================
-   CHEVRON MORE BUTTON (Inside bubble - above time)
+   CHEVRON MORE BUTTON (Top-right corner of bubble)
    =================================== */
 
-/* Chevron More Button - inside the chevron wrapper */
 .chevron-more-btn {
+    position: absolute;
+    top: 4px;
+    right: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 24px;
-    height: 24px;
-    background: rgba(0, 0, 0, 0.1);
+    width: 22px;
+    height: 22px;
+    background: rgba(0, 0, 0, 0.08);
     border: none;
     border-radius: 50%;
-    color: var(--gray-700);
+    color: var(--gray-600);
     cursor: pointer;
-    transition: transform 0.15s ease, background 0.15s ease;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    transition: opacity 0.15s ease, background 0.15s ease;
     padding: 0;
-    flex-shrink: 0;
-    pointer-events: auto;
+    opacity: 0;
+    z-index: 10;
+}
+
+/* Show chevron on hover or when menu is open */
+.message-wrapper:hover .chevron-more-btn,
+.chevron-more-btn.visible {
+    opacity: 1;
 }
 
 .own-bubble .chevron-more-btn {
-    background: rgba(255, 255, 255, 0.25);
-    color: rgba(255, 255, 255, 1);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
-}
-
-.chevron-more-btn.hidden {
-    display: none !important;
+    background: rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.9);
 }
 
 .chevron-more-btn:hover {
     background: rgba(0, 0, 0, 0.15);
-    transform: scale(1.1);
 }
 
 .own-bubble .chevron-more-btn:hover {
-    background: rgba(255, 255, 255, 0.4);
+    background: rgba(255, 255, 255, 0.35);
 }
 
 .chevron-more-btn .mud-icon-root {
     font-size: 14px !important;
 }
 
-/* Chevron more menu - positioned relative to chevron wrapper */
+/* Chevron more menu - dropdown menu */
 .chevron-more-menu {
     position: absolute;
-    min-width: 180px;
+    top: 28px;
+    right: 4px;
+    min-width: 160px;
     background: var(--white);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-xl);
-    z-index: 100;
+    z-index: 200;
     overflow: hidden;
     border: 1px solid var(--gray-200);
-    top: calc(100% + 4px);
     animation: fadeInDown 0.15s ease-out;
 }
 
-/* Menu opens above when needed (when close to bottom of screen) */
-.chevron-wrapper.menu-above .chevron-more-menu {
+/* Menu opens above when close to bottom */
+.chevron-more-menu.menu-above {
     top: auto;
-    bottom: calc(100% + 4px);
+    bottom: 28px;
     animation: fadeInUp 0.15s ease-out;
 }
 
-/* For own messages (right side) - menu aligned to right */
-.message-wrapper.own .chevron-more-menu {
-    right: 0;
-    left: auto;
-}
-
-/* For other messages (left side) - menu aligned to left */
+/* For other messages - menu aligned to left */
 .message-wrapper.other .chevron-more-menu {
-    left: 0;
     right: auto;
+    left: 4px;
 }
 
 /* React button - outside the bubble */
@@ -1225,8 +1185,6 @@
         background: var(--gray-100);
         color: var(--primary-color);
     }
-
-/* Hide old message-meta */
 
 /* Message Reactions - WhatsApp style */
 .message-reactions {
@@ -1339,45 +1297,7 @@
         transform: scale(1.2);
     }
 
-/* ===================================
-   MORE MENU POPUP - Fixed styling
-   =================================== */
-
-.more-menu-popup {
-    position: absolute;
-    min-width: 180px;
-    background: var(--white);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-xl);
-    z-index: 100;
-    overflow: hidden;
-    border: 1px solid var(--gray-200);
-    animation: fadeInUp 0.15s ease-out;
-}
-
-    /* Position below message (default) */
-    .more-menu-popup.position-below {
-        top: 100%;
-        margin-top: 4px;
-    }
-
-    /* Position above message when not enough space below */
-    .more-menu-popup.position-above {
-        bottom: 100%;
-        top: auto;
-        margin-bottom: 4px;
-    }
-
-.message-wrapper.other .more-menu-popup {
-    left: 0;
-}
-
-.message-wrapper.own .more-menu-popup {
-    right: 0;
-    left: auto;
-}
-
-/* Menu Item - Fixed horizontal layout */
+/* Menu Item styles */
 .menu-item {
     display: flex;
     flex-direction: row;
