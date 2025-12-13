@@ -104,6 +104,7 @@ public partial class Messages : IAsyncDisposable
     private bool showForwardDialog;
     private DirectMessageDto? forwardingDirectMessage;
     private ChannelMessageDto? forwardingChannelMessage;
+    private string forwardSearchQuery = string.Empty;
 
     private bool IsEmpty => !selectedConversationId.HasValue && !selectedChannelId.HasValue && !isPendingConversation;
 
@@ -1448,13 +1449,10 @@ public partial class Messages : IAsyncDisposable
         showForwardDialog = false;
         forwardingDirectMessage = null;
         forwardingChannelMessage = null;
+        forwardSearchQuery = string.Empty;
         StateHasChanged();
     }
-    private string GetForwardMessagePreview()
-    {
-        var content = forwardingDirectMessage?.Content ?? forwardingChannelMessage?.Content ?? "";
-        return content.Length > 60 ? content.Substring(0, 60) + "..." : content;
-    }
+
     private async Task ForwardToConversation(Guid conversationId)
     {
         try
@@ -1471,8 +1469,39 @@ public partial class Messages : IAsyncDisposable
 
             if (result.IsSuccess)
             {
-                // Update conversation list to show the forwarded message
-                await LoadConversationsAndChannels();
+                var messageTime = DateTime.UtcNow;
+
+                // If forwarding to current conversation, add message locally
+                if (conversationId == selectedConversationId)
+                {
+                    var conversation = conversations.FirstOrDefault(c => c.Id == conversationId);
+                    var newMessage = new DirectMessageDto(
+                        result.Value,
+                        conversationId,
+                        currentUserId,
+                        UserState.CurrentUser?.Username ?? "",
+                        UserState.CurrentUser?.DisplayName ?? "",
+                        UserState.CurrentUser?.AvatarUrl,
+                        conversation?.OtherUserId ?? Guid.Empty,
+                        content,
+                        null,
+                        false,
+                        false,
+                        false,
+                        0,
+                        messageTime,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        true);
+
+                    directMessages.Add(newMessage);
+                }
+
+                // Update conversation list locally
+                UpdateConversationLocally(conversationId, content, messageTime);
                 CancelForward();
             }
             else
@@ -1485,6 +1514,7 @@ public partial class Messages : IAsyncDisposable
             ShowError("Failed to forward message: " + ex.Message);
         }
     }
+
     private async Task ForwardToChannel(Guid channelId)
     {
         try
@@ -1501,8 +1531,37 @@ public partial class Messages : IAsyncDisposable
 
             if (result.IsSuccess)
             {
-                // Update channel list to show the forwarded message
-                await LoadConversationsAndChannels();
+                var messageTime = DateTime.UtcNow;
+
+                // If forwarding to current channel, add message locally
+                if (channelId == selectedChannelId)
+                {
+                    var newMessage = new ChannelMessageDto(
+                        result.Value,
+                        channelId,
+                        currentUserId,
+                        UserState.CurrentUser?.Username ?? "",
+                        UserState.CurrentUser?.DisplayName ?? "",
+                        UserState.CurrentUser?.AvatarUrl,
+                        content,
+                        null,
+                        false,
+                        false,
+                        false,
+                        0,
+                        messageTime,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        true);
+
+                    channelMessages.Add(newMessage);
+                }
+
+                // Update channel list locally
+                UpdateChannelLastMessage(channelId, content, UserState.CurrentUser?.DisplayName);
                 CancelForward();
             }
             else
@@ -1513,6 +1572,60 @@ public partial class Messages : IAsyncDisposable
         catch (Exception ex)
         {
             ShowError("Failed to forward message: " + ex.Message);
+        }
+    }
+
+    private record ForwardItem(Guid Id, string Name, string? AvatarUrl, bool IsChannel, bool IsPrivate, DateTime? LastMessageAt);
+
+    private IEnumerable<ForwardItem> GetFilteredForwardItems()
+    {
+        var items = new List<ForwardItem>();
+
+        // Add conversations
+        foreach (var conv in conversations)
+        {
+            items.Add(new ForwardItem(
+                conv.Id,
+                conv.OtherUserDisplayName,
+                conv.OtherUserAvatarUrl,
+                IsChannel: false,
+                IsPrivate: false,
+                conv.LastMessageAtUtc));
+        }
+
+        // Add channels
+        foreach (var channel in channels)
+        {
+            items.Add(new ForwardItem(
+                channel.Id,
+                channel.Name,
+                null,
+                IsChannel: true,
+                IsPrivate: channel.Type == ChannelType.Private,
+                channel.LastMessageAtUtc));
+        }
+
+        // Sort by last message date (most recent first)
+        items = items.OrderByDescending(x => x.LastMessageAt ?? DateTime.MinValue).ToList();
+
+        // Filter by search query
+        if (!string.IsNullOrWhiteSpace(forwardSearchQuery))
+        {
+            items = items.Where(x => x.Name.Contains(forwardSearchQuery, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+
+        return items;
+    }
+
+    private async Task HandleForwardItemClick(ForwardItem item)
+    {
+        if (item.IsChannel)
+        {
+            await ForwardToChannel(item.Id);
+        }
+        else
+        {
+            await ForwardToConversation(item.Id);
         }
     }
     #endregion

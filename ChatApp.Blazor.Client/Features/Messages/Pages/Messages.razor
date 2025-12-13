@@ -233,71 +233,58 @@
 @if (showForwardDialog)
 {
     <div class="dialog-overlay" @onclick="CancelForward">
-        <div class="dialog-container" @onclick:stopPropagation="true">
-            <div class="dialog-content">
-                <div class="dialog-header">
-                    <h3>Forward Message</h3>
-                    <button class="dialog-close-btn" @onclick="CancelForward">
-                        <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Medium" />
-                    </button>
+        <div class="dialog-content forward-dialog" @onclick:stopPropagation="true">
+            <div class="forward-dialog-header">
+                <span class="forward-dialog-title">Forward message</span>
+                <button class="dialog-close-btn" @onclick="CancelForward">
+                    <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" />
+                </button>
+            </div>
+
+            <div class="forward-search-container">
+                <MudIcon Icon="@Icons.Material.Filled.Search" Size="Size.Small" Class="forward-search-icon" />
+                <input type="text"
+                       class="forward-search-input"
+                       placeholder="Search..."
+                       @bind="forwardSearchQuery"
+                       @bind:event="oninput" />
+            </div>
+
+            <div class="forward-dialog-body">
+                <span class="forward-section-label">Recent chats</span>
+
+                <div class="forward-chats-list">
+                    @foreach (var item in GetFilteredForwardItems())
+                    {
+                        <div class="forward-chat-item">
+                            <div class="forward-chat-avatar @(item.IsChannel ? "channel-type" : "")">
+                                @if (item.IsChannel)
+                                {
+                                    <MudIcon Icon="@(item.IsPrivate ? Icons.Material.Filled.Lock : Icons.Material.Filled.Group)" Size="Size.Small" />
+                                }
+                                else if (!string.IsNullOrEmpty(item.AvatarUrl))
+                                {
+                                    <img src="@item.AvatarUrl" alt="@item.Name" />
+                                }
+                                else
+                                {
+                                    <span class="avatar-initials">@GetInitials(item.Name)</span>
+                                }
+                            </div>
+                            <span class="forward-chat-name">@item.Name</span>
+                            <button class="forward-send-btn" @onclick="() => HandleForwardItemClick(item)">
+                                <MudIcon Icon="@Icons.Material.Filled.Send" Size="Size.Small" />
+                            </button>
+                        </div>
+                    }
                 </div>
-                <div class="dialog-body">
-                    <div class="forward-message-preview">
-                        <MudIcon Icon="@Icons.Material.Filled.ForwardToInbox" Size="Size.Small" />
-                        <span>@GetForwardMessagePreview()</span>
+
+                @if (!GetFilteredForwardItems().Any())
+                {
+                    <div class="forward-empty-state">
+                        <span>No chats found</span>
                     </div>
-
-                    <h4 class="forward-section-title">Select destination:</h4>
-
-                    @if (conversations.Any())
-                    {
-                        <div class="forward-list-section">
-                            <h5>Direct Messages</h5>
-                            @foreach (var conversation in conversations)
-                            {
-                                <div class="forward-list-item" @onclick="() => ForwardToConversation(conversation.Id)">
-                                    <div class="conversation-avatar">
-                                        @if (!string.IsNullOrEmpty(conversation.OtherUserAvatarUrl))
-                                        {
-                                            <img src="@conversation.OtherUserAvatarUrl" alt="@conversation.OtherUserDisplayName" />
-                                        }
-                                        else
-                                        {
-                                            <div class="avatar-placeholder">@GetInitials(conversation.OtherUserDisplayName)</div>
-                                        }
-                                    </div>
-                                    <span class="forward-item-name">@conversation.OtherUserDisplayName</span>
-                                    <MudIcon Icon="@Icons.Material.Filled.Send" Size="Size.Small" Class="forward-icon" />
-                                </div>
-                            }
-                        </div>
-                    }
-
-                    @if (channels.Any())
-                    {
-                        <div class="forward-list-section">
-                            <h5>Groups</h5>
-                            @foreach (var channel in channels)
-                            {
-                                <div class="forward-list-item" @onclick="() => ForwardToChannel(channel.Id)">
-                                    <div class="channel-avatar">
-                                        <MudIcon Icon="@(channel.Type == ChannelType.Private ? Icons.Material.Filled.Lock : Icons.Material.Filled.Group)" Size="Size.Small" />
-                                    </div>
-                                    <span class="forward-item-name">@channel.Name</span>
-                                    <MudIcon Icon="@Icons.Material.Filled.Send" Size="Size.Small" Class="forward-icon" />
-                                </div>
-                            }
-                        </div>
-                    }
-
-                    @if (!conversations.Any() && !channels.Any())
-                    {
-                        <div class="empty-state">
-                            <MudIcon Icon="@Icons.Material.Filled.Forum" Class="empty-icon" />
-                            <p>No conversations or channels available</p>
-                        </div>
-                    }
-                </div>
+                }
             </div>
         </div>
     </div>

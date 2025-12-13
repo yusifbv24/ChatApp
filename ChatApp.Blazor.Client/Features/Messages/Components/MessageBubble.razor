@@ -151,26 +151,24 @@
         </div>
 
         <!-- Message Actions (visible on hover) -->
-        @if (!IsDeleted && !showReactionPicker && !showMoreMenu)
+        @if (!IsDeleted && !showMoreMenu)
         {
-            <div class="message-actions">
+            <div class="message-actions @(showReactionPicker ? "picker-open" : "")">
                 <button class="action-btn" title="React" @onclick="ToggleReactionPicker"
                         @onclick:stopPropagation="true">
                     <MudIcon Icon="@Icons.Material.Filled.EmojiEmotions" Size="Size.Small" />
                 </button>
-            </div>
-        }
 
-        <!-- Reaction Picker (positioned above react button location) -->
-        @if (showReactionPicker)
-        {
-            <div class="message-actions">
-                <div class="reaction-picker-popup" @onclick:stopPropagation="true">
-                    @foreach (var emoji in CommonReactions)
-                    {
-                        <button class="reaction-btn" @onclick="() => SelectReaction(emoji)">@emoji</button>
-                    }
-                </div>
+                <!-- Reaction Picker (positioned above react button) -->
+                @if (showReactionPicker)
+                {
+                    <div class="reaction-picker-popup" @onclick:stopPropagation="true">
+                        @foreach (var emoji in CommonReactions)
+                        {
+                            <button class="reaction-btn" @onclick="() => SelectReaction(emoji)">@emoji</button>
+                        }
+                    </div>
+                }
             </div>
         }
     </div>

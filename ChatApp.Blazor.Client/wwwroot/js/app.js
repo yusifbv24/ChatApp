@@ -73,6 +73,30 @@ window.chatAppUtils = {
         }
     },
 
+    // Auto-resize textarea based on content
+    autoResizeTextarea: (element) => {
+        if (!element) return;
+        element.style.height = 'auto';
+        const scrollHeight = element.scrollHeight;
+        const maxHeight = 200;
+        const newHeight = Math.min(scrollHeight, maxHeight);
+        element.style.height = newHeight + 'px';
+
+        // Add scroll class only when content exceeds max height
+        if (scrollHeight > maxHeight) {
+            element.classList.add('has-scroll');
+        } else {
+            element.classList.remove('has-scroll');
+        }
+    },
+
+    // Reset textarea height to default
+    resetTextareaHeight: (element) => {
+        if (!element) return;
+        element.style.height = '24px';
+        element.classList.remove('has-scroll');
+    },
+
     // Get element position for smart menu positioning
     getElementPosition: (element) => {
         if (!element) return null;

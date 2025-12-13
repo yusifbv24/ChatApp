@@ -1,11 +1,14 @@
-﻿<div class="message-input-container @(IsEditing ? "editing" : "") @(IsReplying ? "replying" : "")">
+@inject IJSRuntime JS
+@inject UserState UserState
+
+<div class="message-input-container @(IsEditing ? "editing" : "") @(IsReplying ? "replying" : "")">
     @if (IsEditing)
     {
         <div class="edit-indicator">
             <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" />
             <span>Editing message</span>
             <button class="cancel-edit-btn" @onclick="CancelEdit">
-                <MudIcon  Icon="@Icons.Material.Filled.Close" Size="Size.Small" />
+                <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" />
             </button>
         </div>
     }
@@ -26,7 +29,7 @@
 
     @if (!UserState.HasPermission("Messages.Send"))
     {
-        <div class="input-row disabled-input">
+        <div class="input-bubble disabled-input">
             <div class="permission-denied-message">
                 <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" />
                 <span>You don't have permission to send messages</span>
@@ -35,38 +38,41 @@
     }
     else
     {
-        <div class="input-row">
-            <button class="input-action-btn attach-btn" title="Attach file" @onclick="OnAttachClick" disabled="@IsSending">
-                <MudIcon Icon="@Icons.Material.Filled.AttachFile" />
+        <div class="input-bubble">
+            <button class="input-icon-btn attach-btn" title="Attach file" @onclick="OnAttachClick" disabled="@IsSending">
+                <MudIcon Icon="@Icons.Material.Filled.AttachFile" Size="Size.Small" />
             </button>
 
-            <div class="input-wrapper">
-                <textarea @ref="textAreaRef"
-                          class="message-textarea"
-                          placeholder="@Placeholder"
-                          value="@MessageText"
-                          @oninput="HandleInput"
-                          @onkeydown="HandleKeyDown"
-                          @onblur="HandleBlur"
-                          disabled="@IsSending"
-                          rows="1"></textarea>
-            </div>
+            <textarea @ref="textAreaRef"
+                      class="message-textarea"
+                      placeholder="@Placeholder"
+                      value="@MessageText"
+                      @oninput="HandleInput"
+                      @onkeydown="HandleKeyDown"
+                      @onblur="HandleBlur"
+                      disabled="@IsSending"
+                      maxlength="4000"
+                      rows="1"></textarea>
 
-            <button class="input-action-btn emoji-btn" title="Emoji" @onclick="ToggleEmojiPicker" disabled="@IsSending">
-                <MudIcon Icon="@Icons.Material.Filled.EmojiEmotions"/>
+            <span class="char-counter @(IsNearLimit ? "near-limit" : "") @(IsAtLimit ? "at-limit" : "")">
+                @MessageText.Length/@MaxLength
+            </span>
+
+            <button class="input-icon-btn emoji-btn" title="Emoji" @onclick="ToggleEmojiPicker" disabled="@IsSending">
+                <MudIcon Icon="@Icons.Material.Filled.EmojiEmotions" Size="Size.Small" />
             </button>
 
             <button class="send-btn @(CanSend ? "active" : "")"
                     title="@(IsEditing ? "Save" : "Send")"
                     @onclick="SendMessage"
-                    disabled="@SendButtonDisabled" >   
+                    disabled="@SendButtonDisabled">
                 @if (IsSending)
                 {
                     <div class="send-spinner"></div>
                 }
                 else
                 {
-                    <MudIcon Icon="@(IsEditing ? Icons.Material.Filled.Check : Icons.Material.Filled.Send)" />
+                    <MudIcon Icon="@(IsEditing ? Icons.Material.Filled.Check : Icons.Material.Filled.Send)" Size="Size.Small" />
                 }
             </button>
         </div>
@@ -85,20 +91,16 @@
                 </button>
             </div>
             <div class="emoji-grid">
-                @foreach(var emoji in CommonEmojis)
+                @foreach (var emoji in CommonEmojis)
                 {
-                    <button class="emoji-btn" @onclick="()=>InsertEmoji(emoji)">@emoji</button>
+                    <button class="emoji-btn" @onclick="() => InsertEmoji(emoji)">@emoji</button>
                 }
             </div>
         </div>
     </div>
 }
 
-
-@inject IJSRuntime JS
-@inject UserState UserState
-
-@code{
+@code {
     [Parameter] public string Placeholder { get; set; } = "Type a message...";
     [Parameter] public bool IsEditing { get; set; }
     [Parameter] public string? EditingContent { get; set; }
@@ -112,14 +114,14 @@
 
     // Reply-related parameters
     [Parameter] public bool IsReplying { get; set; }
-    [Parameter] public Guid? ReplyToMessageId { get; set; }
     [Parameter] public string? ReplyToSenderName { get; set; }
     [Parameter] public string? ReplyToContent { get; set; }
     [Parameter] public EventCallback OnCancelReply { get; set; }
 
+    private const int MaxLength = 4000;
     private ElementReference textAreaRef;
     private string MessageText { get; set; } = string.Empty;
-    private bool showEmojiPicker=false;
+    private bool showEmojiPicker = false;
     private bool isTyping = false;
     private System.Timers.Timer? typingTimer;
     private Guid? previousConversationId;
@@ -127,34 +129,27 @@
     private bool wasReplying = false;
 
     private readonly string[] CommonEmojis = {
-
         "😀", "😃", "😄", "😁", "😅", "😂", "🤣", "😊",
-
         "😇", "🙂", "🙃", "😉", "😌", "😍", "🥰", "😘",
-
         "😗", "😙", "😚", "😋", "😛", "😜", "🤪", "😝",
-
         "🤑", "🤗", "🤭", "🤫", "🤔", "🤐", "🤨", "😐",
-
         "👍", "👎", "👌", "✌️", "🤞", "🤟", "🤘", "🤙",
-
         "👏", "🙌", "👐", "🤲", "🤝", "🙏", "❤️", "🧡",
-
         "💛", "💚", "💙", "💜", "🖤", "💔", "💕", "💞",
-
         "🎉", "🎊", "🎁", "🔥", "⭐", "✨", "💯", "💪"
-
     };
 
-    private bool CanSend => !string.IsNullOrWhiteSpace(MessageText) && !IsSending;
+    private bool CanSend => !string.IsNullOrWhiteSpace(MessageText) && !IsSending && MessageText.Length <= MaxLength;
     private bool SendButtonDisabled => !CanSend || IsSending;
+    private bool IsNearLimit => MessageText.Length >= 3500 && MessageText.Length < MaxLength;
+    private bool IsAtLimit => MessageText.Length >= MaxLength;
     private bool shouldFocus = false;
 
     protected override void OnInitialized()
     {
         typingTimer = new System.Timers.Timer(2000);
         typingTimer.Elapsed += async (s, e) => await StopTyping();
-        typingTimer.AutoReset=false;
+        typingTimer.AutoReset = false;
     }
 
     protected override void OnParametersSet()
@@ -210,15 +205,46 @@
 
     private async Task HandleInput(ChangeEventArgs e)
     {
-        MessageText = e.Value?.ToString() ?? "";
+        var newValue = e.Value?.ToString() ?? "";
+
+        // Enforce max length
+        if (newValue.Length > MaxLength)
+        {
+            newValue = newValue.Substring(0, MaxLength);
+        }
+
+        MessageText = newValue;
+
+        // Close emoji picker when typing
+        if (showEmojiPicker)
+        {
+            showEmojiPicker = false;
+        }
+
         await StartTyping();
+
+        // Auto-resize textarea
+        await JS.InvokeVoidAsync("chatAppUtils.autoResizeTextarea", textAreaRef);
     }
 
     private async Task HandleKeyDown(KeyboardEventArgs e)
     {
-        if(e.Key == "Enter" && !e.ShiftKey)
+        if (e.Key == "Enter" && !e.ShiftKey)
         {
+            // Close emoji picker if open
+            if (showEmojiPicker)
+            {
+                showEmojiPicker = false;
+            }
             await SendMessage();
+        }
+        else if (e.Key == "Escape")
+        {
+            // Close emoji picker with Escape key
+            if (showEmojiPicker)
+            {
+                showEmojiPicker = false;
+            }
         }
     }
 
@@ -251,9 +277,18 @@
     {
         if (!CanSend) return;
 
+        // Close emoji picker if open
+        if (showEmojiPicker)
+        {
+            showEmojiPicker = false;
+        }
+
         var message = MessageText.Trim();
         MessageText = string.Empty;
         await StopTyping();
+
+        // Reset textarea height
+        await JS.InvokeVoidAsync("chatAppUtils.resetTextareaHeight", textAreaRef);
 
         if (IsEditing)
         {
@@ -292,9 +327,18 @@
         await OnAttach.InvokeAsync();
     }
 
-    private void ToggleEmojiPicker()
+    private async Task ToggleEmojiPicker()
     {
         showEmojiPicker = !showEmojiPicker;
+
+        // Keep textarea focused when emoji picker opens
+        if (showEmojiPicker)
+        {
+            shouldFocus = true;
+            StateHasChanged();
+            await Task.Delay(10);
+            await FocusAsync();
+        }
     }
 
     private void CloseEmojiPicker()
@@ -302,9 +346,16 @@
         showEmojiPicker = false;
     }
 
-    private void InsertEmoji(string emoji)
+    private async Task InsertEmoji(string emoji)
     {
-        MessageText += emoji;
+        // Check if adding emoji would exceed limit
+        if (MessageText.Length + emoji.Length <= MaxLength)
+        {
+            MessageText += emoji;
+        }
+
+        // Keep textarea focused after inserting emoji
+        await FocusAsync();
     }
 
     // Public method to focus the textarea from parent components
