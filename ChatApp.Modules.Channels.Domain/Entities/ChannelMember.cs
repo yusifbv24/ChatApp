@@ -10,6 +10,7 @@ namespace ChatApp.Modules.Channels.Domain.Entities
         public MemberRole Role { get; private set; }
         public DateTime JoinedAtUtc { get; private set; }
         public DateTime? LeftAtUtc { get; private set; }
+        public DateTime? LastReadAtUtc { get; private set; }
         public bool IsActive { get; private set; }
 
         // Navigation properties
@@ -44,6 +45,12 @@ namespace ChatApp.Modules.Channels.Domain.Entities
             IsActive = true;
             LeftAtUtc = null;
             JoinedAtUtc = DateTime.UtcNow;
+            UpdateTimestamp();
+        }
+
+        public void MarkAsRead()
+        {
+            LastReadAtUtc = DateTime.UtcNow;
             UpdateTimestamp();
         }
     }

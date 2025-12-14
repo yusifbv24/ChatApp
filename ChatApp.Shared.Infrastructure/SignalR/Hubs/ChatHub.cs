@@ -70,11 +70,14 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Hubs
             if (userId == Guid.Empty)
                 return;
 
+            var username = GetUsername();
+
             // Broadcast to all users in the channel except sender
             await Clients.Group($"channel_{channelId}").SendAsync(
                 "UserTypingInChannel",
                 channelId,
                 userId,
+                username,
                 isTyping);
         }
 
@@ -172,6 +175,11 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Hubs
             }
 
             return userId;
+        }
+
+        private string GetUsername()
+        {
+            return Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Someone";
         }
     }
 }

@@ -2,6 +2,7 @@
 using ChatApp.Modules.Channels.Domain.Entities;
 using ChatApp.Modules.Channels.Domain.Enums;
 using ChatApp.Modules.Channels.Domain.Events;
+using ChatApp.Shared.Infrastructure.SignalR.Services;
 using ChatApp.Shared.Kernel.Common;
 using ChatApp.Shared.Kernel.Exceptions;
 using ChatApp.Shared.Kernel.Interfaces;
@@ -40,15 +41,18 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMembers
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IEventBus _eventBus;
+        private readonly ISignalRNotificationService _notificationService;
         private readonly ILogger<AddMemberCommandHandler> _logger;
 
         public AddMemberCommandHandler(
             IUnitOfWork unitOfWork,
             IEventBus eventBus,
+            ISignalRNotificationService notificationService,
             ILogger<AddMemberCommandHandler> logger)
         {
             _unitOfWork = unitOfWork;
             _eventBus = eventBus;
+            _notificationService = notificationService;
             _logger = logger;
         }
 
@@ -115,6 +119,21 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMembers
                 await _eventBus.PublishAsync(
                     new MemberAddedEvent(request.ChannelId, request.UserId, request.AddedBy),
                     cancellationToken);
+
+                // Notify added user via SignalR so channel appears in their list
+                var channelDto = new
+                {
+                    Id = channel.Id,
+                    Name = channel.Name,
+                    Description = channel.Description,
+                    Type = (int)channel.Type,
+                    CreatedBy = channel.CreatedBy,
+                    MemberCount = channel.Members?.Count(m => m.IsActive) ?? 1,
+                    IsArchived = channel.IsArchived,
+                    CreatedAtUtc = channel.CreatedAtUtc,
+                    UnreadCount = 0
+                };
+                await _notificationService.NotifyMemberAddedToChannelAsync(request.UserId, channelDto);
 
                 _logger?.LogInformation(
                     "User {UserId} added to channel {ChannelId} successfully",

@@ -194,28 +194,25 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
 
         public async Task<int> GetUnreadCountAsync(Guid channelId, Guid userId, CancellationToken cancellationToken = default)
         {
-            // Get the last read message timestamp for this user in this channel
-            var lastReadTime = await _context.ChannelMessageReads
-                .Where(r => r.UserId == userId)
-                .Join(_context.ChannelMessages,
-                    read => read.MessageId,
-                    message => message.Id,
-                    (read, message) => new { read.ReadAtUtc, message.ChannelId })
-                .Where(x => x.ChannelId == channelId)
-                .OrderByDescending(x => x.ReadAtUtc)
-                .Select(x => (DateTime?)x.ReadAtUtc)
+            // Get the last read timestamp from ChannelMember
+            var member = await _context.ChannelMembers
+                .Where(m => m.ChannelId == channelId && m.UserId == userId && m.IsActive)
+                .Select(m => new { m.LastReadAtUtc, m.JoinedAtUtc })
                 .FirstOrDefaultAsync(cancellationToken);
 
+            if (member == null)
+                return 0;
+
+            // Use LastReadAtUtc if available, otherwise use JoinedAtUtc (don't count messages before joining)
+            var lastReadTime = member.LastReadAtUtc ?? member.JoinedAtUtc;
+
             // Count unread messages (after last read time, excluding user's own messages)
-            var query = _context.ChannelMessages
-                .Where(m => m.ChannelId == channelId && !m.IsDeleted && m.SenderId != userId);
-
-            if (lastReadTime.HasValue)
-            {
-                query = query.Where(m => m.CreatedAtUtc > lastReadTime.Value);
-            }
-
-            return await query.CountAsync(cancellationToken);
+            return await _context.ChannelMessages
+                .Where(m => m.ChannelId == channelId
+                         && !m.IsDeleted
+                         && m.SenderId != userId
+                         && m.CreatedAtUtc > lastReadTime)
+                .CountAsync(cancellationToken);
         }
 
         public async Task AddAsync(ChannelMessage message, CancellationToken cancellationToken = default)

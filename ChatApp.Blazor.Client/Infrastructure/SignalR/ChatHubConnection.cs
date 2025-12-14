@@ -167,6 +167,16 @@ public class ChatHubConnection : IChatHubConnection, IAsyncDisposable
         return _hubConnection.On(methodName, handler);
     }
 
+    public IDisposable On<T1, T2, T3, T4>(string methodName, Action<T1, T2, T3, T4> handler)
+    {
+        if (_hubConnection == null)
+        {
+            throw new InvalidOperationException("Hub connection not started");
+        }
+
+        return _hubConnection.On(methodName, handler);
+    }
+
     public async ValueTask DisposeAsync()
     {
         if (_hubConnection != null)

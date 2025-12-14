@@ -1,5 +1,6 @@
 ﻿@implements IAsyncDisposable
 @inject IJSRuntime JS
+@using ChatApp.Blazor.Client.Models.Auth
 
 <div class="chat-area">
     @if (IsEmpty)
@@ -55,14 +56,10 @@
                 }
             </div>
             <div class="chat-header-actions">
-                @if (!IsDirectMessage)
+                @if (!IsDirectMessage && IsChannelAdmin)
                 {
-                    <button class="header-action-btn" title="Pinned messages" @onclick="TogglePinnedMessages">
-                        <MudIcon Icon="@Icons.Material.Filled.PushPin" />
-                        @if (PinnedCount > 0)
-                        {
-                            <span class="action-badge">@PinnedCount</span>
-                        }
+                    <button class="header-action-btn" title="Add member" @onclick="ToggleAddMemberPanel">
+                        <MudIcon Icon="@Icons.Material.Filled.PersonAdd" />
                     </button>
                 }
                 <button class="header-action-btn" title="Search" @onclick="ToggleSearch">
@@ -251,7 +248,7 @@
                         {
                             <div class="info-avatar-placeholder">@GetInitials(RecipientName)></div>
                         }
-                        <h4>@RecipientName</h4> 
+                        <h4>@RecipientName</h4>
                         <span class="info-status @(IsRecipientOnline ? "online" : "")">
                             @(IsRecipientOnline ? "Online" : "Offline")
                         </span>
@@ -273,12 +270,110 @@
     </div>
 }
 
+<!-- Add Member Dialog -->
+@if (showAddMemberPanel)
+{
+    <div class="dialog-overlay" @onclick="CloseAddMemberPanel">
+        <div class="dialog-content add-member-dialog" @onclick:stopPropagation="true">
+            <div class="dialog-header">
+                <h3>Add Member</h3>
+                <button class="dialog-close-btn" @onclick="CloseAddMemberPanel">
+                    <MudIcon Icon="@Icons.Material.Filled.Close" />
+                </button>
+            </div>
+            <div class="dialog-body">
+                <!-- Search Users -->
+                <div class="member-search-section">
+                    <div class="member-search-input">
+                        <MudIcon Icon="@Icons.Material.Filled.Search" Size="Size.Small" />
+                        <input type="text"
+                               placeholder="Search users..."
+                               value="@memberSearchQuery"
+                               @oninput="OnMemberSearchInput" />
+                    </div>
+
+                    @if (isSearchingMembers)
+                    {
+                        <div class="member-search-loading">
+                            <div class="loading-spinner small"></div>
+                            <span>Searching...</span>
+                        </div>
+                    }
+                    else if (memberSearchResults.Any())
+                    {
+                        <div class="member-search-results">
+                            @foreach (var user in memberSearchResults)
+                            {
+                                <div class="member-search-item">
+                                    <div class="member-avatar">
+                                        @if (!string.IsNullOrEmpty(user.AvatarUrl))
+                                        {
+                                            <img src="@user.AvatarUrl" alt="@user.DisplayName" />
+                                        }
+                                        else
+                                        {
+                                            <div class="avatar-placeholder">@GetInitials(user.DisplayName)</div>
+                                        }
+                                    </div>
+                                    <div class="member-info">
+                                        <span class="member-name">@user.DisplayName</span>
+                                        <span class="member-username">@@@user.Username</span>
+                                    </div>
+                                    <div class="member-actions">
+                                        <select class="role-select" @bind="selectedRoleForUser[user.Id]">
+                                            <option value="@ChannelMemberRole.Member">Member</option>
+                                            <option value="@ChannelMemberRole.Admin">Admin</option>
+                                        </select>
+                                        <button class="add-member-btn" @onclick="() => AddMemberToChannel(user.Id)" disabled="@isAddingMember">
+                                            @if (isAddingMember && addingUserId == user.Id)
+                                            {
+                                                <div class="loading-spinner small"></div>
+                                            }
+                                            else
+                                            {
+                                                <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" />
+                                            }
+                                        </button>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else if (!string.IsNullOrEmpty(memberSearchQuery) && memberSearchQuery.Length >= 2)
+                    {
+                        <div class="member-search-empty">
+                            <span>No users found</span>
+                        </div>
+                    }
+                </div>
+
+                @if (!string.IsNullOrEmpty(addMemberError))
+                {
+                    <div class="add-member-error">
+                        <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Small" />
+                        <span>@addMemberError</span>
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(addMemberSuccess))
+                {
+                    <div class="add-member-success">
+                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" />
+                        <span>@addMemberSuccess</span>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+
 
 @code {
     [Parameter] public bool IsEmpty { get; set; } = true;
     [Parameter] public bool IsDirectMessage { get; set; } = true;
     [Parameter] public Guid CurrentUserId { get; set; }
     [Parameter] public Guid? ConversationId { get; set; }
+    [Parameter] public Guid? ChannelId { get; set; }
 
     // Direct Message Parameters
     [Parameter] public List<DirectMessageDto> DirectMessages { get; set; } = new();
@@ -293,6 +388,7 @@
     [Parameter] public ChannelType ChannelType { get; set; }
     [Parameter] public int MemberCount { get; set; }
     [Parameter] public int PinnedCount { get; set; }
+    [Parameter] public bool IsChannelAdmin { get; set; }
 
     // Common Parameters
     [Parameter] public bool IsLoading { get; set; }
@@ -300,7 +396,6 @@
     [Parameter] public bool HasMoreMessages { get; set; }
     [Parameter] public bool IsSending { get; set; }
     [Parameter] public List<string> TypingUsers { get; set; } = new();
-
 
     // Event Callbacks
     [Parameter] public EventCallback<string> OnSendMessage { get; set; }
@@ -313,6 +408,10 @@
     [Parameter] public EventCallback<Guid> OnReply { get; set; }
     [Parameter] public EventCallback<Guid> OnForward { get; set; }
     [Parameter] public EventCallback OnCancelReply { get; set; }
+    [Parameter] public EventCallback<(Guid userId, ChannelMemberRole role)> OnAddMember { get; set; }
+    [Parameter] public EventCallback<string> OnSearchUsers { get; set; }
+    [Parameter] public List<UserDto> UserSearchResults { get; set; } = new();
+    [Parameter] public bool IsSearchingUsers { get; set; }
 
     // Reply state parameters
     [Parameter] public bool IsReplying { get; set; }
@@ -327,6 +426,7 @@
     private MessageInput? messageInputRef;
     private bool showSearch = false;
     private bool showInfoPanel = false;
+    private bool showAddMemberPanel = false;
     private string SearchQuery { get; set; } = string.Empty;
     private bool isEditing = false;
     private Guid editingMessageId;
@@ -337,6 +437,17 @@
     private object? _savedScrollPosition = null;
     private DateTime _lastScrollCheck = DateTime.MinValue;
     private int _scrollTopOnLastCheck = 0;
+
+    // Add member panel state
+    private string memberSearchQuery = string.Empty;
+    private List<UserDto> memberSearchResults = new();
+    private bool isSearchingMembers = false;
+    private bool isAddingMember = false;
+    private Guid? addingUserId = null;
+    private string? addMemberError = null;
+    private string? addMemberSuccess = null;
+    private Dictionary<Guid, ChannelMemberRole> selectedRoleForUser = new();
+    private CancellationTokenSource? _memberSearchCts;
 
     protected override void OnParametersSet()
     {
@@ -636,9 +747,158 @@
         await RefocusInput();
     }
 
+    #region Add Member Panel
+
+    private void ToggleAddMemberPanel()
+    {
+        showAddMemberPanel = !showAddMemberPanel;
+        if (!showAddMemberPanel)
+        {
+            ResetAddMemberPanel();
+        }
+    }
+
+    private void CloseAddMemberPanel()
+    {
+        showAddMemberPanel = false;
+        ResetAddMemberPanel();
+    }
+
+    private void ResetAddMemberPanel()
+    {
+        memberSearchQuery = string.Empty;
+        memberSearchResults.Clear();
+        selectedRoleForUser.Clear();
+        addMemberError = null;
+        addMemberSuccess = null;
+        _memberSearchCts?.Cancel();
+    }
+
+    private async Task OnMemberSearchInput(ChangeEventArgs e)
+    {
+        memberSearchQuery = e.Value?.ToString() ?? "";
+        addMemberError = null;
+        addMemberSuccess = null;
+
+        // Cancel previous search
+        _memberSearchCts?.Cancel();
+        _memberSearchCts = new CancellationTokenSource();
+        var token = _memberSearchCts.Token;
+
+        // Clear results if query is too short
+        if (string.IsNullOrWhiteSpace(memberSearchQuery) || memberSearchQuery.Length < 2)
+        {
+            memberSearchResults.Clear();
+            isSearchingMembers = false;
+            StateHasChanged();
+            return;
+        }
+
+        // Debounce - wait 300ms before searching
+        try
+        {
+            await Task.Delay(300, token);
+        }
+        catch (TaskCanceledException)
+        {
+            return;
+        }
+
+        await SearchMembers(token);
+    }
+
+    private async Task SearchMembers(CancellationToken token)
+    {
+        if (token.IsCancellationRequested) return;
+
+        isSearchingMembers = true;
+        StateHasChanged();
+
+        try
+        {
+            await OnSearchUsers.InvokeAsync(memberSearchQuery);
+
+            if (token.IsCancellationRequested) return;
+
+            // Copy results from parent and initialize role selections
+            memberSearchResults = UserSearchResults.ToList();
+            foreach (var user in memberSearchResults)
+            {
+                if (!selectedRoleForUser.ContainsKey(user.Id))
+                {
+                    selectedRoleForUser[user.Id] = ChannelMemberRole.Member;
+                }
+            }
+        }
+        catch
+        {
+            memberSearchResults.Clear();
+        }
+        finally
+        {
+            if (!token.IsCancellationRequested)
+            {
+                isSearchingMembers = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task AddMemberToChannel(Guid userId)
+    {
+        if (isAddingMember) return;
+
+        isAddingMember = true;
+        addingUserId = userId;
+        addMemberError = null;
+        addMemberSuccess = null;
+        StateHasChanged();
+
+        try
+        {
+            var role = selectedRoleForUser.GetValueOrDefault(userId, ChannelMemberRole.Member);
+            await OnAddMember.InvokeAsync((userId, role));
+
+            // Remove from search results after successful add
+            var user = memberSearchResults.FirstOrDefault(u => u.Id == userId);
+            if (user != null)
+            {
+                addMemberSuccess = $"{user.DisplayName} added successfully";
+                memberSearchResults.Remove(user);
+                selectedRoleForUser.Remove(userId);
+            }
+        }
+        catch (Exception ex)
+        {
+            addMemberError = ex.Message;
+        }
+        finally
+        {
+            isAddingMember = false;
+            addingUserId = null;
+            StateHasChanged();
+
+            // Auto-hide success message after 3 seconds
+            if (!string.IsNullOrEmpty(addMemberSuccess))
+            {
+                _ = Task.Delay(3000).ContinueWith(_ =>
+                {
+                    InvokeAsync(() =>
+                    {
+                        addMemberSuccess = null;
+                        StateHasChanged();
+                    });
+                });
+            }
+        }
+    }
+
+    #endregion
+
     public async ValueTask DisposeAsync()
     {
-        // Cleanup if needed
+        _memberSearchCts?.Cancel();
+        _memberSearchCts?.Dispose();
         await Task.CompletedTask;
     }
 }

@@ -34,12 +34,16 @@ public interface ISignalRService
 
 
     // Typing indicators
-    event Action<Guid, Guid, bool>? OnUserTypingInChannel;
+    event Action<Guid, Guid, string, bool>? OnUserTypingInChannel;
     event Action<Guid, Guid, bool>? OnUserTypingInConversation;
 
 
     // Reaction events
     event Action<Guid, Guid, List<ReactionSummary>>? OnDirectMessageReactionToggled;
+
+
+    // Channel membership events
+    event Action<ChannelDto>? OnAddedToChannel;
 
 
     // Connection management

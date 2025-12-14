@@ -192,5 +192,20 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Services
                     .SendAsync(eventName, data);
             }
         }
+
+
+        public async Task NotifyMemberAddedToChannelAsync(Guid userId, object channelDto)
+        {
+            _logger?.LogDebug("Notifying user {UserId} about being added to channel", userId);
+
+            var userConnections = await _connectionManager.GetUserConnectionsAsync(userId);
+
+            if (userConnections.Any())
+            {
+                await _hubContext.Clients
+                    .Clients(userConnections)
+                    .SendAsync("AddedToChannel", channelDto);
+            }
+        }
     }
 }

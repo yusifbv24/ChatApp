@@ -126,6 +126,33 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         }
 
 
+        /// <summary>
+        /// Marks all messages in the channel as read for the current user
+        /// </summary>
+        [HttpPost("mark-as-read")]
+        [RequirePermission("Messages.Read")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> MarkAsRead(
+            [FromRoute] Guid channelId,
+            CancellationToken cancellationToken)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == Guid.Empty)
+                return Unauthorized();
+
+            var result = await _mediator.Send(
+                new MarkChannelMessagesAsReadCommand(channelId, userId),
+                cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return Ok(new { message = "Messages marked as read" });
+        }
+
+
 
         /// <summary>
         /// Sends a message to the channel

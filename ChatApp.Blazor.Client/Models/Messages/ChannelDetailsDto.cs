@@ -32,8 +32,8 @@
 
     public enum ChannelMemberRole
     {
-        Member=0,
-        Admin=1,
-        Owner=2
+        Member=1,
+        Admin=2,
+        Owner=3
     }
 }

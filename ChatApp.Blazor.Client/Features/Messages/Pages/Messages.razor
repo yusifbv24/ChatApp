@@ -26,6 +26,7 @@
                   IsDirectMessage="@isDirectMessage"
                   CurrentUserId="@currentUserId"
                   ConversationId="@(selectedConversationId ?? selectedChannelId)"
+                  ChannelId="@selectedChannelId"
                   DirectMessages="@directMessages"
                   RecipientName="@recipientName"
                   RecipientAvatarUrl="@recipientAvatarUrl"
@@ -36,6 +37,7 @@
                   ChannelType="@selectedChannelType"
                   MemberCount="@selectedChannelMemberCount"
                   PinnedCount="@pinnedMessageCount"
+                  IsChannelAdmin="@isChannelAdmin"
                   IsLoading="@isLoadingMessages"
                   IsLoadingMore="@isLoadingMoreMessages"
                   HasMoreMessages="@hasMoreMessages"
@@ -45,6 +47,8 @@
                   ReplyToMessageId="@replyToMessageId"
                   ReplyToSenderName="@replyToSenderName"
                   ReplyToContent="@replyToContent"
+                  UserSearchResults="@memberSearchResults"
+                  IsSearchingUsers="@isSearchingMembersForAdd"
                   OnSendMessage="SendMessage"
                   OnEditMessage="EditMessage"
                   OnDeleteMessage="DeleteMessage"
@@ -54,7 +58,9 @@
                   OnCancelReply="CancelReply"
                   OnTyping="HandleTyping"
                   OnLoadMore="LoadMoreMessages"
-                  OnShowPinnedMessages="ShowPinnedMessages" />
+                  OnShowPinnedMessages="ShowPinnedMessages"
+                  OnSearchUsers="SearchUsersForAddMember"
+                  OnAddMember="AddMemberToChannel" />
     </div>
 </div>
 

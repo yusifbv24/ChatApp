@@ -76,5 +76,11 @@
         /// Notify specific user about something
         /// </summary>
         Task NotifyUserAsync(Guid userId, string eventName, object data);
+
+
+        /// <summary>
+        /// Notify user that they have been added to a channel
+        /// </summary>
+        Task NotifyMemberAddedToChannelAsync(Guid userId, object channelDto);
     }
 }

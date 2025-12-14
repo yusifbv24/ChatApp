@@ -225,7 +225,13 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence
                 new RolePermission(
                     Guid.Parse("33333333-3333-3333-3333-333333333333"),
                     Guid.Parse("11111111-1111-1111-1111-11111111111e")  // Files.Download
-                ) { Id = Guid.NewGuid() }
+                ) { Id = Guid.NewGuid() },
+
+                // Users can read group messages
+                new RolePermission(
+                    Guid.Parse("33333333-3333-3333-3333-333333333333"),
+                    Guid.Parse("11111111-1111-1111-1111-111111111123") // Groups.Reead
+                ) { Id = Guid.NewGuid() },
             };
 
             // Operator Role Permissions - Everything users have, plus group management

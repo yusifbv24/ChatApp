@@ -51,6 +51,12 @@ public partial class Messages : IAsyncDisposable
     private ChannelType selectedChannelType;
     private int selectedChannelMemberCount;
     private int pinnedMessageCount;
+    private bool isChannelAdmin;
+    private ChannelMemberRole currentUserChannelRole;
+
+    // Add member state
+    private List<UserDto> memberSearchResults = [];
+    private bool isSearchingMembersForAdd;
 
     // Loading states
     private bool isLoadingList;
@@ -73,6 +79,9 @@ public partial class Messages : IAsyncDisposable
     // Pending read receipts (for race condition: MessageRead arrives before message is added)
     private Dictionary<Guid, (Guid readBy, DateTime readAtUtc)> pendingReadReceipts = []; // messageId -> (readBy, readAtUtc)
 
+    // Processed message tracking (to prevent duplicate SignalR notifications)
+    private HashSet<Guid> processedMessageIds = [];
+
     // Page visibility tracking
     private bool isPageVisible = true;
     private IJSObjectReference? visibilitySubscription;
@@ -93,6 +102,9 @@ public partial class Messages : IAsyncDisposable
 
     // Error handling
     private string? errorMessage;
+
+    // Subscription tracking
+    private bool isSubscribedToSignalR;
 
     // Reply state
     private bool isReplying;
@@ -227,6 +239,10 @@ public partial class Messages : IAsyncDisposable
 
     private void SubscribeToSignalREvents()
     {
+        // Prevent multiple subscriptions
+        if (isSubscribedToSignalR) return;
+        isSubscribedToSignalR = true;
+
         // SignalR is already initialized in MainLayout, just subscribe to events here
         SignalRService.OnNewDirectMessage += HandleNewDirectMessage;
         SignalRService.OnNewChannelMessage += HandleNewChannelMessage;
@@ -240,6 +256,7 @@ public partial class Messages : IAsyncDisposable
         SignalRService.OnUserOnline += HandleUserOnline;
         SignalRService.OnUserOffline += HandleUserOffline;
         SignalRService.OnDirectMessageReactionToggled += HandleReactionToggled;
+        SignalRService.OnAddedToChannel += HandleAddedToChannel;
     }
 
     private void HandleNewDirectMessage(DirectMessageDto message)
@@ -249,16 +266,18 @@ public partial class Messages : IAsyncDisposable
             // Skip our own messages - they're already added via optimistic UI
             if (message.SenderId == currentUserId) return;
 
+            // Skip already processed messages (prevents duplicate SignalR notifications)
+            if (!processedMessageIds.Add(message.Id)) return;
+
             if (message.ConversationId == selectedConversationId)
             {
                 // Check if message already exists (prevent duplicates)
                 if (!directMessages.Any(m => m.Id == message.Id))
                 {
-                    // Only mark as read if the page is visible (user is actually viewing the messages)
+                    // Only mark as read if the page is visible
                     bool shouldMarkAsRead = isPageVisible;
 
                     directMessages.Add(message with { IsRead = shouldMarkAsRead });
-                    StateHasChanged();
 
                     // Mark as read on the server only if page is visible
                     if (shouldMarkAsRead)
@@ -293,14 +312,14 @@ public partial class Messages : IAsyncDisposable
                 {
                     AppState.IncrementUnreadMessages();
                 }
-
-                StateHasChanged();
             }
             else
             {
                 // New conversation from someone else - reload the list
                 _ = LoadConversationsAndChannels();
             }
+
+            StateHasChanged();
         });
     }
 
@@ -311,15 +330,40 @@ public partial class Messages : IAsyncDisposable
             // Skip our own messages - they're already added via optimistic UI
             if (message.SenderId == currentUserId) return;
 
+            // Skip already processed messages (prevents duplicate SignalR notifications)
+            if (!processedMessageIds.Add(message.Id)) return;
+
             if (message.ChannelId == selectedChannelId)
             {
                 // Check if message already exists (prevent duplicates)
                 if (!channelMessages.Any(m => m.Id == message.Id))
                 {
                     channelMessages.Add(message);
-                    StateHasChanged();
                 }
             }
+
+            // Update channel list for messages from others
+            var channel = channels.FirstOrDefault(c => c.Id == message.ChannelId);
+            if (channel != null)
+            {
+                var index = channels.IndexOf(channel);
+                var isCurrentChannel = message.ChannelId == selectedChannelId;
+                channels[index] = channel with
+                {
+                    LastMessageContent = message.Content,
+                    LastMessageAtUtc = message.CreatedAtUtc,
+                    LastMessageSenderName = message.SenderDisplayName,
+                    UnreadCount = isCurrentChannel ? 0 : channel.UnreadCount + 1
+                };
+
+                // Increment global unread count if not in this channel
+                if (!isCurrentChannel)
+                {
+                    AppState.IncrementUnreadMessages();
+                }
+            }
+
+            StateHasChanged();
         });
     }
 
@@ -535,7 +579,7 @@ public partial class Messages : IAsyncDisposable
         }
     }
 
-    private void HandleTypingInChannel(Guid channelId, Guid userId, bool isTyping)
+    private void HandleTypingInChannel(Guid channelId, Guid userId, string username, bool isTyping)
     {
         // Only track typing state for OTHER users, not yourself
         if (userId != currentUserId)
@@ -555,17 +599,17 @@ public partial class Messages : IAsyncDisposable
                 // ALSO update typingUsers list if we're currently viewing this channel
                 if (channelId == selectedChannelId)
                 {
-                    var userName = typingUserNames.GetValueOrDefault(userId, "Someone");
+                    // Use the username directly from SignalR event
                     if (isTyping)
                     {
-                        if (!typingUsers.Contains(userName))
+                        if (!typingUsers.Contains(username))
                         {
-                            typingUsers.Add(userName);
+                            typingUsers.Add(username);
                         }
                     }
                     else
                     {
-                        typingUsers = typingUsers.Where(u => u != userName).ToList();
+                        typingUsers = typingUsers.Where(u => u != username).ToList();
                     }
                 }
 
@@ -782,6 +826,8 @@ public partial class Messages : IAsyncDisposable
 
                 if (result.IsSuccess)
                 {
+                    var messageTime = DateTime.UtcNow;
+
                     // Add message locally (optimistic UI)
                     var newMessage = new ChannelMessageDto(
                         result.Value,
@@ -796,7 +842,7 @@ public partial class Messages : IAsyncDisposable
                         false,
                         false,
                         0,
-                        DateTime.UtcNow,
+                        messageTime,
                         null,
                         null,
                         replyToMessageId,
@@ -808,6 +854,9 @@ public partial class Messages : IAsyncDisposable
 
                     // Clear reply state after sending
                     CancelReply();
+
+                    // Update channel list locally without reloading
+                    UpdateChannelLocally(selectedChannelId.Value, content, messageTime, UserState.CurrentUser?.DisplayName);
                 }
                 else
                 {
@@ -1054,6 +1103,29 @@ public partial class Messages : IAsyncDisposable
             StateHasChanged();
         }
     }
+
+    private void UpdateChannelLocally(Guid channelId, string lastMessage, DateTime messageTime, string? senderName = null)
+    {
+        var channel = channels.FirstOrDefault(c => c.Id == channelId);
+        if (channel != null)
+        {
+            var index = channels.IndexOf(channel);
+
+            // Create updated channel with new last message
+            var updatedChannel = channel with
+            {
+                LastMessageContent = lastMessage,
+                LastMessageAtUtc = messageTime,
+                LastMessageSenderName = senderName ?? channel.LastMessageSenderName
+            };
+
+            // Replace in the same position to avoid reordering
+            channels[index] = updatedChannel;
+
+            // Trigger UI update
+            StateHasChanged();
+        }
+    }
     private async Task LoadDirectMessages()
     {
         isLoadingMessages = true;
@@ -1185,6 +1257,18 @@ public partial class Messages : IAsyncDisposable
             if (channelsResult.IsSuccess)
             {
                 channels = channelsResult.Value ?? [];
+
+                // Join all channel SignalR groups to receive notifications for all channels
+                foreach (var channel in channels)
+                {
+                    await SignalRService.JoinChannelAsync(channel.Id);
+                }
+            }
+
+            // Join all conversation SignalR groups to receive notifications for all conversations
+            foreach (var conv in conversations)
+            {
+                await SignalRService.JoinConversationAsync(conv.Id);
             }
 
             // Refresh online status for all conversation participants
@@ -1308,6 +1392,9 @@ public partial class Messages : IAsyncDisposable
             }
         }
 
+        // Always mark messages as read on the server when entering channel
+        _ = ChannelService.MarkAsReadAsync(channel.Id);
+
         // IMPORTANT: Clear messages BEFORE setting selectedChannelId
         // This prevents race condition where SignalR events arrive between setting ID and clearing messages
         directMessages.Clear();
@@ -1326,6 +1413,25 @@ public partial class Messages : IAsyncDisposable
         selectedChannelDescription = channel.Description;
         selectedChannelType = channel.Type;
         selectedChannelMemberCount = channel.MemberCount;
+
+        // Check if current user is admin/owner of this channel
+        isChannelAdmin = channel.CreatedBy == currentUserId;
+        currentUserChannelRole = isChannelAdmin ? ChannelMemberRole.Owner : ChannelMemberRole.Member;
+
+        // If not owner, check if admin through channel details
+        if (!isChannelAdmin)
+        {
+            var channelDetails = await ChannelService.GetChannelAsync(channel.Id);
+            if (channelDetails.IsSuccess && channelDetails.Value != null)
+            {
+                var currentMember = channelDetails.Value.Members.FirstOrDefault(m => m.UserId == currentUserId);
+                if (currentMember != null)
+                {
+                    currentUserChannelRole = currentMember.Role;
+                    isChannelAdmin = currentMember.Role == ChannelMemberRole.Admin || currentMember.Role == ChannelMemberRole.Owner;
+                }
+            }
+        }
 
         // Join SignalR group
         await SignalRService.JoinChannelAsync(channel.Id);
@@ -1871,9 +1977,127 @@ public partial class Messages : IAsyncDisposable
             ? $"{parts[0][0]}{parts[1][0]}".ToUpper()
             : name[0].ToString().ToUpper();
     }
-    public async ValueTask DisposeAsync()
+
+    private void HandleAddedToChannel(ChannelDto channel)
     {
-        // Unsubscribe from SignalR events
+        InvokeAsync(() =>
+        {
+            // Check if channel already exists
+            if (!channels.Any(c => c.Id == channel.Id))
+            {
+                // Add channel to the list
+                channels.Insert(0, channel);
+                StateHasChanged();
+            }
+        });
+    }
+
+    #region Add Member Methods
+
+    private async Task SearchUsersForAddMember(string query)
+    {
+        if (string.IsNullOrWhiteSpace(query) || query.Length < 2)
+        {
+            memberSearchResults.Clear();
+            isSearchingMembersForAdd = false;
+            StateHasChanged();
+            return;
+        }
+
+        isSearchingMembersForAdd = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await UserService.SearchUsersAsync(query);
+            if (result.IsSuccess && result.Value != null)
+            {
+                // Get current channel members to exclude them from search results
+                var channelDetails = selectedChannelId.HasValue
+                    ? await ChannelService.GetChannelAsync(selectedChannelId.Value)
+                    : null;
+
+                var existingMemberIds = channelDetails?.Value?.Members
+                    .Select(m => m.UserId)
+                    .ToHashSet() ?? [];
+
+                // Filter out current user and existing members
+                memberSearchResults = result.Value
+                    .Where(u => u.Id != currentUserId && !existingMemberIds.Contains(u.Id))
+                    .ToList();
+            }
+            else
+            {
+                memberSearchResults.Clear();
+            }
+        }
+        catch
+        {
+            memberSearchResults.Clear();
+        }
+        finally
+        {
+            isSearchingMembersForAdd = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task AddMemberToChannel((Guid userId, ChannelMemberRole role) memberData)
+    {
+        if (!selectedChannelId.HasValue) return;
+
+        try
+        {
+            // First add the member
+            var addResult = await ChannelService.AddMemberAsync(selectedChannelId.Value, memberData.userId);
+            if (addResult.IsFailure)
+            {
+                throw new Exception(addResult.Error ?? "Failed to add member");
+            }
+
+            // If role is Admin, update the role
+            if (memberData.role == ChannelMemberRole.Admin)
+            {
+                var roleResult = await ChannelService.UpdateMemberRoleAsync(
+                    selectedChannelId.Value,
+                    memberData.userId,
+                    memberData.role);
+
+                if (roleResult.IsFailure)
+                {
+                    // Member added but role update failed - log but don't throw
+                    Console.WriteLine($"Member added but role update failed: {roleResult.Error}");
+                }
+            }
+
+            // Update member count
+            selectedChannelMemberCount++;
+
+            // Update channel in list
+            var channelIndex = channels.FindIndex(c => c.Id == selectedChannelId.Value);
+            if (channelIndex >= 0)
+            {
+                channels[channelIndex] = channels[channelIndex] with
+                {
+                    MemberCount = selectedChannelMemberCount
+                };
+            }
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            throw new Exception(ex.Message);
+        }
+    }
+
+    #endregion
+
+    private void UnsubscribeFromSignalREvents()
+    {
+        if (!isSubscribedToSignalR) return;
+        isSubscribedToSignalR = false;
+
         SignalRService.OnNewDirectMessage -= HandleNewDirectMessage;
         SignalRService.OnNewChannelMessage -= HandleNewChannelMessage;
         SignalRService.OnDirectMessageEdited -= HandleDirectMessageEdited;
@@ -1886,6 +2110,13 @@ public partial class Messages : IAsyncDisposable
         SignalRService.OnUserOnline -= HandleUserOnline;
         SignalRService.OnUserOffline -= HandleUserOffline;
         SignalRService.OnDirectMessageReactionToggled -= HandleReactionToggled;
+        SignalRService.OnAddedToChannel -= HandleAddedToChannel;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        // Unsubscribe from SignalR events
+        UnsubscribeFromSignalREvents();
 
         // Dispose page visibility subscription
         if (visibilitySubscription != null)

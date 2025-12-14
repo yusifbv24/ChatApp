@@ -92,6 +92,11 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
         }
 
 
+        public async Task<Result> MarkAsReadAsync(Guid channelId)
+        {
+            return await apiClient.PostAsync($"/api/channels/{channelId}/messages/mark-as-read");
+        }
+
 
         public async Task<Result<Guid>> SendMessageAsync(Guid channelId, string content, string? fileId = null, Guid? replyToMessageId = null, bool isForwarded = false)
         {
@@ -172,6 +177,28 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
         public async Task<Result> LeaveChannelAsync(Guid channelId)
         {
             return await apiClient.PostAsync($"/api/channels/{channelId}/members/leave");
+        }
+
+
+        public async Task<Result> AddMemberAsync(Guid channelId, Guid userId)
+        {
+            return await apiClient.PostAsync(
+                $"/api/channels/{channelId}/members",
+                new { UserId = userId });
+        }
+
+
+        public async Task<Result> UpdateMemberRoleAsync(Guid channelId, Guid userId, ChannelMemberRole newRole)
+        {
+            return await apiClient.PutAsync(
+                $"/api/channels/{channelId}/members/{userId}/role",
+                new { NewRole = (int)newRole });
+        }
+
+
+        public async Task<Result> RemoveMemberAsync(Guid channelId, Guid userId)
+        {
+            return await apiClient.DeleteAsync($"/api/channels/{channelId}/members/{userId}");
         }
 
 

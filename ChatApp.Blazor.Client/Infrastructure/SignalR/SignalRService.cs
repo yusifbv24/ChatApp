@@ -43,12 +43,16 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
 
 
     // Typing indicators
-    public event Action<Guid, Guid, bool>? OnUserTypingInChannel;
+    public event Action<Guid, Guid, string, bool>? OnUserTypingInChannel;
     public event Action<Guid, Guid, bool>? OnUserTypingInConversation;
 
 
     // Reaction events
     public event Action<Guid, Guid, List<ReactionSummary>>? OnDirectMessageReactionToggled;
+
+
+    // Channel membership events
+    public event Action<ChannelDto>? OnAddedToChannel;
 
     public async Task InitializeAsync()
     {
@@ -238,10 +242,10 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
 
 
         // Typing indicators
-        _subscriptions.Add(hubConnection.On<Guid, Guid, bool>("UserTypingInChannel",
-            (channelId, userId, isTyping) =>
+        _subscriptions.Add(hubConnection.On<Guid, Guid, string, bool>("UserTypingInChannel",
+            (channelId, userId, username, isTyping) =>
             {
-                OnUserTypingInChannel?.Invoke(channelId, userId, isTyping);
+                OnUserTypingInChannel?.Invoke(channelId, userId, username, isTyping);
             }));
 
         _subscriptions.Add(hubConnection.On<Guid, Guid, bool>("UserTypingInConversation",
@@ -300,6 +304,25 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
             catch (Exception ex)
             {
                 Console.WriteLine($"Error processing reaction toggled: {ex.Message}");
+            }
+        }));
+
+
+        // Channel membership - when user is added to a channel
+        _subscriptions.Add(hubConnection.On<object>("AddedToChannel", channelObj =>
+        {
+            try
+            {
+                var json = JsonSerializer.Serialize(channelObj);
+                var channel = JsonSerializer.Deserialize<ChannelDto>(json, _jsonOptions);
+                if (channel != null)
+                {
+                    OnAddedToChannel?.Invoke(channel);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error deserializing AddedToChannel: {ex.Message}");
             }
         }));
     }
