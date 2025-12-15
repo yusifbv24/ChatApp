@@ -51,7 +51,27 @@
                     </div>
                     <div class="header-details">
                         <h3 class="header-name">@ChannelName</h3>
-                        <span class="header-status">@MemberCount members</span>
+                        @if (TypingUsers?.Any() ?? false)
+                        {
+                            <span class="header-status typing">
+                                @if (TypingUsers.Count == 1)
+                                {
+                                    <text>@TypingUsers[0] is typing...</text>
+                                }
+                                else if (TypingUsers.Count == 2)
+                                {
+                                    <text>@TypingUsers[0] and @TypingUsers[1] are typing...</text>
+                                }
+                                else
+                                {
+                                    <text>@TypingUsers.Count people are typing...</text>
+                                }
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="header-status">@MemberCount members</span>
+                        }
                     </div>
                 }
             </div>

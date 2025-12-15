@@ -96,9 +96,9 @@
                                 }
                             </div>
                             <div class="conversation-preview">
-                                @if (ChannelTypingState.GetValueOrDefault(item.Id, false))
+                                @if (ChannelTypingUsers.TryGetValue(item.Id, out var typingUsers))
                                 {
-                                    <span class="preview-text typing-preview">is typing...</span>
+                                    <span class="preview-text typing-preview">@typingUsers is typing...</span>
                                 }
                                 else
                                 {
@@ -139,7 +139,7 @@
                             <div class="conversation-preview">
                                 @if (ConversationTypingState.GetValueOrDefault(item.Id, false))
                                 {
-                                    <span class="preview-text typing-preview">is typing...</span>
+                                    <span class="preview-text typing-preview">typing...</span>
                                 }
                                 else
                                 {
@@ -176,7 +176,7 @@
     [Parameter] public Guid? SelectedChannelId { get; set; }
     [Parameter] public bool IsLoading { get; set; }
     [Parameter] public Dictionary<Guid, bool> ConversationTypingState { get; set; } = new();
-    [Parameter] public Dictionary<Guid, bool> ChannelTypingState { get; set; } = new();
+    [Parameter] public Dictionary<Guid, List<string>> ChannelTypingUsers { get; set; } = new();
     [Parameter] public EventCallback<DirectConversationDto> OnConversationSelected { get; set; }
     [Parameter] public EventCallback<ChannelDto> OnChannelSelected { get; set; }
     [Parameter] public EventCallback OnNewConversation { get; set; }

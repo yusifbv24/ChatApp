@@ -249,9 +249,9 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
             }));
 
         _subscriptions.Add(hubConnection.On<Guid, Guid, bool>("UserTypingInConversation",
-            (conversationId, userId, IsTyping) =>
+            (conversationId, userId, isTyping) =>
             {
-                OnUserTypingInConversation?.Invoke(conversationId, userId, IsTyping);
+                OnUserTypingInConversation?.Invoke(conversationId, userId, isTyping);
             }));
 
 

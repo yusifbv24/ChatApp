@@ -71,10 +71,9 @@ public partial class Messages : IAsyncDisposable
     private int pageSize = 50; // İlk yükləmə 50, sonrakılar 100
 
     // Typing
-    private List<string> typingUsers = [];
-    private Dictionary<Guid, string> typingUserNames = [];
-    private Dictionary<Guid, bool> conversationTypingState = []; // conversationId -> isTyping
-    private Dictionary<Guid, bool> channelTypingState = []; // channelId -> isTyping
+    private List<string> typingUsersInChannel = [];
+    private Dictionary<Guid, bool> conversationTypingState = [];
+    private Dictionary<Guid, List<string>> channelTypingUsers = [];
 
     // Pending read receipts (for race condition: MessageRead arrives before message is added)
     private Dictionary<Guid, (Guid readBy, DateTime readAtUtc)> pendingReadReceipts = []; // messageId -> (readBy, readAtUtc)
@@ -553,26 +552,6 @@ public partial class Messages : IAsyncDisposable
                 {
                     conversationTypingState.Remove(conversationId);
                 }
-
-                // ALSO update typingUsers list if we're currently viewing this conversation (for chat area)
-                if (conversationId == selectedConversationId)
-                {
-                    // Get user name from dictionary (populated in LoadConversationsAndChannels)
-                    var userName = typingUserNames.GetValueOrDefault(userId, "Someone");
-
-                    if (isTyping)
-                    {
-                        if (!typingUsers.Contains(userName))
-                        {
-                            typingUsers.Add(userName);
-                        }
-                    }
-                    else
-                    {
-                        typingUsers = typingUsers.Where(u => u != userName).ToList();
-                    }
-                }
-
                 // ALWAYS call StateHasChanged to update conversation list
                 StateHasChanged();
             });
@@ -586,30 +565,46 @@ public partial class Messages : IAsyncDisposable
         {
             InvokeAsync(() =>
             {
-                // Update typing state for this channel
+                // Update typing state for conversation list (just bool, no username)
                 if (isTyping)
                 {
-                    channelTypingState[channelId] = true;
+                    // Track usernames for chat header
+                    if (!channelTypingUsers.TryGetValue(channelId, out List<string>? value))
+                    {
+                        value = [];
+                        channelTypingUsers[channelId] = value;
+                    }
+                    if (!value.Contains(username))
+                    {
+                        value.Add(username);
+                    }
                 }
                 else
                 {
-                    channelTypingState.Remove(channelId);
+                    // Remove from username list
+                    if (channelTypingUsers.TryGetValue(channelId, out List<string>? value))
+                    {
+                        value.Remove(username);
+                        if (channelTypingUsers[channelId].Count == 0)
+                        {
+                            channelTypingUsers.Remove(channelId);
+                        }
+                    }
                 }
 
-                // ALSO update typingUsers list if we're currently viewing this channel
+                // ALSO update typingUsers list if we're currently viewing this channel (for chat header)
                 if (channelId == selectedChannelId)
                 {
-                    // Use the username directly from SignalR event
                     if (isTyping)
                     {
-                        if (!typingUsers.Contains(username))
+                        if (!typingUsersInChannel.Contains(username))
                         {
-                            typingUsers.Add(username);
+                            typingUsersInChannel.Add(username);
                         }
                     }
                     else
                     {
-                        typingUsers = typingUsers.Where(u => u != username).ToList();
+                        typingUsersInChannel = typingUsersInChannel.Where(u => u != username).ToList();
                     }
                 }
 
@@ -770,10 +765,6 @@ public partial class Messages : IAsyncDisposable
                     // Check if there's a pending read receipt for this message
                     bool hasReadReceipt = pendingReadReceipts.TryGetValue(messageId, out var readReceipt);
 
-                    // Add message locally (optimistic UI) - don't wait for SignalR
-                    // Parameter order: Id, ConversationId, SenderId, SenderUsername, SenderDisplayName, SenderAvatarUrl,
-                    //                  ReceiverId, Content, FileId, IsEdited, IsDeleted, IsRead, ReactionCount,
-                    //                  CreatedAtUtc, EditedAtUtc, ReadAtUtc, ReplyToMessageId, ReplyToContent, ReplyToSenderName, IsForwarded
                     var newMessage = new DirectMessageDto(
                         messageId,
                         selectedConversationId.Value,
@@ -1103,7 +1094,6 @@ public partial class Messages : IAsyncDisposable
             StateHasChanged();
         }
     }
-
     private void UpdateChannelLocally(Guid channelId, string lastMessage, DateTime messageTime, string? senderName = null)
     {
         var channel = channels.FirstOrDefault(c => c.Id == channelId);
@@ -1180,10 +1170,6 @@ public partial class Messages : IAsyncDisposable
         isPendingConversation = false;
         pendingUser = null;
 
-        // NOTE: We DON'T leave previous conversation/channel groups
-        // This allows us to receive typing indicators for conversation list
-        // User stays subscribed to all conversation/channel groups they've joined
-
         // Mark conversation as read and update global unread count
         if (conversation.UnreadCount > 0)
         {
@@ -1197,13 +1183,11 @@ public partial class Messages : IAsyncDisposable
             }
         }
 
-        // IMPORTANT: Clear messages BEFORE setting selectedConversationId
-        // This prevents race condition where SignalR events arrive between setting ID and clearing messages
         directMessages.Clear();
         channelMessages.Clear();
         hasMoreMessages = true;
         oldestMessageDate = null;
-        typingUsers.Clear();
+        typingUsersInChannel.Clear();
         pendingReadReceipts.Clear(); // Clear pending read receipts when changing conversations
         pageSize = 50; // Reset page size to 50 for new conversation
 
@@ -1244,14 +1228,6 @@ public partial class Messages : IAsyncDisposable
             if (conversationsResult.IsSuccess)
             {
                 conversations = conversationsResult.Value ?? [];
-
-                // Populate typingUserNames dictionary for all conversations
-                // This allows us to show correct names when typing events arrive
-                typingUserNames.Clear();
-                foreach (var conv in conversations)
-                {
-                    typingUserNames[conv.OtherUserId] = conv.OtherUserDisplayName;
-                }
             }
 
             if (channelsResult.IsSuccess)
@@ -1401,7 +1377,7 @@ public partial class Messages : IAsyncDisposable
         channelMessages.Clear();
         hasMoreMessages = true;
         oldestMessageDate = null;
-        typingUsers.Clear();
+        typingUsersInChannel.Clear();
         pendingReadReceipts.Clear(); // Clear pending read receipts when changing channels
         pageSize = 50; // Reset page size to 50 for new channel
 
