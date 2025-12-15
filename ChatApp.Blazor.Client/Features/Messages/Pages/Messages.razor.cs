@@ -71,7 +71,7 @@ public partial class Messages : IAsyncDisposable
     private int pageSize = 50; // İlk yükləmə 50, sonrakılar 100
 
     // Typing
-    private List<string> typingUsersInChannel = [];
+    private List<string> typingUsers = [];
     private Dictionary<Guid, bool> conversationTypingState = [];
     private Dictionary<Guid, List<string>> channelTypingUsers = [];
 
@@ -552,6 +552,24 @@ public partial class Messages : IAsyncDisposable
                 {
                     conversationTypingState.Remove(conversationId);
                 }
+
+                // ALSO update typingUsers list if we're currently viewing this conversation (for chat header)
+                // For direct messages, we just add a placeholder since the header shows "typing..." without username
+                if (conversationId == selectedConversationId)
+                {
+                    if (isTyping)
+                    {   
+                        if (!typingUsers.Contains("typing"))
+                        {
+                            typingUsers.Add("typing");
+                        }
+                    }
+                    else
+                    {
+                        typingUsers.Clear();
+                    }
+                }
+
                 // ALWAYS call StateHasChanged to update conversation list
                 StateHasChanged();
             });
@@ -597,14 +615,14 @@ public partial class Messages : IAsyncDisposable
                 {
                     if (isTyping)
                     {
-                        if (!typingUsersInChannel.Contains(username))
+                        if (!typingUsers.Contains(username))
                         {
-                            typingUsersInChannel.Add(username);
+                            typingUsers.Add(username);
                         }
                     }
                     else
                     {
-                        typingUsersInChannel = typingUsersInChannel.Where(u => u != username).ToList();
+                        typingUsers = typingUsers.Where(u => u != username).ToList();
                     }
                 }
 
@@ -1187,7 +1205,7 @@ public partial class Messages : IAsyncDisposable
         channelMessages.Clear();
         hasMoreMessages = true;
         oldestMessageDate = null;
-        typingUsersInChannel.Clear();
+        typingUsers.Clear();
         pendingReadReceipts.Clear(); // Clear pending read receipts when changing conversations
         pageSize = 50; // Reset page size to 50 for new conversation
 
@@ -1377,7 +1395,7 @@ public partial class Messages : IAsyncDisposable
         channelMessages.Clear();
         hasMoreMessages = true;
         oldestMessageDate = null;
-        typingUsersInChannel.Clear();
+        typingUsers.Clear();
         pendingReadReceipts.Clear(); // Clear pending read receipts when changing channels
         pageSize = 50; // Reset page size to 50 for new channel
 

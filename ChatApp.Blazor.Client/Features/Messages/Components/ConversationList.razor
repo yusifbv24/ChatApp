@@ -96,9 +96,22 @@
                                 }
                             </div>
                             <div class="conversation-preview">
-                                @if (ChannelTypingUsers.TryGetValue(item.Id, out var typingUsers))
+                                @if (ChannelTypingUsers.TryGetValue(item.Id, out var typingUsers) && typingUsers.Any())
                                 {
-                                    <span class="preview-text typing-preview">@typingUsers is typing...</span>
+                                    <span class="preview-text typing-preview">
+                                        @if (typingUsers.Count == 1)
+                                        {
+                                            <text>@typingUsers[0] is typing...</text>
+                                        }
+                                        else if (typingUsers.Count == 2)
+                                        {
+                                            <text>@typingUsers[0] and @typingUsers[1] are typing...</text>
+                                        }
+                                        else
+                                        {
+                                            <text>@typingUsers.Count people are typing...</text>
+                                        }
+                                    </span>
                                 }
                                 else
                                 {
