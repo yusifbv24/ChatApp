@@ -22,8 +22,11 @@ namespace ChatApp.Modules.Channels.Infrastructure
                 ?? throw new InvalidOperationException("Database connection string not configured");
 
             services.AddDbContext<ChannelsDbContext>(options =>
-                options.UseNpgsql(connectionString,
-                    b => b.MigrationsAssembly(typeof(ChannelsDbContext).Assembly.FullName)));
+                options.UseNpgsql(connectionString, npgsqlOptions =>
+                {
+                    npgsqlOptions.MigrationsAssembly(typeof(ChannelsDbContext).Assembly.FullName);
+                    npgsqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+                }));
 
             // Repositories
             services.AddScoped<IUnitOfWork, UnitOfWork>();

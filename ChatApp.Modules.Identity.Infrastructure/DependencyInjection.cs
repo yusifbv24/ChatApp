@@ -20,8 +20,11 @@ namespace ChatApp.Modules.Identity.Infrastructure
             // Database
             var connectionString = configuration.GetConnectionString("IdentityDb");
             services.AddDbContext<IdentityDbContext>(options =>
-                options.UseNpgsql(connectionString,
-                    b => b.MigrationsAssembly(typeof(IdentityDbContext).Assembly.FullName)));
+                options.UseNpgsql(connectionString, npgsqlOptions =>
+                {
+                    npgsqlOptions.MigrationsAssembly(typeof(IdentityDbContext).Assembly.FullName);
+                    npgsqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+                }));
 
             // Repositories
             services.AddScoped<IUnitOfWork, UnitOfWork>();

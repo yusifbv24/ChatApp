@@ -23,8 +23,11 @@ namespace ChatApp.Modules.Notifications.Infrastructure
                 ?? throw new InvalidOperationException("Database connection string not configured");
 
             services.AddDbContext<NotificationsDbContext>(options =>
-                options.UseNpgsql(connectionString,
-                    b => b.MigrationsAssembly(typeof(NotificationsDbContext).Assembly.FullName)));
+                options.UseNpgsql(connectionString, npgsqlOptions =>
+                {
+                    npgsqlOptions.MigrationsAssembly(typeof(NotificationsDbContext).Assembly.FullName);
+                    npgsqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+                }));
 
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped<INotificationRepository, NotificationRepository>();

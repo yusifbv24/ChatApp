@@ -22,8 +22,11 @@ namespace ChatApp.Modules.Search.Infrastructure
                 ?? throw new InvalidOperationException("Database connection string not configured");
 
             services.AddDbContext<SearchDbContext>(options =>
-                options.UseNpgsql(connectionString,
-                    b => b.MigrationsAssembly(typeof(SearchDbContext).Assembly.FullName)));
+                options.UseNpgsql(connectionString, npgsqlOptions =>
+                {
+                    npgsqlOptions.MigrationsAssembly(typeof(SearchDbContext).Assembly.FullName);
+                    npgsqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+                }));
 
             services.AddScoped<ISearchRepository, SearchRepository>();
             return services;

@@ -22,8 +22,12 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure
                 ?? throw new InvalidOperationException("Database connection string not configured");
 
             services.AddDbContext<DirectMessagesDbContext>(options =>
-                options.UseNpgsql(connectionString,
-                    b => b.MigrationsAssembly(typeof(DirectMessagesDbContext).Assembly.FullName)));
+                options.UseNpgsql(connectionString, npgsqlOptions =>
+                {
+                    npgsqlOptions.MigrationsAssembly(typeof(DirectMessagesDbContext).Assembly.FullName);
+                    // Configure split query behavior to avoid cartesian explosion warning
+                    npgsqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+                }));
 
             // Repositories
             services.AddScoped<IUnitOfWork, UnitOfWork>();
