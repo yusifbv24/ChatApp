@@ -195,6 +195,33 @@ namespace ChatApp.Modules.DirectMessages.Api.Controllers
 
 
         /// <summary>
+        /// Marks all unread messages in the conversation as read (bulk operation)
+        /// </summary>
+        [HttpPost("mark-as-read")]
+        [RequirePermission("Messages.Read")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> MarkAllAsRead(
+            [FromRoute] Guid conversationId,
+            CancellationToken cancellationToken)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == Guid.Empty)
+                return Unauthorized();
+
+            var result = await _mediator.Send(
+                new MarkDirectMessagesAsReadCommand(conversationId, userId),
+                cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return Ok(new { message = "Messages marked as read" });
+        }
+
+
+        /// <summary>
         /// Marks a message as read (only receiver can mark as read)
         /// </summary>
         [HttpPost("{messageId:guid}/read")]
@@ -209,7 +236,7 @@ namespace ChatApp.Modules.DirectMessages.Api.Controllers
             CancellationToken cancellationToken)
         {
             var userId = GetCurrentUserId();
-            if(userId== Guid.Empty) 
+            if(userId== Guid.Empty)
                 return Unauthorized();
 
             var result = await _mediator.Send(

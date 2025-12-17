@@ -221,5 +221,20 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                        !m.IsDeleted)
                 .CountAsync(cancellationToken);
         }
+
+
+        public async Task<List<DirectMessage>> GetUnreadMessagesForUserAsync(
+            Guid conversationId,
+            Guid userId,
+            CancellationToken cancellationToken = default)
+        {
+            return await _context.DirectMessages
+                .Where(m => m.ConversationId == conversationId &&
+                       m.ReceiverId == userId &&
+                       !m.IsRead &&
+                       !m.IsDeleted)
+                .OrderBy(m => m.CreatedAtUtc)
+                .ToListAsync(cancellationToken);
+        }
     }
 }

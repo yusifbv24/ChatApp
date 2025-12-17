@@ -71,6 +71,13 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
         }
 
 
+        public async Task<Result> MarkAllAsReadAsync(Guid conversationId)
+        {
+            return await _apiClient.PostAsync(
+                $"/api/conversations/{conversationId}/messages/mark-as-read");
+        }
+
+
         public async Task<Result<ReactionToggleResponse>> ToggleReactionAsync(Guid conversationId, Guid messageId, string reaction)
         {
             return await _apiClient.PutAsync<ReactionToggleResponse>(

@@ -211,36 +211,50 @@ public partial class Messages : IAsyncDisposable
 
     private async Task MarkUnreadMessagesAsRead()
     {
-        // Mark unread direct messages as read if viewing a conversation
+        // Mark unread direct messages as read if viewing a conversation using smart threshold
+        // Use smart threshold: 5+ messages = bulk, <5 messages = individual
         if (selectedConversationId.HasValue)
         {
             var unreadMessages = directMessages.Where(m => !m.IsRead && m.SenderId != currentUserId).ToList();
             if (unreadMessages.Count != 0)
             {
-                foreach (var message in unreadMessages)
+                try
                 {
-                    try
+                    if (unreadMessages.Count >= 5)
                     {
-                        await ConversationService.MarkAsReadAsync(message.ConversationId, message.Id);
+                        // Bulk operation for 5+ unread messages
+                        await ConversationService.MarkAllAsReadAsync(selectedConversationId.Value);
+                    }
+                    else
+                    {
+                        // Individual operations for 1-4 unread messages (parallel)
+                        var markTasks = unreadMessages.Select(message =>
+                            ConversationService.MarkAsReadAsync(message.ConversationId, message.Id)
+                        );
+                        await Task.WhenAll(markTasks);
+                    }
 
+                    // Update UI
+                    foreach (var message in unreadMessages)
+                    {
                         var index = directMessages.IndexOf(message);
                         if (index >= 0)
                         {
                             directMessages[index] = message with { IsRead = true };
                         }
                     }
-                    catch
-                    {
-                        // Ignore errors when marking as read
-                    }
+                    StateHasChanged();
                 }
-                StateHasChanged();
+                catch
+                {
+                    // Ignore errors when marking as read
+                }
             }
         }
         else if (selectedChannelId.HasValue)
         {
             // Mark all channel messages as read using smart threshold
-            // Use smart threshold: 10+ messages = bulk, <10 messages = individual
+            // Use smart threshold: 5+ messages = bulk, <5 messages = individual
             try
             {
                 var unreadMessages = channelMessages.Where(m =>
@@ -248,14 +262,14 @@ public partial class Messages : IAsyncDisposable
                     (m.ReadBy == null || !m.ReadBy.Contains(currentUserId))
                 ).ToList();
 
-                if (unreadMessages.Count >= 10)
+                if (unreadMessages.Count >= 5)
                 {
-                    // Bulk operation for 10+ unread messages
+                    // Bulk operation for 5+ unread messages
                     await ChannelService.MarkAsReadAsync(selectedChannelId.Value);
                 }
                 else if (unreadMessages.Count > 0)
                 {
-                    // Individual operations for 1-9 unread messages
+                    // Individual operations for 1-4 unread messages
                     foreach (var msg in unreadMessages)
                     {
                         await ChannelService.MarkSingleMessageAsReadAsync(selectedChannelId.Value, msg.Id);
@@ -1524,11 +1538,24 @@ public partial class Messages : IAsyncDisposable
                     hasMoreMessages = false;
                 }
 
-                // Mark messages as read
-                var unreadMessages = messages.Where(m => !m.IsRead && m.SenderId != currentUserId);
-                foreach (var msg in unreadMessages)
+                // Mark messages as read using smart threshold
+                // Use smart threshold: 5+ messages = bulk, <5 messages = individual
+                var unreadMessages = messages.Where(m => !m.IsRead && m.SenderId != currentUserId).ToList();
+                if (unreadMessages.Count > 0)
                 {
-                    await ConversationService.MarkAsReadAsync(selectedConversationId!.Value, msg.Id);
+                    if (unreadMessages.Count >= 5)
+                    {
+                        // Bulk operation for 5+ unread messages
+                        await ConversationService.MarkAllAsReadAsync(selectedConversationId!.Value);
+                    }
+                    else
+                    {
+                        // Individual operations for 1-4 unread messages (parallel)
+                        var markTasks = unreadMessages.Select(msg =>
+                            ConversationService.MarkAsReadAsync(selectedConversationId!.Value, msg.Id)
+                        );
+                        await Task.WhenAll(markTasks);
+                    }
                 }
             }
         }
@@ -1835,7 +1862,7 @@ public partial class Messages : IAsyncDisposable
 
         // CRITICAL: Mark NEW channel as read AFTER loading
         // This must be called even if previous channel mark-as-read failed
-        // Use smart threshold: 10+ messages = bulk, <10 messages = individual
+        // Use smart threshold: 5+ messages = bulk, <5 messages = individual
         try
         {
             var unreadMessages = channelMessages.Where(m =>
@@ -1843,9 +1870,9 @@ public partial class Messages : IAsyncDisposable
                 (m.ReadBy == null || !m.ReadBy.Contains(currentUserId))
             ).ToList();
 
-            if (unreadMessages.Count >= 10)
+            if (unreadMessages.Count >= 5)
             {
-                // Bulk operation for 10+ unread messages
+                // Bulk operation for 5+ unread messages
                 var markResult = await ChannelService.MarkAsReadAsync(channel.Id);
                 if (!markResult.IsSuccess)
                 {
@@ -1854,7 +1881,7 @@ public partial class Messages : IAsyncDisposable
             }
             else if (unreadMessages.Count > 0)
             {
-                // Individual operations for 1-9 unread messages
+                // Individual operations for 1-4 unread messages
                 foreach (var msg in unreadMessages)
                 {
                     var markResult = await ChannelService.MarkSingleMessageAsReadAsync(channel.Id, msg.Id);

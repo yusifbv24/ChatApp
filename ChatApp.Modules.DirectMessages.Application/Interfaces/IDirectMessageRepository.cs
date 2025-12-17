@@ -14,6 +14,7 @@ namespace ChatApp.Modules.DirectMessages.Application.Interfaces
             DateTime? beforeUtc = null,
             CancellationToken cancellationToken = default);
         Task<int> GetUnreadCountAsync(Guid conversationId, Guid userId, CancellationToken cancellationToken = default);
+        Task<List<DirectMessage>> GetUnreadMessagesForUserAsync(Guid conversationId, Guid userId, CancellationToken cancellationToken = default);
         Task AddAsync(DirectMessage message, CancellationToken cancellationToken = default);
         Task DeleteAsync(DirectMessage message, CancellationToken cancellationToken = default);
     }

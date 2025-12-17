@@ -29,6 +29,9 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
         Task<Result> MarkAsReadAsync(Guid conversationId, Guid messageId);
 
 
+        Task<Result> MarkAllAsReadAsync(Guid conversationId);
+
+
         Task<Result<ReactionToggleResponse>> ToggleReactionAsync(Guid conversationId, Guid messageId, string reaction);
     }
 }
