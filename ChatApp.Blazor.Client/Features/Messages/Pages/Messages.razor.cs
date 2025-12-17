@@ -407,7 +407,8 @@ public partial class Messages : IAsyncDisposable
                     pendingMessageAdds.Add(message.Id);
 
                     // Message from another user - mark as read if page is visible
-                    if (isPageVisible)
+                    // ONLY mark if: message is from another user AND page is visible
+                    if (message.SenderId != currentUserId && isPageVisible)
                     {
                         try
                         {
@@ -1376,7 +1377,7 @@ public partial class Messages : IAsyncDisposable
         });
     }
 
-    private void HandleChannelMessagesRead(Guid channelId, Guid userId, DateTime readAtUtc)
+    private void HandleChannelMessagesRead(Guid channelId, Guid userId, List<Guid> messageIds)
     {
         InvokeAsync(() =>
         {
@@ -1385,53 +1386,46 @@ public partial class Messages : IAsyncDisposable
                 return;
 
             bool updated = false;
-            var updatedMessages = new List<ChannelMessageDto>();
+            var updatedList = new List<ChannelMessageDto>(channelMessages);
 
-            // Mark messages as read based on timestamp comparison
-            foreach (var message in channelMessages)
+            // Update read status for the specified messages without reloading
+            for (int i = 0; i < updatedList.Count; i++)
             {
-                // Skip if user is the sender (sender is never in ReadBy list)
-                if (message.SenderId == userId)
+                var message = updatedList[i];
+                if (messageIds.Contains(message.Id))
                 {
-                    updatedMessages.Add(message);
-                    continue;
-                }
+                    // Don't add sender to their own ReadBy list
+                    if (message.SenderId == userId)
+                        continue;
 
-                // Check if this user already marked this message as read
-                var readByList = message.ReadBy ?? new List<Guid>();
+                    // Create new ReadBy list with the userId added
+                    var newReadBy = message.ReadBy != null
+                        ? new List<Guid>(message.ReadBy)
+                        : new List<Guid>();
 
-                // Only mark as read if: user hasn't read it yet AND message was created before readAtUtc
-                if (!readByList.Contains(userId) && readAtUtc >= message.CreatedAtUtc)
-                {
-                    // Add user to ReadBy list
-                    var newReadByList = new List<Guid>(readByList) { userId };
-
-                    // Update message with new ReadBy list and recalculated count
-                    var updatedMessage = message with
+                    // Add userId if not already present
+                    if (!newReadBy.Contains(userId))
                     {
-                        ReadBy = newReadByList,
-                        ReadByCount = newReadByList.Count
-                    };
+                        newReadBy.Add(userId);
 
-                    updatedMessages.Add(updatedMessage);
-                    updated = true;
-                }
-                else
-                {
-                    updatedMessages.Add(message);
+                        // Replace the message with updated ReadBy and ReadByCount
+                        // This creates a new object reference, triggering Blazor's change detection
+                        updatedList[i] = message with
+                        {
+                            ReadBy = newReadBy,
+                            ReadByCount = newReadBy.Count
+                        };
+
+                        updated = true;
+                    }
                 }
             }
 
             if (updated)
             {
-                // Create a NEW list instance to trigger Blazor parameter change detection
-                channelMessages = updatedMessages;
+                // Replace the entire list to trigger Blazor's change detection on the parent component
+                channelMessages = updatedList;
                 StateHasChanged();
-            }
-            else
-            {
-                // Store as pending read receipt (for race condition)
-                pendingChannelReadReceipts[userId] = readAtUtc;
             }
         });
     }
@@ -1684,30 +1678,42 @@ public partial class Messages : IAsyncDisposable
     #endregion
 
     #region Channel
-    private async Task LoadChannelMessages()
+    private async Task LoadChannelMessages(bool reload = false)
     {
         isLoadingMessages = true;
         StateHasChanged();
 
         try
         {
+            // If reload, fetch latest messages (not paginated)
             var result = await ChannelService.GetMessagesAsync(
                 selectedChannelId!.Value,
-                pageSize,
-                oldestMessageDate);
+                reload ? 50 : pageSize,  // Reload: get latest 50 messages
+                reload ? null : oldestMessageDate);  // Reload: no beforeUtc filter
 
             if (result.IsSuccess && result.Value != null)
             {
                 var messages = result.Value;
                 if (messages.Count != 0)
                 {
-                    // Filter out duplicates before adding to list
-                    var existingIds = channelMessages.Select(m => m.Id).ToHashSet();
-                    var newMessages = messages.Where(m => !existingIds.Contains(m.Id)).OrderBy(m => m.CreatedAtUtc);
+                    if (reload)
+                    {
+                        // Replace all messages with fresh data from backend
+                        channelMessages.Clear();
+                        channelMessages.AddRange(messages.OrderBy(m => m.CreatedAtUtc));
+                        oldestMessageDate = messages.Min(m => m.CreatedAtUtc);
+                        hasMoreMessages = messages.Count >= 50;
+                    }
+                    else
+                    {
+                        // Pagination: filter out duplicates before adding to list
+                        var existingIds = channelMessages.Select(m => m.Id).ToHashSet();
+                        var newMessages = messages.Where(m => !existingIds.Contains(m.Id)).OrderBy(m => m.CreatedAtUtc);
 
-                    channelMessages.InsertRange(0, newMessages);
-                    oldestMessageDate = messages.Min(m => m.CreatedAtUtc);
-                    hasMoreMessages = messages.Count >= pageSize;
+                        channelMessages.InsertRange(0, newMessages);
+                        oldestMessageDate = messages.Min(m => m.CreatedAtUtc);
+                        hasMoreMessages = messages.Count >= pageSize;
+                    }
                 }
                 else
                 {
@@ -1808,14 +1814,19 @@ public partial class Messages : IAsyncDisposable
         await LoadChannelMessages();
         await LoadPinnedMessageCount();
 
-        // Mark messages as read AFTER loading to ensure all loaded messages are marked
+        // CRITICAL: Mark NEW channel as read AFTER loading
+        // This must be called even if previous channel mark-as-read failed
         try
         {
-            await ChannelService.MarkAsReadAsync(channel.Id);
+            var markResult = await ChannelService.MarkAsReadAsync(channel.Id);
+            if (!markResult.IsSuccess)
+            {
+                Console.WriteLine($"[SelectChannel] Mark-as-read failed: {markResult.Error}");
+            }
         }
-        catch
+        catch (Exception ex)
         {
-            // Ignore errors when marking as read
+            Console.WriteLine($"[SelectChannel] Mark-as-read exception: {ex.Message}");
         }
 
         // Update URL

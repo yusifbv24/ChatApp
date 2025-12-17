@@ -73,9 +73,9 @@
 
         /// <summary>
         /// Notify about channel messages read
-        /// Broadcasts when a member updates their LastReadAtUtc timestamp
+        /// Broadcasts when a member marks messages as read, includes the list of message IDs that were marked as read
         /// </summary>
-        Task NotifyChannelMessagesReadAsync(Guid channelId, Guid userId, DateTime readAtUtc);
+        Task NotifyChannelMessagesReadAsync(Guid channelId, Guid userId, List<Guid> messageIds);
 
 
         /// <summary>

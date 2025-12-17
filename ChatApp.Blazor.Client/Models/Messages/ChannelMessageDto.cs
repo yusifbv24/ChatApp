@@ -25,6 +25,9 @@
         List<Guid>? ReadBy = null,
         List<ChannelMessageReactionDto>? Reactions = null)
     {
+        // Mutable properties for real-time updates
+        public int ReadByCount { get; set; } = ReadByCount;
+        public List<Guid>? ReadBy { get; set; } = ReadBy;
         public List<ChannelMessageReactionDto> Reactions { get; init; } = Reactions ?? [];
     }
 }

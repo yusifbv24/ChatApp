@@ -40,7 +40,7 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
     public event Action<ChannelMessageDto>? OnNewChannelMessage;
     public event Action<ChannelMessageDto>? OnChannelMessageEdited;
     public event Action<ChannelMessageDto>? OnChannelMessageDeleted;
-    public event Action<Guid, Guid, DateTime>? OnChannelMessagesRead;
+    public event Action<Guid, Guid, List<Guid>>? OnChannelMessagesRead;
 
 
     // Typing indicators
@@ -324,10 +324,10 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
             }));
 
         // Channel messages read event
-        _subscriptions.Add(hubConnection.On<Guid, Guid, DateTime>("ChannelMessagesRead",
-            (channelId, userId, readAtUtc) =>
+        _subscriptions.Add(hubConnection.On<Guid, Guid, List<Guid>>("ChannelMessagesRead",
+            (channelId, userId, messageIds) =>
             {
-                OnChannelMessagesRead?.Invoke(channelId, userId, readAtUtc);
+                OnChannelMessagesRead?.Invoke(channelId, userId, messageIds);
             }));
 
 

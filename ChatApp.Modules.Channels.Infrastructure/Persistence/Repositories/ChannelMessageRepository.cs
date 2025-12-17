@@ -120,26 +120,18 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                             ReplyToContent = repliedMessage != null ? repliedMessage.Content : null,
                             ReplyToSenderName = repliedSender != null ? repliedSender.DisplayName : null,
                             message.IsForwarded,
-                            // Calculate read status based on LastReadAtUtc timestamps
-                            ReadByCount = _context.ChannelMembers.Count(m =>
-                                m.ChannelId == channelId &&
-                                m.IsActive &&
-                                m.UserId != message.SenderId &&
-                                m.LastReadAtUtc.HasValue &&
-                                m.LastReadAtUtc >= message.CreatedAtUtc),
+                            // Calculate read status using ChannelMessageRead table
+                            ReadByCount = _context.ChannelMessageReads.Count(r =>
+                                r.MessageId == message.Id &&
+                                r.UserId != message.SenderId),
                             TotalMemberCount = _context.ChannelMembers.Count(m =>
                                 m.ChannelId == channelId &&
                                 m.IsActive &&
                                 m.UserId != message.SenderId),
-                            // Get list of users who have read this message
-                            ReadBy = _context.ChannelMembers
-                                .Where(m =>
-                                    m.ChannelId == channelId &&
-                                    m.IsActive &&
-                                    m.UserId != message.SenderId &&
-                                    m.LastReadAtUtc.HasValue &&
-                                    m.LastReadAtUtc >= message.CreatedAtUtc)
-                                .Select(m => m.UserId)
+                            // Get list of users who have read this message from ChannelMessageRead table
+                            ReadBy = _context.ChannelMessageReads
+                                .Where(r => r.MessageId == message.Id && r.UserId != message.SenderId)
+                                .Select(r => r.UserId)
                                 .ToList()
                         };
 
@@ -212,24 +204,16 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                               repliedMessage != null ? repliedMessage.Content : null,
                               repliedSender != null ? repliedSender.DisplayName : null,
                               message.IsForwarded,
-                              _context.ChannelMembers.Count(m =>
-                                  m.ChannelId == channelId &&
-                                  m.IsActive &&
-                                  m.UserId != message.SenderId &&
-                                  m.LastReadAtUtc.HasValue &&
-                                  m.LastReadAtUtc >= message.CreatedAtUtc),
+                              _context.ChannelMessageReads.Count(r =>
+                                  r.MessageId == message.Id &&
+                                  r.UserId != message.SenderId),
                               _context.ChannelMembers.Count(m =>
                                   m.ChannelId == channelId &&
                                   m.IsActive &&
                                   m.UserId != message.SenderId),
-                              _context.ChannelMembers
-                                  .Where(m =>
-                                      m.ChannelId == channelId &&
-                                      m.IsActive &&
-                                      m.UserId != message.SenderId &&
-                                      m.LastReadAtUtc.HasValue &&
-                                      m.LastReadAtUtc >= message.CreatedAtUtc)
-                                  .Select(m => m.UserId)
+                              _context.ChannelMessageReads
+                                  .Where(r => r.MessageId == message.Id && r.UserId != message.SenderId)
+                                  .Select(r => r.UserId)
                                   .ToList()
                           ))
                          .ToListAsync(cancellationToken);
@@ -237,24 +221,23 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
 
         public async Task<int> GetUnreadCountAsync(Guid channelId, Guid userId, CancellationToken cancellationToken = default)
         {
-            // Get the last read timestamp from ChannelMember
+            // Verify user is a member of the channel
             var member = await _context.ChannelMembers
                 .Where(m => m.ChannelId == channelId && m.UserId == userId && m.IsActive)
-                .Select(m => new { m.LastReadAtUtc, m.JoinedAtUtc })
                 .FirstOrDefaultAsync(cancellationToken);
 
             if (member == null)
                 return 0;
 
-            // Use LastReadAtUtc if available, otherwise use JoinedAtUtc (don't count messages before joining)
-            var lastReadTime = member.LastReadAtUtc ?? member.JoinedAtUtc;
-
-            // Count unread messages (after last read time, excluding user's own messages)
+            // Count messages in the channel that:
+            // 1. Are not deleted
+            // 2. Were not sent by the user
+            // 3. Don't have a corresponding ChannelMessageRead record for this user
             return await _context.ChannelMessages
                 .Where(m => m.ChannelId == channelId
                          && !m.IsDeleted
                          && m.SenderId != userId
-                         && m.CreatedAtUtc > lastReadTime)
+                         && !_context.ChannelMessageReads.Any(r => r.MessageId == m.Id && r.UserId == userId))
                 .CountAsync(cancellationToken);
         }
 

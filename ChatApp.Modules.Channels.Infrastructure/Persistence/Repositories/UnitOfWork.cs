@@ -11,6 +11,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
         public IChannelRepository Channels { get; }
         public IChannelMemberRepository ChannelMembers { get; }
         public IChannelMessageRepository ChannelMessages { get; }
+        public IChannelMessageReadRepository ChannelMessageReads { get; }
 
         public UnitOfWork(ChannelsDbContext context)
         {
@@ -18,6 +19,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
             Channels = new ChannelRepository(context);
             ChannelMembers = new ChannelMemberRepository(context);
             ChannelMessages = new ChannelMessageRepository(context);
+            ChannelMessageReads = new ChannelMessageReadRepository(context);
         }
 
         public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

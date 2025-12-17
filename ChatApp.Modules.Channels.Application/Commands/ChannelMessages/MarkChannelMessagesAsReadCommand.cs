@@ -1,4 +1,5 @@
 using ChatApp.Modules.Channels.Application.Interfaces;
+using ChatApp.Modules.Channels.Domain.Entities;
 using ChatApp.Shared.Infrastructure.SignalR.Services;
 using ChatApp.Shared.Kernel.Common;
 using FluentValidation;
@@ -59,18 +60,40 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMessages
                     return Result.Failure("User is not a member of this channel");
                 }
 
-                // Mark as read (entity is already tracked, no need to call UpdateAsync)
-                member.MarkAsRead();
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                // Get all unread message IDs for this user in the channel (excludes user's own messages)
+                var unreadMessageIds = await _unitOfWork.ChannelMessageReads
+                    .GetUnreadMessageIdsAsync(request.ChannelId, request.UserId, cancellationToken);
 
-                // Broadcast read status update to all channel members
-                await _signalRNotificationService.NotifyChannelMessagesReadAsync(
-                    request.ChannelId,
-                    request.UserId,
-                    member.LastReadAtUtc!.Value);
+                // Filter out messages sent by the user (don't mark own messages as read)
+                var messagesToMark = await _unitOfWork.ChannelMessages
+                    .GetChannelMessagesAsync(request.ChannelId, int.MaxValue, null, cancellationToken);
+
+                var filteredMessageIds = messagesToMark
+                    .Where(m => unreadMessageIds.Contains(m.Id) && m.SenderId != request.UserId)
+                    .Select(m => m.Id)
+                    .ToList();
+
+                if (filteredMessageIds.Any())
+                {
+                    // Create ChannelMessageRead records for all unread messages
+                    var readRecords = filteredMessageIds
+                        .Select(messageId => new ChannelMessageRead(messageId, request.UserId))
+                        .ToList();
+
+                    // Bulk insert read records
+                    await _unitOfWork.ChannelMessageReads.BulkInsertAsync(readRecords, cancellationToken);
+                    await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                    // Broadcast read status update to all channel members with the list of message IDs
+                    await _signalRNotificationService.NotifyChannelMessagesReadAsync(
+                        request.ChannelId,
+                        request.UserId,
+                        filteredMessageIds);
+                }
 
                 _logger?.LogDebug(
-                    "Messages marked as read for user {UserId} in channel {ChannelId}",
+                    "Marked {Count} messages as read for user {UserId} in channel {ChannelId}",
+                    filteredMessageIds.Count,
                     request.UserId,
                     request.ChannelId);
 

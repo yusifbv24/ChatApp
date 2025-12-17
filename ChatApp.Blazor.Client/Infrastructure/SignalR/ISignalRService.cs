@@ -31,7 +31,7 @@ public interface ISignalRService
     event Action<ChannelMessageDto>? OnNewChannelMessage;
     event Action<ChannelMessageDto>? OnChannelMessageEdited;
     event Action<ChannelMessageDto>? OnChannelMessageDeleted;
-    event Action<Guid, Guid, DateTime>? OnChannelMessagesRead;  // channelId, userId, readAtUtc
+    event Action<Guid, Guid, List<Guid>>? OnChannelMessagesRead;  // channelId, userId, messageIds
 
 
     // Typing indicators

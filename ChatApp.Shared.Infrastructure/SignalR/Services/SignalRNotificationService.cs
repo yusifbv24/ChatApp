@@ -158,14 +158,15 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Services
             }
         }
 
-        public async Task NotifyChannelMessagesReadAsync(Guid channelId, Guid userId, DateTime readAtUtc)
+        public async Task NotifyChannelMessagesReadAsync(Guid channelId, Guid userId, List<Guid> messageIds)
         {
-            _logger?.LogDebug("Broadcasting channel messages read for user {UserId} in channel {ChannelId}", userId, channelId);
+            _logger?.LogDebug("Broadcasting {Count} messages read for user {UserId} in channel {ChannelId}",
+                messageIds.Count, userId, channelId);
 
             // Broadcast to all members in the channel group
             await _hubContext.Clients
                 .Group($"channel_{channelId}")
-                .SendAsync("ChannelMessagesRead", channelId, userId, readAtUtc);
+                .SendAsync("ChannelMessagesRead", channelId, userId, messageIds);
         }
 
 

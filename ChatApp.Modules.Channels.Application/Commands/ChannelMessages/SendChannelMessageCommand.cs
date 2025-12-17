@@ -105,9 +105,8 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMessages
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 // Get the message DTO using GetByIdAsDtoAsync instead of GetChannelMessagesAsync
-                // GetChannelMessagesAsync calculates ReadBy based on current LastReadAtUtc values,
-                // which incorrectly marks the brand new message as read by users who were viewing the channel earlier
-                // GetByIdAsDtoAsync returns the message without ReadBy calculation (ReadBy=null, ReadByCount=0)
+                // Brand new messages should have ReadBy=empty and ReadByCount=0 (not yet read by anyone)
+                // GetByIdAsDtoAsync returns the message with correct initial read status
                 var messageDto = await _unitOfWork.ChannelMessages.GetByIdAsDtoAsync(
                     message.Id,
                     cancellationToken);

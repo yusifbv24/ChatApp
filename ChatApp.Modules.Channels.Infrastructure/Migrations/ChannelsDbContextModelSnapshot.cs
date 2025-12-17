@@ -140,9 +140,6 @@ namespace ChatApp.Modules.Channels.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("joined_at_utc");
 
-                    b.Property<DateTime?>("LastReadAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<DateTime?>("LeftAtUtc")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("left_at_utc");

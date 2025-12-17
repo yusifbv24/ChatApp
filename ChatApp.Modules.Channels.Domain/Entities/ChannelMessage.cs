@@ -21,10 +21,10 @@ namespace ChatApp.Modules.Channels.Domain.Entities
         // Navigation properties
         public Channel Channel { get; private set; } = null!;
 
-        private readonly List<ChannelMessageReaction> _reactions = new();
+        private readonly List<ChannelMessageReaction> _reactions = [];
         public IReadOnlyCollection<ChannelMessageReaction> Reactions => _reactions.AsReadOnly();
 
-        private readonly List<ChannelMessageRead> _reads = new();
+        private readonly List<ChannelMessageRead> _reads = [];
         public IReadOnlyCollection<ChannelMessageRead> Reads => _reads.AsReadOnly();
 
         private ChannelMessage() : base() { }

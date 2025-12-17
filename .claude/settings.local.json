@@ -30,7 +30,9 @@
       "Bash(dotnet clean:*)",
       "Bash(ren:*)",
       "Bash(Stop-Process -Id 5384 -Force)",
-      "Bash(Stop-Process -Id 5684 -Force)"
+      "Bash(Stop-Process -Id 5684 -Force)",
+      "Bash(del \"ChatApp.Modules.Channels.Infrastructure\\Migrations\\20251214105003_AddChannelMemberLastReadAtUtc.cs\")",
+      "Bash(del \"ChatApp.Modules.Channels.Infrastructure\\Migrations\\20251214105003_AddChannelMemberLastReadAtUtc.Designer.cs\")"
     ],
     "deny": [],
     "ask": []
