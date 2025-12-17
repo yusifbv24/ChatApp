@@ -6,6 +6,7 @@
         IChannelMemberRepository ChannelMembers { get; }
         IChannelMessageRepository ChannelMessages { get; }
         IChannelMessageReadRepository ChannelMessageReads { get; }
+        IChannelMessageReactionRepository ChannelMessageReactions { get; }
 
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
         Task BeginTransactionAsync(CancellationToken cancellationToken = default);

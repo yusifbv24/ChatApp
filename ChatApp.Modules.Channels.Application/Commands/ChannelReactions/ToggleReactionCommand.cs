@@ -54,12 +54,8 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelReactions
         {
             try
             {
-                _logger?.LogInformation(
-                    "Toggling reaction {Reaction} on message {MessageId}",
-                    request.Reaction,
-                    request.MessageId);
-
-                var message = await _unitOfWork.ChannelMessages.GetByIdWithReactionsAsync(
+                // First, verify message exists and user is a member (without tracking)
+                var message = await _unitOfWork.ChannelMessages.GetByIdAsync(
                     request.MessageId,
                     cancellationToken);
 
@@ -77,15 +73,18 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelReactions
                     return Result.Failure<List<ChannelMessageReactionDto>>("You must be a member to react to messages");
                 }
 
-                // Check if user has already reacted with this emoji
-                var existingReaction = message.Reactions
-                    .FirstOrDefault(r => r.UserId == request.UserId && r.Reaction == request.Reaction);
+                // Work with reactions directly through repository to avoid tracking message entity
+                var existingReaction = await _unitOfWork.ChannelMessageReactions.GetReactionAsync(
+                    request.MessageId,
+                    request.UserId,
+                    request.Reaction,
+                    cancellationToken);
 
                 bool wasAdded;
                 if (existingReaction != null)
                 {
                     // Remove the reaction
-                    message.RemoveReaction(request.UserId, request.Reaction);
+                    await _unitOfWork.ChannelMessageReactions.RemoveReactionAsync(existingReaction, cancellationToken);
                     wasAdded = false;
                 }
                 else
@@ -95,15 +94,19 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelReactions
                         request.MessageId,
                         request.UserId,
                         request.Reaction);
-                    message.AddReaction(reaction);
+                    await _unitOfWork.ChannelMessageReactions.AddReactionAsync(reaction, cancellationToken);
                     wasAdded = true;
                 }
 
-                await _unitOfWork.ChannelMessages.UpdateAsync(message, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+                // Get updated reactions for this message
+                var updatedReactions = await _unitOfWork.ChannelMessageReactions.GetMessageReactionsAsync(
+                    request.MessageId,
+                    cancellationToken);
+
                 // Get updated reactions grouped by emoji
-                var reactionsGrouped = message.Reactions
+                var reactionsGrouped = updatedReactions
                     .GroupBy(r => r.Reaction)
                     .Select(g => new ChannelMessageReactionDto(
                         g.Key,

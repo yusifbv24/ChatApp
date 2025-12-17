@@ -108,7 +108,7 @@ namespace ChatApp.Modules.Channels.Domain.Entities
                 throw new InvalidOperationException("User has already reacted with this emoji");
 
             _reactions.Add(reaction);
-            UpdateTimestamp();
+            // Don't update message timestamp - reactions are separate entities
         }
 
         public void RemoveReaction(Guid userId, string reactionEmoji)
@@ -117,7 +117,7 @@ namespace ChatApp.Modules.Channels.Domain.Entities
             if (reaction != null)
             {
                 _reactions.Remove(reaction);
-                UpdateTimestamp();
+                // Don't update message timestamp - reactions are separate entities
             }
         }
     }
