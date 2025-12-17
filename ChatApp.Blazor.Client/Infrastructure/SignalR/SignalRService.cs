@@ -40,6 +40,7 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
     public event Action<ChannelMessageDto>? OnNewChannelMessage;
     public event Action<ChannelMessageDto>? OnChannelMessageEdited;
     public event Action<ChannelMessageDto>? OnChannelMessageDeleted;
+    public event Action<Guid, Guid, DateTime>? OnChannelMessagesRead;
 
 
     // Typing indicators
@@ -49,6 +50,8 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
 
     // Reaction events
     public event Action<Guid, Guid, List<ReactionSummary>>? OnDirectMessageReactionToggled;
+    public event Action<Guid, Guid, Guid, string>? OnChannelReactionAdded;
+    public event Action<Guid, Guid, Guid, string>? OnChannelReactionRemoved;
 
 
     // Channel membership events
@@ -306,6 +309,26 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
                 Console.WriteLine($"Error processing reaction toggled: {ex.Message}");
             }
         }));
+
+        // Channel reaction events
+        _subscriptions.Add(hubConnection.On<Guid, Guid, Guid, string>("ReactionAdded",
+            (channelId, messageId, userId, reaction) =>
+            {
+                OnChannelReactionAdded?.Invoke(channelId, messageId, userId, reaction);
+            }));
+
+        _subscriptions.Add(hubConnection.On<Guid, Guid, Guid, string>("ReactionRemoved",
+            (channelId, messageId, userId, reaction) =>
+            {
+                OnChannelReactionRemoved?.Invoke(channelId, messageId, userId, reaction);
+            }));
+
+        // Channel messages read event
+        _subscriptions.Add(hubConnection.On<Guid, Guid, DateTime>("ChannelMessagesRead",
+            (channelId, userId, readAtUtc) =>
+            {
+                OnChannelMessagesRead?.Invoke(channelId, userId, readAtUtc);
+            }));
 
 
         // Channel membership - when user is added to a channel

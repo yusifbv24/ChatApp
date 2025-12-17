@@ -27,7 +27,10 @@
       "Bash(del \"C:\\Users\\ybaghiyev\\Desktop\\ChatApp\\ChatApp.Blazor.Client\\wwwroot\\service-worker.published.js\")",
       "Bash(dir:*)",
       "Bash(dotnet ef dbcontext info:*)",
-      "Bash(dotnet clean:*)"
+      "Bash(dotnet clean:*)",
+      "Bash(ren:*)",
+      "Bash(Stop-Process -Id 5384 -Force)",
+      "Bash(Stop-Process -Id 5684 -Force)"
     ],
     "deny": [],
     "ask": []

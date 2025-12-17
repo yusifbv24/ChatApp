@@ -104,21 +104,43 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMessages
                 await _unitOfWork.ChannelMessages.AddAsync(message, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                // Get the full message DTO with user details for real-time broadcast
-                var messages = await _unitOfWork.ChannelMessages.GetChannelMessagesAsync(
-                    request.ChannelId,
-                    pageSize: 1,
-                    beforeUtc: null,
+                // Get the message DTO using GetByIdAsDtoAsync instead of GetChannelMessagesAsync
+                // GetChannelMessagesAsync calculates ReadBy based on current LastReadAtUtc values,
+                // which incorrectly marks the brand new message as read by users who were viewing the channel earlier
+                // GetByIdAsDtoAsync returns the message without ReadBy calculation (ReadBy=null, ReadByCount=0)
+                var messageDto = await _unitOfWork.ChannelMessages.GetByIdAsDtoAsync(
+                    message.Id,
                     cancellationToken);
-
-                var messageDto = messages.FirstOrDefault();
 
                 if(messageDto != null)
                 {
+                    // Get all active members to calculate TotalMemberCount
+                    var members = await _unitOfWork.ChannelMembers.GetChannelMembersAsync(
+                        request.ChannelId,
+                        cancellationToken);
+
+                    // Count active members except the sender (sender is not in ReadBy list)
+                    var adjustedMemberCount = members.Count(m => m.IsActive && m.UserId != request.SenderId);
+
+                    // Create a new DTO with proper TotalMemberCount and empty ReadBy list
+                    // This ensures the new message starts with ReadByCount=0, ReadBy=[], TotalMemberCount=correct value
+                    var broadcastDto = messageDto with
+                    {
+                        ReadByCount = 0,
+                        ReadBy = new List<Guid>(),
+                        TotalMemberCount = adjustedMemberCount
+                    };
+
+                    _logger?.LogInformation(
+                        "Broadcasting message {MessageId}: ReadByCount={ReadByCount}, TotalMemberCount={TotalMemberCount}",
+                        broadcastDto.Id,
+                        broadcastDto.ReadByCount,
+                        broadcastDto.TotalMemberCount);
+
                     // Send real-time notification to all users in the channel
                     await _signalRNotificationService.NotifyChannelMessageAsync(
                         request.ChannelId,
-                        messageDto);
+                        broadcastDto);
                 }
 
                 // Publish domain event (for other modules/event handlers)

@@ -71,18 +71,40 @@
                             <MudIcon Icon="@Icons.Material.Filled.PushPin" Size="Size.Small" Class="pinned-icon-inline" />
                         }
                         <span class="message-time">@FormatTime(CreatedAt)</span>
-                        @if (IsOwn && !IsDeleted && IsDirectMessage)
+                        @if (IsOwn && !IsDeleted)
                         {
-                            <span class="read-status">
-                                @if (IsRead)
-                                {
-                                    <MudIcon Icon="@Icons.Material.Filled.DoneAll" Size="Size.Small" Class="read-icon" />
-                                }
-                                else
-                                {
-                                    <MudIcon Icon="@Icons.Material.Filled.Done" Size="Size.Small" />
-                                }
-                            </span>
+                            @if (IsDirectMessage)
+                            {
+                                <span class="read-status">
+                                    @if (IsRead)
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Filled.DoneAll" Size="Size.Small" Class="read-icon" />
+                                    }
+                                    else
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Filled.Done" Size="Size.Small" />
+                                    }
+                                </span>
+                            }
+                            else
+                            {
+                                @* Channel message read status *@
+                                <span class="read-status">
+                                    @if (ReadByCount > 0)
+                                    {
+                                        @* At least one person read it - show double checkmark *@
+                                        @* Blue if everyone (except sender) read it, gray if only some read it *@
+                                        @* TotalMemberCount already excludes sender (calculated in backend) *@
+                                        <MudIcon Icon="@Icons.Material.Filled.DoneAll" Size="Size.Small"
+                                                 Class="@(TotalMemberCount > 0 && ReadByCount >= TotalMemberCount ? "read-icon" : "")" />
+                                    }
+                                    else
+                                    {
+                                        @* Not read by anyone - show single checkmark *@
+                                        <MudIcon Icon="@Icons.Material.Filled.Done" Size="Size.Small" />
+                                    }
+                                </span>
+                            }
                         }
                     </div>
 
@@ -210,6 +232,8 @@
     [Parameter] public bool IsEdited { get; set; }
     [Parameter] public bool IsDeleted { get; set; }
     [Parameter] public bool IsRead { get; set; }
+    [Parameter] public int ReadByCount { get; set; }
+    [Parameter] public int TotalMemberCount { get; set; }
     [Parameter] public bool IsPinned { get; set; }
     [Parameter] public int ReactionCount { get; set; }
     [Parameter] public List<MessageReactionDto>? Reactions { get; set; }

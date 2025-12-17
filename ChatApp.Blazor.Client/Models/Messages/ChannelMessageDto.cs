@@ -19,5 +19,12 @@
         Guid? ReplyToMessageId = null,
         string? ReplyToContent = null,
         string? ReplyToSenderName = null,
-        bool IsForwarded = false);
+        bool IsForwarded = false,
+        int ReadByCount = 0,
+        int TotalMemberCount = 0,
+        List<Guid>? ReadBy = null,
+        List<ChannelMessageReactionDto>? Reactions = null)
+    {
+        public List<ChannelMessageReactionDto> Reactions { get; init; } = Reactions ?? [];
+    }
 }

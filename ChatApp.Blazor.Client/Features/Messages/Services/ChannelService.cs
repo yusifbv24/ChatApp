@@ -151,22 +151,19 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
         }
 
 
-        public async Task<Result> AddReactionAsync(Guid channelId, Guid messageId, string reaction)
+        public async Task<Result<List<ChannelMessageReactionDto>>> ToggleReactionAsync(Guid channelId, Guid messageId, string reaction)
         {
-            return await apiClient.PostAsync(
-                $"/api/channels/{channelId}/messages/{messageId}/reactions",
+            var result = await apiClient.PostAsync<ChannelReactionToggleResponse>(
+                $"/api/channels/{channelId}/messages/{messageId}/reactions/toggle",
                 new {Reaction=reaction});
+
+            if (result.IsSuccess && result.Value != null)
+            {
+                return Result.Success(result.Value.Reactions);
+            }
+
+            return Result.Failure<List<ChannelMessageReactionDto>>(result.Error ?? "Failed to toggle reaction");
         }
-
-
-
-        public async Task<Result> RemoveReactionAsync(Guid channelId, Guid messageId, string reaction)
-        {
-            return await apiClient.DeleteAsync(
-                $"/api/channels/{channelId}/messages/{messageId}/reactions");
-        }
-
-
 
         public async Task<Result> JoinChannelAsync(Guid channelId)
         {

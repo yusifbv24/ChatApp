@@ -158,6 +158,16 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Services
             }
         }
 
+        public async Task NotifyChannelMessagesReadAsync(Guid channelId, Guid userId, DateTime readAtUtc)
+        {
+            _logger?.LogDebug("Broadcasting channel messages read for user {UserId} in channel {ChannelId}", userId, channelId);
+
+            // Broadcast to all members in the channel group
+            await _hubContext.Clients
+                .Group($"channel_{channelId}")
+                .SendAsync("ChannelMessagesRead", channelId, userId, readAtUtc);
+        }
+
 
         public async Task NotifyReactionAddedAsync(Guid channelId, Guid messageId, Guid userId, string reaction)
         {
@@ -165,7 +175,7 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Services
 
             await _hubContext.Clients
                 .Group($"channel_{channelId}")
-                .SendAsync("ReactionAdded", new { channelId, messageId, userId, reaction });
+                .SendAsync("ReactionAdded", channelId, messageId, userId, reaction);
         }
 
 
@@ -175,7 +185,7 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Services
 
             await _hubContext.Clients
                 .Group($"channel_{channelId}")
-                .SendAsync("ReactionRemoved", new { channelId, messageId, userId, reaction });
+                .SendAsync("ReactionRemoved", channelId, messageId, userId, reaction);
         }
 
 

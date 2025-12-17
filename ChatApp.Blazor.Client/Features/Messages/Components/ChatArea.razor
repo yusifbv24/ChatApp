@@ -194,6 +194,10 @@
                                        IsDeleted="@message.IsDeleted"
                                        IsPinned="@message.IsPinned"
                                        ReactionCount="@message.ReactionCount"
+                                       Reactions="@(message.Reactions.Select(r => new MessageReactionDto(r.Emoji, r.Count, r.UserIds)).ToList())"
+                                       CurrentUserId="@CurrentUserId"
+                                       ReadByCount="@message.ReadByCount"
+                                       TotalMemberCount="@message.TotalMemberCount"
                                        IsDirectMessage="false"
                                        ShowAvatar="@ShouldShowChannelAvatar(message, group)"
                                        ShowSenderName="@ShouldShowSenderName(message, group)"
@@ -468,6 +472,7 @@
     private string? addMemberSuccess = null;
     private Dictionary<Guid, ChannelMemberRole> selectedRoleForUser = new();
     private CancellationTokenSource? _memberSearchCts;
+    private int _previousChannelMessagesHash = 0;
 
     protected override void OnParametersSet()
     {
@@ -498,8 +503,16 @@
 
         _previousMessageCount = currentCount;
 
-        // Force re-render when parameters change
-        StateHasChanged();
+        // Check if ChannelMessages list reference changed
+        var currentHash = ChannelMessages.GetHashCode();
+        if (currentHash != _previousChannelMessagesHash)
+        {
+            _previousChannelMessagesHash = currentHash;
+
+            // Force immediate re-render when parameters change
+            // This ensures MessageBubble components receive updated parameters like ReadByCount
+            InvokeAsync(StateHasChanged);
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

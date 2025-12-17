@@ -53,11 +53,7 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
         Task<Result> UnPinMessageAsync(Guid channelId, Guid messageId);
 
 
-        Task<Result> AddReactionAsync(Guid channelId, Guid messageId, string reaction);
-
-
-        Task<Result> RemoveReactionAsync(Guid channelId, Guid messageId, string reaction);
-
+        Task<Result<List<ChannelMessageReactionDto>>> ToggleReactionAsync(Guid channelId, Guid messageId, string reaction);
 
         Task<Result> JoinChannelAsync(Guid channelId);
 

@@ -31,6 +31,7 @@ public interface ISignalRService
     event Action<ChannelMessageDto>? OnNewChannelMessage;
     event Action<ChannelMessageDto>? OnChannelMessageEdited;
     event Action<ChannelMessageDto>? OnChannelMessageDeleted;
+    event Action<Guid, Guid, DateTime>? OnChannelMessagesRead;  // channelId, userId, readAtUtc
 
 
     // Typing indicators
@@ -40,6 +41,8 @@ public interface ISignalRService
 
     // Reaction events
     event Action<Guid, Guid, List<ReactionSummary>>? OnDirectMessageReactionToggled;
+    event Action<Guid, Guid, Guid, string>? OnChannelReactionAdded;  // channelId, messageId, userId, reaction
+    event Action<Guid, Guid, Guid, string>? OnChannelReactionRemoved;  // channelId, messageId, userId, reaction
 
 
     // Channel membership events

@@ -119,7 +119,28 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                             message.ReplyToMessageId,
                             ReplyToContent = repliedMessage != null ? repliedMessage.Content : null,
                             ReplyToSenderName = repliedSender != null ? repliedSender.DisplayName : null,
-                            message.IsForwarded
+                            message.IsForwarded,
+                            // Calculate read status based on LastReadAtUtc timestamps
+                            ReadByCount = _context.ChannelMembers.Count(m =>
+                                m.ChannelId == channelId &&
+                                m.IsActive &&
+                                m.UserId != message.SenderId &&
+                                m.LastReadAtUtc.HasValue &&
+                                m.LastReadAtUtc >= message.CreatedAtUtc),
+                            TotalMemberCount = _context.ChannelMembers.Count(m =>
+                                m.ChannelId == channelId &&
+                                m.IsActive &&
+                                m.UserId != message.SenderId),
+                            // Get list of users who have read this message
+                            ReadBy = _context.ChannelMembers
+                                .Where(m =>
+                                    m.ChannelId == channelId &&
+                                    m.IsActive &&
+                                    m.UserId != message.SenderId &&
+                                    m.LastReadAtUtc.HasValue &&
+                                    m.LastReadAtUtc >= message.CreatedAtUtc)
+                                .Select(m => m.UserId)
+                                .ToList()
                         };
 
             if (beforeUtc.HasValue)
@@ -151,7 +172,10 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 r.ReplyToMessageId,
                 r.ReplyToContent,
                 r.ReplyToSenderName,
-                r.IsForwarded
+                r.IsForwarded,
+                r.ReadByCount,
+                r.TotalMemberCount,
+                r.ReadBy // Include the ReadBy list for real-time read receipt updates
             )).ToList();
         }
 
@@ -187,7 +211,26 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                               message.ReplyToMessageId,
                               repliedMessage != null ? repliedMessage.Content : null,
                               repliedSender != null ? repliedSender.DisplayName : null,
-                              message.IsForwarded
+                              message.IsForwarded,
+                              _context.ChannelMembers.Count(m =>
+                                  m.ChannelId == channelId &&
+                                  m.IsActive &&
+                                  m.UserId != message.SenderId &&
+                                  m.LastReadAtUtc.HasValue &&
+                                  m.LastReadAtUtc >= message.CreatedAtUtc),
+                              _context.ChannelMembers.Count(m =>
+                                  m.ChannelId == channelId &&
+                                  m.IsActive &&
+                                  m.UserId != message.SenderId),
+                              _context.ChannelMembers
+                                  .Where(m =>
+                                      m.ChannelId == channelId &&
+                                      m.IsActive &&
+                                      m.UserId != message.SenderId &&
+                                      m.LastReadAtUtc.HasValue &&
+                                      m.LastReadAtUtc >= message.CreatedAtUtc)
+                                  .Select(m => m.UserId)
+                                  .ToList()
                           ))
                          .ToListAsync(cancellationToken);
         }

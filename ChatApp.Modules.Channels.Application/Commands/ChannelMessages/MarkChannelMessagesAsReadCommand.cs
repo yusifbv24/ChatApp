@@ -1,4 +1,5 @@
 using ChatApp.Modules.Channels.Application.Interfaces;
+using ChatApp.Shared.Infrastructure.SignalR.Services;
 using ChatApp.Shared.Kernel.Common;
 using FluentValidation;
 using MediatR;
@@ -28,13 +29,16 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMessages
     public class MarkChannelMessagesAsReadCommandHandler : IRequestHandler<MarkChannelMessagesAsReadCommand, Result>
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ISignalRNotificationService _signalRNotificationService;
         private readonly ILogger<MarkChannelMessagesAsReadCommandHandler> _logger;
 
         public MarkChannelMessagesAsReadCommandHandler(
             IUnitOfWork unitOfWork,
+            ISignalRNotificationService signalRNotificationService,
             ILogger<MarkChannelMessagesAsReadCommandHandler> logger)
         {
             _unitOfWork = unitOfWork;
+            _signalRNotificationService = signalRNotificationService;
             _logger = logger;
         }
 
@@ -55,10 +59,15 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMessages
                     return Result.Failure("User is not a member of this channel");
                 }
 
-                // Mark as read
+                // Mark as read (entity is already tracked, no need to call UpdateAsync)
                 member.MarkAsRead();
-                await _unitOfWork.ChannelMembers.UpdateAsync(member, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                // Broadcast read status update to all channel members
+                await _signalRNotificationService.NotifyChannelMessagesReadAsync(
+                    request.ChannelId,
+                    request.UserId,
+                    member.LastReadAtUtc!.Value);
 
                 _logger?.LogDebug(
                     "Messages marked as read for user {UserId} in channel {ChannelId}",

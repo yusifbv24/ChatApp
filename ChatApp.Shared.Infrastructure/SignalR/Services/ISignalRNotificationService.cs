@@ -71,6 +71,12 @@
         Task NotifyMessageReadAsync(Guid conversationId, Guid messageId, Guid readBy, Guid senderId, DateTime readAtUtc);
 
 
+        /// <summary>
+        /// Notify about channel messages read
+        /// Broadcasts when a member updates their LastReadAtUtc timestamp
+        /// </summary>
+        Task NotifyChannelMessagesReadAsync(Guid channelId, Guid userId, DateTime readAtUtc);
+
 
         /// <summary>
         /// Notify specific user about something

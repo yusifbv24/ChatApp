@@ -51,6 +51,12 @@ namespace ChatApp.Blazor.Client.Models.Messages
         public List<ReactionSummary> Reactions { get; set; } = new();
     }
 
+    public class ChannelReactionToggleResponse
+    {
+        public List<ChannelMessageReactionDto> Reactions { get; set; } = new();
+        public string Message { get; set; } = string.Empty;
+    }
+
 
 
     public class ReactionSummary

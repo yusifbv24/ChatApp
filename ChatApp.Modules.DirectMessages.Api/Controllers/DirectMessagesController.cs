@@ -236,7 +236,7 @@ namespace ChatApp.Modules.DirectMessages.Api.Controllers
         public async Task<IActionResult> ToggleReaction(
             [FromRoute] Guid conversationId,
             [FromRoute] Guid messageId,
-            [FromBody] ToggleReactionRequest request,
+            [FromBody] DirectMessageToggleReactionRequest request,
             CancellationToken cancellationToken)
         {
             var userId = GetCurrentUserId();

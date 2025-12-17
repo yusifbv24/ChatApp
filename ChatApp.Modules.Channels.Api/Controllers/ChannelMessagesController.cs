@@ -316,18 +316,18 @@ namespace ChatApp.Modules.Channels.Api.Controllers
 
 
         /// <summary>
-        /// Adds a reaction to a message
+        /// Toggles a reaction on a message (add if not exists, remove if exists)
         /// </summary>
-        [HttpPost("{messageId:guid}/reactions")]
+        [HttpPost("{messageId:guid}/reactions/toggle")]
         [RequirePermission("Messages.Read")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(List<ChannelMessageReactionDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        public async Task<IActionResult> AddReaction(
+        public async Task<IActionResult> ToggleReaction(
             [FromRoute] Guid channelId,
             [FromRoute] Guid messageId,
-            [FromBody] AddReactionRequestToChannel request,
+            [FromBody] ChannelToggleReactionRequest request,
             CancellationToken cancellationToken)
         {
             var userId = GetCurrentUserId();
@@ -335,46 +335,14 @@ namespace ChatApp.Modules.Channels.Api.Controllers
                 return Unauthorized();
 
             var result = await _mediator.Send(
-                new AddReactionCommand(messageId, userId, request.Reaction),
+                new ToggleReactionCommand(messageId, userId, request.Reaction),
                 cancellationToken);
 
             if (result.IsFailure)
                 return BadRequest(new { error = result.Error });
 
-            return Ok(new { message = "Reaction added successfully" });
+            return Ok(new { reactions = result.Value, message = "Reaction toggled successfully" });
         }
-
-
-
-        /// <summary>
-        /// Removes a reaction from a message
-        /// </summary>
-        [HttpDelete("{messageId:guid}/reactions")]
-        [RequirePermission("Messages.Read")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        public async Task<IActionResult> RemoveReaction(
-            [FromRoute] Guid channelId,
-            [FromRoute] Guid messageId,
-            [FromBody] RemoveReactionRequestToChannel request,
-            CancellationToken cancellationToken)
-        {
-            var userId = GetCurrentUserId();
-            if (userId == Guid.Empty)
-                return Unauthorized();
-
-            var result = await _mediator.Send(
-                new RemoveReactionCommand(messageId, userId, request.Reaction),
-                cancellationToken);
-
-            if (result.IsFailure)
-                return BadRequest(new { error = result.Error });
-
-            return Ok(new { message = "Reaction removed successfully" });
-        }
-
 
 
         private Guid GetCurrentUserId()

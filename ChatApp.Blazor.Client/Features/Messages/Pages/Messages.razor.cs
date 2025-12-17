@@ -75,11 +75,17 @@ public partial class Messages : IAsyncDisposable
     private Dictionary<Guid, bool> conversationTypingState = [];
     private Dictionary<Guid, List<string>> channelTypingUsers = [];
 
-    // Pending read receipts (for race condition: MessageRead arrives before message is added)
+    // Pending read receipts for direct messages (for race condition: MessageRead arrives before message is added)
     private Dictionary<Guid, (Guid readBy, DateTime readAtUtc)> pendingReadReceipts = []; // messageId -> (readBy, readAtUtc)
+
+    // Pending read receipts for channel messages (userId -> readAtUtc)
+    private Dictionary<Guid, DateTime> pendingChannelReadReceipts = []; // userId -> readAtUtc
 
     // Processed message tracking (to prevent duplicate SignalR notifications)
     private HashSet<Guid> processedMessageIds = [];
+
+    // Track messages currently being added to prevent race condition
+    private HashSet<Guid> pendingMessageAdds = [];
 
     // Page visibility tracking
     private bool isPageVisible = true;
@@ -231,6 +237,19 @@ public partial class Messages : IAsyncDisposable
                 StateHasChanged();
             }
         }
+        else if (selectedChannelId.HasValue)
+        {
+            // Mark all channel messages as read
+            try
+            {
+                await ChannelService.MarkAsReadAsync(selectedChannelId.Value);
+                // SignalR event will update the UI automatically
+            }
+            catch
+            {
+                // Ignore errors when marking as read
+            }
+        }
     }
 
 
@@ -255,6 +274,9 @@ public partial class Messages : IAsyncDisposable
         SignalRService.OnUserOnline += HandleUserOnline;
         SignalRService.OnUserOffline += HandleUserOffline;
         SignalRService.OnDirectMessageReactionToggled += HandleReactionToggled;
+        SignalRService.OnChannelReactionAdded += HandleChannelReactionAdded;
+        SignalRService.OnChannelReactionRemoved += HandleChannelReactionRemoved;
+        SignalRService.OnChannelMessagesRead += HandleChannelMessagesRead;
         SignalRService.OnAddedToChannel += HandleAddedToChannel;
     }
 
@@ -262,24 +284,30 @@ public partial class Messages : IAsyncDisposable
     {
         InvokeAsync(async () =>
         {
-            // Skip our own messages - they're already added via optimistic UI
-            if (message.SenderId == currentUserId) return;
-
             // Skip already processed messages (prevents duplicate SignalR notifications)
             if (!processedMessageIds.Add(message.Id)) return;
 
             if (message.ConversationId == selectedConversationId)
             {
-                // Check if message already exists (prevent duplicates)
-                if (!directMessages.Any(m => m.Id == message.Id))
+                // Check if this is our own message (already added optimistically)
+                var existingIndex = directMessages.FindIndex(m => m.Id == message.Id);
+
+                if (existingIndex >= 0)
                 {
-                    // Only mark as read if the page is visible
-                    bool shouldMarkAsRead = isPageVisible;
+                    // REPLACE the optimistic message with the real one from the backend
+                    // This ensures IsRead, ReadAtUtc, and other fields are up-to-date
+                    // Create a new list instance to trigger Blazor parameter change detection
+                    var updatedList = new List<DirectMessageDto>(directMessages);
+                    updatedList[existingIndex] = message;
+                    directMessages = updatedList;
+                }
+                else
+                {
+                    // Message from another user - add it
+                    directMessages.Add(message);
 
-                    directMessages.Add(message with { IsRead = shouldMarkAsRead });
-
-                    // Mark as read on the server only if page is visible
-                    if (shouldMarkAsRead)
+                    // Only mark as read if: message is from another user AND page is visible
+                    if (message.SenderId != currentUserId && isPageVisible)
                     {
                         try
                         {
@@ -293,29 +321,32 @@ public partial class Messages : IAsyncDisposable
                 }
             }
 
-            // Update conversation list for messages from others
-            var conversation = conversations.FirstOrDefault(c => c.Id == message.ConversationId);
-            if (conversation != null)
+            // Update conversation list for messages from others (not our own)
+            if (message.SenderId != currentUserId)
             {
-                var index = conversations.IndexOf(conversation);
-                var isCurrentConversation = message.ConversationId == selectedConversationId;
-                conversations[index] = conversation with
+                var conversation = conversations.FirstOrDefault(c => c.Id == message.ConversationId);
+                if (conversation != null)
                 {
-                    LastMessageContent = message.Content,
-                    LastMessageAtUtc = message.CreatedAtUtc,
-                    UnreadCount = isCurrentConversation ? 0 : conversation.UnreadCount + 1
-                };
+                    var index = conversations.IndexOf(conversation);
+                    var isCurrentConversation = message.ConversationId == selectedConversationId;
+                    conversations[index] = conversation with
+                    {
+                        LastMessageContent = message.Content,
+                        LastMessageAtUtc = message.CreatedAtUtc,
+                        UnreadCount = isCurrentConversation ? 0 : conversation.UnreadCount + 1
+                    };
 
-                // Increment global unread count if not in this conversation
-                if (!isCurrentConversation)
-                {
-                    AppState.IncrementUnreadMessages();
+                    // Increment global unread count if not in this conversation
+                    if (!isCurrentConversation)
+                    {
+                        AppState.IncrementUnreadMessages();
+                    }
                 }
-            }
-            else
-            {
-                // New conversation from someone else - reload the list
-                _ = LoadConversationsAndChannels();
+                else
+                {
+                    // New conversation from someone else - reload the list
+                    _ = LoadConversationsAndChannels();
+                }
             }
 
             StateHasChanged();
@@ -324,41 +355,121 @@ public partial class Messages : IAsyncDisposable
 
     private void HandleNewChannelMessage(ChannelMessageDto message)
     {
-        InvokeAsync(() =>
+        InvokeAsync(async () =>
         {
-            // Skip our own messages - they're already added via optimistic UI
-            if (message.SenderId == currentUserId) return;
-
             // Skip already processed messages (prevents duplicate SignalR notifications)
-            if (!processedMessageIds.Add(message.Id)) return;
+            if (!processedMessageIds.Add(message.Id))
+                return;
 
             if (message.ChannelId == selectedChannelId)
             {
-                // Check if message already exists (prevent duplicates)
-                if (!channelMessages.Any(m => m.Id == message.Id))
+                // Check if message is already being added by another handler (race condition protection)
+                if (pendingMessageAdds.Contains(message.Id))
+                    return;
+
+                // Check if this is our own message (already added optimistically)
+                var existingIndex = channelMessages.FindIndex(m => m.Id == message.Id);
+
+                if (existingIndex >= 0)
                 {
-                    channelMessages.Add(message);
+                    // REPLACE the optimistic message with the real one from the backend
+                    // Apply pending read receipts (race condition: mark-as-read arrived before HTTP response)
+                    var readByList = new List<Guid>(message.ReadBy ?? []);
+                    var appliedReceipts = new List<Guid>();
+
+                    foreach (var (userId, readAtUtc) in pendingChannelReadReceipts)
+                    {
+                        // CRITICAL: Never add sender to their own message's ReadBy list
+                        if (userId != message.SenderId && readAtUtc >= message.CreatedAtUtc && !readByList.Contains(userId))
+                        {
+                            readByList.Add(userId);
+                            appliedReceipts.Add(userId);
+                        }
+                    }
+
+                    // Update message with applied receipts
+                    var updatedMessage = readByList.Count > (message.ReadBy?.Count ?? 0)
+                        ? message with { ReadBy = readByList, ReadByCount = readByList.Count }
+                        : message;
+
+                    // Create a new list instance to trigger Blazor parameter change detection
+                    var updatedList = new List<ChannelMessageDto>(channelMessages);
+                    updatedList[existingIndex] = updatedMessage;
+                    channelMessages = updatedList;
+
+                    // Remove applied pending receipts
+                    foreach (var userId in appliedReceipts)
+                        pendingChannelReadReceipts.Remove(userId);
+                }
+                else
+                {
+                    // Mark as pending to prevent HTTP handler from adding it
+                    pendingMessageAdds.Add(message.Id);
+
+                    // Message from another user - mark as read if page is visible
+                    if (isPageVisible)
+                    {
+                        try
+                        {
+                            await ChannelService.MarkAsReadAsync(message.ChannelId);
+                        }
+                        catch
+                        {
+                            // Ignore mark-as-read errors
+                        }
+                    }
+
+                    // Apply pending read receipts before adding
+                    var readByList = new List<Guid>(message.ReadBy ?? []);
+                    var appliedReceipts = new List<Guid>();
+
+                    foreach (var (userId, readAtUtc) in pendingChannelReadReceipts)
+                    {
+                        // CRITICAL: Never add sender to their own message's ReadBy list
+                        if (userId != message.SenderId && readAtUtc >= message.CreatedAtUtc && !readByList.Contains(userId))
+                        {
+                            readByList.Add(userId);
+                            appliedReceipts.Add(userId);
+                        }
+                    }
+
+                    // Update message with applied receipts before adding
+                    var messageWithReceipts = readByList.Count > (message.ReadBy?.Count ?? 0)
+                        ? message with { ReadBy = readByList, ReadByCount = readByList.Count }
+                        : message;
+
+                    channelMessages.Add(messageWithReceipts);
+
+                    // Remove applied pending receipts
+                    foreach (var userId in appliedReceipts)
+                        pendingChannelReadReceipts.Remove(userId);
+
+                    // Remove from pending after adding
+                    pendingMessageAdds.Remove(message.Id);
                 }
             }
 
-            // Update channel list for messages from others
-            var channel = channels.FirstOrDefault(c => c.Id == message.ChannelId);
-            if (channel != null)
+            // Update channel list for messages from others (not our own)
+            if (message.SenderId != currentUserId)
             {
-                var index = channels.IndexOf(channel);
-                var isCurrentChannel = message.ChannelId == selectedChannelId;
-                channels[index] = channel with
+                var channel = channels.FirstOrDefault(c => c.Id == message.ChannelId);
+                if (channel != null)
                 {
-                    LastMessageContent = message.Content,
-                    LastMessageAtUtc = message.CreatedAtUtc,
-                    LastMessageSenderName = message.SenderDisplayName,
-                    UnreadCount = isCurrentChannel ? 0 : channel.UnreadCount + 1
-                };
+                    var index = channels.IndexOf(channel);
+                    var isCurrentChannel = message.ChannelId == selectedChannelId;
+                    channels[index] = channel with
+                    {
+                        LastMessageContent = message.Content,
+                        LastMessageAtUtc = message.CreatedAtUtc,
+                        LastMessageSenderName = message.SenderDisplayName,
+                        UnreadCount = isCurrentChannel ? 0 : channel.UnreadCount + 1
+                    };
 
-                // Increment global unread count if not in this channel
-                if (!isCurrentChannel)
-                {
-                    AppState.IncrementUnreadMessages();
+                    // Increment global unread count if not in this channel
+                    if (!isCurrentChannel)
+                    {
+                        AppState.IncrementUnreadMessages();
+                    }
                 }
             }
 
@@ -805,7 +916,12 @@ public partial class Messages : IAsyncDisposable
                         replyToSenderName,
                         false);                                         // IsForwarded
 
-                    directMessages.Add(newMessage);
+                    // Before adding optimistic message, check if it already exists
+                    // (in case SignalR arrived faster than HTTP response)
+                    if (!directMessages.Any(m => m.Id == messageId))
+                    {
+                        directMessages.Add(newMessage);
+                    }
 
                     // Remove from pending if applied
                     if (hasReadReceipt)
@@ -837,29 +953,75 @@ public partial class Messages : IAsyncDisposable
                 {
                     var messageTime = DateTime.UtcNow;
 
-                    // Add message locally (optimistic UI)
-                    var newMessage = new ChannelMessageDto(
-                        result.Value,
-                        selectedChannelId.Value,
-                        currentUserId,
-                        UserState.CurrentUser?.Username ?? "",
-                        UserState.CurrentUser?.DisplayName ?? "",
-                        UserState.CurrentUser?.AvatarUrl,
-                        content,
-                        null,
-                        false,
-                        false,
-                        false,
-                        0,
-                        messageTime,
-                        null,
-                        null,
-                        replyToMessageId,
-                        replyToContent,
-                        replyToSenderName,
-                        false);
+                    // Check if message is already being added by SignalR handler (race condition protection)
+                    if (pendingMessageAdds.Contains(result.Value))
+                    {
+                        // SignalR already adding it - skip
+                    }
+                    // Check if message already exists in the list
+                    else if (channelMessages.Any(m => m.Id == result.Value))
+                    {
+                        // Already added by SignalR - skip
+                    }
+                    else
+                    {
+                        // Mark as pending to prevent SignalR handler from adding it
+                        pendingMessageAdds.Add(result.Value);
 
-                    channelMessages.Add(newMessage);
+                        // Add message locally (optimistic UI)
+                        // TotalMemberCount = all active members except sender
+                        var totalMembers = Math.Max(0, selectedChannelMemberCount - 1);
+
+                        // Check for pending read receipts (race condition: mark-as-read arrived before HTTP completed)
+                        var readByList = new List<Guid>();
+                        var appliedReceipts = new List<Guid>(); // Track which receipts we applied
+
+                        foreach (var (userId, readAtUtc) in pendingChannelReadReceipts)
+                        {
+                            // CRITICAL: Never add sender to their own message's ReadBy list
+                            if (userId != currentUserId && readAtUtc >= messageTime)
+                            {
+                                readByList.Add(userId);
+                                appliedReceipts.Add(userId);
+                            }
+                        }
+
+                        var newMessage = new ChannelMessageDto(
+                            result.Value,
+                            selectedChannelId.Value,
+                            currentUserId,
+                            UserState.CurrentUser?.Username ?? "",
+                            UserState.CurrentUser?.DisplayName ?? "",
+                            UserState.CurrentUser?.AvatarUrl,
+                            content,
+                            null,
+                            false,
+                            false,
+                            false,
+                            0,
+                            messageTime,
+                            null,
+                            null,
+                            replyToMessageId,
+                            replyToContent,
+                            replyToSenderName,
+                            false,
+                            ReadByCount: readByList.Count,
+                            TotalMemberCount: totalMembers,
+                            ReadBy: readByList,
+                            Reactions: []);
+
+                        channelMessages.Add(newMessage);
+
+                        // Remove applied pending receipts
+                        foreach (var userId in appliedReceipts)
+                        {
+                            pendingChannelReadReceipts.Remove(userId);
+                        }
+
+                        // Remove from pending after adding
+                        pendingMessageAdds.Remove(result.Value);
+                    }
 
                     // Clear reply state after sending
                     CancelReply();
@@ -1038,10 +1200,16 @@ public partial class Messages : IAsyncDisposable
             }
             else if (!isDirectMessage && selectedChannelId.HasValue)
             {
-                await ChannelService.AddReactionAsync(
+                var result = await ChannelService.ToggleReactionAsync(
                     selectedChannelId.Value,
                     reaction.messageId,
                     reaction.emoji);
+
+                if (result.IsSuccess && result.Value != null)
+                {
+                    // Update the message reactions in the local list
+                    UpdateChannelMessageReactions(reaction.messageId, result.Value);
+                }
             }
         }
         catch (Exception ex)
@@ -1081,12 +1249,191 @@ public partial class Messages : IAsyncDisposable
         }
     }
 
+    private void UpdateChannelMessageReactions(Guid messageId, List<ChannelMessageReactionDto> reactions)
+    {
+        var message = channelMessages.FirstOrDefault(m => m.Id == messageId);
+        if (message != null)
+        {
+            var totalCount = reactions.Sum(r => r.Count);
+            var index = channelMessages.IndexOf(message);
+
+            // Update the message with new reaction data
+            var updatedMessage = message with
+            {
+                ReactionCount = totalCount,
+                Reactions = reactions
+            };
+
+            channelMessages[index] = updatedMessage;
+            StateHasChanged();
+        }
+    }
+
     private void HandleReactionToggled(Guid conversationId, Guid messageId, List<ReactionSummary> reactions)
     {
         if (selectedConversationId.HasValue && selectedConversationId.Value == conversationId)
         {
             UpdateMessageReactions(messageId, reactions);
         }
+    }
+
+    private void HandleChannelReactionAdded(Guid channelId, Guid messageId, Guid userId, string reaction)
+    {
+        InvokeAsync(() =>
+        {
+            if (selectedChannelId.HasValue && selectedChannelId.Value == channelId)
+            {
+                var message = channelMessages.FirstOrDefault(m => m.Id == messageId);
+                if (message != null)
+                {
+                    var index = channelMessages.IndexOf(message);
+                    var reactions = message.Reactions.ToList();
+
+                    // Find existing reaction for this emoji
+                    var existingReaction = reactions.FirstOrDefault(r => r.Emoji == reaction);
+                    if (existingReaction != null)
+                    {
+                        // Add userId to existing reaction if not already present
+                        if (!existingReaction.UserIds.Contains(userId))
+                        {
+                            var updatedUserIds = existingReaction.UserIds.ToList();
+                            updatedUserIds.Add(userId);
+                            var reactionIndex = reactions.IndexOf(existingReaction);
+                            reactions[reactionIndex] = new ChannelMessageReactionDto(
+                                existingReaction.Emoji,
+                                updatedUserIds.Count,
+                                updatedUserIds
+                            );
+                        }
+                    }
+                    else
+                    {
+                        // Create new reaction
+                        reactions.Add(new ChannelMessageReactionDto(reaction, 1, [userId]));
+                    }
+
+                    // Update message with new reactions
+                    var updatedMessage = message with
+                    {
+                        ReactionCount = reactions.Sum(r => r.Count),
+                        Reactions = reactions
+                    };
+
+                    channelMessages[index] = updatedMessage;
+                    StateHasChanged();
+                }
+            }
+        });
+    }
+
+    private void HandleChannelReactionRemoved(Guid channelId, Guid messageId, Guid userId, string reaction)
+    {
+        InvokeAsync(() =>
+        {
+            if (selectedChannelId.HasValue && selectedChannelId.Value == channelId)
+            {
+                var message = channelMessages.FirstOrDefault(m => m.Id == messageId);
+                if (message != null)
+                {
+                    var index = channelMessages.IndexOf(message);
+                    var reactions = message.Reactions.ToList();
+
+                    // Find existing reaction for this emoji
+                    var existingReaction = reactions.FirstOrDefault(r => r.Emoji == reaction);
+                    if (existingReaction != null)
+                    {
+                        // Remove userId from reaction
+                        var updatedUserIds = existingReaction.UserIds.Where(id => id != userId).ToList();
+
+                        if (updatedUserIds.Count > 0)
+                        {
+                            // Update reaction with remaining users
+                            var reactionIndex = reactions.IndexOf(existingReaction);
+                            reactions[reactionIndex] = new ChannelMessageReactionDto(
+                                existingReaction.Emoji,
+                                updatedUserIds.Count,
+                                updatedUserIds
+                            );
+                        }
+                        else
+                        {
+                            // Remove reaction entirely if no users left
+                            reactions.Remove(existingReaction);
+                        }
+
+                        // Update message with new reactions
+                        var updatedMessage = message with
+                        {
+                            ReactionCount = reactions.Sum(r => r.Count),
+                            Reactions = reactions
+                        };
+
+                        channelMessages[index] = updatedMessage;
+                        StateHasChanged();
+                    }
+                }
+            }
+        });
+    }
+
+    private void HandleChannelMessagesRead(Guid channelId, Guid userId, DateTime readAtUtc)
+    {
+        InvokeAsync(() =>
+        {
+            // Only process if we're viewing this channel
+            if (!selectedChannelId.HasValue || selectedChannelId.Value != channelId)
+                return;
+
+            bool updated = false;
+            var updatedMessages = new List<ChannelMessageDto>();
+
+            // Mark messages as read based on timestamp comparison
+            foreach (var message in channelMessages)
+            {
+                // Skip if user is the sender (sender is never in ReadBy list)
+                if (message.SenderId == userId)
+                {
+                    updatedMessages.Add(message);
+                    continue;
+                }
+
+                // Check if this user already marked this message as read
+                var readByList = message.ReadBy ?? new List<Guid>();
+
+                // Only mark as read if: user hasn't read it yet AND message was created before readAtUtc
+                if (!readByList.Contains(userId) && readAtUtc >= message.CreatedAtUtc)
+                {
+                    // Add user to ReadBy list
+                    var newReadByList = new List<Guid>(readByList) { userId };
+
+                    // Update message with new ReadBy list and recalculated count
+                    var updatedMessage = message with
+                    {
+                        ReadBy = newReadByList,
+                        ReadByCount = newReadByList.Count
+                    };
+
+                    updatedMessages.Add(updatedMessage);
+                    updated = true;
+                }
+                else
+                {
+                    updatedMessages.Add(message);
+                }
+            }
+
+            if (updated)
+            {
+                // Create a NEW list instance to trigger Blazor parameter change detection
+                channelMessages = updatedMessages;
+                StateHasChanged();
+            }
+            else
+            {
+                // Store as pending read receipt (for race condition)
+                pendingChannelReadReceipts[userId] = readAtUtc;
+            }
+        });
     }
     #endregion
 
@@ -1184,6 +1531,19 @@ public partial class Messages : IAsyncDisposable
     }
     private async Task SelectConversation(DirectConversationDto conversation)
     {
+        // Mark previous channel as read before switching to conversation
+        if (selectedChannelId.HasValue)
+        {
+            try
+            {
+                await ChannelService.MarkAsReadAsync(selectedChannelId.Value);
+            }
+            catch
+            {
+                // Ignore errors when marking as read
+            }
+        }
+
         // Clear pending conversation state
         isPendingConversation = false;
         pendingUser = null;
@@ -1207,6 +1567,8 @@ public partial class Messages : IAsyncDisposable
         oldestMessageDate = null;
         typingUsers.Clear();
         pendingReadReceipts.Clear(); // Clear pending read receipts when changing conversations
+        pendingChannelReadReceipts.Clear(); // Clear pending channel read receipts when changing conversations
+        pendingMessageAdds.Clear(); // Clear pending message adds when changing conversations
         pageSize = 50; // Reset page size to 50 for new conversation
 
         // Set conversation details AFTER clearing
@@ -1365,6 +1727,19 @@ public partial class Messages : IAsyncDisposable
     }
     private async Task SelectChannel(ChannelDto channel)
     {
+        // Mark previous channel as read before switching
+        if (selectedChannelId.HasValue && selectedChannelId.Value != channel.Id)
+        {
+            try
+            {
+                await ChannelService.MarkAsReadAsync(selectedChannelId.Value);
+            }
+            catch
+            {
+                // Ignore errors when marking as read
+            }
+        }
+
         // Clear pending conversation state
         isPendingConversation = false;
         pendingUser = null;
@@ -1386,9 +1761,6 @@ public partial class Messages : IAsyncDisposable
             }
         }
 
-        // Always mark messages as read on the server when entering channel
-        _ = ChannelService.MarkAsReadAsync(channel.Id);
-
         // IMPORTANT: Clear messages BEFORE setting selectedChannelId
         // This prevents race condition where SignalR events arrive between setting ID and clearing messages
         directMessages.Clear();
@@ -1397,6 +1769,8 @@ public partial class Messages : IAsyncDisposable
         oldestMessageDate = null;
         typingUsers.Clear();
         pendingReadReceipts.Clear(); // Clear pending read receipts when changing channels
+        pendingChannelReadReceipts.Clear(); // Clear pending channel read receipts when changing channels
+        pendingMessageAdds.Clear(); // Clear pending message adds when changing channels
         pageSize = 50; // Reset page size to 50 for new channel
 
         // Set channel details AFTER clearing
@@ -1433,6 +1807,16 @@ public partial class Messages : IAsyncDisposable
         // Load messages and pinned count
         await LoadChannelMessages();
         await LoadPinnedMessageCount();
+
+        // Mark messages as read AFTER loading to ensure all loaded messages are marked
+        try
+        {
+            await ChannelService.MarkAsReadAsync(channel.Id);
+        }
+        catch
+        {
+            // Ignore errors when marking as read
+        }
 
         // Update URL
         NavigationManager.NavigateTo($"/messages/channel/{channel.Id}", false);
@@ -1636,6 +2020,9 @@ public partial class Messages : IAsyncDisposable
                 // If forwarding to current channel, add message locally
                 if (channelId == selectedChannelId)
                 {
+                    // TotalMemberCount = all active members except sender
+                    var totalMembers = Math.Max(0, selectedChannelMemberCount - 1);
+
                     var newMessage = new ChannelMessageDto(
                         result.Value,
                         channelId,
@@ -1655,7 +2042,11 @@ public partial class Messages : IAsyncDisposable
                         null,
                         null,
                         null,
-                        true);
+                        true,
+                        ReadByCount: 0,
+                        TotalMemberCount: totalMembers,
+                        ReadBy: new List<Guid>(),
+                        Reactions: new List<ChannelMessageReactionDto>());
 
                     channelMessages.Add(newMessage);
                 }
@@ -2104,6 +2495,9 @@ public partial class Messages : IAsyncDisposable
         SignalRService.OnUserOnline -= HandleUserOnline;
         SignalRService.OnUserOffline -= HandleUserOffline;
         SignalRService.OnDirectMessageReactionToggled -= HandleReactionToggled;
+        SignalRService.OnChannelReactionAdded -= HandleChannelReactionAdded;
+        SignalRService.OnChannelReactionRemoved -= HandleChannelReactionRemoved;
+        SignalRService.OnChannelMessagesRead -= HandleChannelMessagesRead;
         SignalRService.OnAddedToChannel -= HandleAddedToChannel;
     }
 

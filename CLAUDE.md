@@ -488,3 +488,39 @@ Building a modern messaging UI similar to WhatsApp Web.
   - React button stays outside bubble and works perfectly ✅
   - No layout shifting or jumping on hover ✅
   - Professional, WhatsApp-inspired design ✅
+
+### Session 7 (2025-12-17)
+**Fixed critical channel message read status issues:**
+
+1. **Channel messages not persisting as read after page refresh:**
+   - **Problem:** When clicking a channel, messages were marked as read in the UI, but after refreshing the page, all messages showed as unread again
+   - **Root Cause:** Backend was calling `UpdateAsync()` on an already-tracked entity, causing EF Core tracking conflicts
+   - **Solution:** Removed redundant `UpdateAsync()` call from `MarkChannelMessagesAsReadCommand.cs`
+   - Entity is already tracked from `GetMemberAsync()`, so calling `MarkAsRead()` + `SaveChangesAsync()` is sufficient
+   - Files modified: `MarkChannelMessagesAsReadCommand.cs` (line 62-64)
+
+2. **Page visibility not working for channels:**
+   - **Problem:** When returning to the browser tab while viewing a channel, messages were not automatically marked as read for other users
+   - **Root Cause:** Channel mark-as-read code in `MarkUnreadMessagesAsRead()` was commented out
+   - **Solution:** Uncommented and simplified the channel handling in `OnVisibilityChanged` handler
+   - When user returns to tab, calls `MarkAsReadAsync()` for selected channel, SignalR event updates all users' UI
+   - Files modified: `Messages.razor.cs` (line 240-252)
+
+3. **Direct message mark-as-read broken (regression):**
+   - **Problem:** After fixing channel issues, direct messages were incorrectly marked as read immediately when sender sent them, regardless of page visibility or recipient status
+   - **Root Cause:** In `HandleNewDirectMessage`, the code was checking only `isPageVisible` without checking if message was from current user
+   - **Solution:** Fixed condition to only mark as read if: `message.SenderId != currentUserId && isPageVisible`
+   - Files modified: `Messages.razor.cs` - `HandleNewDirectMessage` method (line 304-321)
+
+**Code cleanup:**
+- Removed all debug `Console.WriteLine` statements from:
+  - `MessageBubble.razor` - Removed ReadByCount change tracking
+  - `ChatArea.razor` - Removed ChannelMessages reference change logging
+  - `Messages.razor.cs` - Removed SendMessage pending receipt logging
+- Removed unused field `_previousReadByCount` from MessageBubble component
+
+**Final behavior (working correctly):**
+- ✅ Direct messages: Only marked as read when recipient views them AND page is visible
+- ✅ Channel messages: Persist read status correctly across page refreshes
+- ✅ Page visibility: Returns to tab → automatically marks messages as read for all users
+- ✅ Sender's own messages: Never marked as read (only recipient can mark as read)
