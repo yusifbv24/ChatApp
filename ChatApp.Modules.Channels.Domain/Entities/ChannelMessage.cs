@@ -102,22 +102,28 @@ namespace ChatApp.Modules.Channels.Domain.Entities
             UpdateTimestamp();
         }
 
-        public void AddReaction(ChannelMessageReaction reaction)
+        /// <summary>
+        /// Toggles a reaction: removes if exists, adds if not exists.
+        /// Returns (wasAdded, addedReaction, removedReaction)
+        /// </summary>
+        public (bool WasAdded, ChannelMessageReaction? AddedReaction, ChannelMessageReaction? RemovedReaction) ToggleReaction(
+            Guid userId,
+            string reactionEmoji)
         {
-            if (_reactions.Any(r => r.UserId == reaction.UserId && r.Reaction == reaction.Reaction))
-                throw new InvalidOperationException("User has already reacted with this emoji");
+            var existingReaction = _reactions.FirstOrDefault(r => r.UserId == userId && r.Reaction == reactionEmoji);
 
-            _reactions.Add(reaction);
-            // Don't update message timestamp - reactions are separate entities
-        }
-
-        public void RemoveReaction(Guid userId, string reactionEmoji)
-        {
-            var reaction = _reactions.FirstOrDefault(r => r.UserId == userId && r.Reaction == reactionEmoji);
-            if (reaction != null)
+            if (existingReaction != null)
             {
-                _reactions.Remove(reaction);
-                // Don't update message timestamp - reactions are separate entities
+                // Remove existing reaction
+                _reactions.Remove(existingReaction);
+                return (false, null, existingReaction);
+            }
+            else
+            {
+                // Add new reaction
+                var newReaction = new ChannelMessageReaction(Id, userId, reactionEmoji);
+                _reactions.Add(newReaction);
+                return (true, newReaction, null);
             }
         }
     }

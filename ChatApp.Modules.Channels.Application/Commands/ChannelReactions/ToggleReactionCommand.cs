@@ -54,13 +54,11 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelReactions
         {
             try
             {
-                // First, verify message exists and user is a member (without tracking)
-                var message = await _unitOfWork.ChannelMessages.GetByIdAsync(
+                // Load message with reactions (AsNoTracking for validation only)
+                var message = await _unitOfWork.ChannelMessages.GetByIdWithReactionsAsync(
                     request.MessageId,
-                    cancellationToken);
-
-                if (message == null)
-                    throw new NotFoundException($"Message with ID {request.MessageId} not found");
+                    cancellationToken) 
+                    ?? throw new NotFoundException($"Message with ID {request.MessageId} not found");
 
                 // Verify user is a member
                 var isMember = await _unitOfWork.Channels.IsUserMemberAsync(
@@ -73,29 +71,19 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelReactions
                     return Result.Failure<List<ChannelMessageReactionDto>>("You must be a member to react to messages");
                 }
 
-                // Work with reactions directly through repository to avoid tracking message entity
-                var existingReaction = await _unitOfWork.ChannelMessageReactions.GetReactionAsync(
-                    request.MessageId,
+                // Use domain method for toggle logic (DDD principle - business logic in domain)
+                var (wasAdded, addedReaction, removedReaction) = message.ToggleReaction(
                     request.UserId,
-                    request.Reaction,
-                    cancellationToken);
+                    request.Reaction);
 
-                bool wasAdded;
-                if (existingReaction != null)
+                // Persist changes to database using repository
+                if (wasAdded && addedReaction != null)
                 {
-                    // Remove the reaction
-                    await _unitOfWork.ChannelMessageReactions.RemoveReactionAsync(existingReaction, cancellationToken);
-                    wasAdded = false;
+                    await _unitOfWork.ChannelMessageReactions.AddReactionAsync(addedReaction, cancellationToken);
                 }
-                else
+                else if (!wasAdded && removedReaction != null)
                 {
-                    // Add the reaction
-                    var reaction = new ChannelMessageReaction(
-                        request.MessageId,
-                        request.UserId,
-                        request.Reaction);
-                    await _unitOfWork.ChannelMessageReactions.AddReactionAsync(reaction, cancellationToken);
-                    wasAdded = true;
+                    await _unitOfWork.ChannelMessageReactions.RemoveReactionAsync(removedReaction, cancellationToken);
                 }
 
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -132,12 +120,6 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelReactions
                         request.UserId,
                         request.Reaction);
                 }
-
-                _logger?.LogInformation(
-                    "Reaction {Reaction} {Action} for message {MessageId}",
-                    request.Reaction,
-                    wasAdded ? "added" : "removed",
-                    request.MessageId);
 
                 return Result.Success(reactionsGrouped);
             }

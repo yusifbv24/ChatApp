@@ -23,6 +23,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
         public async Task<ChannelMessage?> GetByIdWithReactionsAsync(Guid id, CancellationToken cancellationToken = default)
         {
             return await _context.ChannelMessages
+                .AsNoTracking()
                 .Include(m => m.Reactions)
                 .FirstOrDefaultAsync(m => m.Id == id, cancellationToken);
         }
