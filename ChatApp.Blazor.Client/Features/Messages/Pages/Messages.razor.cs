@@ -239,10 +239,28 @@ public partial class Messages : IAsyncDisposable
         }
         else if (selectedChannelId.HasValue)
         {
-            // Mark all channel messages as read
+            // Mark all channel messages as read using smart threshold
+            // Use smart threshold: 10+ messages = bulk, <10 messages = individual
             try
             {
-                await ChannelService.MarkAsReadAsync(selectedChannelId.Value);
+                var unreadMessages = channelMessages.Where(m =>
+                    m.SenderId != currentUserId &&
+                    (m.ReadBy == null || !m.ReadBy.Contains(currentUserId))
+                ).ToList();
+
+                if (unreadMessages.Count >= 10)
+                {
+                    // Bulk operation for 10+ unread messages
+                    await ChannelService.MarkAsReadAsync(selectedChannelId.Value);
+                }
+                else if (unreadMessages.Count > 0)
+                {
+                    // Individual operations for 1-9 unread messages
+                    foreach (var msg in unreadMessages)
+                    {
+                        await ChannelService.MarkSingleMessageAsReadAsync(selectedChannelId.Value, msg.Id);
+                    }
+                }
                 // SignalR event will update the UI automatically
             }
             catch
@@ -408,11 +426,12 @@ public partial class Messages : IAsyncDisposable
 
                     // Message from another user - mark as read if page is visible
                     // ONLY mark if: message is from another user AND page is visible
+                    // Use single message endpoint for individual new messages
                     if (message.SenderId != currentUserId && isPageVisible)
                     {
                         try
                         {
-                            await ChannelService.MarkAsReadAsync(message.ChannelId);
+                            await ChannelService.MarkSingleMessageAsReadAsync(message.ChannelId, message.Id);
                         }
                         catch
                         {
@@ -1816,12 +1835,34 @@ public partial class Messages : IAsyncDisposable
 
         // CRITICAL: Mark NEW channel as read AFTER loading
         // This must be called even if previous channel mark-as-read failed
+        // Use smart threshold: 10+ messages = bulk, <10 messages = individual
         try
         {
-            var markResult = await ChannelService.MarkAsReadAsync(channel.Id);
-            if (!markResult.IsSuccess)
+            var unreadMessages = channelMessages.Where(m =>
+                m.SenderId != currentUserId &&
+                (m.ReadBy == null || !m.ReadBy.Contains(currentUserId))
+            ).ToList();
+
+            if (unreadMessages.Count >= 10)
             {
-                Console.WriteLine($"[SelectChannel] Mark-as-read failed: {markResult.Error}");
+                // Bulk operation for 10+ unread messages
+                var markResult = await ChannelService.MarkAsReadAsync(channel.Id);
+                if (!markResult.IsSuccess)
+                {
+                    Console.WriteLine($"[SelectChannel] Bulk mark-as-read failed: {markResult.Error}");
+                }
+            }
+            else if (unreadMessages.Count > 0)
+            {
+                // Individual operations for 1-9 unread messages
+                foreach (var msg in unreadMessages)
+                {
+                    var markResult = await ChannelService.MarkSingleMessageAsReadAsync(channel.Id, msg.Id);
+                    if (!markResult.IsSuccess)
+                    {
+                        Console.WriteLine($"[SelectChannel] Single mark-as-read failed for message {msg.Id}: {markResult.Error}");
+                    }
+                }
             }
         }
         catch (Exception ex)

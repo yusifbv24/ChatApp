@@ -98,6 +98,12 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
         }
 
 
+        public async Task<Result> MarkSingleMessageAsReadAsync(Guid channelId, Guid messageId)
+        {
+            return await apiClient.PostAsync($"/api/channels/{channelId}/messages/{messageId}/mark-as-read");
+        }
+
+
         public async Task<Result<Guid>> SendMessageAsync(Guid channelId, string content, string? fileId = null, Guid? replyToMessageId = null, bool isForwarded = false)
         {
             var response = await apiClient.PostAsync<SendMessageResponse>(

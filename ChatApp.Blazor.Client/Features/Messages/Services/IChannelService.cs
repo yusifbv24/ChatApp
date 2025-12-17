@@ -38,6 +38,9 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
         Task<Result> MarkAsReadAsync(Guid channelId);
 
 
+        Task<Result> MarkSingleMessageAsReadAsync(Guid channelId, Guid messageId);
+
+
         Task<Result<Guid>> SendMessageAsync(Guid channelId, string content, string? fileId = null, Guid? replyToMessageId = null, bool isForwarded = false);
 
 
