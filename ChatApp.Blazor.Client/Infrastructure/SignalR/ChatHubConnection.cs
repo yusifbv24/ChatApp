@@ -44,7 +44,20 @@ public class ChatHubConnection : IChatHubConnection, IAsyncDisposable
                 // Provide access token for authentication
                 options.AccessTokenProvider = () => Task.FromResult(_cachedToken);
             })
-            .WithAutomaticReconnect([TimeSpan.Zero, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(10)])
+            // Aggressive reconnection strategy: keep trying for much longer
+            .WithAutomaticReconnect(new[]
+            {
+                TimeSpan.Zero,             // 1st retry: immediately
+                TimeSpan.FromSeconds(2),   // 2nd retry: 2 sec
+                TimeSpan.FromSeconds(5),   // 3rd retry: 5 sec
+                TimeSpan.FromSeconds(10),  // 4th retry: 10 sec
+                TimeSpan.FromSeconds(15),  // 5th retry: 15 sec
+                TimeSpan.FromSeconds(20),  // 6th retry: 20 sec
+                TimeSpan.FromSeconds(30),  // 7th retry: 30 sec
+                TimeSpan.FromSeconds(30),  // 8th retry: 30 sec
+                TimeSpan.FromSeconds(30),  // 9th retry: 30 sec
+                TimeSpan.FromSeconds(60),  // 10th retry: 1 min
+            })
             .Build();
 
         // Handle reconnection - refresh token when reconnecting
@@ -122,8 +135,24 @@ public class ChatHubConnection : IChatHubConnection, IAsyncDisposable
             throw new InvalidOperationException("Hub connection not started");
         }
 
-        // Use SendCoreAsync to properly spread the arguments (fire-and-forget)
-        await _hubConnection.SendCoreAsync(method, args);
+        // Check if connection is active before sending
+        if (_hubConnection.State != HubConnectionState.Connected)
+        {
+            Console.WriteLine($"SignalR connection is {_hubConnection.State}. Cannot send message: {method}");
+            // Silently ignore if connection is not active (graceful degradation)
+            return;
+        }
+
+        try
+        {
+            // Use SendCoreAsync to properly spread the arguments (fire-and-forget)
+            await _hubConnection.SendCoreAsync(method, args);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error sending SignalR message '{method}': {ex.Message}");
+            // Gracefully handle errors - don't crash the app
+        }
     }
 
     public async Task<TResult> InvokeAsync<TResult>(string methodName, params object?[] args)
@@ -133,8 +162,23 @@ public class ChatHubConnection : IChatHubConnection, IAsyncDisposable
             throw new InvalidOperationException("Hub connection not started");
         }
 
-        // Use InvokeAsync to call server method and wait for result
-        return await _hubConnection.InvokeCoreAsync<TResult>(methodName, args);
+        // Check if connection is active before invoking
+        if (_hubConnection.State != HubConnectionState.Connected)
+        {
+            Console.WriteLine($"SignalR connection is {_hubConnection.State}. Cannot invoke method: {methodName}");
+            throw new InvalidOperationException($"SignalR connection is not active (State: {_hubConnection.State})");
+        }
+
+        try
+        {
+            // Use InvokeAsync to call server method and wait for result
+            return await _hubConnection.InvokeCoreAsync<TResult>(methodName, args);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error invoking SignalR method '{methodName}': {ex.Message}");
+            throw;
+        }
     }
 
     public IDisposable On<T>(string methodName, Action<T> handler)

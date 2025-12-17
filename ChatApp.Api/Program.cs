@@ -115,8 +115,11 @@ builder.Services.AddScoped<ISignalRNotificationService, SignalRNotificationServi
 builder.Services.AddSignalR(options =>
 {
     options.EnableDetailedErrors = builder.Environment.IsDevelopment();
-    options.KeepAliveInterval = TimeSpan.FromSeconds(15);
-    options.ClientTimeoutInterval = TimeSpan.FromSeconds(30);
+    // Keep-alive ping interval (server sends ping to client)
+    options.KeepAliveInterval = TimeSpan.FromSeconds(30);
+    // Client timeout (how long before server considers client disconnected)
+    // Set to 2 minutes to handle idle connections gracefully
+    options.ClientTimeoutInterval = TimeSpan.FromMinutes(2);
     options.HandshakeTimeout = TimeSpan.FromSeconds(15);
     options.MaximumReceiveMessageSize = 1024 * 1024; // 1MB
 });
