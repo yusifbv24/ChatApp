@@ -103,27 +103,37 @@ namespace ChatApp.Modules.Channels.Domain.Entities
         }
 
         /// <summary>
-        /// Toggles a reaction: removes if exists, adds if not exists.
-        /// Returns (wasAdded, addedReaction, removedReaction)
+        /// Toggles a reaction: removes if same emoji clicked, replaces if different emoji.
+        /// User can only have ONE reaction per message (like WhatsApp/Telegram).
+        /// Returns (wasAdded, addedReaction, removedReactions)
         /// </summary>
         public (bool WasAdded, ChannelMessageReaction? AddedReaction, ChannelMessageReaction? RemovedReaction) ToggleReaction(
             Guid userId,
             string reactionEmoji)
         {
-            var existingReaction = _reactions.FirstOrDefault(r => r.UserId == userId && r.Reaction == reactionEmoji);
+            // Find user's existing reaction with the same emoji
+            var existingSameReaction = _reactions.FirstOrDefault(r => r.UserId == userId && r.Reaction == reactionEmoji);
 
-            if (existingReaction != null)
+            if (existingSameReaction != null)
             {
-                // Remove existing reaction
-                _reactions.Remove(existingReaction);
-                return (false, null, existingReaction);
+                // Same emoji clicked - remove it (toggle off)
+                _reactions.Remove(existingSameReaction);
+                return (false, null, existingSameReaction);
             }
             else
             {
+                // Different emoji or no reaction - remove ALL user's existing reactions first
+                var userExistingReaction = _reactions.Find(r => r.UserId == userId);
+               
+                if(userExistingReaction != null)
+                {
+                    _reactions.Remove(userExistingReaction);
+                }
+
                 // Add new reaction
                 var newReaction = new ChannelMessageReaction(Id, userId, reactionEmoji);
                 _reactions.Add(newReaction);
-                return (true, newReaction, null);
+                return (true, newReaction, userExistingReaction);
             }
         }
     }

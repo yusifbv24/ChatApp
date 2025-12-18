@@ -60,52 +60,71 @@
                     <!-- Message text -->
                     <div class="message-text">@Content</div>
 
-                    <!-- Footer: Time and status -->
-                    <div class="message-footer">
-                        @if (IsEdited)
+                    <!-- Footer Row: Reactions (left) and Time/Status (right) -->
+                    <div class="message-footer-row">
+                        <!-- Reactions - parallel to footer -->
+                        @if (GetReactionsList() is var reactions && reactions != null && reactions.Count > 0 && !IsDeleted)
                         {
-                            <span class="edited-label">edited</span>
+                            <div class="message-reactions-inline">
+                                @foreach (var reaction in reactions)
+                                {
+                                    var isOwnReaction = CurrentUserId.HasValue && reaction.UserIds.Contains(CurrentUserId.Value);
+                                    var badgeClass = isOwnReaction ? "reaction-badge own-reaction" : "reaction-badge";
+                                    <span class="@badgeClass" @onclick="() => SelectReaction(reaction.Emoji)" title="@GetReactionTooltip(reaction)">
+                                        <span class="reaction-emoji">@reaction.Emoji</span>
+                                        <span class="reaction-count">@reaction.Count</span>
+                                    </span>
+                                }
+                            </div>
                         }
-                        @if (IsPinned)
-                        {
-                            <MudIcon Icon="@Icons.Material.Filled.PushPin" Size="Size.Small" Class="pinned-icon-inline" />
-                        }
-                        <span class="message-time">@FormatTime(CreatedAt)</span>
-                        @if (IsOwn && !IsDeleted)
-                        {
-                            @if (IsDirectMessage)
+
+                        <!-- Footer: Time and status -->
+                        <div class="message-footer">
+                            @if (IsEdited)
                             {
-                                <span class="read-status">
-                                    @if (IsRead)
-                                    {
-                                        <MudIcon Icon="@Icons.Material.Filled.DoneAll" Size="Size.Small" Class="read-icon" />
-                                    }
-                                    else
-                                    {
-                                        <MudIcon Icon="@Icons.Material.Filled.Done" Size="Size.Small" />
-                                    }
-                                </span>
+                                <span class="edited-label">edited</span>
                             }
-                            else
+                            @if (IsPinned)
                             {
-                                @* Channel message read status *@
-                                <span class="read-status">
-                                    @if (ReadByCount > 0)
-                                    {
-                                        @* At least one person read it - show double checkmark *@
-                                        @* Blue if everyone (except sender) read it, gray if only some read it *@
-                                        @* TotalMemberCount already excludes sender (calculated in backend) *@
-                                        <MudIcon Icon="@Icons.Material.Filled.DoneAll" Size="Size.Small"
-                                                 Class="@(TotalMemberCount > 0 && ReadByCount >= TotalMemberCount ? "read-icon" : "")" />
-                                    }
-                                    else
-                                    {
-                                        @* Not read by anyone - show single checkmark *@
-                                        <MudIcon Icon="@Icons.Material.Filled.Done" Size="Size.Small" />
-                                    }
-                                </span>
+                                <MudIcon Icon="@Icons.Material.Filled.PushPin" Size="Size.Small" Class="pinned-icon-inline" />
                             }
-                        }
+                            <span class="message-time">@FormatTime(CreatedAt)</span>
+                            @if (IsOwn && !IsDeleted)
+                            {
+                                @if (IsDirectMessage)
+                                {
+                                    <span class="read-status">
+                                        @if (IsRead)
+                                        {
+                                            <MudIcon Icon="@Icons.Material.Filled.DoneAll" Size="Size.Small" Class="read-icon" />
+                                        }
+                                        else
+                                        {
+                                            <MudIcon Icon="@Icons.Material.Filled.Done" Size="Size.Small" />
+                                        }
+                                    </span>
+                                }
+                                else
+                                {
+                                    @* Channel message read status *@
+                                    <span class="read-status">
+                                        @if (ReadByCount > 0)
+                                        {
+                                            @* At least one person read it - show double checkmark *@
+                                            @* Blue if everyone (except sender) read it, gray if only some read it *@
+                                            @* TotalMemberCount already excludes sender (calculated in backend) *@
+                                            <MudIcon Icon="@Icons.Material.Filled.DoneAll" Size="Size.Small"
+                                                     Class="@(TotalMemberCount > 0 && ReadByCount >= TotalMemberCount ? "read-icon" : "")" />
+                                        }
+                                        else
+                                        {
+                                            @* Not read by anyone - show single checkmark *@
+                                            <MudIcon Icon="@Icons.Material.Filled.Done" Size="Size.Small" />
+                                        }
+                                    </span>
+                                }
+                            }
+                        </div>
                     </div>
 
                     <!-- Chevron button - top right corner -->
@@ -151,22 +170,6 @@
                                 </button>
                             }
                         </div>
-                    }
-                </div>
-            }
-
-            <!-- Reactions Badge - positioned at bottom-right corner of bubble -->
-            @if (Reactions != null && Reactions.Count > 0 && !IsDeleted)
-            {
-                <div class="message-reactions">
-                    @foreach (var reaction in Reactions)
-                    {
-                        var isOwnReaction = CurrentUserId.HasValue && reaction.UserIds.Contains(CurrentUserId.Value);
-                        var badgeClass = isOwnReaction ? "reaction-badge own-reaction" : "reaction-badge";
-                        <span class="@badgeClass" @onclick="() => SelectReaction(reaction.Emoji)" title="@GetReactionTooltip(reaction)">
-                            <span class="reaction-emoji">@reaction.Emoji</span>
-                            <span class="reaction-count">@reaction.Count</span>
-                        </span>
                     }
                 </div>
             }
@@ -236,7 +239,7 @@
     [Parameter] public int TotalMemberCount { get; set; }
     [Parameter] public bool IsPinned { get; set; }
     [Parameter] public int ReactionCount { get; set; }
-    [Parameter] public List<MessageReactionDto>? Reactions { get; set; }
+    [Parameter] public object? Reactions { get; set; } // Can be List<MessageReactionDto> or List<ChannelMessageReactionDto>
     [Parameter] public Guid? CurrentUserId { get; set; }
     [Parameter] public bool ShowAvatar { get; set; }
     [Parameter] public bool ShowSenderName { get; set; }
@@ -415,13 +418,30 @@
         await OnActionCompleted.InvokeAsync();
     }
 
-    private string GetReactionTooltip(MessageReactionDto reaction)
+    // Helper to get reactions list (works for both MessageReactionDto and ChannelMessageReactionDto)
+    private List<dynamic>? GetReactionsList()
     {
-        if (reaction.Count == 1)
+        if (Reactions == null) return null;
+
+        if (Reactions is List<MessageReactionDto> directReactions)
+            return directReactions.Cast<dynamic>().ToList();
+
+        if (Reactions is List<ChannelMessageReactionDto> channelReactions)
+            return channelReactions.Cast<dynamic>().ToList();
+
+        return null;
+    }
+
+    private string GetReactionTooltip(dynamic reaction)
+    {
+        string emoji = reaction.Emoji;
+        int count = reaction.Count;
+
+        if (count == 1)
         {
-            return $"{reaction.Emoji} 1 person";
+            return $"{emoji} 1 person";
         }
-        return $"{reaction.Emoji} {reaction.Count} people";
+        return $"{emoji} {count} people";
     }
 
     private record MenuPositionInfo

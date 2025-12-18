@@ -52,6 +52,7 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
     public event Action<Guid, Guid, List<ReactionSummary>>? OnDirectMessageReactionToggled;
     public event Action<Guid, Guid, Guid, string>? OnChannelReactionAdded;
     public event Action<Guid, Guid, Guid, string>? OnChannelReactionRemoved;
+    public event Action<Guid, List<ChannelMessageReactionDto>>? OnChannelMessageReactionsUpdated;
 
 
     // Channel membership events
@@ -323,6 +324,25 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
                 OnChannelReactionRemoved?.Invoke(channelId, messageId, userId, reaction);
             }));
 
+        // Channel message reactions updated (simplified - replaces ReactionAdded/Removed)
+        _subscriptions.Add(hubConnection.On<object>("ChannelMessageReactionsUpdated", data =>
+        {
+            try
+            {
+                var json = JsonSerializer.Serialize(data);
+                var payload = JsonSerializer.Deserialize<ChannelMessageReactionsUpdatedPayload>(json, _jsonOptions);
+
+                if (payload != null && payload.MessageId != Guid.Empty)
+                {
+                    OnChannelMessageReactionsUpdated?.Invoke(payload.MessageId, payload.Reactions ?? new List<ChannelMessageReactionDto>());
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error deserializing ChannelMessageReactionsUpdated: {ex.Message}");
+            }
+        }));
+
         // Channel messages read event
         _subscriptions.Add(hubConnection.On<Guid, Guid, List<Guid>>("ChannelMessagesRead",
             (channelId, userId, messageIds) =>
@@ -439,4 +459,11 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
     {
         await DisconnectAsync();
     }
+}
+
+// Payload class for ChannelMessageReactionsUpdated SignalR event
+internal class ChannelMessageReactionsUpdatedPayload
+{
+    public Guid MessageId { get; set; }
+    public List<ChannelMessageReactionDto>? Reactions { get; set; }
 }

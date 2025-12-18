@@ -189,6 +189,16 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Services
                 .SendAsync("ReactionRemoved", channelId, messageId, userId, reaction);
         }
 
+        public async Task NotifyChannelMessageReactionsUpdatedAsync(Guid channelId, Guid messageId, object reactions)
+        {
+            _logger?.LogDebug("Broadcasting reactions updated for message {MessageId} in channel {ChannelId}",
+                messageId, channelId);
+
+            await _hubContext.Clients
+                .Group($"channel_{channelId}")
+                .SendAsync("ChannelMessageReactionsUpdated", new { messageId, reactions });
+        }
+
 
         public async Task NotifyUserAsync(Guid userId, string eventName, object data)
         {

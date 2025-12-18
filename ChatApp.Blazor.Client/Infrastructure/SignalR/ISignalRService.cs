@@ -43,6 +43,7 @@ public interface ISignalRService
     event Action<Guid, Guid, List<ReactionSummary>>? OnDirectMessageReactionToggled;
     event Action<Guid, Guid, Guid, string>? OnChannelReactionAdded;  // channelId, messageId, userId, reaction
     event Action<Guid, Guid, Guid, string>? OnChannelReactionRemoved;  // channelId, messageId, userId, reaction
+    event Action<Guid, List<ChannelMessageReactionDto>>? OnChannelMessageReactionsUpdated;  // messageId, reactions (simplified)
 
 
     // Channel membership events

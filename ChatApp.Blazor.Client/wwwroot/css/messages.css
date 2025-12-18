@@ -898,15 +898,33 @@
     color: var(--white);
 }
 
-/* Message footer - time and status */
+/* Message footer row - contains reactions and footer side by side */
+.message-footer-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+/* Inline reactions container */
+.message-reactions-inline {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+/* Message footer - time and status (always on the right) */
 .message-footer {
     display: flex;
     align-items: center;
     justify-content: flex-end;
     gap: 4px;
-    margin-top: 4px;
     font-size: 11px;
     color: var(--gray-500);
+    white-space: nowrap;
+    flex-shrink: 0;
+    margin-left: auto; /* Always push to the right */
 }
 
 .own-bubble .message-footer {
@@ -1186,21 +1204,7 @@
         color: var(--primary-color);
     }
 
-/* Message Reactions - WhatsApp style */
-.message-reactions {
-    position: absolute;
-    bottom: -20px;
-    right: 8px;
-    display: flex;
-    gap: 4px;
-    z-index: 1;
-}
-
-/* Add margin to message wrapper when reactions are present */
-.message-wrapper:has(.message-reactions) {
-    margin-bottom: 16px;
-}
-
+/* Message Reactions - inline style */
 .reaction-badge {
     display: flex;
     align-items: center;

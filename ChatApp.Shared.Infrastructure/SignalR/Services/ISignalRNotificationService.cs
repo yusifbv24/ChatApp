@@ -55,12 +55,15 @@
         /// </summary>
         Task NotifyReactionAddedAsync(Guid channelId, Guid messageId, Guid userId, string reaction);
 
-
-
         /// <summary>
         /// Notify about reaction removed
         /// </summary>
         Task NotifyReactionRemovedAsync(Guid channelId, Guid messageId, Guid userId, string reaction);
+
+        /// <summary>
+        /// Notify about channel message reactions updated (simplified - sends all reactions)
+        /// </summary>
+        Task NotifyChannelMessageReactionsUpdatedAsync(Guid channelId, Guid messageId, object reactions);
 
 
 

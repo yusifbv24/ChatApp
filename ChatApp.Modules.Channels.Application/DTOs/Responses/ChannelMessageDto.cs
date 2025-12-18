@@ -22,6 +22,7 @@
         bool IsForwarded,
         int ReadByCount = 0,
         int TotalMemberCount = 0,
-        List<Guid>? ReadBy = null
+        List<Guid>? ReadBy = null,
+        List<ChannelMessageReactionDto>? Reactions = null
     );
 }

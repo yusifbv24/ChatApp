@@ -306,8 +306,7 @@ public partial class Messages : IAsyncDisposable
         SignalRService.OnUserOnline += HandleUserOnline;
         SignalRService.OnUserOffline += HandleUserOffline;
         SignalRService.OnDirectMessageReactionToggled += HandleReactionToggled;
-        SignalRService.OnChannelReactionAdded += HandleChannelReactionAdded;
-        SignalRService.OnChannelReactionRemoved += HandleChannelReactionRemoved;
+        SignalRService.OnChannelMessageReactionsUpdated += HandleChannelMessageReactionsUpdated;
         SignalRService.OnChannelMessagesRead += HandleChannelMessagesRead;
         SignalRService.OnAddedToChannel += HandleAddedToChannel;
     }
@@ -1311,101 +1310,27 @@ public partial class Messages : IAsyncDisposable
         }
     }
 
-    private void HandleChannelReactionAdded(Guid channelId, Guid messageId, Guid userId, string reaction)
+    private void HandleChannelMessageReactionsUpdated(Guid messageId, List<ChannelMessageReactionDto> reactions)
     {
         InvokeAsync(() =>
         {
-            if (selectedChannelId.HasValue && selectedChannelId.Value == channelId)
+            if (!selectedChannelId.HasValue)
+                return;
+
+            var message = channelMessages.FirstOrDefault(m => m.Id == messageId);
+            if (message != null)
             {
-                var message = channelMessages.FirstOrDefault(m => m.Id == messageId);
-                if (message != null)
+                var index = channelMessages.IndexOf(message);
+
+                // Simply replace all reactions (no complex logic, just direct update)
+                var updatedMessage = message with
                 {
-                    var index = channelMessages.IndexOf(message);
-                    var reactions = message.Reactions.ToList();
+                    ReactionCount = reactions.Sum(r => r.Count),
+                    Reactions = reactions
+                };
 
-                    // Find existing reaction for this emoji
-                    var existingReaction = reactions.FirstOrDefault(r => r.Emoji == reaction);
-                    if (existingReaction != null)
-                    {
-                        // Add userId to existing reaction if not already present
-                        if (!existingReaction.UserIds.Contains(userId))
-                        {
-                            var updatedUserIds = existingReaction.UserIds.ToList();
-                            updatedUserIds.Add(userId);
-                            var reactionIndex = reactions.IndexOf(existingReaction);
-                            reactions[reactionIndex] = new ChannelMessageReactionDto(
-                                existingReaction.Emoji,
-                                updatedUserIds.Count,
-                                updatedUserIds
-                            );
-                        }
-                    }
-                    else
-                    {
-                        // Create new reaction
-                        reactions.Add(new ChannelMessageReactionDto(reaction, 1, [userId]));
-                    }
-
-                    // Update message with new reactions
-                    var updatedMessage = message with
-                    {
-                        ReactionCount = reactions.Sum(r => r.Count),
-                        Reactions = reactions
-                    };
-
-                    channelMessages[index] = updatedMessage;
-                    StateHasChanged();
-                }
-            }
-        });
-    }
-
-    private void HandleChannelReactionRemoved(Guid channelId, Guid messageId, Guid userId, string reaction)
-    {
-        InvokeAsync(() =>
-        {
-            if (selectedChannelId.HasValue && selectedChannelId.Value == channelId)
-            {
-                var message = channelMessages.FirstOrDefault(m => m.Id == messageId);
-                if (message != null)
-                {
-                    var index = channelMessages.IndexOf(message);
-                    var reactions = message.Reactions.ToList();
-
-                    // Find existing reaction for this emoji
-                    var existingReaction = reactions.FirstOrDefault(r => r.Emoji == reaction);
-                    if (existingReaction != null)
-                    {
-                        // Remove userId from reaction
-                        var updatedUserIds = existingReaction.UserIds.Where(id => id != userId).ToList();
-
-                        if (updatedUserIds.Count > 0)
-                        {
-                            // Update reaction with remaining users
-                            var reactionIndex = reactions.IndexOf(existingReaction);
-                            reactions[reactionIndex] = new ChannelMessageReactionDto(
-                                existingReaction.Emoji,
-                                updatedUserIds.Count,
-                                updatedUserIds
-                            );
-                        }
-                        else
-                        {
-                            // Remove reaction entirely if no users left
-                            reactions.Remove(existingReaction);
-                        }
-
-                        // Update message with new reactions
-                        var updatedMessage = message with
-                        {
-                            ReactionCount = reactions.Sum(r => r.Count),
-                            Reactions = reactions
-                        };
-
-                        channelMessages[index] = updatedMessage;
-                        StateHasChanged();
-                    }
-                }
+                channelMessages[index] = updatedMessage;
+                StateHasChanged();
             }
         });
     }
@@ -2574,8 +2499,7 @@ public partial class Messages : IAsyncDisposable
         SignalRService.OnUserOnline -= HandleUserOnline;
         SignalRService.OnUserOffline -= HandleUserOffline;
         SignalRService.OnDirectMessageReactionToggled -= HandleReactionToggled;
-        SignalRService.OnChannelReactionAdded -= HandleChannelReactionAdded;
-        SignalRService.OnChannelReactionRemoved -= HandleChannelReactionRemoved;
+        SignalRService.OnChannelMessageReactionsUpdated -= HandleChannelMessageReactionsUpdated;
         SignalRService.OnChannelMessagesRead -= HandleChannelMessagesRead;
         SignalRService.OnAddedToChannel -= HandleAddedToChannel;
     }

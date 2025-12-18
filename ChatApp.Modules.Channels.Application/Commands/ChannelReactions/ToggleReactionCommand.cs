@@ -72,18 +72,20 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelReactions
                 }
 
                 // Use domain method for toggle logic (DDD principle - business logic in domain)
+                // User can only have ONE reaction per message - old reactions are automatically removed
                 var (wasAdded, addedReaction, removedReaction) = message.ToggleReaction(
                     request.UserId,
                     request.Reaction);
 
-                // Persist changes to database using repository
+                if (removedReaction!=null)
+                {
+                    await _unitOfWork.ChannelMessageReactions.RemoveReactionAsync(removedReaction, cancellationToken);
+                }
+
+                // Add new reaction to database (if user selected different emoji)
                 if (wasAdded && addedReaction != null)
                 {
                     await _unitOfWork.ChannelMessageReactions.AddReactionAsync(addedReaction, cancellationToken);
-                }
-                else if (!wasAdded && removedReaction != null)
-                {
-                    await _unitOfWork.ChannelMessageReactions.RemoveReactionAsync(removedReaction, cancellationToken);
                 }
 
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -103,23 +105,16 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelReactions
                     ))
                     .ToList();
 
-                // Send real-time notification
-                if (wasAdded)
-                {
-                    await _signalRNotificationService.NotifyReactionAddedAsync(
-                        message.ChannelId,
-                        request.MessageId,
-                        request.UserId,
-                        request.Reaction);
-                }
-                else
-                {
-                    await _signalRNotificationService.NotifyReactionRemovedAsync(
-                        message.ChannelId,
-                        request.MessageId,
-                        request.UserId,
-                        request.Reaction);
-                }
+                // Send real-time notification with updated reactions list (simplified)
+                await _signalRNotificationService.NotifyChannelMessageReactionsUpdatedAsync(
+                    message.ChannelId,
+                    request.MessageId,
+                    reactionsGrouped);
+
+                _logger?.LogInformation(
+                    "Reaction toggled for message {MessageId}: {Action}",
+                    request.MessageId,
+                    wasAdded ? "added" : "removed");
 
                 return Result.Success(reactionsGrouped);
             }

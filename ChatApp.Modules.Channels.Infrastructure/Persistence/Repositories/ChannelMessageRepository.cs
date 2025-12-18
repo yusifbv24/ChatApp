@@ -133,6 +133,16 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                             ReadBy = _context.ChannelMessageReads
                                 .Where(r => r.MessageId == message.Id && r.UserId != message.SenderId)
                                 .Select(r => r.UserId)
+                                .ToList(),
+                            // Get reactions grouped by emoji
+                            Reactions = _context.ChannelMessageReactions
+                                .Where(r => r.MessageId == message.Id)
+                                .GroupBy(r => r.Reaction)
+                                .Select(g => new ChannelMessageReactionDto(
+                                    g.Key,
+                                    g.Count(),
+                                    g.Select(r => r.UserId).ToList()
+                                ))
                                 .ToList()
                         };
 
@@ -168,7 +178,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 r.IsForwarded,
                 r.ReadByCount,
                 r.TotalMemberCount,
-                r.ReadBy // Include the ReadBy list for real-time read receipt updates
+                r.ReadBy, // Include the ReadBy list for real-time read receipt updates
+                r.Reactions // Include reactions grouped by emoji
             )).ToList();
         }
 
@@ -215,6 +226,15 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                               _context.ChannelMessageReads
                                   .Where(r => r.MessageId == message.Id && r.UserId != message.SenderId)
                                   .Select(r => r.UserId)
+                                  .ToList(),
+                              _context.ChannelMessageReactions
+                                  .Where(r => r.MessageId == message.Id)
+                                  .GroupBy(r => r.Reaction)
+                                  .Select(g => new ChannelMessageReactionDto(
+                                      g.Key,
+                                      g.Count(),
+                                      g.Select(r => r.UserId).ToList()
+                                  ))
                                   .ToList()
                           ))
                          .ToListAsync(cancellationToken);
