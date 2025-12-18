@@ -34,7 +34,9 @@
       "Bash(del \"ChatApp.Modules.Channels.Infrastructure\\Migrations\\20251214105003_AddChannelMemberLastReadAtUtc.cs\")",
       "Bash(del \"ChatApp.Modules.Channels.Infrastructure\\Migrations\\20251214105003_AddChannelMemberLastReadAtUtc.Designer.cs\")",
       "Bash(Stop-Process -Id 21952 -Force)",
-      "Bash(cmd //c taskkill //F //PID 21952)"
+      "Bash(cmd //c taskkill //F //PID 21952)",
+      "Bash(cmd //c taskkill //F //PID 16248)",
+      "Bash(cmd //c taskkill //F //PID 17488)"
     ],
     "deny": [],
     "ask": []

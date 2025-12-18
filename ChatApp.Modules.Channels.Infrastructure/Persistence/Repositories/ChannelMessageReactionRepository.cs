@@ -1,3 +1,4 @@
+using ChatApp.Modules.Channels.Application.DTOs.Responses;
 using ChatApp.Modules.Channels.Application.Interfaces;
 using ChatApp.Modules.Channels.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -33,6 +34,25 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
         {
             return await _context.Set<ChannelMessageReaction>()
                 .Where(r => r.MessageId == messageId)
+                .ToListAsync(cancellationToken);
+        }
+
+        public async Task<List<ChannelMessageReactionDto>> GetMessageReactionsWithUserDetailsAsync(
+            Guid messageId,
+            CancellationToken cancellationToken = default)
+        {
+            return await (
+                from reaction in _context.Set<ChannelMessageReaction>()
+                join user in _context.Set<UserReadModel>() on reaction.UserId equals user.Id
+                where reaction.MessageId == messageId
+                group new { reaction, user } by reaction.Reaction into g
+                select new ChannelMessageReactionDto(
+                    g.Key,
+                    g.Count(),
+                    g.Select(x => x.reaction.UserId).ToList(),
+                    g.Select(x => x.user.DisplayName).ToList(),
+                    g.Select(x => x.user.AvatarUrl).ToList()
+                ))
                 .ToListAsync(cancellationToken);
         }
 

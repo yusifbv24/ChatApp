@@ -283,6 +283,8 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
                             var emoji = reactionElement.GetProperty("emoji").GetString() ?? "";
                             var count = reactionElement.GetProperty("count").GetInt32();
                             var userIds = new List<Guid>();
+                            var userDisplayNames = new List<string>();
+                            var userAvatarUrls = new List<string?>();
 
                             if (reactionElement.TryGetProperty("userIds", out var userIdsProp) &&
                                 userIdsProp.ValueKind == JsonValueKind.Array)
@@ -293,11 +295,31 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
                                 }
                             }
 
+                            if (reactionElement.TryGetProperty("userDisplayNames", out var displayNamesProp) &&
+                                displayNamesProp.ValueKind == JsonValueKind.Array)
+                            {
+                                foreach (var nameElement in displayNamesProp.EnumerateArray())
+                                {
+                                    userDisplayNames.Add(nameElement.GetString() ?? "");
+                                }
+                            }
+
+                            if (reactionElement.TryGetProperty("userAvatarUrls", out var avatarUrlsProp) &&
+                                avatarUrlsProp.ValueKind == JsonValueKind.Array)
+                            {
+                                foreach (var urlElement in avatarUrlsProp.EnumerateArray())
+                                {
+                                    userAvatarUrls.Add(urlElement.ValueKind == JsonValueKind.Null ? null : urlElement.GetString());
+                                }
+                            }
+
                             reactions.Add(new ReactionSummary
                             {
                                 Emoji = emoji,
                                 Count = count,
-                                UserIds = userIds
+                                UserIds = userIds,
+                                UserDisplayNames = userDisplayNames,
+                                UserAvatarUrls = userAvatarUrls
                             });
                         }
                     }

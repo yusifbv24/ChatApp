@@ -87,6 +87,9 @@ namespace ChatApp.Modules.Channels.Domain.Entities
 
         public void AddMember(ChannelMember member)
         {
+            if(Type==ChannelType.Private && (member.Role!=MemberRole.Admin && member.Role != MemberRole.Owner))
+                throw new InvalidOperationException("Cannot add member with role other than Admin or Owner to a private channel");
+
             if (_members.Any(m => m.UserId == member.UserId))
                 throw new InvalidOperationException("User is already a member of this channel");
 

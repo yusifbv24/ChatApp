@@ -194,7 +194,7 @@
                                        IsDeleted="@message.IsDeleted"
                                        IsPinned="@message.IsPinned"
                                        ReactionCount="@message.ReactionCount"
-                                       Reactions="@(message.Reactions.Select(r => new MessageReactionDto(r.Emoji, r.Count, r.UserIds)).ToList())"
+                                       Reactions="@message.Reactions"
                                        CurrentUserId="@CurrentUserId"
                                        ReadByCount="@message.ReadByCount"
                                        TotalMemberCount="@message.TotalMemberCount"

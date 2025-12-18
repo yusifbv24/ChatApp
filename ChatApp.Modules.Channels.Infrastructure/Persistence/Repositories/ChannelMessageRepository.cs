@@ -134,15 +134,18 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                                 .Where(r => r.MessageId == message.Id && r.UserId != message.SenderId)
                                 .Select(r => r.UserId)
                                 .ToList(),
-                            // Get reactions grouped by emoji
-                            Reactions = _context.ChannelMessageReactions
-                                .Where(r => r.MessageId == message.Id)
-                                .GroupBy(r => r.Reaction)
-                                .Select(g => new ChannelMessageReactionDto(
-                                    g.Key,
-                                    g.Count(),
-                                    g.Select(r => r.UserId).ToList()
-                                ))
+                            // Get reactions grouped by emoji with user details
+                            Reactions = (from reaction in _context.ChannelMessageReactions
+                                        join reactionUser in _context.Set<UserReadModel>() on reaction.UserId equals reactionUser.Id
+                                        where reaction.MessageId == message.Id
+                                        group new { reaction, reactionUser } by reaction.Reaction into g
+                                        select new ChannelMessageReactionDto(
+                                            g.Key,
+                                            g.Count(),
+                                            g.Select(x => x.reaction.UserId).ToList(),
+                                            g.Select(x => x.reactionUser.DisplayName).ToList(),
+                                            g.Select(x => x.reactionUser.AvatarUrl).ToList()
+                                        ))
                                 .ToList()
                         };
 
@@ -227,13 +230,16 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                                   .Where(r => r.MessageId == message.Id && r.UserId != message.SenderId)
                                   .Select(r => r.UserId)
                                   .ToList(),
-                              _context.ChannelMessageReactions
-                                  .Where(r => r.MessageId == message.Id)
-                                  .GroupBy(r => r.Reaction)
-                                  .Select(g => new ChannelMessageReactionDto(
-                                      g.Key,
-                                      g.Count(),
-                                      g.Select(r => r.UserId).ToList()
+                              (from reaction in _context.ChannelMessageReactions
+                               join reactionUser in _context.Set<UserReadModel>() on reaction.UserId equals reactionUser.Id
+                               where reaction.MessageId == message.Id
+                               group new { reaction, reactionUser } by reaction.Reaction into g
+                               select new ChannelMessageReactionDto(
+                                   g.Key,
+                                   g.Count(),
+                                   g.Select(x => x.reaction.UserId).ToList(),
+                                   g.Select(x => x.reactionUser.DisplayName).ToList(),
+                                   g.Select(x => x.reactionUser.AvatarUrl).ToList()
                                   ))
                                   .ToList()
                           ))

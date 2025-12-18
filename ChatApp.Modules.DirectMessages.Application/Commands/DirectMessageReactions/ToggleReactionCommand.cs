@@ -26,7 +26,9 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectMessageReact
     public record ReactionSummary(
         string Emoji,
         int Count,
-        List<Guid> UserIds
+        List<Guid> UserIds,
+        List<string> UserDisplayNames,
+        List<string?> UserAvatarUrls
     );
 
     public class ToggleReactionCommandValidator : AbstractValidator<ToggleReactionCommand>
@@ -149,20 +151,10 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectMessageReact
 
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                // Reload message with updated reactions
-                message = await _unitOfWork.Messages.GetByIdWithReactionsAsync(
+                // Get updated reactions with user details
+                var reactionSummary = await _unitOfWork.Reactions.GetMessageReactionsWithUserDetailsAsync(
                     request.MessageId,
-                    cancellationToken)
-                        ?? throw new NotFoundException($"Message with ID {request.MessageId} not found");
-
-                // Group reactions by emoji
-                var reactionSummary = message.Reactions
-                    .GroupBy(r => r.Reaction)
-                    .Select(g => new ReactionSummary(
-                        g.Key,
-                        g.Count(),
-                        g.Select(r => r.UserId).ToList()))
-                    .ToList();
+                    cancellationToken);
 
                 var result = new ReactionToggleResult(
                     wasAdded,

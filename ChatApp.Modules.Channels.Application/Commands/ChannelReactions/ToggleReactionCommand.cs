@@ -1,6 +1,5 @@
 using ChatApp.Modules.Channels.Application.DTOs.Responses;
 using ChatApp.Modules.Channels.Application.Interfaces;
-using ChatApp.Modules.Channels.Domain.Entities;
 using ChatApp.Shared.Infrastructure.SignalR.Services;
 using ChatApp.Shared.Kernel.Common;
 using ChatApp.Shared.Kernel.Exceptions;
@@ -90,31 +89,16 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelReactions
 
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                // Get updated reactions for this message
-                var updatedReactions = await _unitOfWork.ChannelMessageReactions.GetMessageReactionsAsync(
+                // Get updated reactions for this message with user details
+                var reactionsGrouped = await _unitOfWork.ChannelMessageReactions.GetMessageReactionsWithUserDetailsAsync(
                     request.MessageId,
                     cancellationToken);
-
-                // Get updated reactions grouped by emoji
-                var reactionsGrouped = updatedReactions
-                    .GroupBy(r => r.Reaction)
-                    .Select(g => new ChannelMessageReactionDto(
-                        g.Key,
-                        g.Count(),
-                        g.Select(r => r.UserId).ToList()
-                    ))
-                    .ToList();
 
                 // Send real-time notification with updated reactions list (simplified)
                 await _signalRNotificationService.NotifyChannelMessageReactionsUpdatedAsync(
                     message.ChannelId,
                     request.MessageId,
                     reactionsGrouped);
-
-                _logger?.LogInformation(
-                    "Reaction toggled for message {MessageId}: {Action}",
-                    request.MessageId,
-                    wasAdded ? "added" : "removed");
 
                 return Result.Success(reactionsGrouped);
             }

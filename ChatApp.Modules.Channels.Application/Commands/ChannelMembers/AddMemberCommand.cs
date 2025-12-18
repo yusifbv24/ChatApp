@@ -62,32 +62,10 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMembers
         {
             try
             {
-                _logger?.LogInformation(
-                    "Adding user {UserId} to channel {ChannelId}",
-                    request.UserId,
-                    request.ChannelId);
-
                 var channel = await _unitOfWork.Channels.GetByIdWithMembersAsync(
                     request.ChannelId,
-                    cancellationToken);
-
-                if (channel == null)
-                    throw new NotFoundException($"Channel with ID {request.ChannelId} not found");
-
-                // Check if requester has permission (Admin or Owner for private channels)
-                if (channel.Type == ChannelType.Private)
-                {
-                    var requesterRole = await _unitOfWork.ChannelMembers.GetUserRoleAsync(
-                        request.ChannelId,
-                        request.AddedBy,
-                        cancellationToken);
-
-                    if (requesterRole == null || (requesterRole != MemberRole.Admin && requesterRole != MemberRole.Owner))
-                    {
-                        return Result.Failure("You don't have permission to add members to this channel");
-                    }
-                }
-
+                    cancellationToken) 
+                    ?? throw new NotFoundException($"Channel with ID {request.ChannelId} not found");
 
                 // Check if user is already a member
                 var existingMember = await _unitOfWork.ChannelMembers.GetMemberAsync(
