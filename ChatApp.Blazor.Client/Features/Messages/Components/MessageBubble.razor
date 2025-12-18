@@ -219,36 +219,33 @@
                     }
                 </div>
             }
+
+            <!-- Quick Reaction Icon (Like button in bottom corner) -->
+            @if (!IsDeleted)
+            {
+                <div class="reaction-quick-icon @(showReactionPicker ? "active" : "")"
+                     @onmouseenter="HandleReactionIconHover"
+                     @onmouseleave="CancelReactionIconHover"
+                     @onclick="ToggleLikeReaction"
+                     @onclick:stopPropagation="true">
+                    <span class="quick-icon-emoji">👍</span>
+
+                    @if (showReactionPicker)
+                    {
+                        <div class="reaction-picker-quick"
+                             @onmouseenter="KeepReactionPickerOpen"
+                             @onmouseleave="HandleReactionPickerLeave"
+                             @onclick:stopPropagation="true">
+                            @foreach (var emoji in CommonReactions)
+                            {
+                                <button class="reaction-btn" @onclick="() => SelectReaction(emoji)">@emoji</button>
+                            }
+                        </div>
+                    }
+                </div>
+            }
         </div>
-
-        <!-- Message Actions (visible on hover) -->
-        @if (!IsDeleted && !showMoreMenu)
-        {
-            <div class="message-actions @(showReactionPicker ? "picker-open" : "")">
-                <button class="action-btn" title="React" @onclick="ToggleReactionPicker"
-                        @onclick:stopPropagation="true">
-                    <MudIcon Icon="@Icons.Material.Filled.EmojiEmotions" Size="Size.Small" />
-                </button>
-
-                <!-- Reaction Picker (positioned above react button) -->
-                @if (showReactionPicker)
-                {
-                    <div class="reaction-picker-popup" @onclick:stopPropagation="true">
-                        @foreach (var emoji in CommonReactions)
-                        {
-                            <button class="reaction-btn" @onclick="() => SelectReaction(emoji)">@emoji</button>
-                        }
-                    </div>
-                }
-            </div>
-        }
     </div>
-
-    <!-- Reaction Picker Overlay -->
-    @if (showReactionPicker)
-    {
-        <div class="popup-overlay" @onclick="CloseReactionPicker"></div>
-    }
 
     <!-- More Menu Overlay -->
     @if (showMoreMenu)
@@ -336,15 +333,90 @@
         await OnActionCompleted.InvokeAsync();
     }
 
-    private void ToggleReactionPicker()
+    private CancellationTokenSource? showReactionPickerCts;
+
+    private async Task HandleReactionIconHover()
     {
-        showReactionPicker = !showReactionPicker;
-        showMoreMenu = false;
+        // Cancel any existing delay
+        showReactionPickerCts?.Cancel();
+        showReactionPickerCts = new CancellationTokenSource();
+        var token = showReactionPickerCts.Token;
+
+        try
+        {
+            // Wait 250ms before showing picker
+            await Task.Delay(250, token);
+
+            if (!token.IsCancellationRequested)
+            {
+                showReactionPicker = true;
+                showMoreMenu = false;
+                StateHasChanged();
+            }
+        }
+        catch (TaskCanceledException)
+        {
+            // Expected when hovering away quickly
+        }
     }
 
-    private void CloseReactionPicker()
+    private async Task CancelReactionIconHover()
     {
+        // Small delay before closing picker
+        showReactionPickerCts?.Cancel();
+        showReactionPickerCts = new CancellationTokenSource();
+        var token = showReactionPickerCts.Token;
+
+        try
+        {
+            await Task.Delay(200, token);
+
+            if (!token.IsCancellationRequested)
+            {
+                showReactionPicker = false;
+                StateHasChanged();
+            }
+        }
+        catch (TaskCanceledException) { }
+    }
+
+    private Task KeepReactionPickerOpen()
+    {
+        // Cancel any scheduled close operation to keep picker open
+        showReactionPickerCts?.Cancel();
+        showReactionPickerCts = null;
+        return Task.CompletedTask;
+    }
+
+    private async Task HandleReactionPickerLeave()
+    {
+        // Small delay before closing picker
+        showReactionPickerCts?.Cancel();
+        showReactionPickerCts = new CancellationTokenSource();
+        var token = showReactionPickerCts.Token;
+
+        try
+        {
+            await Task.Delay(200, token);
+
+            if (!token.IsCancellationRequested)
+            {
+                showReactionPicker = false;
+                StateHasChanged();
+            }
+        }
+        catch (TaskCanceledException) { }
+    }
+
+    private async Task ToggleLikeReaction()
+    {
+        // Immediately close picker (don't wait for delay)
+        showReactionPickerCts?.Cancel();
         showReactionPicker = false;
+
+        // Toggle like reaction
+        await OnReaction.InvokeAsync("👍");
+        await OnActionCompleted.InvokeAsync();
     }
 
     private async Task ToggleMoreMenu()
@@ -404,8 +476,10 @@
 
     private async Task SelectReaction(string emoji)
     {
+        showReactionPickerCts?.Cancel();
         showReactionPicker = false;
         await OnReaction.InvokeAsync(emoji);
+        await OnActionCompleted.InvokeAsync();
     }
 
     private async Task HandleReplyButtonClick()

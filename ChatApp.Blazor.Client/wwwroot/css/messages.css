@@ -1151,57 +1151,53 @@
     left: 4px;
 }
 
-/* React button - outside the bubble */
-.message-actions {
+/* Quick Reaction Icon - Bitrix24 style flat button */
+.reaction-quick-icon {
     position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    display: none;
-    gap: 4px;
-    padding: 4px;
-    background: var(--white);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-md);
-    z-index: 101;
-    border: 1px solid var(--gray-200);
-}
-
-.message-wrapper.other .message-actions {
-    right: -48px;
-}
-
-.message-wrapper.own .message-actions {
-    left: -48px;
-}
-
-/* Position relative to allow reaction picker to be positioned relative to this */
-.message-actions {
-    position: absolute;
-}
-
-.message-wrapper:hover .message-actions,
-.message-actions:hover,
-.message-actions.picker-open {
-    display: flex;
-}
-
-.action-btn {
+    bottom: 4px;
+    width: 24px;
+    height: 20px;
+    background: transparent;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
-    background: transparent;
-    border: none;
-    border-radius: var(--radius-sm);
-    color: var(--gray-500);
     cursor: pointer;
-    transition: all var(--transition-fast);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    z-index: 102;
 }
 
-    .action-btn:hover {
-        background: var(--gray-100);
-        color: var(--primary-color);
+    .reaction-quick-icon:hover .quick-icon-emoji {
+        transform: scale(1.2);
+    }
+
+/* Keep visible when picker is open */
+.message-wrapper:hover .reaction-quick-icon,
+.reaction-quick-icon.active {
+    opacity: 1;
+}
+
+/* Position for other messages - outside right bottom corner */
+.message-wrapper.other .reaction-quick-icon {
+    right: -14px;
+}
+
+/* Position for own messages - outside left bottom corner */
+.message-wrapper.own .reaction-quick-icon {
+    left: -14px;
+}
+
+.quick-icon-emoji {
+    font-size: 16px;
+    line-height: 1;
+    filter: grayscale(100%);
+    opacity: 0.6;
+    transition: transform 0.15s ease, opacity 0.15s ease, filter 0.15s ease;
+}
+
+    .reaction-quick-icon:hover .quick-icon-emoji {
+        filter: grayscale(0%);
+        opacity: 1;
     }
 
 /* Message Reactions - inline style */
@@ -1343,23 +1339,31 @@
    REACTION PICKER POPUP
    =================================== */
 
-.reaction-picker-popup {
+/* Reaction Picker Quick - appears to the right/left of like icon */
+.reaction-picker-quick {
     position: absolute;
-    bottom: 100%;
-    margin-bottom: 8px;
+    bottom: -4px;
     display: flex;
     gap: 4px;
     padding: 8px;
     background: var(--white);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-xl);
-    z-index: 102;
+    z-index: 103;
     border: 1px solid var(--gray-200);
     white-space: nowrap;
     pointer-events: auto;
-    /* Center relative to React button */
-    left: 50%;
-    transform: translateX(-50%);
+    animation: fadeInUp 0.15s ease-out;
+}
+
+/* For other messages - open to the right of icon */
+.message-wrapper.other .reaction-picker-quick {
+    left: calc(100% + 4px);
+}
+
+/* For own messages - open to the left of icon */
+.message-wrapper.own .reaction-picker-quick {
+    right: calc(100% + 4px);
 }
 
 .reaction-btn {
@@ -2589,17 +2593,6 @@
     .message-wrapper {
         max-width: 85%;
     }
-
-        .message-wrapper .message-actions {
-            position: static;
-            display: none;
-            margin-top: 4px;
-            transform: none;
-        }
-
-        .message-wrapper:hover .message-actions {
-            display: flex;
-        }
 
     .emoji-picker {
         right: 20px;
