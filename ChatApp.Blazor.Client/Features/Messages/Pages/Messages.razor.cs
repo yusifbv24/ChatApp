@@ -1395,8 +1395,6 @@ public partial class Messages : IAsyncDisposable
         var conversation = conversations.FirstOrDefault(c => c.Id == conversationId);
         if (conversation != null)
         {
-            var index = conversations.IndexOf(conversation);
-
             // Create updated conversation with new last message
             var updatedConversation = conversation with
             {
@@ -1404,8 +1402,11 @@ public partial class Messages : IAsyncDisposable
                 LastMessageAtUtc = messageTime
             };
 
-            // Replace in the same position to avoid reordering
-            conversations[index] = updatedConversation;
+            // Remove from current position
+            conversations.Remove(conversation);
+
+            // Add to the top of the list (most recent)
+            conversations.Insert(0, updatedConversation);
 
             // Trigger UI update
             StateHasChanged();
@@ -1416,8 +1417,6 @@ public partial class Messages : IAsyncDisposable
         var channel = channels.FirstOrDefault(c => c.Id == channelId);
         if (channel != null)
         {
-            var index = channels.IndexOf(channel);
-
             // Create updated channel with new last message
             var updatedChannel = channel with
             {
@@ -1426,8 +1425,11 @@ public partial class Messages : IAsyncDisposable
                 LastMessageSenderName = senderName ?? channel.LastMessageSenderName
             };
 
-            // Replace in the same position to avoid reordering
-            channels[index] = updatedChannel;
+            // Remove from current position
+            channels.Remove(channel);
+
+            // Add to the top of the list (most recent)
+            channels.Insert(0, updatedChannel);
 
             // Trigger UI update
             StateHasChanged();
@@ -1958,13 +1960,14 @@ public partial class Messages : IAsyncDisposable
             if (result.IsSuccess)
             {
                 var messageTime = DateTime.UtcNow;
+                var messageId = result.Value;
 
                 // If forwarding to current conversation, add message locally
                 if (conversationId == selectedConversationId)
                 {
                     var conversation = conversations.FirstOrDefault(c => c.Id == conversationId);
                     var newMessage = new DirectMessageDto(
-                        result.Value,
+                        messageId,
                         conversationId,
                         currentUserId,
                         UserState.CurrentUser?.Username ?? "",
@@ -1985,12 +1988,21 @@ public partial class Messages : IAsyncDisposable
                         null,
                         true);
 
-                    directMessages.Add(newMessage);
+                    // Before adding optimistic message, check if it already exists
+                    // (in case SignalR arrived faster than HTTP response)
+                    if (!directMessages.Any(m => m.Id == messageId))
+                    {
+                        directMessages.Add(newMessage);
+                    }
+
+                    // Add to processed messages to prevent SignalR duplicate
+                    processedMessageIds.Add(messageId);
                 }
 
                 // Update conversation list locally
                 UpdateConversationLocally(conversationId, content, messageTime);
                 CancelForward();
+                StateHasChanged();
             }
             else
             {
@@ -2020,6 +2032,7 @@ public partial class Messages : IAsyncDisposable
             if (result.IsSuccess)
             {
                 var messageTime = DateTime.UtcNow;
+                var messageId = result.Value;
 
                 // If forwarding to current channel, add message locally
                 if (channelId == selectedChannelId)
@@ -2028,7 +2041,7 @@ public partial class Messages : IAsyncDisposable
                     var totalMembers = Math.Max(0, selectedChannelMemberCount - 1);
 
                     var newMessage = new ChannelMessageDto(
-                        result.Value,
+                        messageId,
                         channelId,
                         currentUserId,
                         UserState.CurrentUser?.Username ?? "",
@@ -2052,12 +2065,21 @@ public partial class Messages : IAsyncDisposable
                         ReadBy: new List<Guid>(),
                         Reactions: new List<ChannelMessageReactionDto>());
 
-                    channelMessages.Add(newMessage);
+                    // Before adding optimistic message, check if it already exists
+                    // (in case SignalR arrived faster than HTTP response)
+                    if (!channelMessages.Any(m => m.Id == messageId))
+                    {
+                        channelMessages.Add(newMessage);
+                    }
+
+                    // Add to processed messages to prevent SignalR duplicate
+                    processedMessageIds.Add(messageId);
                 }
 
-                // Update channel list locally
-                UpdateChannelLastMessage(channelId, content, UserState.CurrentUser?.DisplayName);
+                // Update channel list locally with time (to sort to top)
+                UpdateChannelLocally(channelId, content, messageTime, UserState.CurrentUser?.DisplayName);
                 CancelForward();
+                StateHasChanged();
             }
             else
             {
@@ -2295,18 +2317,22 @@ public partial class Messages : IAsyncDisposable
     /// </summary>
     private void UpdateChannelLastMessage(Guid channelId, string newContent, string? senderName = null)
     {
-        var channelIndex = channels.FindIndex(c => c.Id == channelId);
-        if (channelIndex >= 0)
+        var channel = channels.FirstOrDefault(c => c.Id == channelId);
+        if (channel != null)
         {
-            var channel = channels[channelIndex];
-            if (senderName != null)
-            {
-                channels[channelIndex] = channel with { LastMessageContent = newContent, LastMessageSenderName = senderName };
-            }
-            else
-            {
-                channels[channelIndex] = channel with { LastMessageContent = newContent };
-            }
+            // Create updated channel with new last message
+            var updatedChannel = senderName != null
+                ? channel with { LastMessageContent = newContent, LastMessageSenderName = senderName }
+                : channel with { LastMessageContent = newContent };
+
+            // Remove from current position
+            channels.Remove(channel);
+
+            // Add to the top of the list (most recent)
+            channels.Insert(0, updatedChannel);
+
+            // Trigger UI update
+            StateHasChanged();
         }
     }
 

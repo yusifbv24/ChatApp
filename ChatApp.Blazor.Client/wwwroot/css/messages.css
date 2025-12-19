@@ -1128,10 +1128,10 @@
     position: absolute;
     top: 28px;
     right: 4px;
-    min-width: 160px;
+    min-width: 220px;
     background: var(--white);
     border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-xl);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
     z-index: 200;
     overflow: hidden;
     border: 1px solid var(--gray-200);
@@ -1390,17 +1390,20 @@
     display: flex;
     flex-direction: row;
     align-items: center;
-    gap: 12px;
+    justify-content: space-between;
+    gap: 16px;
     width: 100%;
-    padding: 10px 16px;
+    padding: 11px 16px;
     background: transparent;
     border: none;
     text-align: left;
     font-size: 14px;
     font-weight: 500;
-    color: var(--gray-700);
+    color: var(--gray-900);
     cursor: pointer;
-    transition: background var(--transition-fast);
+    transition: all 0.15s ease;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+    letter-spacing: 0.01em;
 }
 
     .menu-item:hover {
@@ -1408,13 +1411,15 @@
     }
 
     .menu-item .mud-icon-root {
-        font-size: 18px !important;
+        font-size: 20px !important;
         flex-shrink: 0;
-        color: var(--gray-500);
+        color: var(--gray-600);
+        transition: all 0.15s ease;
     }
 
     .menu-item:hover .mud-icon-root {
         color: var(--primary-color);
+        transform: scale(1.05);
     }
 
     .menu-item span {
@@ -1423,16 +1428,21 @@
     }
 
     .menu-item.delete-item {
-        color: var(--error-color);
+        color: #EF4444;
     }
 
         .menu-item.delete-item .mud-icon-root {
-            color: var(--error-color);
+            color: #EF4444;
         }
 
         .menu-item.delete-item:hover {
             background: #FEE2E2;
+            color: #DC2626;
         }
+
+            .menu-item.delete-item:hover .mud-icon-root {
+                color: #DC2626;
+            }
 
 /* Popup Overlay */
 .popup-overlay {

@@ -524,3 +524,129 @@ Building a modern messaging UI similar to WhatsApp Web.
 - ✅ Channel messages: Persist read status correctly across page refreshes
 - ✅ Page visibility: Returns to tab → automatically marks messages as read for all users
 - ✅ Sender's own messages: Never marked as read (only recipient can mark as read)
+
+### Session 8 (2025-12-19)
+**Fixed reaction picker issues:**
+
+1. **Reaction panel not closing properly:**
+   - **Problem:** After opening reaction picker, it wasn't closing when mouse left the icon
+   - **Root Cause:** `CancelReactionIconHover()` method wasn't implementing close logic, only canceling scheduled opens
+   - **Solution:** Updated method to schedule close with 200ms delay, consistent with picker leave behavior
+   - Files modified: `MessageBubble.razor` - `CancelReactionIconHover()` method
+
+2. **Reaction picker positioning incorrect:**
+   - **Problem:** Picker opened above the icon instead of to the right/left side
+   - **Solution:** Changed picker positioning:
+     - Other messages: Opens to right (`left: calc(100% + 4px)`)
+     - Own messages: Opens to left (`right: calc(100% + 4px)`)
+     - Vertical alignment with icon (`bottom: -4px`)
+   - Files modified: `messages.css` - `.reaction-picker-quick` positioning
+
+3. **Picker closing when hovering over it:**
+   - **Problem:** Moving mouse from icon to picker caused it to close immediately
+   - **Root Cause:** Wrong event handler - was triggering close logic on mouse enter
+   - **Solution:** Created new `KeepReactionPickerOpen()` method that only cancels scheduled close, doesn't start new timer
+   - Files modified: `MessageBubble.razor` - Added `KeepReactionPickerOpen()` method, updated picker's `@onmouseenter` handler
+
+**Redesigned message bubble more menu (modern design):**
+
+1. **Removed "More" submenu button:**
+   - All menu items now display directly in single menu
+   - No nested menus - cleaner, faster access
+
+2. **Updated menu structure:**
+   - **Direct Messages:** Reply, Copy, Edit, Forward, Pin, Add to Favorites, Delete, Select
+   - **Channel Messages:** Reply, Copy, Edit, Forward, Pin, Add to Favorites, Mark to read later, Delete, Select
+   - "Mark to read later" only appears for channel messages from other users
+
+3. **Modern icon design:**
+   - Changed all icons to `Outlined` variants (cleaner, more modern)
+   - **Reply:** `FormatQuote` (quotation marks icon instead of arrow)
+   - **Copy:** `ContentCopy` (outlined)
+   - **Edit:** `Edit` (outlined)
+   - **Forward:** `Redo` (modern forward arrow)
+   - **Pin:** `PushPin` (outlined)
+   - **Add to Favorites:** `StarBorder` (star outline)
+   - **Mark to read later:** `WatchLater` (clock icon)
+   - **Delete:** `Delete` (outlined)
+   - **Select:** `CheckCircle` (outlined)
+
+4. **Enhanced typography and styling:**
+   - Menu width increased: `220px` (from 200px)
+   - Modern font stack: `-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto'...`
+   - Font weight: `500` (medium for better readability)
+   - Letter spacing: `0.01em`
+   - Text color: `var(--gray-900)` (darker for better contrast)
+   - Icon size: `20px` (from 18px - more visible)
+   - Icon hover animation: `scale(1.05)` with smooth transition
+   - Improved shadow: `0 4px 12px rgba(0, 0, 0, 0.12)`
+
+5. **Layout improvements:**
+   - Items use `justify-content: space-between` (text left, icon right)
+   - Consistent padding: `11px 16px`
+   - Smooth transitions: `0.15s ease`
+   - Delete item has enhanced hover states (red text + light red background)
+
+6. **Files modified:**
+   - `MessageBubble.razor`:
+     - Removed `HandleMoreClick()` method
+     - Added `HandleAddToFavoritesClick()` placeholder
+     - Added `HandleMarkToReadLaterClick()` placeholder
+     - Updated menu HTML structure with all items inline
+     - Changed all icon references to Outlined variants
+   - `messages.css`:
+     - Updated `.chevron-more-menu` width and shadow
+     - Enhanced `.menu-item` with modern font, better spacing, typography
+     - Updated `.menu-item .mud-icon-root` with larger size and hover animation
+     - Improved `.menu-item.delete-item` hover states
+
+**Visual result:**
+- Cleaner, single-level menu (no "More" submenu)
+- Modern outlined icons throughout
+- Better typography with system fonts
+- Smooth hover animations
+- Larger, more visible icons
+- Professional, polished appearance
+- Text on left, icons on right (standard pattern)
+
+**Placeholder functions added:**
+- `HandleAddToFavoritesClick()` - For favorites feature
+- `HandleMarkToReadLaterClick()` - For read later feature (channel only)
+- `HandleSelectClick()` - For message selection feature
+
+All changes compiled successfully and ready for testing.
+
+**Fixed duplicate message bug when forwarding to same conversation:**
+- **Problem:** When forwarding a message to the same conversation/channel, duplicate message appeared and forward dialog didn't close
+- **Root Cause:** Optimistic UI added message without checking if it already exists (SignalR race condition), and processedMessageIds wasn't updated
+- **Solution:**
+  1. Added duplicate check before adding optimistic message (same as SendMessage logic)
+  2. Added message ID to processedMessageIds to prevent SignalR duplicate processing
+  3. Added explicit StateHasChanged() after CancelForward() to ensure dialog closes
+- **Files modified:**
+  - `Messages.razor.cs` - ForwardToConversation and ForwardToChannel methods
+- **Behavior now:**
+  - ✅ Forward dialog closes immediately after sending
+  - ✅ No duplicate messages when forwarding to same conversation
+  - ✅ No Blazor "duplicate key" errors
+  - ✅ Consistent with SendMessage logic
+
+**Fixed conversation/channel list ordering when forwarding:**
+- **Problem:** When forwarding a message to another conversation/channel, the last message content updated but conversation stayed in same position (not moving to top)
+- **Root Cause #1:** Update methods were replacing conversation in same position with comment "Replace in the same position to avoid reordering"
+- **Root Cause #2:** `ForwardToChannel` was calling `UpdateChannelLastMessage` which only updated content, not `LastMessageAtUtc`. UnifiedList sorts by time, so channel didn't move to top.
+- **Solution:**
+  1. Changed all update methods to remove conversation from current position and insert at top (index 0)
+  2. Changed `ForwardToChannel` to call `UpdateChannelLocally` instead of `UpdateChannelLastMessage` (includes time update)
+- **Files modified:**
+  - `Messages.razor.cs` - Updated 3 methods:
+    - `UpdateConversationLocally` - Direct messages (remove + insert to top)
+    - `UpdateChannelLocally` - Channel messages with time (remove + insert to top)
+    - `UpdateChannelLastMessage` - Channel messages content only (remove + insert to top)
+  - `Messages.razor.cs` - `ForwardToChannel` method now calls `UpdateChannelLocally` to update time
+- **Behavior now:**
+  - ✅ Forward to another conversation → moves to top immediately
+  - ✅ Forward to channel → moves to top immediately (time updated!)
+  - ✅ Send message → conversation moves to top
+  - ✅ Edit/delete message → conversation stays at top
+  - ✅ WhatsApp-like behavior (most recent conversations first)

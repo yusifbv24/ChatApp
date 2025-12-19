@@ -186,35 +186,51 @@
                     {
                         <div class="chevron-more-menu @(menuPositionAbove ? "menu-above" : "")" @onclick:stopPropagation="true">
                             <button class="menu-item" @onclick="HandleReplyButtonClick">
-                                <MudIcon Icon="@Icons.Material.Filled.Reply" Size="Size.Small" />
                                 <span>Reply</span>
+                                <MudIcon Icon="@Icons.Material.Outlined.FormatQuote" Size="Size.Small" />
                             </button>
                             <button class="menu-item" @onclick="OnCopyClick">
-                                <MudIcon Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small" />
                                 <span>Copy</span>
+                                <MudIcon Icon="@Icons.Material.Outlined.ContentCopy" Size="Size.Small" />
                             </button>
-                            <button class="menu-item" @onclick="OnForwardClick">
-                                <MudIcon Icon="@Icons.Material.Filled.Forward" Size="Size.Small" />
-                                <span>Forward</span>
-                            </button>
-                            @if (!IsDirectMessage)
+                            @if (IsOwn && !IsDeleted)
                             {
-                                <button class="menu-item" @onclick="OnPinClick">
-                                    <MudIcon Icon="@Icons.Material.Filled.PushPin" Size="Size.Small" />
-                                    <span>@(IsPinned ? "Unpin" : "Pin")</span>
+                                <button class="menu-item" @onclick="OnEditClick">
+                                    <span>Edit</span>
+                                    <MudIcon Icon="@Icons.Material.Outlined.Edit" Size="Size.Small" />
+                                </button>
+                            }
+                            <button class="menu-item" @onclick="OnForwardClick">
+                                <span>Forward</span>
+                                <MudIcon Icon="@Icons.Material.Outlined.Redo" Size="Size.Small" />
+                            </button>
+                            <button class="menu-item" @onclick="OnPinClick">
+                                <span>@(IsPinned ? "Unpin" : "Pin")</span>
+                                <MudIcon Icon="@(IsPinned ? Icons.Material.Outlined.PushPin : Icons.Material.Outlined.PushPin)" Size="Size.Small" />
+                            </button>
+                            <button class="menu-item" @onclick="HandleAddToFavoritesClick">
+                                <span>Add to Favorites</span>
+                                <MudIcon Icon="@Icons.Material.Outlined.StarBorder" Size="Size.Small" />
+                            </button>
+                            @if (!IsDirectMessage && !IsOwn)
+                            {
+                                @* Mark to read later - only for channel messages from others *@
+                                <button class="menu-item" @onclick="HandleMarkToReadLaterClick">
+                                    <span>Mark to read later</span>
+                                    <MudIcon Icon="@Icons.Material.Outlined.WatchLater" Size="Size.Small" />
                                 </button>
                             }
                             @if (IsOwn && !IsDeleted)
                             {
-                                <button class="menu-item" @onclick="OnEditClick">
-                                    <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" />
-                                    <span>Edit</span>
-                                </button>
                                 <button class="menu-item delete-item" @onclick="OnDeleteClick">
-                                    <MudIcon Icon="@Icons.Material.Filled.Delete" Size="Size.Small" />
                                     <span>Delete</span>
+                                    <MudIcon Icon="@Icons.Material.Outlined.Delete" Size="Size.Small" />
                                 </button>
                             }
+                            <button class="menu-item" @onclick="HandleSelectClick">
+                                <span>Select</span>
+                                <MudIcon Icon="@Icons.Material.Outlined.CheckCircle" Size="Size.Small" />
+                            </button>
                         </div>
                     }
                 </div>
@@ -524,6 +540,27 @@
             await OnReplyClick.InvokeAsync(ReplyToMessageId.Value);
         }
         await OnActionCompleted.InvokeAsync();
+    }
+
+    private Task HandleAddToFavoritesClick()
+    {
+        // TODO: Implement Add to Favorites functionality
+        CloseMoreMenu();
+        return Task.CompletedTask;
+    }
+
+    private Task HandleMarkToReadLaterClick()
+    {
+        // TODO: Implement Mark to read later functionality
+        CloseMoreMenu();
+        return Task.CompletedTask;
+    }
+
+    private Task HandleSelectClick()
+    {
+        // TODO: Implement Select functionality
+        CloseMoreMenu();
+        return Task.CompletedTask;
     }
 
     // Helper to get reactions list (works for both MessageReactionDto and ChannelMessageReactionDto)
