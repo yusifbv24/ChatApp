@@ -29,6 +29,30 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Services
                 .SendAsync("NewChannelMessage", messageDto);
         }
 
+        public async Task NotifyChannelMessageToMembersAsync(Guid channelId, List<Guid> memberUserIds, object messageDto)
+        {
+            _logger?.LogDebug("Broadcasting new message to channel {ChannelId} and {MemberCount} members directly",
+                channelId, memberUserIds.Count);
+
+            // 1. Send to channel group (for users actively viewing the channel)
+            await _hubContext.Clients
+                .Group($"channel_{channelId}")
+                .SendAsync("NewChannelMessage", messageDto);
+
+            // 2. ALSO send directly to each member's connections (for lazy loading support)
+            // This ensures notifications work even if user hasn't joined the channel group yet
+            foreach (var memberId in memberUserIds)
+            {
+                var memberConnections = await _connectionManager.GetUserConnectionsAsync(memberId);
+                if (memberConnections.Count != 0)
+                {
+                    await _hubContext.Clients
+                        .Clients(memberConnections)
+                        .SendAsync("NewChannelMessage", messageDto);
+                }
+            }
+        }
+
 
         public async Task NotifyDirectMessageAsync(Guid conversationId, Guid receiverId, object messageDto)
         {
@@ -44,7 +68,7 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Services
 
             // Also send directly to receiver's connections (in case they're not in the group yet)
             var receiverConnections = await _connectionManager.GetUserConnectionsAsync(receiverId);
-            if (receiverConnections.Any())
+            if (receiverConnections.Count != 0)
             {
                 await _hubContext.Clients
                     .Clients(receiverConnections)
@@ -88,7 +112,7 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Services
 
             // Also send directly to receiver's connections
             var receiverConnections = await _connectionManager.GetUserConnectionsAsync(receiverId);
-            if (receiverConnections.Any())
+            if (receiverConnections.Count != 0)
             {
                 await _hubContext.Clients
                     .Clients(receiverConnections)
@@ -105,6 +129,29 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Services
                 .SendAsync("ChannelMessageEdited", messageDto);
         }
 
+        public async Task NotifyChannelMessageEditedToMembersAsync(Guid channelId, List<Guid> memberUserIds, object messageDto)
+        {
+            _logger?.LogDebug("Broadcasting edited message to channel {ChannelId} and {MemberCount} members directly",
+                channelId, memberUserIds.Count);
+
+            // 1. Send to channel group (for active viewers)
+            await _hubContext.Clients
+                .Group($"channel_{channelId}")
+                .SendAsync("ChannelMessageEdited", messageDto);
+
+            // 2. Send directly to each member's connections (for lazy loading)
+            foreach (var memberId in memberUserIds)
+            {
+                var memberConnections = await _connectionManager.GetUserConnectionsAsync(memberId);
+                if (memberConnections.Count != 0)
+                {
+                    await _hubContext.Clients
+                        .Clients(memberConnections)
+                        .SendAsync("ChannelMessageEdited", messageDto);
+                }
+            }
+        }
+
         public async Task NotifyDirectMessageDeletedAsync(Guid conversationId, Guid receiverId, object messageDto)
         {
             _logger?.LogDebug(
@@ -119,7 +166,7 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Services
 
             // Also send directly to receiver's connections
             var receiverConnections = await _connectionManager.GetUserConnectionsAsync(receiverId);
-            if (receiverConnections.Any())
+            if (receiverConnections.Count != 0)
             {
                 await _hubContext.Clients
                     .Clients(receiverConnections)
@@ -136,6 +183,29 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Services
                 .SendAsync("ChannelMessageDeleted", messageDto);
         }
 
+        public async Task NotifyChannelMessageDeletedToMembersAsync(Guid channelId, List<Guid> memberUserIds, object messageDto)
+        {
+            _logger?.LogDebug("Broadcasting deleted message to channel {ChannelId} and {MemberCount} members directly",
+                channelId, memberUserIds.Count);
+
+            // 1. Send to channel group (for active viewers)
+            await _hubContext.Clients
+                .Group($"channel_{channelId}")
+                .SendAsync("ChannelMessageDeleted", messageDto);
+
+            // 2. Send directly to each member's connections (for lazy loading)
+            foreach (var memberId in memberUserIds)
+            {
+                var memberConnections = await _connectionManager.GetUserConnectionsAsync(memberId);
+                if (memberConnections.Count != 0)
+                {
+                    await _hubContext.Clients
+                        .Clients(memberConnections)
+                        .SendAsync("ChannelMessageDeleted", messageDto);
+                }
+            }
+        }
+
         public async Task NotifyMessageReadAsync(Guid conversationId, Guid messageId, Guid readBy, Guid senderId, DateTime readAtUtc)
         {
             _logger?.LogDebug("Broadcasting message read for message {MessageId} to sender {SenderId}", messageId, senderId);
@@ -150,7 +220,7 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Services
             // ALSO send directly to sender specifically
             // This ensures sender gets notification even if they're not actively in the conversation group
             var senderConnections = await _connectionManager.GetUserConnectionsAsync(senderId);
-            if (senderConnections.Any())
+            if (senderConnections.Count != 0)
             {
                 await _hubContext.Clients
                     .Clients(senderConnections)
@@ -206,7 +276,7 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Services
 
             var userConnections = await _connectionManager.GetUserConnectionsAsync(userId);
 
-            if (userConnections.Any())
+            if (userConnections.Count != 0)
             {
                 await _hubContext.Clients
                     .Clients(userConnections)
@@ -221,11 +291,60 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Services
 
             var userConnections = await _connectionManager.GetUserConnectionsAsync(userId);
 
-            if (userConnections.Any())
+            if (userConnections.Count != 0)
             {
                 await _hubContext.Clients
                     .Clients(userConnections)
                     .SendAsync("AddedToChannel", channelDto);
+            }
+        }
+
+
+        public async Task NotifyUserTypingInChannelToMembersAsync(Guid channelId, List<Guid> memberUserIds, Guid typingUserId, string username, bool isTyping)
+        {
+            _logger?.LogDebug("Broadcasting typing indicator to channel {ChannelId} and {MemberCount} members directly",
+                channelId, memberUserIds.Count);
+
+            // 1. Send to channel group (for users actively viewing the channel - real-time, no delay)
+            await _hubContext.Clients
+                .Group($"channel_{channelId}")
+                .SendAsync("UserTypingInChannel", channelId, typingUserId, username, isTyping);
+
+            // 2. ALSO send directly to each member's connections (for lazy loading support)
+            // This allows typing indicators to appear in conversation list even if user hasn't joined the channel
+            foreach (var memberId in memberUserIds)
+            {
+                var memberConnections = await _connectionManager.GetUserConnectionsAsync(memberId);
+                if (memberConnections.Count != 0)
+                {
+                    await _hubContext.Clients
+                        .Clients(memberConnections)
+                        .SendAsync("UserTypingInChannel", channelId, typingUserId, username, isTyping);
+                }
+            }
+        }
+
+
+        public async Task NotifyUserTypingInConversationToMembersAsync(Guid conversationId, List<Guid> memberUserIds, Guid typingUserId, bool isTyping)
+        {
+            _logger?.LogDebug("Broadcasting typing indicator to conversation {ConversationId} and {MemberCount} members directly",
+                conversationId, memberUserIds.Count);
+
+            // 1. Send to conversation group (for active viewers - real-time)
+            await _hubContext.Clients
+                .Group($"conversation_{conversationId}")
+                .SendAsync("UserTypingInConversation", conversationId, typingUserId, isTyping);
+
+            // 2. ALSO send directly to each member's connections (for lazy loading)
+            foreach (var memberId in memberUserIds)
+            {
+                var memberConnections = await _connectionManager.GetUserConnectionsAsync(memberId);
+                if (memberConnections.Count != 0)
+                {
+                    await _hubContext.Clients
+                        .Clients(memberConnections)
+                        .SendAsync("UserTypingInConversation", conversationId, typingUserId, isTyping);
+                }
             }
         }
     }

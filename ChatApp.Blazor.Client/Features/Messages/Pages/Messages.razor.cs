@@ -358,14 +358,19 @@ public partial class Messages : IAsyncDisposable
                 var conversation = conversations.FirstOrDefault(c => c.Id == message.ConversationId);
                 if (conversation != null)
                 {
-                    var index = conversations.IndexOf(conversation);
                     var isCurrentConversation = message.ConversationId == selectedConversationId;
-                    conversations[index] = conversation with
+
+                    // Create updated conversation with new message info
+                    var updatedConversation = conversation with
                     {
                         LastMessageContent = message.Content,
                         LastMessageAtUtc = message.CreatedAtUtc,
                         UnreadCount = isCurrentConversation ? 0 : conversation.UnreadCount + 1
                     };
+
+                    // Remove from current position and add to top (most recent)
+                    conversations.Remove(conversation);
+                    conversations.Insert(0, updatedConversation);
 
                     // Increment global unread count if not in this conversation
                     if (!isCurrentConversation)
@@ -488,15 +493,20 @@ public partial class Messages : IAsyncDisposable
                 var channel = channels.FirstOrDefault(c => c.Id == message.ChannelId);
                 if (channel != null)
                 {
-                    var index = channels.IndexOf(channel);
                     var isCurrentChannel = message.ChannelId == selectedChannelId;
-                    channels[index] = channel with
+
+                    // Create updated channel with new message info
+                    var updatedChannel = channel with
                     {
                         LastMessageContent = message.Content,
                         LastMessageAtUtc = message.CreatedAtUtc,
                         LastMessageSenderName = message.SenderDisplayName,
                         UnreadCount = isCurrentChannel ? 0 : channel.UnreadCount + 1
                     };
+
+                    // Remove from current position and add to top (most recent)
+                    channels.Remove(channel);
+                    channels.Insert(0, updatedChannel);
 
                     // Increment global unread count if not in this channel
                     if (!isCurrentChannel)
@@ -1515,6 +1525,19 @@ public partial class Messages : IAsyncDisposable
         isPendingConversation = false;
         pendingUser = null;
 
+        // LAZY LOADING: Leave previous conversation group before joining new one
+        // This reduces active group memberships and improves scalability
+        if (selectedConversationId.HasValue && selectedConversationId.Value != conversation.Id)
+        {
+            await SignalRService.LeaveConversationAsync(selectedConversationId.Value);
+        }
+
+        // Leave previous channel group if switching from channel to conversation
+        if (selectedChannelId.HasValue)
+        {
+            await SignalRService.LeaveChannelAsync(selectedChannelId.Value);
+        }
+
         // Mark conversation as read and update global unread count
         if (conversation.UnreadCount > 0)
         {
@@ -1580,19 +1603,12 @@ public partial class Messages : IAsyncDisposable
             if (channelsResult.IsSuccess)
             {
                 channels = channelsResult.Value ?? [];
-
-                // Join all channel SignalR groups to receive notifications for all channels
-                foreach (var channel in channels)
-                {
-                    await SignalRService.JoinChannelAsync(channel.Id);
-                }
             }
 
-            // Join all conversation SignalR groups to receive notifications for all conversations
-            foreach (var conv in conversations)
-            {
-                await SignalRService.JoinConversationAsync(conv.Id);
-            }
+            // NO LONGER NEEDED: Bulk join removed
+            // Hybrid notification pattern (group + direct connections) handles notifications
+            // without requiring users to join all channel/conversation groups on page load
+            // Groups are now joined only when user actively views a conversation/channel (lazy loading)
 
             // Refresh online status for all conversation participants
             await RefreshOnlineStatus();
@@ -1723,9 +1739,18 @@ public partial class Messages : IAsyncDisposable
         isPendingConversation = false;
         pendingUser = null;
 
-        // NOTE: We DON'T leave previous conversation/channel groups
-        // This allows us to receive typing indicators for conversation list
-        // User stays subscribed to all conversation/channel groups they've joined
+        // LAZY LOADING: Leave previous channel group before joining new one
+        // This reduces active group memberships and improves scalability
+        if (selectedChannelId.HasValue && selectedChannelId.Value != channel.Id)
+        {
+            await SignalRService.LeaveChannelAsync(selectedChannelId.Value);
+        }
+
+        // Leave previous conversation group if switching from conversation to channel
+        if (selectedConversationId.HasValue)
+        {
+            await SignalRService.LeaveConversationAsync(selectedConversationId.Value);
+        }
 
         // Mark channel as read and update global unread count
         if (channel.UnreadCount > 0)

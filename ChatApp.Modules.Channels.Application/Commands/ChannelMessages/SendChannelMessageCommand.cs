@@ -48,17 +48,20 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMessages
         private readonly IUnitOfWork _unitOfWork;
         private readonly IEventBus _eventBus;
         private readonly ISignalRNotificationService _signalRNotificationService;
+        private readonly IChannelMemberCache _channelMemberCache;
         private readonly ILogger<SendChannelMessageCommandHandler> _logger;
 
         public SendChannelMessageCommandHandler(
             IUnitOfWork unitOfWork,
             IEventBus eventBus,
             ISignalRNotificationService signalRNotificationService,
+            IChannelMemberCache channelMemberCache,
             ILogger<SendChannelMessageCommandHandler> logger)
         {
             _unitOfWork = unitOfWork;
             _eventBus = eventBus;
             _signalRNotificationService = signalRNotificationService;
+            _channelMemberCache = channelMemberCache;
             _logger = logger;
         }
 
@@ -136,9 +139,27 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMessages
                         broadcastDto.ReadByCount,
                         broadcastDto.TotalMemberCount);
 
-                    // Send real-time notification to all users in the channel
-                    await _signalRNotificationService.NotifyChannelMessageAsync(
+                    // Get all member user IDs (excluding the sender)
+                    var memberUserIds = members
+                        .Where(m => m.IsActive && m.UserId != request.SenderId)
+                        .Select(m => m.UserId)
+                        .ToList();
+
+                    // Update channel member cache for typing indicators
+                    // Cache includes ALL active members (including sender) for typing broadcast
+                    var allMemberIds = members
+                        .Where(m => m.IsActive)
+                        .Select(m => m.UserId)
+                        .ToList();
+                    await _channelMemberCache.UpdateChannelMembersAsync(request.ChannelId, allMemberIds);
+
+                    // Send real-time notification to channel group AND each member's connections
+                    // This hybrid approach supports both:
+                    // 1. Active viewers (already in channel group) - instant delivery
+                    // 2. Lazy loading (not in group yet) - notification via direct connections
+                    await _signalRNotificationService.NotifyChannelMessageToMembersAsync(
                         request.ChannelId,
+                        memberUserIds,
                         broadcastDto);
                 }
 

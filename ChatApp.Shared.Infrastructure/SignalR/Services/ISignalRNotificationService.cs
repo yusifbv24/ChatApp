@@ -11,6 +11,12 @@
         /// </summary>
         Task NotifyChannelMessageAsync(Guid channelId, object messageDto);
 
+        /// <summary>
+        /// Notify channel members about new message (hybrid: group + direct connections)
+        /// Sends to channel group AND each member's connections directly
+        /// </summary>
+        Task NotifyChannelMessageToMembersAsync(Guid channelId, List<Guid> memberUserIds, object messageDto);
+
 
         /// <summary>
         /// Notify users in direct conversation about new message
@@ -34,6 +40,11 @@
         Task NotifyChannelMessageEditedAsync(Guid channelId, object messageDto);
 
         /// <summary>
+        /// Notify channel members about edited message (hybrid: group + direct connections)
+        /// </summary>
+        Task NotifyChannelMessageEditedToMembersAsync(Guid channelId, List<Guid> memberUserIds, object messageDto);
+
+        /// <summary>
         /// Notify about message deletion (old channel method - deprecated)
         /// </summary>
         Task NotifyMessageDeletedAsync(Guid channelId, Guid messageId);
@@ -47,6 +58,11 @@
         /// Notify about channel message deletion with updated DTO
         /// </summary>
         Task NotifyChannelMessageDeletedAsync(Guid channelId, object messageDto);
+
+        /// <summary>
+        /// Notify channel members about deleted message (hybrid: group + direct connections)
+        /// </summary>
+        Task NotifyChannelMessageDeletedToMembersAsync(Guid channelId, List<Guid> memberUserIds, object messageDto);
 
 
 
@@ -91,5 +107,18 @@
         /// Notify user that they have been added to a channel
         /// </summary>
         Task NotifyMemberAddedToChannelAsync(Guid userId, object channelDto);
+
+
+        /// <summary>
+        /// Notify channel members about typing indicator (hybrid: group + direct connections)
+        /// Sends typing indicator to channel group AND each member's connections directly
+        /// This allows typing indicators to work with lazy loading (user doesn't need to JOIN channel)
+        /// </summary>
+        Task NotifyUserTypingInChannelToMembersAsync(Guid channelId, List<Guid> memberUserIds, Guid typingUserId, string username, bool isTyping);
+
+        /// <summary>
+        /// Notify conversation members about typing indicator (hybrid: group + direct connections)
+        /// </summary>
+        Task NotifyUserTypingInConversationToMembersAsync(Guid conversationId, List<Guid> memberUserIds, Guid typingUserId, bool isTyping);
     }
 }

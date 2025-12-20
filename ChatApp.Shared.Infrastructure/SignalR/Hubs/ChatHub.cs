@@ -13,13 +13,19 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Hubs
     {
         private readonly IConnectionManager _connectionManager;
         private readonly IPresenceService _presenceService;
+        private readonly ISignalRNotificationService _signalRNotificationService;
+        private readonly IChannelMemberCache _channelMemberCache;
 
         public ChatHub(
             IConnectionManager connectionManager,
-            IPresenceService presenceService)
+            IPresenceService presenceService,
+            ISignalRNotificationService signalRNotificationService,
+            IChannelMemberCache channelMemberCache)
         {
             _connectionManager= connectionManager;
             _presenceService= presenceService;
+            _signalRNotificationService = signalRNotificationService;
+            _channelMemberCache = channelMemberCache;
         }
 
         public override async Task OnConnectedAsync()
@@ -62,6 +68,7 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Hubs
 
         /// <summary>
         /// Client notifies they are typing in a channel
+        /// Uses hybrid pattern: broadcasts to group (for active viewers) AND direct connections (for lazy loading)
         /// </summary>
         public async Task TypingInChannel(Guid channelId,bool isTyping)
         {
@@ -72,18 +79,40 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Hubs
 
             var username = GetUsername();
 
-            // Broadcast to all users in the channel except sender
-            await Clients.Group($"channel_{channelId}").SendAsync(
-                "UserTypingInChannel",
-                channelId,
-                userId,
-                username,
-                isTyping);
+            // Get channel members from cache
+            var memberUserIds = await _channelMemberCache.GetChannelMemberIdsAsync(channelId);
+
+            // Exclude sender from member list
+            var recipientUserIds = memberUserIds.Where(id => id != userId).ToList();
+
+            if (recipientUserIds.Any())
+            {
+                // HYBRID BROADCAST: Send to both group AND direct connections
+                // This allows typing indicators to work even without JOIN (lazy loading)
+                await _signalRNotificationService.NotifyUserTypingInChannelToMembersAsync(
+                    channelId,
+                    recipientUserIds,
+                    userId,
+                    username,
+                    isTyping);
+            }
+            else
+            {
+                // Fallback: If cache is empty, just broadcast to group (backward compatible)
+                // Cache will be populated on next message send or member change
+                await Clients.Group($"channel_{channelId}").SendAsync(
+                    "UserTypingInChannel",
+                    channelId,
+                    userId,
+                    username,
+                    isTyping);
+            }
         }
 
 
         /// <summary>
         /// Client notifies they are typing in a direct conversation
+        /// Uses hybrid pattern for consistency (though conversations only have 2 members)
         /// </summary>
         public async Task TypingInConversation(Guid conversationId,bool isTyping)
         {
@@ -91,7 +120,10 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Hubs
 
             if(userId==Guid.Empty) return;
 
-            // Broadcast to all users in the conversation except sender
+            // For direct conversations, we could query participants from database,
+            // but simpler approach: just broadcast to group (only 2 members, minimal overhead)
+            // If we implement conversation member cache later, we can use hybrid pattern here too
+
             await Clients.Group($"conversation_{conversationId}").SendAsync(
                 "UserTypingInConversation",
                 conversationId,

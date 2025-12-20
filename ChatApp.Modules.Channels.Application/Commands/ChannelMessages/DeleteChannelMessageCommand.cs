@@ -111,8 +111,21 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMessages
                     IsForwarded: message.IsForwarded
                 );
 
-                // Send real-time notification with deleted message DTO
-                await _signalRNotificationService.NotifyChannelMessageDeletedAsync(channelId, messageDto);
+                // Get all active channel members for notification
+                var members = await _unitOfWork.ChannelMembers.GetChannelMembersAsync(
+                    channelId,
+                    cancellationToken);
+
+                var memberUserIds = members
+                    .Where(m => m.IsActive && m.UserId != request.RequestedBy)
+                    .Select(m => m.UserId)
+                    .ToList();
+
+                // Send real-time notification with deleted message DTO (hybrid: group + direct connections)
+                await _signalRNotificationService.NotifyChannelMessageDeletedToMembersAsync(
+                    channelId,
+                    memberUserIds,
+                    messageDto);
 
                 _logger?.LogInformation("Message {MessageId} deleted successfully", request.MessageId);
 

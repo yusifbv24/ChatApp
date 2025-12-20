@@ -87,8 +87,21 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMessages
 
                 if (messageDto != null)
                 {
-                    // Send real-time notification with edited message
-                    await _signalRNotificationService.NotifyChannelMessageEditedAsync(channelId, messageDto);
+                    // Get all active channel members for notification
+                    var members = await _unitOfWork.ChannelMembers.GetChannelMembersAsync(
+                        channelId,
+                        cancellationToken);
+
+                    var memberUserIds = members
+                        .Where(m => m.IsActive && m.UserId != request.RequestedBy)
+                        .Select(m => m.UserId)
+                        .ToList();
+
+                    // Send real-time notification with edited message (hybrid: group + direct connections)
+                    await _signalRNotificationService.NotifyChannelMessageEditedToMembersAsync(
+                        channelId,
+                        memberUserIds,
+                        messageDto);
                 }
 
                 _logger?.LogInformation("Message {MessageId} edited successfully", request.MessageId);

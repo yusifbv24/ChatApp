@@ -109,6 +109,7 @@ builder.Services.AddSingleton<IEventBus, InMemoryEventBus>();
 builder.Services.AddSingleton<IConnectionManager,ConnectionManager>();
 builder.Services.AddScoped<IPresenceService,PresenceService>();
 builder.Services.AddScoped<ISignalRNotificationService, SignalRNotificationService>();
+builder.Services.AddSingleton<IChannelMemberCache, ChannelMemberCache>();
 
 
 // Add SignalR

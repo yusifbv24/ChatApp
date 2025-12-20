@@ -38,7 +38,10 @@
       "Bash(cmd //c taskkill //F //PID 16248)",
       "Bash(cmd //c taskkill //F //PID 17488)",
       "Bash(cmd //c taskkill //F //PID 30644)",
-      "Bash(cmd //c taskkill //F //PID 19020)"
+      "Bash(cmd //c taskkill //F //PID 19020)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "Bash(cmd //c taskkill //F //PID 12472)"
     ],
     "deny": [],
     "ask": []
