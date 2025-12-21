@@ -451,11 +451,11 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
         }
     }
 
-    public async Task SendTypingInConversationAsync(Guid conversationId,bool isTyping)
+    public async Task SendTypingInConversationAsync(Guid conversationId, Guid recipientUserId, bool isTyping)
     {
         if (_isInitialized)
         {
-            await hubConnection.SendMessageAsync("TypingInConversation",conversationId,isTyping);
+            await hubConnection.SendMessageAsync("TypingInConversation", conversationId, recipientUserId, isTyping);
         }
     }
 

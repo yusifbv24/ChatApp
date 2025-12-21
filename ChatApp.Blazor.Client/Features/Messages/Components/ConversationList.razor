@@ -113,6 +113,12 @@
                                         }
                                     </span>
                                 }
+                                else if (item.HasDraft)
+                                {
+                                    <span class="preview-text draft-preview">
+                                        <span class="draft-label">Draft:</span> @TruncateMessage(item.DraftText)
+                                    </span>
+                                }
                                 else
                                 {
                                     <span class="preview-text">@(item.LastMessage ?? $"{item.MemberCount} members")</span>
@@ -154,6 +160,12 @@
                                 {
                                     <span class="preview-text typing-preview">typing...</span>
                                 }
+                                else if (item.HasDraft)
+                                {
+                                    <span class="preview-text draft-preview">
+                                        <span class="draft-label">Draft:</span> @TruncateMessage(item.DraftText)
+                                    </span>
+                                }
                                 else
                                 {
                                     <span class="preview-text">@TruncateMessage(item.LastMessage)</span>
@@ -190,6 +202,7 @@
     [Parameter] public bool IsLoading { get; set; }
     [Parameter] public Dictionary<Guid, bool> ConversationTypingState { get; set; } = new();
     [Parameter] public Dictionary<Guid, List<string>> ChannelTypingUsers { get; set; } = new();
+    [Parameter] public Dictionary<string, string> MessageDrafts { get; set; } = new();
     [Parameter] public EventCallback<DirectConversationDto> OnConversationSelected { get; set; }
     [Parameter] public EventCallback<ChannelDto> OnChannelSelected { get; set; }
     [Parameter] public EventCallback OnNewConversation { get; set; }
@@ -211,6 +224,8 @@
         public bool IsChannel { get; set; }
         public bool IsPrivate { get; set; } // For channels: private or public
         public int MemberCount { get; set; } // For channels
+        public bool HasDraft { get; set; } // Draft indicator
+        public string? DraftText { get; set; } // Draft content preview
 
         // Original references for selection
         public DirectConversationDto? DirectConversation { get; set; }
@@ -226,6 +241,12 @@
             // Add direct conversations
             foreach (var conv in Conversations)
             {
+                // Check for draft - but hide if currently selected (user is typing)
+                var draftKey = $"conv_{conv.Id}";
+                var isSelected = SelectedConversationId == conv.Id;
+                MessageDrafts.TryGetValue(draftKey, out var draftText);
+                var hasDraft = !isSelected && !string.IsNullOrWhiteSpace(draftText);
+
                 items.Add(new UnifiedChatItem
                 {
                     Id = conv.Id,
@@ -236,6 +257,8 @@
                     UnreadCount = conv.UnreadCount,
                     IsOnline = conv.IsOtherUserOnline,
                     IsChannel = false,
+                    HasDraft = hasDraft,
+                    DraftText = hasDraft ? draftText : null,
                     DirectConversation = conv
                 });
             }
@@ -250,6 +273,12 @@
                     lastMessage = $"{channel.LastMessageSenderName}: {channel.LastMessageContent}";
                 }
 
+                // Check for draft - but hide if currently selected (user is typing)
+                var draftKey = $"chan_{channel.Id}";
+                var isSelected = SelectedChannelId == channel.Id;
+                MessageDrafts.TryGetValue(draftKey, out var draftText);
+                var hasDraft = !isSelected && !string.IsNullOrWhiteSpace(draftText);
+
                 items.Add(new UnifiedChatItem
                 {
                     Id = channel.Id,
@@ -260,6 +289,8 @@
                     IsChannel = true,
                     IsPrivate = channel.Type == ChannelType.Private,
                     MemberCount = channel.MemberCount,
+                    HasDraft = hasDraft,
+                    DraftText = hasDraft ? draftText : null,
                     Channel = channel
                 });
             }

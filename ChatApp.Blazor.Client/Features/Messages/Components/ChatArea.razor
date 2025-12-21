@@ -241,12 +241,14 @@
                       IsReplying="@IsReplying"
                       ReplyToSenderName="@ReplyToSenderName"
                       ReplyToContent="@ReplyToContent"
+                      InitialDraft="@InitialDraft"
                       OnSend="SendMessage"
                       OnEdit="EditMessage"
                       OnCancelEdit="CancelEdit"
                       OnCancelReply="OnCancelReply"
                       OnTyping="HandleTyping"
-                      OnAttach="HandleAttach" />
+                      OnAttach="HandleAttach"
+                      OnDraftChanged="OnDraftChanged" />
     }
 </div>
 <!-- Info Panel (slide out) -->
@@ -442,6 +444,10 @@
     [Parameter] public Guid? ReplyToMessageId { get; set; }
     [Parameter] public string? ReplyToSenderName { get; set; }
     [Parameter] public string? ReplyToContent { get; set; }
+
+    // Draft support
+    [Parameter] public string? InitialDraft { get; set; }
+    [Parameter] public EventCallback<string> OnDraftChanged { get; set; }
 
 
     private ElementReference messagesContainerRef;
@@ -911,15 +917,14 @@
             addingUserId = null;
             StateHasChanged();
 
-            // Auto-hide success message after 3 seconds
+            // Auto-close panel after 1 second (so user sees success message)
             if (!string.IsNullOrEmpty(addMemberSuccess))
             {
-                _ = Task.Delay(3000).ContinueWith(_ =>
+                _ = Task.Delay(1000).ContinueWith(_ =>
                 {
                     InvokeAsync(() =>
                     {
-                        addMemberSuccess = null;
-                        StateHasChanged();
+                        CloseAddMemberPanel();
                     });
                 });
             }

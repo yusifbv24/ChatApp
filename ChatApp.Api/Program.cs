@@ -105,6 +105,9 @@ builder.Services.AddSettingsInfrastructure(builder.Configuration);
 // Register event bus for inter-module communication
 builder.Services.AddSingleton<IEventBus, InMemoryEventBus>();
 
+// Register Memory Cache (required for ChannelMemberCache)
+builder.Services.AddMemoryCache();
+
 // Register SignalR services
 builder.Services.AddSingleton<IConnectionManager,ConnectionManager>();
 builder.Services.AddScoped<IPresenceService,PresenceService>();

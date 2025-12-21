@@ -167,6 +167,14 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 .AnyAsync(m => m.ChannelId == channelId && m.UserId == userId && m.IsActive, cancellationToken);
         }
 
+        public async Task<List<Guid>> GetMemberUserIdsAsync(Guid channelId, CancellationToken cancellationToken = default)
+        {
+            return await _context.ChannelMembers
+                .Where(m => m.ChannelId == channelId && m.IsActive)
+                .Select(m => m.UserId)
+                .ToListAsync(cancellationToken);
+        }
+
         public async Task<bool> ExistsAsync(Expression<Func<Channel, bool>> predicate, CancellationToken cancellationToken = default)
         {
             return await _context.Channels.AnyAsync(predicate, cancellationToken);

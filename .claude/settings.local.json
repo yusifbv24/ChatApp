@@ -41,7 +41,9 @@
       "Bash(cmd //c taskkill //F //PID 19020)",
       "WebSearch",
       "WebFetch(domain:github.com)",
-      "Bash(cmd //c taskkill //F //PID 12472)"
+      "Bash(cmd //c taskkill //F //PID 12472)",
+      "Bash(cmd //c taskkill //F //PID 1160)",
+      "Bash(cmd //c taskkill //F //PID 2992)"
     ],
     "deny": [],
     "ask": []

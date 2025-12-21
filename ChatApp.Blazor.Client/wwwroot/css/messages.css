@@ -350,6 +350,15 @@
         font-style: italic;
     }
 
+    .preview-text.draft-preview {
+        color: #e74c3c;
+    }
+
+    .preview-text.draft-preview .draft-label {
+        color: #e74c3c;
+        font-weight: 600;
+    }
+
 .unread-badge {
     background: var(--primary-color);
     color: var(--white);

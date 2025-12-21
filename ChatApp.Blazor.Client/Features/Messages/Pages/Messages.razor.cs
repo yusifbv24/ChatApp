@@ -92,6 +92,11 @@ public partial class Messages : IAsyncDisposable
     private IJSObjectReference? visibilitySubscription;
     private DotNetObjectReference<Messages>? dotNetReference;
 
+    // Debounce state changes to prevent UI freezing
+    private Timer? _stateChangeDebounceTimer;
+    private bool _stateChangeScheduled;
+    private readonly object _stateChangeLock = new();
+
     // Dialogs
     private bool showNewConversationDialog;
     private bool showNewChannelDialog;
@@ -122,6 +127,10 @@ public partial class Messages : IAsyncDisposable
     private DirectMessageDto? forwardingDirectMessage;
     private ChannelMessageDto? forwardingChannelMessage;
     private string forwardSearchQuery = string.Empty;
+
+    // Draft messages - stores unsent message text for each conversation/channel
+    private Dictionary<string, string> messageDrafts = [];
+    private string currentDraft = string.Empty;
 
     private bool IsEmpty => !selectedConversationId.HasValue && !selectedChannelId.HasValue && !isPendingConversation;
 
@@ -712,7 +721,7 @@ public partial class Messages : IAsyncDisposable
                 if (conversationId == selectedConversationId)
                 {
                     if (isTyping)
-                    {   
+                    {
                         if (!typingUsers.Contains("typing"))
                         {
                             typingUsers.Add("typing");
@@ -724,8 +733,8 @@ public partial class Messages : IAsyncDisposable
                     }
                 }
 
-                // ALWAYS call StateHasChanged to update conversation list
-                StateHasChanged();
+                // Use debounced update for typing events (very frequent)
+                ScheduleStateUpdate();
             });
         }
     }
@@ -780,8 +789,8 @@ public partial class Messages : IAsyncDisposable
                     }
                 }
 
-                // ALWAYS call StateHasChanged to update conversation list
-                StateHasChanged();
+                // Use debounced update for typing events (very frequent)
+                ScheduleStateUpdate();
             });
         }
     }
@@ -802,7 +811,8 @@ public partial class Messages : IAsyncDisposable
                 conversations[index] = conversation with { IsOtherUserOnline = true };
             }
 
-            StateHasChanged();
+            // Use debounced update for online status
+            ScheduleStateUpdate();
         });
     }
 
@@ -822,7 +832,8 @@ public partial class Messages : IAsyncDisposable
                 conversations[index] = conversation with { IsOtherUserOnline = false };
             }
 
-            StateHasChanged();
+            // Use debounced update for offline status
+            ScheduleStateUpdate();
         });
     }
 
@@ -1262,9 +1273,9 @@ public partial class Messages : IAsyncDisposable
     }
     private async Task HandleTyping(bool isTyping)
     {
-        if (isDirectMessage && selectedConversationId.HasValue)
+        if (isDirectMessage && selectedConversationId.HasValue && recipientUserId != Guid.Empty)
         {
-            await SignalRService.SendTypingInConversationAsync(selectedConversationId.Value, isTyping);
+            await SignalRService.SendTypingInConversationAsync(selectedConversationId.Value, recipientUserId, isTyping);
         }
         else if (!isDirectMessage && selectedChannelId.HasValue)
         {
@@ -1521,6 +1532,9 @@ public partial class Messages : IAsyncDisposable
             }
         }
 
+        // Save current draft before switching (currentDraft is updated by MessageInput)
+        // Note: currentDraft is synced with MessageInput via OnDraftChanged callback
+
         // Clear pending conversation state
         isPendingConversation = false;
         pendingUser = null;
@@ -1570,6 +1584,9 @@ public partial class Messages : IAsyncDisposable
         recipientAvatarUrl = conversation.OtherUserAvatarUrl;
         recipientUserId = conversation.OtherUserId;
         isRecipientOnline = conversation.IsOtherUserOnline;
+
+        // Load draft for this conversation
+        currentDraft = LoadDraft(conversation.Id, null);
 
         // Join SignalR group
         await SignalRService.JoinConversationAsync(conversation.Id);
@@ -1655,10 +1672,19 @@ public partial class Messages : IAsyncDisposable
         recipientAvatarUrl = user.AvatarUrl;
         isRecipientOnline = false; // Will be updated via SignalR
 
-        // Clear messages since this is a new conversation
+        // Clear ALL messages and state since this is a new conversation
         directMessages.Clear();
+        channelMessages.Clear();
+        typingUsers.Clear();
+        pendingReadReceipts.Clear();
+        pendingChannelReadReceipts.Clear();
+        pendingMessageAdds.Clear();
         hasMoreMessages = false;
         oldestMessageDate = null;
+        pageSize = 50;
+
+        // Load draft for this pending user (if any)
+        currentDraft = LoadDraft(null, null, user.Id);
 
         CloseNewConversationDialog();
         StateHasChanged();
@@ -1785,6 +1811,9 @@ public partial class Messages : IAsyncDisposable
         selectedChannelDescription = channel.Description;
         selectedChannelType = channel.Type;
         selectedChannelMemberCount = channel.MemberCount;
+
+        // Load draft for this channel
+        currentDraft = LoadDraft(null, channel.Id);
 
         // Check if current user is admin/owner of this channel
         isChannelAdmin = channel.CreatedBy == currentUserId;
@@ -2280,6 +2309,49 @@ public partial class Messages : IAsyncDisposable
     }
     #endregion
 
+    #region Debounced State Updates
+
+    /// <summary>
+    /// Schedules a debounced StateHasChanged call.
+    /// Multiple calls within 50ms will be batched into a single UI update.
+    /// </summary>
+    private void ScheduleStateUpdate()
+    {
+        lock (_stateChangeLock)
+        {
+            if (_stateChangeScheduled) return;
+            _stateChangeScheduled = true;
+
+            _stateChangeDebounceTimer?.Dispose();
+            _stateChangeDebounceTimer = new Timer(_ =>
+            {
+                InvokeAsync(() =>
+                {
+                    lock (_stateChangeLock)
+                    {
+                        _stateChangeScheduled = false;
+                    }
+                    StateHasChanged();
+                });
+            }, null, 50, Timeout.Infinite);
+        }
+    }
+
+    /// <summary>
+    /// For critical updates that need immediate UI refresh (user actions)
+    /// </summary>
+    private void ImmediateStateUpdate()
+    {
+        lock (_stateChangeLock)
+        {
+            _stateChangeDebounceTimer?.Dispose();
+            _stateChangeScheduled = false;
+        }
+        StateHasChanged();
+    }
+
+    #endregion
+
     #region Helpers
     private async Task RefreshOnlineStatus()
     {
@@ -2417,6 +2489,77 @@ public partial class Messages : IAsyncDisposable
             ? $"{parts[0][0]}{parts[1][0]}".ToUpper()
             : name[0].ToString().ToUpper();
     }
+
+    #region Draft Management
+
+    /// <summary>
+    /// Saves the current draft for the given conversation or channel
+    /// </summary>
+    private void SaveCurrentDraft(string draft)
+    {
+        // Get the current key (conversation or channel)
+        string? key = null;
+        if (selectedConversationId.HasValue)
+        {
+            key = $"conv_{selectedConversationId.Value}";
+        }
+        else if (selectedChannelId.HasValue)
+        {
+            key = $"chan_{selectedChannelId.Value}";
+        }
+        else if (isPendingConversation && pendingUser != null)
+        {
+            key = $"pending_{pendingUser.Id}";
+        }
+
+        if (key == null) return;
+
+        if (string.IsNullOrWhiteSpace(draft))
+        {
+            // Remove draft if empty
+            messageDrafts.Remove(key);
+        }
+        else
+        {
+            // Save draft
+            messageDrafts[key] = draft;
+        }
+    }
+
+    /// <summary>
+    /// Loads the draft for the given conversation or channel
+    /// </summary>
+    private string LoadDraft(Guid? conversationId, Guid? channelId, Guid? pendingUserId = null)
+    {
+        string? key = null;
+        if (conversationId.HasValue)
+        {
+            key = $"conv_{conversationId.Value}";
+        }
+        else if (channelId.HasValue)
+        {
+            key = $"chan_{channelId.Value}";
+        }
+        else if (pendingUserId.HasValue)
+        {
+            key = $"pending_{pendingUserId.Value}";
+        }
+
+        if (key == null) return string.Empty;
+
+        return messageDrafts.TryGetValue(key, out var draft) ? draft : string.Empty;
+    }
+
+    /// <summary>
+    /// Called when user types in the message input - saves draft
+    /// </summary>
+    private void HandleDraftChanged(string draft)
+    {
+        currentDraft = draft;
+        SaveCurrentDraft(draft);
+    }
+
+    #endregion
 
     private void HandleAddedToChannel(ChannelDto channel)
     {
@@ -2559,6 +2702,9 @@ public partial class Messages : IAsyncDisposable
     {
         // Unsubscribe from SignalR events
         UnsubscribeFromSignalREvents();
+
+        // Dispose debounce timer
+        _stateChangeDebounceTimer?.Dispose();
 
         // Dispose page visibility subscription
         if (visibilitySubscription != null)

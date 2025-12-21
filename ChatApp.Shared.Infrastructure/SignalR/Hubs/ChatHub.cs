@@ -112,21 +112,19 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Hubs
 
         /// <summary>
         /// Client notifies they are typing in a direct conversation
-        /// Uses hybrid pattern for consistency (though conversations only have 2 members)
+        /// Uses hybrid pattern: broadcasts to group AND directly to recipient
         /// </summary>
-        public async Task TypingInConversation(Guid conversationId,bool isTyping)
+        public async Task TypingInConversation(Guid conversationId, Guid recipientUserId, bool isTyping)
         {
             var userId = GetUserId();
 
-            if(userId==Guid.Empty) return;
+            if (userId == Guid.Empty) return;
 
-            // For direct conversations, we could query participants from database,
-            // but simpler approach: just broadcast to group (only 2 members, minimal overhead)
-            // If we implement conversation member cache later, we can use hybrid pattern here too
-
-            await Clients.Group($"conversation_{conversationId}").SendAsync(
-                "UserTypingInConversation",
+            // HYBRID BROADCAST: Send to both group AND direct connection
+            // This allows typing indicators to work even without JOIN (lazy loading)
+            await _signalRNotificationService.NotifyUserTypingInConversationToMembersAsync(
                 conversationId,
+                new List<Guid> { recipientUserId },
                 userId,
                 isTyping);
         }

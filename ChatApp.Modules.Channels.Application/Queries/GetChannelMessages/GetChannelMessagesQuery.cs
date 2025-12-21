@@ -1,5 +1,6 @@
 ﻿using ChatApp.Modules.Channels.Application.DTOs.Responses;
 using ChatApp.Modules.Channels.Application.Interfaces;
+using ChatApp.Shared.Infrastructure.SignalR.Services;
 using ChatApp.Shared.Kernel.Common;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -17,13 +18,16 @@ namespace ChatApp.Modules.Channels.Application.Queries.GetChannelMessages
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<GetChannelMessagesQueryHandler> _logger;
+        private readonly IChannelMemberCache _channelMemberCache;
 
         public GetChannelMessagesQueryHandler(
             IUnitOfWork unitOfWork,
-            ILogger<GetChannelMessagesQueryHandler> logger)
+            ILogger<GetChannelMessagesQueryHandler> logger,
+            IChannelMemberCache channelMemberCache)
         {
             _unitOfWork = unitOfWork;
             _logger = logger;
+            _channelMemberCache = channelMemberCache;
         }
 
         public async Task<Result<List<ChannelMessageDto>>> Handle(
@@ -58,6 +62,13 @@ namespace ChatApp.Modules.Channels.Application.Queries.GetChannelMessages
                     request.PageSize,
                     request.BeforeUtc,
                     cancellationToken);
+
+                // Populate channel member cache for typing indicators
+                // This ensures typing works even on first visit (before any message is sent)
+                var memberIds = await _unitOfWork.Channels.GetMemberUserIdsAsync(
+                    request.ChannelId,
+                    cancellationToken);
+                await _channelMemberCache.UpdateChannelMembersAsync(request.ChannelId, memberIds);
 
                 return Result.Success(messages);
             }

@@ -118,6 +118,10 @@
     [Parameter] public string? ReplyToContent { get; set; }
     [Parameter] public EventCallback OnCancelReply { get; set; }
 
+    // Draft support
+    [Parameter] public string? InitialDraft { get; set; }
+    [Parameter] public EventCallback<string> OnDraftChanged { get; set; }
+
     private const int MaxLength = 4000;
     private ElementReference textAreaRef;
     private string MessageText { get; set; } = string.Empty;
@@ -179,11 +183,14 @@
             wasReplying = false;
         }
 
-        // Focus when conversation changes
+        // Focus when conversation changes and load draft
         if (ConversationId != previousConversationId)
         {
             previousConversationId = ConversationId;
             shouldFocus = true;
+
+            // Load the initial draft for this conversation (only on conversation change)
+            MessageText = InitialDraft ?? string.Empty;
         }
     }
 
@@ -225,6 +232,9 @@
 
         // Auto-resize textarea
         await JS.InvokeVoidAsync("chatAppUtils.autoResizeTextarea", textAreaRef);
+
+        // Notify parent about draft change (for persistence)
+        await OnDraftChanged.InvokeAsync(newValue);
     }
 
     private async Task HandleKeyDown(KeyboardEventArgs e)
@@ -286,6 +296,9 @@
         var message = MessageText.Trim();
         MessageText = string.Empty;
         await StopTyping();
+
+        // Clear draft when message is sent
+        await OnDraftChanged.InvokeAsync(string.Empty);
 
         // Reset textarea height
         await JS.InvokeVoidAsync("chatAppUtils.resetTextareaHeight", textAreaRef);

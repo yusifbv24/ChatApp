@@ -65,7 +65,7 @@ public interface ISignalRService
 
     // Typing indicators
     Task SendTypingInChannelAsync(Guid channelId, bool isTyping);
-    Task SendTypingInConversationAsync(Guid conversationId, bool isTyping);
+    Task SendTypingInConversationAsync(Guid conversationId, Guid recipientUserId, bool isTyping);
 
 
     // Online status
