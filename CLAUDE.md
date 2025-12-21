@@ -850,3 +850,130 @@ Backend:
 - No unnecessary network traffic (throttled to ~0.5 event/s per user) ✅
 - Cache prevents database overload (member list cached for 30 minutes) ✅
 - Works seamlessly with existing lazy loading architecture ✅
+
+### Session 10 (2025-12-21)
+
+**Fixed IMemoryCache DI registration:**
+- **Problem:** Backend crashed on startup with "Unable to resolve service for type 'IMemoryCache'"
+- **Solution:** Added `builder.Services.AddMemoryCache()` to Program.cs before ChannelMemberCache registration
+- **File:** `Program.cs:108-109`
+
+**Implemented Message Drafts System (WhatsApp-style):**
+- **Problem:** When switching between conversations/channels, typed message was lost
+- **Solution:** Draft messages are saved and restored when switching
+- **How it works:**
+  1. User types message in conversation A
+  2. User switches to conversation B → Draft saved for A
+  3. User returns to conversation A → Draft restored in input
+  4. Message sent → Draft cleared
+- **Files modified:**
+  - `Messages.razor.cs` - Added `messageDrafts` dictionary, `SaveCurrentDraft()`, `LoadDraft()`, `HandleDraftChanged()` methods
+  - `MessageInput.razor` - Added `InitialDraft` and `OnDraftChanged` parameters, loads draft on conversation change
+  - `ChatArea.razor` - Passes draft parameters to MessageInput
+  - `Messages.razor` - Passes draft to ChatArea
+
+**Draft Indicator in Conversation List:**
+- Drafts shown as "Draft: [text]" in red color in conversation list
+- Draft hidden for currently selected conversation (only shows when switching away)
+- **Files modified:**
+  - `ConversationList.razor` - Added `MessageDrafts` parameter, shows draft preview with priority: Typing > Draft > LastMessage
+  - `messages.css` - Added `.draft-preview` and `.draft-label` styles (red color)
+
+**Auto-close Add Member Panel:**
+- **Problem:** After adding member to channel, panel stayed open
+- **Solution:** Panel auto-closes 1 second after successful add (so user sees success message)
+- **File:** `ChatArea.razor:914-924`
+
+**Clear State on New Conversation:**
+- **Problem:** When selecting new user from search, previous channel messages were still visible
+- **Solution:** `StartConversationWithUser` now clears all state: `directMessages`, `channelMessages`, `typingUsers`, `pendingReadReceipts`, etc.
+- **File:** `Messages.razor.cs:1668-1680`
+
+**Fixed Conversation Typing Indicator (Hybrid Pattern):**
+- **Problem:** Typing indicator in conversations didn't work without selecting conversation first (lazy loading issue)
+- **Solution:** Implemented hybrid pattern for conversation typing (same as channels)
+- **Changes:**
+  - `ChatHub.cs:117` - `TypingInConversation(conversationId, recipientUserId, isTyping)` - accepts recipientUserId
+  - `ISignalRService.cs:68` - Updated interface
+  - `SignalRService.cs:454` - Updated implementation to pass recipientUserId
+  - `Messages.razor.cs:1271` - Passes `recipientUserId` when calling typing
+- **How it works:**
+  - Frontend sends `recipientUserId` with typing event
+  - Backend broadcasts to both conversation group AND directly to recipient's connections
+  - Works with lazy loading (no JOIN required)
+
+**Fixed Channel Typing Indicator (Cache Population):**
+- **Problem:** Channel typing didn't work if cache was empty (no message sent yet)
+- **Solution:** Populate cache when channel messages are loaded
+- **Changes:**
+  - `IChannelRepository.cs:18` - Added `GetMemberUserIdsAsync` method
+  - `ChannelRepository.cs:170-176` - Implemented method to fetch active member IDs
+  - `GetChannelMessagesQuery.cs:66-71` - Populates cache after loading messages
+- **How it works:**
+  - User selects channel → `GetChannelMessages` API called
+  - Messages loaded → Member IDs fetched → Cache populated
+  - Now typing works immediately (cache has member list)
+
+**Fixed UI Freeze Issue (Debounced StateHasChanged):**
+- **Problem:** Site froze after extensive messaging - 58 `StateHasChanged()` calls causing cascading re-renders
+- **Root cause:** Rapid SignalR events (typing, online/offline) each triggered immediate UI refresh
+- **Solution:** Debounced state updates for frequent events
+- **Implementation:**
+  ```csharp
+  // Messages.razor.cs - Debounce mechanism
+  private Timer? _stateChangeDebounceTimer;
+  private bool _stateChangeScheduled;
+  private readonly object _stateChangeLock = new();
+
+  private void ScheduleStateUpdate()
+  {
+      lock (_stateChangeLock)
+      {
+          if (_stateChangeScheduled) return;
+          _stateChangeScheduled = true;
+
+          _stateChangeDebounceTimer = new Timer(_ =>
+          {
+              InvokeAsync(() =>
+              {
+                  _stateChangeScheduled = false;
+                  StateHasChanged();
+              });
+          }, null, 50, Timeout.Infinite); // 50ms debounce
+      }
+  }
+  ```
+- **Updated handlers to use `ScheduleStateUpdate()` instead of `StateHasChanged()`:**
+  - `HandleTypingInConversation`
+  - `HandleTypingInChannel`
+  - `HandleUserOnline`
+  - `HandleUserOffline`
+- **Result:** Multiple rapid events within 50ms batched into single UI update
+
+**Files Modified This Session:**
+
+Backend:
+- `Program.cs` - Added `AddMemoryCache()`
+- `IChannelRepository.cs` - Added `GetMemberUserIdsAsync`
+- `ChannelRepository.cs` - Implemented `GetMemberUserIdsAsync`
+- `GetChannelMessagesQuery.cs` - Cache population on message load
+- `ChatHub.cs` - Updated `TypingInConversation` to use hybrid pattern
+
+Frontend:
+- `Messages.razor` - Draft parameters to ChatArea
+- `Messages.razor.cs` - Draft system, debounce mechanism, typing fix
+- `ChatArea.razor` - Draft parameters to MessageInput, auto-close add member panel
+- `MessageInput.razor` - Draft loading/saving
+- `ConversationList.razor` - Draft indicator display
+- `ISignalRService.cs` - Updated typing method signature
+- `SignalRService.cs` - Updated typing implementation
+- `messages.css` - Draft styles
+
+**Performance Improvements:**
+| Issue | Solution | Status |
+|-------|----------|--------|
+| 58x StateHasChanged calls | Debounce (50ms batch) | ✅ Fixed |
+| Rapid SignalR events | ScheduleStateUpdate() | ✅ Fixed |
+| Channel typing cache miss | Populate on message load | ✅ Fixed |
+| Conversation typing lazy | Hybrid pattern | ✅ Fixed |
+| Sequential notification sends | Task.WhenAll (future) | ⏳ Pending |
