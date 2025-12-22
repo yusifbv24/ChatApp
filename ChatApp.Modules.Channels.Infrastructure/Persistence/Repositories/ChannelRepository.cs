@@ -105,14 +105,15 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 from channel in _context.Channels
                 join member in _context.ChannelMembers on channel.Id equals member.ChannelId
                 where member.UserId == userId && member.IsActive && !channel.IsArchived
-                // Get last message for each channel (LEFT JOIN)
+                // Get last message for each channel (LEFT JOIN) - Include deleted messages to show "This message was deleted"
                 let lastMessage = (from msg in _context.ChannelMessages
                                    join sender in _context.Set<UserReadModel>() on msg.SenderId equals sender.Id
-                                   where msg.ChannelId == channel.Id && !msg.IsDeleted
+                                   where msg.ChannelId == channel.Id
                                    orderby msg.CreatedAtUtc descending
                                    select new
                                    {
                                        msg.Content,
+                                       msg.IsDeleted,
                                        sender.DisplayName,
                                        msg.CreatedAtUtc
                                    }).FirstOrDefault()
@@ -139,7 +140,9 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                     channel.IsArchived,
                     channel.CreatedAtUtc,
                     channel.ArchivedAtUtc,
-                    lastMessage != null ? lastMessage.Content : null,
+                    lastMessage != null
+                        ? (lastMessage.IsDeleted ? "This message was deleted" : lastMessage.Content)
+                        : null, // SECURITY: Sanitize deleted content in last message preview
                     lastMessage != null ? lastMessage.DisplayName : null,
                     lastMessage != null ? lastMessage.CreatedAtUtc : (DateTime?)null,
                     unreadCount

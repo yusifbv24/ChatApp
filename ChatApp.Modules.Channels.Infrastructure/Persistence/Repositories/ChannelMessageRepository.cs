@@ -55,7 +55,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                             message.PinnedAtUtc,
                             ReactionCount = _context.ChannelMessageReactions.Count(r => r.MessageId == message.Id),
                             message.ReplyToMessageId,
-                            ReplyToContent = repliedMessage != null ? repliedMessage.Content : null,
+                            ReplyToContent = repliedMessage != null && !repliedMessage.IsDeleted ? repliedMessage.Content : null,
+                            ReplyToIsDeleted = repliedMessage != null && repliedMessage.IsDeleted,
                             ReplyToSenderName = repliedSender != null ? repliedSender.DisplayName : null,
                             message.IsForwarded
                         }).FirstOrDefaultAsync(cancellationToken);
@@ -70,7 +71,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 result.Username,
                 result.DisplayName,
                 result.AvatarUrl,
-                result.Content,
+                result.IsDeleted ? "This message was deleted" : result.Content, // SECURITY: Sanitize deleted content
                 result.FileId,
                 result.IsEdited,
                 result.IsDeleted,
@@ -80,7 +81,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 result.EditedAtUtc,
                 result.PinnedAtUtc,
                 result.ReplyToMessageId,
-                result.ReplyToContent,
+                result.ReplyToIsDeleted ? "This message was deleted" : result.ReplyToContent, // SECURITY: Sanitize deleted reply content
                 result.ReplyToSenderName,
                 result.IsForwarded
             );
@@ -118,7 +119,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                             message.PinnedAtUtc,
                             ReactionCount = _context.ChannelMessageReactions.Count(r => r.MessageId == message.Id),
                             message.ReplyToMessageId,
-                            ReplyToContent = repliedMessage != null ? repliedMessage.Content : null,
+                            ReplyToContent = repliedMessage != null && !repliedMessage.IsDeleted ? repliedMessage.Content : null,
+                            ReplyToIsDeleted = repliedMessage != null && repliedMessage.IsDeleted,
                             ReplyToSenderName = repliedSender != null ? repliedSender.DisplayName : null,
                             message.IsForwarded,
                             // Calculate read status using ChannelMessageRead table
@@ -166,7 +168,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 r.Username,
                 r.DisplayName,
                 r.AvatarUrl,
-                r.Content,
+                r.IsDeleted ? "This message was deleted" : r.Content, // SECURITY: Sanitize deleted content
                 r.FileId,
                 r.IsEdited,
                 r.IsDeleted,
@@ -176,7 +178,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 r.EditedAtUtc,
                 r.PinnedAtUtc,
                 r.ReplyToMessageId,
-                r.ReplyToContent,
+                r.ReplyToIsDeleted ? "This message was deleted" : r.ReplyToContent, // SECURITY: Sanitize deleted reply content
                 r.ReplyToSenderName,
                 r.IsForwarded,
                 r.ReadByCount,
@@ -206,7 +208,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                               user.Username,
                               user.DisplayName,
                               user.AvatarUrl,
-                              message.Content,
+                              message.Content, // Pinned messages are not deleted, no sanitization needed
                               message.FileId,
                               message.IsEdited,
                               message.IsDeleted,
@@ -216,7 +218,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                               message.EditedAtUtc,
                               message.PinnedAtUtc,
                               message.ReplyToMessageId,
-                              repliedMessage != null ? repliedMessage.Content : null,
+                              repliedMessage != null && !repliedMessage.IsDeleted ? repliedMessage.Content : "This message was deleted", // SECURITY: Sanitize deleted reply content
                               repliedSender != null ? repliedSender.DisplayName : null,
                               message.IsForwarded,
                               _context.ChannelMessageReads.Count(r =>

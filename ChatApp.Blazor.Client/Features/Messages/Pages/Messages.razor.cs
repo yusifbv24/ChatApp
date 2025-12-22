@@ -100,6 +100,9 @@ public partial class Messages : IAsyncDisposable
     // Disposal tracking to prevent updates after component disposed
     private bool _disposed;
 
+    // Selection tracking to prevent concurrent SelectConversation/SelectChannel calls
+    private bool _isSelecting;
+
     // Dialogs
     private bool showNewConversationDialog;
     private bool showNewChannelDialog;
@@ -1454,33 +1457,58 @@ public partial class Messages : IAsyncDisposable
 
     private void HandleReactionToggled(Guid conversationId, Guid messageId, List<ReactionSummary> reactions)
     {
-        if (selectedConversationId.HasValue && selectedConversationId.Value == conversationId)
+        InvokeAsync(() =>
         {
-            UpdateMessageReactions(messageId, reactions);
-        }
+            try
+            {
+                // Guard: Don't process if component is disposed
+                if (_disposed) return;
+
+                if (selectedConversationId.HasValue && selectedConversationId.Value == conversationId)
+                {
+                    UpdateMessageReactions(messageId, reactions);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Silently handle exceptions to prevent runtime crash
+                Console.WriteLine($"Error handling reaction toggled: {ex.Message}");
+            }
+        });
     }
 
     private void HandleChannelMessageReactionsUpdated(Guid messageId, List<ChannelMessageReactionDto> reactions)
     {
         InvokeAsync(() =>
         {
-            if (!selectedChannelId.HasValue)
-                return;
-
-            var message = channelMessages.FirstOrDefault(m => m.Id == messageId);
-            if (message != null)
+            try
             {
-                var index = channelMessages.IndexOf(message);
+                // Guard: Don't process if component is disposed
+                if (_disposed) return;
 
-                // Simply replace all reactions (no complex logic, just direct update)
-                var updatedMessage = message with
+                if (!selectedChannelId.HasValue)
+                    return;
+
+                var message = channelMessages.FirstOrDefault(m => m.Id == messageId);
+                if (message != null)
                 {
-                    ReactionCount = reactions.Sum(r => r.Count),
-                    Reactions = reactions
-                };
+                    var index = channelMessages.IndexOf(message);
 
-                channelMessages[index] = updatedMessage;
-                StateHasChanged();
+                    // Simply replace all reactions (no complex logic, just direct update)
+                    var updatedMessage = message with
+                    {
+                        ReactionCount = reactions.Sum(r => r.Count),
+                        Reactions = reactions
+                    };
+
+                    channelMessages[index] = updatedMessage;
+                    StateHasChanged();
+                }
+            }
+            catch (Exception ex)
+            {
+                // Silently handle exceptions to prevent runtime crash
+                Console.WriteLine($"Error handling channel message reactions updated: {ex.Message}");
             }
         });
     }
@@ -1648,85 +1676,116 @@ public partial class Messages : IAsyncDisposable
     }
     private async Task SelectConversation(DirectConversationDto conversation)
     {
-        // Mark previous channel as read before switching to conversation
-        if (selectedChannelId.HasValue)
+        // Guard: Prevent concurrent selection operations (race condition)
+        if (_isSelecting || _disposed)
         {
-            try
+            return;
+        }
+
+        // Guard: Null check
+        if (conversation == null)
+        {
+            return;
+        }
+
+        // Guard: Already selected
+        if (selectedConversationId.HasValue && selectedConversationId.Value == conversation.Id)
+        {
+            return;
+        }
+
+        _isSelecting = true;
+
+        try
+        {
+            // Mark previous channel as read before switching to conversation
+            if (selectedChannelId.HasValue)
             {
-                await ChannelService.MarkAsReadAsync(selectedChannelId.Value);
+                try
+                {
+                    await ChannelService.MarkAsReadAsync(selectedChannelId.Value);
+                }
+                catch
+                {
+                    // Ignore errors when marking as read
+                }
             }
-            catch
+
+            // Save current draft before switching (currentDraft is updated by MessageInput)
+            // Note: currentDraft is synced with MessageInput via OnDraftChanged callback
+
+            // Clear pending conversation state
+            isPendingConversation = false;
+            pendingUser = null;
+
+            // LAZY LOADING: Leave previous conversation group before joining new one
+            // This reduces active group memberships and improves scalability
+            if (selectedConversationId.HasValue && selectedConversationId.Value != conversation.Id)
             {
-                // Ignore errors when marking as read
+                await SignalRService.LeaveConversationAsync(selectedConversationId.Value);
             }
-        }
 
-        // Save current draft before switching (currentDraft is updated by MessageInput)
-        // Note: currentDraft is synced with MessageInput via OnDraftChanged callback
-
-        // Clear pending conversation state
-        isPendingConversation = false;
-        pendingUser = null;
-
-        // LAZY LOADING: Leave previous conversation group before joining new one
-        // This reduces active group memberships and improves scalability
-        if (selectedConversationId.HasValue && selectedConversationId.Value != conversation.Id)
-        {
-            await SignalRService.LeaveConversationAsync(selectedConversationId.Value);
-        }
-
-        // Leave previous channel group if switching from channel to conversation
-        if (selectedChannelId.HasValue)
-        {
-            await SignalRService.LeaveChannelAsync(selectedChannelId.Value);
-        }
-
-        // Mark conversation as read and update global unread count
-        if (conversation.UnreadCount > 0)
-        {
-            AppState.DecrementUnreadMessages(conversation.UnreadCount);
-
-            // Update local conversation list to show 0 unread
-            var index = conversations.IndexOf(conversation);
-            if (index >= 0)
+            // Leave previous channel group if switching from channel to conversation
+            if (selectedChannelId.HasValue)
             {
-                conversations[index] = conversation with { UnreadCount = 0 };
+                await SignalRService.LeaveChannelAsync(selectedChannelId.Value);
             }
+
+            // Mark conversation as read and update global unread count
+            if (conversation.UnreadCount > 0)
+            {
+                AppState.DecrementUnreadMessages(conversation.UnreadCount);
+
+                // Update local conversation list to show 0 unread
+                var index = conversations.IndexOf(conversation);
+                if (index >= 0)
+                {
+                    conversations[index] = conversation with { UnreadCount = 0 };
+                }
+            }
+
+            directMessages.Clear();
+            channelMessages.Clear();
+            hasMoreMessages = true;
+            oldestMessageDate = null;
+            typingUsers.Clear();
+            pendingReadReceipts.Clear(); // Clear pending read receipts when changing conversations
+            pendingChannelReadReceipts.Clear(); // Clear pending channel read receipts when changing conversations
+            pendingMessageAdds.Clear(); // Clear pending message adds when changing conversations
+            pageSize = 50; // Reset page size to 50 for new conversation
+
+            // Set conversation details AFTER clearing
+            selectedConversationId = conversation.Id;
+            selectedChannelId = null;
+            isDirectMessage = true;
+
+            recipientName = conversation.OtherUserDisplayName;
+            recipientAvatarUrl = conversation.OtherUserAvatarUrl;
+            recipientUserId = conversation.OtherUserId;
+            isRecipientOnline = conversation.IsOtherUserOnline;
+
+            // Load draft for this conversation
+            currentDraft = LoadDraft(conversation.Id, null);
+
+            // Join SignalR group
+            await SignalRService.JoinConversationAsync(conversation.Id);
+
+            // Load messages
+            await LoadDirectMessages();
+
+            // Update URL
+            NavigationManager.NavigateTo($"/messages/conversation/{conversation.Id}", false);
+
+            StateHasChanged();
         }
-
-        directMessages.Clear();
-        channelMessages.Clear();
-        hasMoreMessages = true;
-        oldestMessageDate = null;
-        typingUsers.Clear();
-        pendingReadReceipts.Clear(); // Clear pending read receipts when changing conversations
-        pendingChannelReadReceipts.Clear(); // Clear pending channel read receipts when changing conversations
-        pendingMessageAdds.Clear(); // Clear pending message adds when changing conversations
-        pageSize = 50; // Reset page size to 50 for new conversation
-
-        // Set conversation details AFTER clearing
-        selectedConversationId = conversation.Id;
-        selectedChannelId = null;
-        isDirectMessage = true;
-
-        recipientName = conversation.OtherUserDisplayName;
-        recipientAvatarUrl = conversation.OtherUserAvatarUrl;
-        recipientUserId = conversation.OtherUserId;
-        isRecipientOnline = conversation.IsOtherUserOnline;
-
-        // Load draft for this conversation
-        currentDraft = LoadDraft(conversation.Id, null);
-
-        // Join SignalR group
-        await SignalRService.JoinConversationAsync(conversation.Id);
-
-        // Load messages
-        await LoadDirectMessages();
-
-        // Update URL
-        NavigationManager.NavigateTo($"/messages/conversation/{conversation.Id}", false);
-
-        StateHasChanged();
+        catch (Exception ex)
+        {
+            ShowError($"Failed to select conversation: {ex.Message}");
+        }
+        finally
+        {
+            _isSelecting = false;
+        }
     }
     private async Task LoadConversationsAndChannels()
     {
@@ -1877,22 +1936,44 @@ public partial class Messages : IAsyncDisposable
     }
     private async Task SelectChannel(ChannelDto channel)
     {
-        // Mark previous channel as read before switching
-        if (selectedChannelId.HasValue && selectedChannelId.Value != channel.Id)
+        // Guard: Prevent concurrent selection operations (race condition)
+        if (_isSelecting || _disposed)
         {
-            try
-            {
-                await ChannelService.MarkAsReadAsync(selectedChannelId.Value);
-            }
-            catch
-            {
-                // Ignore errors when marking as read
-            }
+            return;
         }
 
-        // Clear pending conversation state
-        isPendingConversation = false;
-        pendingUser = null;
+        // Guard: Null check
+        if (channel == null)
+        {
+            return;
+        }
+
+        // Guard: Already selected
+        if (selectedChannelId.HasValue && selectedChannelId.Value == channel.Id)
+        {
+            return;
+        }
+
+        _isSelecting = true;
+
+        try
+        {
+            // Mark previous channel as read before switching
+            if (selectedChannelId.HasValue && selectedChannelId.Value != channel.Id)
+            {
+                try
+                {
+                    await ChannelService.MarkAsReadAsync(selectedChannelId.Value);
+                }
+                catch
+                {
+                    // Ignore errors when marking as read
+                }
+            }
+
+            // Clear pending conversation state
+            isPendingConversation = false;
+            pendingUser = null;
 
         // LAZY LOADING: Leave previous channel group before joining new one
         // This reduces active group memberships and improves scalability
@@ -2007,10 +2088,19 @@ public partial class Messages : IAsyncDisposable
             Console.WriteLine($"[SelectChannel] Mark-as-read exception: {ex.Message}");
         }
 
-        // Update URL
-        NavigationManager.NavigateTo($"/messages/channel/{channel.Id}", false);
+            // Update URL
+            NavigationManager.NavigateTo($"/messages/channel/{channel.Id}", false);
 
-        StateHasChanged();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Failed to select channel: {ex.Message}");
+        }
+        finally
+        {
+            _isSelecting = false;
+        }
     }
     private async Task CreateChannel()
     {

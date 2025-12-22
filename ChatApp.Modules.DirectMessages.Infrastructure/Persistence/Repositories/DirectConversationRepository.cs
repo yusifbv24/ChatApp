@@ -83,10 +83,10 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                                              && (conv.InitiatedByUserId == userId || conv.HasMessages)
                                        let otherUserId = conv.User1Id == userId ? conv.User2Id : conv.User1Id
                                        join user in _context.Set<UserReadModel>() on otherUserId equals user.Id
-                                       let lastMessage = _context.DirectMessages
-                                          .Where(m => m.ConversationId == conv.Id && !m.IsDeleted)
+                                       let lastMessageInfo = _context.DirectMessages
+                                          .Where(m => m.ConversationId == conv.Id)
                                           .OrderByDescending(m => m.CreatedAtUtc)
-                                          .Select(m => m.Content)
+                                          .Select(m => new { m.Content, m.IsDeleted })
                                           .FirstOrDefault()
                                        let unreadCount = _context.DirectMessages
                                           .Count(m => m.ConversationId == conv.Id &&
@@ -101,7 +101,9 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                                            user.Username,
                                            user.DisplayName,
                                            user.AvatarUrl,
-                                           LastMessage=lastMessage,
+                                           LastMessage = lastMessageInfo != null
+                                               ? (lastMessageInfo.IsDeleted ? "This message was deleted" : lastMessageInfo.Content)
+                                               : null,
                                            conv.LastMessageAtUtc,
                                            UnreadCount=unreadCount
                                        })

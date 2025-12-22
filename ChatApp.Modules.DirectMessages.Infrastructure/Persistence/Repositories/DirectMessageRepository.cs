@@ -71,7 +71,8 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                             message.ReadAtUtc,
                             ReactionCount = _context.DirectMessageReactions.Count(r => r.MessageId == message.Id),
                             message.ReplyToMessageId,
-                            ReplyToContent = repliedMessage != null ? repliedMessage.Content : null,
+                            ReplyToContent = repliedMessage != null && !repliedMessage.IsDeleted ? repliedMessage.Content : null,
+                            ReplyToIsDeleted = repliedMessage != null && repliedMessage.IsDeleted,
                             ReplyToSenderName = repliedSender != null ? repliedSender.DisplayName : null,
                             message.IsForwarded
                         }).FirstOrDefaultAsync(cancellationToken);
@@ -98,7 +99,7 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 result.DisplayName,
                 result.AvatarUrl,
                 result.ReceiverId,
-                result.Content,
+                result.IsDeleted ? "This message was deleted" : result.Content, // SECURITY: Sanitize deleted content
                 result.FileId,
                 result.IsEdited,
                 result.IsDeleted,
@@ -108,7 +109,7 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 result.EditedAtUtc,
                 result.ReadAtUtc,
                 result.ReplyToMessageId,
-                result.ReplyToContent,
+                result.ReplyToIsDeleted ? "This message was deleted" : result.ReplyToContent, // SECURITY: Sanitize deleted reply content
                 result.ReplyToSenderName,
                 result.IsForwarded,
                 reactions.Count > 0 ? reactions : null
@@ -149,7 +150,8 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                             message.ReadAtUtc,
                             ReactionCount = _context.DirectMessageReactions.Count(r => r.MessageId == message.Id),
                             message.ReplyToMessageId,
-                            ReplyToContent = repliedMessage != null ? repliedMessage.Content : null,
+                            ReplyToContent = repliedMessage != null && !repliedMessage.IsDeleted ? repliedMessage.Content : null,
+                            ReplyToIsDeleted = repliedMessage != null && repliedMessage.IsDeleted,
                             ReplyToSenderName = repliedSender != null ? repliedSender.DisplayName : null,
                             message.IsForwarded
                         };
@@ -191,7 +193,7 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 r.DisplayName,
                 r.AvatarUrl,
                 r.ReceiverId,
-                r.Content,
+                r.IsDeleted ? "This message was deleted" : r.Content, // SECURITY: Sanitize deleted content
                 r.FileId,
                 r.IsEdited,
                 r.IsDeleted,
@@ -201,7 +203,7 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 r.EditedAtUtc,
                 r.ReadAtUtc,
                 r.ReplyToMessageId,
-                r.ReplyToContent,
+                r.ReplyToIsDeleted ? "This message was deleted" : r.ReplyToContent, // SECURITY: Sanitize deleted reply content
                 r.ReplyToSenderName,
                 r.IsForwarded,
                 reactions.ContainsKey(r.Id) ? reactions[r.Id] : null

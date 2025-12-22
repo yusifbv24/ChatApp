@@ -25,7 +25,9 @@
         {
             <div class="message-sender">@SenderName</div>
         }
-        <div class="message-bubble @(IsOwn ? "own-bubble" : "other-bubble")">
+        <div class="message-bubble @(IsOwn ? "own-bubble" : "other-bubble")"
+             @onmouseenter="() => showHoverActions = true"
+             @onmouseleave="() => { if (!showMoreMenu && !showReactionPicker) showHoverActions = false; }">
             @if (IsDeleted)
             {
                 <div class="deleted-message">
@@ -172,72 +174,87 @@
                             }
                         </div>
                     </div>
+                </div>
+            }
 
-                    <!-- Chevron button - top right corner -->
-                    <button class="chevron-more-btn @(showMoreMenu ? "visible" : "")"
-                            title="More"
-                            @onclick="ToggleMoreMenu"
-                            @onclick:stopPropagation="true">
-                        <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" />
-                    </button>
+            <!-- Chevron button - top right corner (visible for both deleted and normal messages) -->
+            @if (showHoverActions || showMoreMenu)
+            {
+                <button class="chevron-more-btn @(showMoreMenu ? "visible" : "")"
+                        title="More"
+                        @onclick="ToggleMoreMenu"
+                        @onclick:stopPropagation="true">
+                    <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" />
+                </button>
+            }
 
-                    <!-- More Menu -->
-                    @if (showMoreMenu)
+            <!-- More Menu (content depends on IsDeleted) -->
+            @if (showMoreMenu)
+            {
+                <div class="chevron-more-menu @(menuPositionAbove ? "menu-above" : "")" @onclick:stopPropagation="true">
+                    @if (IsDeleted)
                     {
-                        <div class="chevron-more-menu @(menuPositionAbove ? "menu-above" : "")" @onclick:stopPropagation="true">
-                            <button class="menu-item" @onclick="HandleReplyButtonClick">
-                                <span>Reply</span>
-                                <MudIcon Icon="@Icons.Material.Outlined.FormatQuote" Size="Size.Small" />
+                        @* Deleted messages: ONLY Reply is allowed *@
+                        <button class="menu-item" @onclick="HandleReplyButtonClick">
+                            <span>Reply</span>
+                            <MudIcon Icon="@Icons.Material.Outlined.FormatQuote" Size="Size.Small" />
+                        </button>
+                    }
+                    else
+                    {
+                        @* Normal messages: Full menu *@
+                        <button class="menu-item" @onclick="HandleReplyButtonClick">
+                            <span>Reply</span>
+                            <MudIcon Icon="@Icons.Material.Outlined.FormatQuote" Size="Size.Small" />
+                        </button>
+                        <button class="menu-item" @onclick="OnCopyClick">
+                            <span>Copy</span>
+                            <MudIcon Icon="@Icons.Material.Outlined.ContentCopy" Size="Size.Small" />
+                        </button>
+                        @if (IsOwn && !IsForwarded)
+                        {
+                            <button class="menu-item" @onclick="OnEditClick">
+                                <span>Edit</span>
+                                <MudIcon Icon="@Icons.Material.Outlined.Edit" Size="Size.Small" />
                             </button>
-                            <button class="menu-item" @onclick="OnCopyClick">
-                                <span>Copy</span>
-                                <MudIcon Icon="@Icons.Material.Outlined.ContentCopy" Size="Size.Small" />
+                        }
+                        <button class="menu-item" @onclick="OnForwardClick">
+                            <span>Forward</span>
+                            <MudIcon Icon="@Icons.Material.Outlined.Redo" Size="Size.Small" />
+                        </button>
+                        <button class="menu-item" @onclick="OnPinClick">
+                            <span>@(IsPinned ? "Unpin" : "Pin")</span>
+                            <MudIcon Icon="@(IsPinned ? Icons.Material.Outlined.PushPin : Icons.Material.Outlined.PushPin)" Size="Size.Small" />
+                        </button>
+                        <button class="menu-item" @onclick="HandleAddToFavoritesClick">
+                            <span>Add to Favorites</span>
+                            <MudIcon Icon="@Icons.Material.Outlined.StarBorder" Size="Size.Small" />
+                        </button>
+                        @if (!IsDirectMessage && !IsOwn)
+                        {
+                            @* Mark to read later - only for channel messages from others *@
+                            <button class="menu-item" @onclick="HandleMarkToReadLaterClick">
+                                <span>Mark to read later</span>
+                                <MudIcon Icon="@Icons.Material.Outlined.WatchLater" Size="Size.Small" />
                             </button>
-                            @if (IsOwn && !IsDeleted)
-                            {
-                                <button class="menu-item" @onclick="OnEditClick">
-                                    <span>Edit</span>
-                                    <MudIcon Icon="@Icons.Material.Outlined.Edit" Size="Size.Small" />
-                                </button>
-                            }
-                            <button class="menu-item" @onclick="OnForwardClick">
-                                <span>Forward</span>
-                                <MudIcon Icon="@Icons.Material.Outlined.Redo" Size="Size.Small" />
+                        }
+                        @if (IsOwn)
+                        {
+                            <button class="menu-item delete-item" @onclick="OnDeleteClick">
+                                <span>Delete</span>
+                                <MudIcon Icon="@Icons.Material.Outlined.Delete" Size="Size.Small" />
                             </button>
-                            <button class="menu-item" @onclick="OnPinClick">
-                                <span>@(IsPinned ? "Unpin" : "Pin")</span>
-                                <MudIcon Icon="@(IsPinned ? Icons.Material.Outlined.PushPin : Icons.Material.Outlined.PushPin)" Size="Size.Small" />
-                            </button>
-                            <button class="menu-item" @onclick="HandleAddToFavoritesClick">
-                                <span>Add to Favorites</span>
-                                <MudIcon Icon="@Icons.Material.Outlined.StarBorder" Size="Size.Small" />
-                            </button>
-                            @if (!IsDirectMessage && !IsOwn)
-                            {
-                                @* Mark to read later - only for channel messages from others *@
-                                <button class="menu-item" @onclick="HandleMarkToReadLaterClick">
-                                    <span>Mark to read later</span>
-                                    <MudIcon Icon="@Icons.Material.Outlined.WatchLater" Size="Size.Small" />
-                                </button>
-                            }
-                            @if (IsOwn && !IsDeleted)
-                            {
-                                <button class="menu-item delete-item" @onclick="OnDeleteClick">
-                                    <span>Delete</span>
-                                    <MudIcon Icon="@Icons.Material.Outlined.Delete" Size="Size.Small" />
-                                </button>
-                            }
-                            <button class="menu-item" @onclick="HandleSelectClick">
-                                <span>Select</span>
-                                <MudIcon Icon="@Icons.Material.Outlined.CheckCircle" Size="Size.Small" />
-                            </button>
-                        </div>
+                        }
+                        <button class="menu-item" @onclick="HandleSelectClick">
+                            <span>Select</span>
+                            <MudIcon Icon="@Icons.Material.Outlined.CheckCircle" Size="Size.Small" />
+                        </button>
                     }
                 </div>
             }
 
-            <!-- Quick Reaction Icon (Like button in bottom corner) -->
-            @if (!IsDeleted)
+            <!-- Quick Reaction Icon (Like button in bottom corner) - hidden for deleted messages -->
+            @if (!IsDeleted && (showHoverActions || showReactionPicker))
             {
                 <div class="reaction-quick-icon @(showReactionPicker ? "active" : "")"
                      @onmouseenter="HandleReactionIconHover"
@@ -308,6 +325,7 @@
     private ElementReference messageWrapperRef;
     private bool showReactionPicker = false;
     private bool showMoreMenu = false;
+    private bool showHoverActions = false;
     private bool menuPositionAbove = false;
     private int? hoveredReactionIndex = null;
     private CancellationTokenSource? hideReactionPanelCts;

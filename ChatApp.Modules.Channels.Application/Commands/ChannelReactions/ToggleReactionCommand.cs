@@ -56,8 +56,14 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelReactions
                 // Load message with reactions (AsNoTracking for validation only)
                 var message = await _unitOfWork.ChannelMessages.GetByIdWithReactionsAsync(
                     request.MessageId,
-                    cancellationToken) 
+                    cancellationToken)
                     ?? throw new NotFoundException($"Message with ID {request.MessageId} not found");
+
+                // Prevent reactions on deleted messages
+                if (message.IsDeleted)
+                {
+                    return Result.Failure<List<ChannelMessageReactionDto>>("Cannot react to deleted messages");
+                }
 
                 // Verify user is a member
                 var isMember = await _unitOfWork.Channels.IsUserMemberAsync(

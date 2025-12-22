@@ -818,7 +818,7 @@
 }
 
 .message-wrapper.deleted {
-    opacity: 0.6;
+    /* Removed opacity - deleted messages should have same appearance as normal messages */
 }
 
 .message-avatar {
@@ -1081,7 +1081,7 @@
     align-items: center;
     gap: 8px;
     font-style: italic;
-    opacity: 0.7;
+    /* Removed opacity - text should be fully visible */
     font-size: 13px;
 }
 
@@ -2642,7 +2642,7 @@
 
 .forward-dialog {
     width: 400px;
-    height: 480px;
+    height: 560px; /* Increased from 480px to show 8 items instead of 5-6 */
     display: flex;
     flex-direction: column;
 }

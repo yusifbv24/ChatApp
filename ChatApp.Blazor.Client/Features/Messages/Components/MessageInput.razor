@@ -332,11 +332,17 @@
     {
         MessageText = string.Empty;
         await OnCancelEdit.InvokeAsync();
+
+        // Auto-focus textarea after canceling edit
+        await FocusAsync();
     }
 
     private async Task CancelReply()
     {
         await OnCancelReply.InvokeAsync();
+
+        // Auto-focus textarea after canceling reply
+        await FocusAsync();
     }
 
     private string TruncateText(string? text, int maxLength)

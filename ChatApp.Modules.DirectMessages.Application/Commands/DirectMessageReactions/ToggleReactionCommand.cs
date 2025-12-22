@@ -80,6 +80,12 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectMessageReact
                     cancellationToken)
                         ?? throw new NotFoundException($"Message with ID {request.MessageId} not found");
 
+                // Prevent reactions on deleted messages
+                if (message.IsDeleted)
+                {
+                    return Result.Failure<ReactionToggleResult>("Cannot react to deleted messages");
+                }
+
                 // Verify user is participant in the conversation
                 var conversation = await _unitOfWork.Conversations.GetByIdAsync(
                     message.ConversationId,
