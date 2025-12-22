@@ -156,7 +156,7 @@
         typingTimer.AutoReset = false;
     }
 
-    protected override void OnParametersSet()
+    protected override async Task OnParametersSetAsync()
     {
         // Handle editing mode - only set content when editing STARTS (not every render)
         if (IsEditing && !wasEditing && !string.IsNullOrEmpty(EditingContent))
@@ -167,9 +167,19 @@
         }
         else if (wasEditing && !IsEditing)
         {
-            // Editing was cancelled or completed - clear the text
+            // Editing was cancelled or completed - clear the text and reset textarea height
             MessageText = string.Empty;
             wasEditing = false;
+
+            // Reset textarea height to normal (1 row)
+            try
+            {
+                await JS.InvokeVoidAsync("chatAppUtils.resetTextareaHeight", textAreaRef);
+            }
+            catch
+            {
+                // JS interop may fail if element not available
+            }
         }
 
         // Handle reply mode - auto-focus when replying starts
@@ -228,6 +238,7 @@
             showEmojiPicker = false;
         }
 
+        // Send typing indicator for both new messages AND editing
         await StartTyping();
 
         // Auto-resize textarea

@@ -132,7 +132,7 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
         {
             return await apiClient.PutAsync(
                 $"/api/channels/{channelId}/messages/{messageId}",
-                new {Content=newContent});
+                new {NewContent=newContent});
         }
 
 

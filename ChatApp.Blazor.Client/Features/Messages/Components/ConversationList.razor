@@ -267,10 +267,20 @@
             foreach (var channel in Channels)
             {
                 // Format last message as "SenderName: Message" if available
+                // Exception: For deleted messages, show only "This message was deleted" (no sender name)
                 string? lastMessage = null;
-                if (!string.IsNullOrEmpty(channel.LastMessageContent) && !string.IsNullOrEmpty(channel.LastMessageSenderName))
+                if (!string.IsNullOrEmpty(channel.LastMessageContent))
                 {
-                    lastMessage = $"{channel.LastMessageSenderName}: {channel.LastMessageContent}";
+                    if (channel.LastMessageContent == "This message was deleted")
+                    {
+                        // Deleted messages: show without sender name
+                        lastMessage = channel.LastMessageContent;
+                    }
+                    else if (!string.IsNullOrEmpty(channel.LastMessageSenderName))
+                    {
+                        // Regular messages: show with sender name
+                        lastMessage = $"{channel.LastMessageSenderName}: {channel.LastMessageContent}";
+                    }
                 }
 
                 // Check for draft - but hide if currently selected (user is typing)

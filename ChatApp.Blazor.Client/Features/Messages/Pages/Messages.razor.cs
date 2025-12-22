@@ -97,6 +97,9 @@ public partial class Messages : IAsyncDisposable
     private bool _stateChangeScheduled;
     private readonly object _stateChangeLock = new();
 
+    // Disposal tracking to prevent updates after component disposed
+    private bool _disposed;
+
     // Dialogs
     private bool showNewConversationDialog;
     private bool showNewChannelDialog;
@@ -553,33 +556,60 @@ public partial class Messages : IAsyncDisposable
     {
         InvokeAsync(() =>
         {
-            // Update the message in the list if it's in the current conversation
-            if (editedMessage.ConversationId == selectedConversationId)
+            // Guard: Don't process if component is disposed
+            if (_disposed) return Task.CompletedTask;
+
+            try
             {
-                var message = directMessages.FirstOrDefault(m => m.Id == editedMessage.Id);
-                if (message != null)
-                {
-                    var index = directMessages.IndexOf(message);
-                    directMessages[index] = editedMessage;
+                var needsStateUpdate = false;
 
-                    // Update conversation list if this was the last message
-                    if (IsLastMessageInConversation(editedMessage.ConversationId, editedMessage))
+                // Update the message in the list if it's in the current conversation
+                if (editedMessage.ConversationId == selectedConversationId)
+                {
+                    var message = directMessages.FirstOrDefault(m => m.Id == editedMessage.Id);
+                    if (message != null)
                     {
-                        UpdateConversationLastMessage(editedMessage.ConversationId, editedMessage.Content);
+                        var index = directMessages.IndexOf(message);
+                        directMessages[index] = editedMessage;
+                        needsStateUpdate = true;
+
+                        // Update conversation list if this was the last message
+                        if (IsLastMessageInConversation(editedMessage.ConversationId, editedMessage))
+                        {
+                            UpdateConversationLastMessage(editedMessage.ConversationId, editedMessage.Content);
+                        }
+                    }
+
+                    // Update reply previews for messages that replied to this edited message
+                    for (int i = 0; i < directMessages.Count; i++)
+                    {
+                        var msg = directMessages[i];
+                        if (msg.ReplyToMessageId == editedMessage.Id && msg.ReplyToContent != editedMessage.Content)
+                        {
+                            directMessages[i] = msg with { ReplyToContent = editedMessage.Content };
+                        }
                     }
                 }
 
-                // Update reply previews for messages that replied to this edited message
-                for (int i = 0; i < directMessages.Count; i++)
+                // ALWAYS update conversation list if this edited message is the last message
+                // (even if user is not currently viewing the conversation)
+                var conversation = conversations.FirstOrDefault(c => c.Id == editedMessage.ConversationId);
+                if (conversation != null && IsLastMessageInConversation(editedMessage.ConversationId, editedMessage))
                 {
-                    var msg = directMessages[i];
-                    if (msg.ReplyToMessageId == editedMessage.Id && msg.ReplyToContent != editedMessage.Content)
-                    {
-                        directMessages[i] = msg with { ReplyToContent = editedMessage.Content };
-                    }
+                    UpdateConversationLastMessage(editedMessage.ConversationId, editedMessage.Content);
+                    needsStateUpdate = true;
                 }
 
-                StateHasChanged();
+                // Consolidated state update (only once at the end)
+                if (needsStateUpdate && !_disposed)
+                {
+                    StateHasChanged();
+                }
+            }
+            catch (Exception)
+            {
+                // Silently ignore errors to prevent runtime crash
+                // In production, consider logging this error
             }
 
             return Task.CompletedTask;
@@ -590,33 +620,54 @@ public partial class Messages : IAsyncDisposable
     {
         InvokeAsync(() =>
         {
-            // Update the message in the list if it's in the current conversation
-            if (deletedMessage.ConversationId == selectedConversationId)
+            // Guard: Don't process if component is disposed
+            if (_disposed) return Task.CompletedTask;
+
+            try
             {
-                var message = directMessages.FirstOrDefault(m => m.Id == deletedMessage.Id);
-                if (message != null)
-                {
-                    var index = directMessages.IndexOf(message);
-                    directMessages[index] = deletedMessage; // Use the deleted DTO from server
+                var needsStateUpdate = false;
 
-                    // Update conversation list if this was the last message
-                    if (IsLastMessageInConversation(deletedMessage.ConversationId, deletedMessage))
+                // Update the message in the list if it's in the current conversation
+                if (deletedMessage.ConversationId == selectedConversationId)
+                {
+                    var message = directMessages.FirstOrDefault(m => m.Id == deletedMessage.Id);
+                    if (message != null)
                     {
-                        UpdateConversationLastMessage(deletedMessage.ConversationId, "This message was deleted");
+                        var index = directMessages.IndexOf(message);
+                        directMessages[index] = deletedMessage; // Use the deleted DTO from server
+                        needsStateUpdate = true;
+
+                        // Update reply previews for messages that replied to this deleted message
+                        for (int i = 0; i < directMessages.Count; i++)
+                        {
+                            var msg = directMessages[i];
+                            if (msg.ReplyToMessageId == deletedMessage.Id)
+                            {
+                                directMessages[i] = msg with { ReplyToContent = "This message was deleted" };
+                            }
+                        }
                     }
                 }
 
-                // Update reply previews for messages that replied to this deleted message
-                for (int i = 0; i < directMessages.Count; i++)
+                // ALWAYS update conversation list if this deleted message is the last message
+                // (even if user is not currently viewing the conversation)
+                var conversation = conversations.FirstOrDefault(c => c.Id == deletedMessage.ConversationId);
+                if (conversation != null && IsLastMessageInConversation(deletedMessage.ConversationId, deletedMessage))
                 {
-                    var msg = directMessages[i];
-                    if (msg.ReplyToMessageId == deletedMessage.Id)
-                    {
-                        directMessages[i] = msg with { ReplyToContent = "This message was deleted" };
-                    }
+                    UpdateConversationLastMessage(deletedMessage.ConversationId, "This message was deleted");
+                    needsStateUpdate = true;
                 }
 
-                StateHasChanged();
+                // Consolidated state update (only once at the end)
+                if (needsStateUpdate && !_disposed)
+                {
+                    StateHasChanged();
+                }
+            }
+            catch (Exception)
+            {
+                // Silently ignore errors to prevent runtime crash
+                // In production, consider logging this error
             }
 
             return Task.CompletedTask;
@@ -627,33 +678,70 @@ public partial class Messages : IAsyncDisposable
     {
         InvokeAsync(() =>
         {
-            // Update the message in the list if it's in the current channel
-            if (editedMessage.ChannelId == selectedChannelId)
+            // Guard: Don't process if component is disposed
+            if (_disposed) return Task.CompletedTask;
+
+            try
             {
-                var message = channelMessages.FirstOrDefault(m => m.Id == editedMessage.Id);
-                if (message != null)
-                {
-                    var index = channelMessages.IndexOf(message);
-                    channelMessages[index] = editedMessage;
+                var needsStateUpdate = false;
 
-                    // Update channel list if this was the last message
-                    if (IsLastMessageInChannel(editedMessage.ChannelId, editedMessage))
+                // Update the message in the list if it's in the current channel
+                if (editedMessage.ChannelId == selectedChannelId)
+                {
+                    var message = channelMessages.FirstOrDefault(m => m.Id == editedMessage.Id);
+                    if (message != null)
                     {
-                        UpdateChannelLastMessage(editedMessage.ChannelId, editedMessage.Content, editedMessage.SenderDisplayName);
+                        var index = channelMessages.IndexOf(message);
+
+                        // IMPORTANT: Only update content and IsEdited field, preserve ReadByCount/TotalMemberCount
+                        // Backend GetByIdAsDtoAsync doesn't populate these fields, so we must preserve them
+                        var updatedMessage = message with
+                        {
+                            Content = editedMessage.Content,
+                            IsEdited = editedMessage.IsEdited,
+                            EditedAtUtc = editedMessage.EditedAtUtc
+                        };
+
+                        channelMessages[index] = updatedMessage;
+                        needsStateUpdate = true;
+
+                        // Update channel list if this was the last message
+                        if (IsLastMessageInChannel(editedMessage.ChannelId, updatedMessage))
+                        {
+                            UpdateChannelLastMessage(editedMessage.ChannelId, updatedMessage.Content, message.SenderDisplayName);
+                        }
+                    }
+
+                    // Update reply previews for messages that replied to this edited message
+                    for (int i = 0; i < channelMessages.Count; i++)
+                    {
+                        var msg = channelMessages[i];
+                        if (msg.ReplyToMessageId == editedMessage.Id && msg.ReplyToContent != editedMessage.Content)
+                        {
+                            channelMessages[i] = msg with { ReplyToContent = editedMessage.Content };
+                        }
                     }
                 }
 
-                // Update reply previews for messages that replied to this edited message
-                for (int i = 0; i < channelMessages.Count; i++)
+                // ALWAYS update channel list if this edited message is the last message
+                // (even if user is not currently viewing the channel)
+                var channel = channels.FirstOrDefault(c => c.Id == editedMessage.ChannelId);
+                if (channel != null && IsLastMessageInChannel(editedMessage.ChannelId, editedMessage))
                 {
-                    var msg = channelMessages[i];
-                    if (msg.ReplyToMessageId == editedMessage.Id && msg.ReplyToContent != editedMessage.Content)
-                    {
-                        channelMessages[i] = msg with { ReplyToContent = editedMessage.Content };
-                    }
+                    UpdateChannelLastMessage(editedMessage.ChannelId, editedMessage.Content, editedMessage.SenderDisplayName);
+                    needsStateUpdate = true;
                 }
 
-                StateHasChanged();
+                // Consolidated state update (only once at the end)
+                if (needsStateUpdate && !_disposed)
+                {
+                    StateHasChanged();
+                }
+            }
+            catch (Exception)
+            {
+                // Silently ignore errors to prevent runtime crash
+                // In production, consider logging this error
             }
 
             return Task.CompletedTask;
@@ -664,33 +752,54 @@ public partial class Messages : IAsyncDisposable
     {
         InvokeAsync(() =>
         {
-            // Update the message in the list if it's in the current channel
-            if (deletedMessage.ChannelId == selectedChannelId)
+            // Guard: Don't process if component is disposed
+            if (_disposed) return Task.CompletedTask;
+
+            try
             {
-                var message = channelMessages.FirstOrDefault(m => m.Id == deletedMessage.Id);
-                if (message != null)
-                {
-                    var index = channelMessages.IndexOf(message);
-                    channelMessages[index] = deletedMessage; // Use the deleted DTO from server
+                var needsStateUpdate = false;
 
-                    // Update channel list if this was the last message
-                    if (IsLastMessageInChannel(deletedMessage.ChannelId, deletedMessage))
+                // Update the message in the list if it's in the current channel
+                if (deletedMessage.ChannelId == selectedChannelId)
+                {
+                    var message = channelMessages.FirstOrDefault(m => m.Id == deletedMessage.Id);
+                    if (message != null)
                     {
-                        UpdateChannelLastMessage(deletedMessage.ChannelId, "This message was deleted", deletedMessage.SenderDisplayName);
+                        var index = channelMessages.IndexOf(message);
+                        channelMessages[index] = deletedMessage; // Use the deleted DTO from server
+                        needsStateUpdate = true;
+
+                        // Update reply previews for messages that replied to this deleted message
+                        for (int i = 0; i < channelMessages.Count; i++)
+                        {
+                            var msg = channelMessages[i];
+                            if (msg.ReplyToMessageId == deletedMessage.Id)
+                            {
+                                channelMessages[i] = msg with { ReplyToContent = "This message was deleted" };
+                            }
+                        }
                     }
                 }
 
-                // Update reply previews for messages that replied to this deleted message
-                for (int i = 0; i < channelMessages.Count; i++)
+                // ALWAYS update channel list if this deleted message is the last message
+                // (even if user is not currently viewing the channel)
+                var channel = channels.FirstOrDefault(c => c.Id == deletedMessage.ChannelId);
+                if (channel != null && IsLastMessageInChannel(deletedMessage.ChannelId, deletedMessage))
                 {
-                    var msg = channelMessages[i];
-                    if (msg.ReplyToMessageId == deletedMessage.Id)
-                    {
-                        channelMessages[i] = msg with { ReplyToContent = "This message was deleted" };
-                    }
+                    UpdateChannelLastMessage(deletedMessage.ChannelId, "This message was deleted", deletedMessage.SenderDisplayName);
+                    needsStateUpdate = true;
                 }
 
-                StateHasChanged();
+                // Consolidated state update (only once at the end)
+                if (needsStateUpdate && !_disposed)
+                {
+                    StateHasChanged();
+                }
+            }
+            catch (Exception)
+            {
+                // Silently ignore errors to prevent runtime crash
+                // In production, consider logging this error
             }
 
             return Task.CompletedTask;
@@ -2461,9 +2570,19 @@ public partial class Messages : IAsyncDisposable
         var conv = conversations.FirstOrDefault(c => c.Id == conversationId);
         if (conv == null) return false;
 
-        // Check by comparing content or by checking if it's the most recent message in our list
-        var lastMessage = directMessages.OrderByDescending(m => m.CreatedAtUtc).FirstOrDefault();
-        return lastMessage?.Id == message.Id;
+        // If we're viewing this conversation, check the loaded messages
+        if (conversationId == selectedConversationId && directMessages.Any())
+        {
+            var lastMessage = directMessages.OrderByDescending(m => m.CreatedAtUtc).FirstOrDefault();
+            return lastMessage?.Id == message.Id;
+        }
+
+        // Otherwise, compare with conversation's last message timestamp
+        // If message timestamp matches conversation's last message time, it's the last message
+        if (conv.LastMessageAtUtc == default(DateTime))
+            return false;
+
+        return Math.Abs((message.CreatedAtUtc - conv.LastMessageAtUtc).TotalSeconds) < 1;
     }
 
     /// <summary>
@@ -2474,8 +2593,19 @@ public partial class Messages : IAsyncDisposable
         var channel = channels.FirstOrDefault(c => c.Id == channelId);
         if (channel == null) return false;
 
-        var lastMessage = channelMessages.OrderByDescending(m => m.CreatedAtUtc).FirstOrDefault();
-        return lastMessage?.Id == message.Id;
+        // If we're viewing this channel, check the loaded messages
+        if (channelId == selectedChannelId && channelMessages.Any())
+        {
+            var lastMessage = channelMessages.OrderByDescending(m => m.CreatedAtUtc).FirstOrDefault();
+            return lastMessage?.Id == message.Id;
+        }
+
+        // Otherwise, compare with channel's last message timestamp
+        // If message timestamp matches channel's last message time, it's the last message
+        if (!channel.LastMessageAtUtc.HasValue)
+            return false;
+
+        return Math.Abs((message.CreatedAtUtc - channel.LastMessageAtUtc.Value).TotalSeconds) < 1;
     }
 
     private void ShowError(string message)
@@ -2720,6 +2850,9 @@ public partial class Messages : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        // Mark as disposed to prevent further state updates
+        _disposed = true;
+
         // Unsubscribe from UserState changes
         UserState.OnChange -= HandleUserStateChanged;
 

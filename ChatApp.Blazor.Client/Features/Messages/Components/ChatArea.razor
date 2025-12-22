@@ -493,15 +493,15 @@
         // Otherwise, only scroll to bottom if:
         // 1. New messages were added (currentCount increased)
         // 2. NOT from load more operation (detected by _isLoadingMore flag)
-        // 3. NOT editing
-        // 4. NOT replying
-        // 5. The increase is small (1-5 messages = new incoming, not pagination)
+        // 3. NOT editing (editing doesn't add new messages)
+        // 4. The increase is small (1-5 messages = new incoming, not pagination)
+        // NOTE: Replying is ALLOWED - when user sends reply, scroll to show it
         else
         {
             var messageIncrease = currentCount - _previousMessageCount;
             var isNewIncomingMessage = messageIncrease > 0 && messageIncrease <= 5;
 
-            if (isNewIncomingMessage && !_isLoadingMore && !isEditing && !IsReplying)
+            if (isNewIncomingMessage && !_isLoadingMore && !isEditing)
             {
                 _shouldScrollToBottom = true;
             }
