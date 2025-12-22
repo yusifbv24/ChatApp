@@ -136,10 +136,15 @@ public partial class Messages : IAsyncDisposable
 
     protected override async Task OnInitializedAsync()
     {
+        // Set current user ID (with fallback if UserState not yet populated)
         if (UserState.CurrentUser != null)
         {
             currentUserId = UserState.CurrentUser.Id;
         }
+
+        // Subscribe to UserState changes to handle race condition
+        // (App.razor loads user async, might not be ready when this component initializes)
+        UserState.OnChange += HandleUserStateChanged;
 
         // Subscribe to SignalR events (SignalR is already initialized in MainLayout)
         SubscribeToSignalREvents();
@@ -215,6 +220,21 @@ public partial class Messages : IAsyncDisposable
             {
                 await MarkUnreadMessagesAsRead();
             });
+        }
+    }
+
+    /// <summary>
+    /// Handles UserState changes to fix race condition where Messages component initializes
+    /// before App.razor finishes loading CurrentUser
+    /// </summary>
+    private void HandleUserStateChanged()
+    {
+        // Update currentUserId when UserState changes (handles race condition)
+        if (UserState.CurrentUser != null && currentUserId == Guid.Empty)
+        {
+            currentUserId = UserState.CurrentUser.Id;
+            // Trigger UI refresh to re-render messages with correct ownership
+            InvokeAsync(StateHasChanged);
         }
     }
 
@@ -2700,6 +2720,9 @@ public partial class Messages : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        // Unsubscribe from UserState changes
+        UserState.OnChange -= HandleUserStateChanged;
+
         // Unsubscribe from SignalR events
         UnsubscribeFromSignalREvents();
 
