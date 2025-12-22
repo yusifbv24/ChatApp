@@ -41,7 +41,9 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
 
             if (before.HasValue)
             {
-                url += $"&before={before.Value:O}";
+                // Ensure DateTime is UTC and properly formatted for API
+                var beforeUtc = DateTime.SpecifyKind(before.Value, DateTimeKind.Utc);
+                url += $"&before={beforeUtc:O}"; // ISO 8601 format with timezone
             }
 
             return await _apiClient.GetAsync<List<DirectMessageDto>>(url);

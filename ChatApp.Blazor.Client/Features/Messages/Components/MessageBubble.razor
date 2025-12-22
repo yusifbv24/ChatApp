@@ -324,7 +324,7 @@
 
     private string FormatTime(DateTime dateTime)
     {
-        return dateTime.ToLocalTime().ToString("HH:mm");
+        return dateTime.ToLocalTime().ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture);
     }
 
     private string TruncateText(string? text, int maxLength)

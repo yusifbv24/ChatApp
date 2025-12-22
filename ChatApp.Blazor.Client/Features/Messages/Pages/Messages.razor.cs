@@ -1478,7 +1478,7 @@ public partial class Messages : IAsyncDisposable
                     var newMessages = messages.Where(m => !existingIds.Contains(m.Id)).OrderBy(m => m.CreatedAtUtc);
 
                     directMessages.InsertRange(0, newMessages);
-                    oldestMessageDate = messages.Min(m => m.CreatedAtUtc);
+                    oldestMessageDate = DateTime.SpecifyKind(messages.Min(m => m.CreatedAtUtc), DateTimeKind.Utc);
                     hasMoreMessages = messages.Count >= pageSize;
                 }
                 else
@@ -1716,7 +1716,7 @@ public partial class Messages : IAsyncDisposable
                         // Replace all messages with fresh data from backend
                         channelMessages.Clear();
                         channelMessages.AddRange(messages.OrderBy(m => m.CreatedAtUtc));
-                        oldestMessageDate = messages.Min(m => m.CreatedAtUtc);
+                        oldestMessageDate = DateTime.SpecifyKind(messages.Min(m => m.CreatedAtUtc), DateTimeKind.Utc);
                         hasMoreMessages = messages.Count >= 50;
                     }
                     else
@@ -1726,7 +1726,7 @@ public partial class Messages : IAsyncDisposable
                         var newMessages = messages.Where(m => !existingIds.Contains(m.Id)).OrderBy(m => m.CreatedAtUtc);
 
                         channelMessages.InsertRange(0, newMessages);
-                        oldestMessageDate = messages.Min(m => m.CreatedAtUtc);
+                        oldestMessageDate = DateTime.SpecifyKind(messages.Min(m => m.CreatedAtUtc), DateTimeKind.Utc);
                         hasMoreMessages = messages.Count >= pageSize;
                     }
                 }

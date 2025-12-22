@@ -969,6 +969,38 @@ Frontend:
 - `SignalRService.cs` - Updated typing implementation
 - `messages.css` - Draft styles
 
+**Fixed DateTime Kind Issue (PostgreSQL UTC Requirement):**
+- **Problem:** When scrolling up to load more messages, backend crashed with "Cannot write DateTime with Kind=Unspecified to PostgreSQL type 'timestamp with time zone'"
+- **Root Cause:** Frontend was passing `oldestMessageDate` with `DateTimeKind.Unspecified` instead of `DateTimeKind.Utc`
+- **Two-part fix:**
+  1. **Frontend state:** `oldestMessageDate = DateTime.SpecifyKind(messages.Min(m => m.CreatedAtUtc), DateTimeKind.Utc);`
+  2. **API calls:** Convert DateTime to UTC before adding to query string: `var beforeUtc = DateTime.SpecifyKind(before.Value, DateTimeKind.Utc);`
+- **Files modified:**
+  - `Messages.razor.cs:1481,1719,1729` - Added `DateTime.SpecifyKind` when setting `oldestMessageDate`
+  - `ChannelService.cs:68-69` - Ensure UTC kind before URL serialization
+  - `ConversationService.cs:45-46` - Ensure UTC kind before URL serialization
+- **Result:** Load more messages now works correctly with PostgreSQL ✅
+
+**Fixed Date Format Localization Issue (Browser Locale Dependency):**
+- **Problem:** Date formats showed different languages in different browsers:
+  - Browser with English locale: "Friday", "January"
+  - Browser with Turkish locale: "Cuma", "Ocak" (Turkish day/month names)
+- **Root Cause:** `DateTime.ToString()` uses browser's default culture/locale in Blazor WASM
+- **Solution:** Force `CultureInfo.InvariantCulture` for all date formatting to ensure consistent English output
+- **Locations fixed:**
+  1. **ChatArea.razor** - Date dividers in chat:
+     - `date.ToString("dddd")` → "Friday" vs "Cuma"
+     - `date.ToString("MMMM d, yyyy")` → "January 15, 2025" vs "Ocak 15, 2025"
+  2. **ConversationList.razor** - Last message time:
+     - `dateTime.ToString("ddd")` → "Fri" vs "Cum"
+  3. **MessageBubble.razor** - Message timestamp (consistency):
+     - `dateTime.ToString("HH:mm")` - Already language-independent, added for consistency
+- **Files modified:**
+  - `ChatArea.razor:584-585` - Added `CultureInfo.InvariantCulture` to `FormatDateDivider()`
+  - `ConversationList.razor:371` - Added `CultureInfo.InvariantCulture` to `FormatTime()`
+  - `MessageBubble.razor:327` - Added `CultureInfo.InvariantCulture` to `FormatTime()`
+- **Result:** All users see consistent English date/time formats regardless of browser locale ✅
+
 **Performance Improvements:**
 | Issue | Solution | Status |
 |-------|----------|--------|
@@ -976,4 +1008,5 @@ Frontend:
 | Rapid SignalR events | ScheduleStateUpdate() | ✅ Fixed |
 | Channel typing cache miss | Populate on message load | ✅ Fixed |
 | Conversation typing lazy | Hybrid pattern | ✅ Fixed |
+| DateTime Kind mismatch | SpecifyKind(Utc) | ✅ Fixed |
 | Sequential notification sends | Task.WhenAll (future) | ⏳ Pending |

@@ -368,7 +368,7 @@
         if (diff.TotalMinutes < 1) return "Now";
         if (diff.TotalHours < 1) return $"{(int)diff.TotalMinutes}m";
         if (diff.TotalHours < 24) return dateTime.ToLocalTime().ToString("HH:mm");
-        if (diff.TotalDays < 7) return dateTime.ToLocalTime().ToString("ddd");
+        if (diff.TotalDays < 7) return dateTime.ToLocalTime().ToString("ddd", System.Globalization.CultureInfo.InvariantCulture);
         return dateTime.ToLocalTime().ToString("dd/MM/yy");
     }
 

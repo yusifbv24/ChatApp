@@ -581,8 +581,8 @@
         var today = DateTime.UtcNow.Date;
         if (date == today) return "Today";
         if (date == today.AddDays(-1)) return "Yesterday";
-        if ((today - date).TotalDays < 7) return date.ToString("dddd");
-        return date.ToString("MMMM d, yyyy");
+        if ((today - date).TotalDays < 7) return date.ToString("dddd", System.Globalization.CultureInfo.InvariantCulture);
+        return date.ToString("MMMM d, yyyy", System.Globalization.CultureInfo.InvariantCulture);
     }
 
     private string GetInputPlaceholder()

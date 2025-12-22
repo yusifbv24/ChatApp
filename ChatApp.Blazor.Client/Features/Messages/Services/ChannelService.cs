@@ -64,7 +64,9 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
             var url = $"/api/channels/{channelId}/messages?pageSize={pageSize}";
             if (before.HasValue)
             {
-                url+=$"&before={before.Value}";
+                // Ensure DateTime is UTC and properly formatted for API
+                var beforeUtc = DateTime.SpecifyKind(before.Value, DateTimeKind.Utc);
+                url+=$"&before={beforeUtc:O}"; // ISO 8601 format with timezone
             }
 
             return await apiClient.GetAsync<List<ChannelMessageDto>>(url);
