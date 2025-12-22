@@ -1001,6 +1001,46 @@ Frontend:
   - `MessageBubble.razor:327` - Added `CultureInfo.InvariantCulture` to `FormatTime()`
 - **Result:** All users see consistent English date/time formats regardless of browser locale ✅
 
+**Fixed Message More Menu Z-Index Issue:**
+- **Problem:** When clicking the more icon (chevron) on message bubbles, the dropdown menu sometimes appeared behind chat header or message input
+- **Root Cause:** `.chevron-more-menu` had z-index of 200, which was too low compared to other UI elements creating stacking contexts
+- **Solution:** Increased z-index to ensure menu is always on top:
+  - `.chevron-more-menu`: z-index increased from 200 to 9999 (always on top)
+  - `.reaction-picker-quick`: z-index increased from 103 to 9998 (just below menu)
+- **Files modified:**
+  - `messages.css:1144` - Updated `.chevron-more-menu` z-index with comment
+  - `messages.css:1361` - Updated `.reaction-picker-quick` z-index with comment
+- **Result:** More menu and reaction picker always appear in front of all other UI elements ✅
+
+**Fixed Message More Menu Positioning and Visibility:**
+- **Problem:** Menu sometimes opened downward even when no space below, causing items to be hidden (required scrolling chat area to see all menu items)
+- **Root Causes:**
+  1. **Incorrect menu height estimate:** Code assumed menu height was 200px (6 items × 33px), but actual menu has up to 9 items × 42px = ~420px
+  2. **No max-height constraint:** Menu could exceed viewport height, causing items to be cut off
+  3. **overflow: hidden:** Prevented menu from showing scrollbar when needed
+- **Solutions:**
+  1. **Updated menu height calculation** in `CheckMenuPosition()`:
+     - Old: `menuHeight = 200px` (6 items estimate)
+     - New: `menuHeight = 420px` (9 items: Reply, Copy, Edit, Forward, Pin, Add to Favorites, Mark to read later, Delete, Select)
+     - More accurate calculation triggers "open above" logic when appropriate
+  2. **Added max-height constraint:** `max-height: calc(100vh - 180px)` (viewport height minus chat header, message input, and margins)
+  3. **Changed overflow behavior:**
+     - Old: `overflow: hidden` (items got cut off)
+     - New: `overflow-y: auto; overflow-x: hidden` (allows vertical scrolling if needed)
+  4. **Added custom scrollbar styling** for better UX when menu needs to scroll
+- **Files modified:**
+  - `MessageBubble.razor:456-460` - Updated menu height from 200px to 420px with detailed comment
+  - `messages.css:1141` - Added `max-height: calc(100vh - 180px)`
+  - `messages.css:1146-1147` - Changed `overflow: hidden` to `overflow-y: auto; overflow-x: hidden`
+  - `messages.css:1153-1164` - Added custom scrollbar styles
+- **Behavior now:**
+  - Menu correctly detects when there's insufficient space below (using 420px threshold)
+  - Opens above when needed to avoid being cut off by message input
+  - If menu exceeds available space in both directions, opens toward the larger side
+  - Shows elegant scrollbar if menu items exceed max-height
+  - All menu items always accessible without scrolling the chat area ✅
+- **Result:** Menu always fully visible and accessible, no hidden items ✅
+
 **Performance Improvements:**
 | Issue | Solution | Status |
 |-------|----------|--------|
@@ -1009,4 +1049,6 @@ Frontend:
 | Channel typing cache miss | Populate on message load | ✅ Fixed |
 | Conversation typing lazy | Hybrid pattern | ✅ Fixed |
 | DateTime Kind mismatch | SpecifyKind(Utc) | ✅ Fixed |
+| Message menu z-index | Very high z-index (9999) | ✅ Fixed |
+| Message menu positioning | Accurate height (420px) + max-height | ✅ Fixed |
 | Sequential notification sends | Task.WhenAll (future) | ⏳ Pending |

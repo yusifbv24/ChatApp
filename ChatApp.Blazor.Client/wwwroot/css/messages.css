@@ -1138,13 +1138,29 @@
     top: 28px;
     right: 4px;
     min-width: 220px;
+    max-height: calc(100vh - 180px); /* Ensure menu doesn't exceed viewport (minus chat header ~70px + message input ~80px + margins ~30px) */
     background: var(--white);
     border-radius: var(--radius-lg);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-    z-index: 200;
-    overflow: hidden;
+    z-index: 9999; /* Very high z-index to ensure menu is always on top of chat header and message input */
+    overflow-y: auto; /* Allow scrolling if menu exceeds available space */
+    overflow-x: hidden;
     border: 1px solid var(--gray-200);
     animation: fadeInDown 0.15s ease-out;
+}
+
+/* Custom scrollbar for menu if it's too long */
+.chevron-more-menu::-webkit-scrollbar {
+    width: 6px;
+}
+
+.chevron-more-menu::-webkit-scrollbar-thumb {
+    background: var(--gray-300);
+    border-radius: 3px;
+}
+
+.chevron-more-menu::-webkit-scrollbar-track {
+    background: transparent;
 }
 
 /* Menu opens above when close to bottom */
@@ -1358,7 +1374,7 @@
     background: var(--white);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-xl);
-    z-index: 103;
+    z-index: 9998; /* Very high z-index to ensure picker is always visible (just below menu) */
     border: 1px solid var(--gray-200);
     white-space: nowrap;
     pointer-events: auto;

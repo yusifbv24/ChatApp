@@ -453,8 +453,11 @@
             var position = await JS.InvokeAsync<MenuPositionInfo>("chatAppUtils.getElementPosition", messageWrapperRef);
             if (position != null)
             {
-                // Menu height is approximately 200px (6 items * ~33px each)
-                var menuHeight = 200;
+                // Menu can have up to 9 items: Reply, Copy, Edit, Forward, Pin, Add to Favorites, Mark to read later, Delete, Select
+                // Each item is ~42px height (11px padding top + 11px bottom + ~20px content)
+                // Maximum menu height: 9 items × 42px = 378px + menu padding/border = ~400px
+                // Use conservative estimate of 420px to ensure full menu visibility
+                var menuHeight = 420;
 
                 // Use actual space calculations from JavaScript
                 var actualSpaceBelow = position.ActualSpaceBelow;
