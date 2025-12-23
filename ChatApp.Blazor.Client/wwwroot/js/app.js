@@ -66,6 +66,14 @@ window.chatAppUtils = {
         }
     },
 
+    // Scroll to element by ID (used for unread separator)
+    scrollToElement: (elementId) => {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    },
+
     // Scroll element into view
     scrollIntoView: (element) => {
         if (element) {

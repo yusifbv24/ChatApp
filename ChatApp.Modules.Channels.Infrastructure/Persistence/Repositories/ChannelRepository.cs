@@ -145,7 +145,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                         : null, // SECURITY: Sanitize deleted content in last message preview
                     lastMessage != null ? lastMessage.DisplayName : null,
                     lastMessage != null ? lastMessage.CreatedAtUtc : (DateTime?)null,
-                    unreadCount
+                    unreadCount,
+                    lastReadTime
                 )
             ).ToListAsync(cancellationToken);
 

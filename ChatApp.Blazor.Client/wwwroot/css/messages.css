@@ -2798,3 +2798,23 @@
     font-size: 14px;
     font-weight: 300;
 }
+
+/* Unread separator */
+.unread-separator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 16px 0;
+    position: relative;
+}
+
+.unread-separator span {
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--gray-600);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}

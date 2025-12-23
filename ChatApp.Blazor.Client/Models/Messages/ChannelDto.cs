@@ -13,7 +13,8 @@
         string? LastMessageContent = null,
         string? LastMessageSenderName = null,
         DateTime? LastMessageAtUtc = null,
-        int UnreadCount = 0);
+        int UnreadCount = 0,
+        DateTime? CurrentMemberLastReadAtUtc = null);
 
 
 

@@ -15,6 +15,7 @@ namespace ChatApp.Modules.Channels.Application.DTOs.Responses
         string? LastMessageContent = null,
         string? LastMessageSenderName = null,
         DateTime? LastMessageAtUtc = null,
-        int UnreadCount = 0
+        int UnreadCount = 0,
+        DateTime? CurrentMemberLastReadAtUtc = null
     );
 }

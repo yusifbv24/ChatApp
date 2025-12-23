@@ -138,6 +138,11 @@ public partial class Messages : IAsyncDisposable
     private Dictionary<string, string> messageDrafts = [];
     private string currentDraft = string.Empty;
 
+    // Unread separator state
+    private Guid? unreadSeparatorAfterMessageId;
+    private bool shouldCalculateUnreadSeparator;
+    private DateTime? currentMemberLastReadAtUtc;
+
     private bool IsEmpty => !selectedConversationId.HasValue && !selectedChannelId.HasValue && !isPendingConversation;
 
     protected override async Task OnInitializedAsync()
@@ -1643,6 +1648,14 @@ public partial class Messages : IAsyncDisposable
                     hasMoreMessages = false;
                 }
 
+                // Calculate unread separator position
+                CalculateUnreadSeparatorPosition(
+                    messages,
+                    m => !m.IsRead && m.SenderId != currentUserId,
+                    m => m.Id,
+                    m => m.CreatedAtUtc
+                );
+
                 // Mark messages as read using smart threshold
                 // Use smart threshold: 5+ messages = bulk, <5 messages = individual
                 var unreadMessages = messages.Where(m => !m.IsRead && m.SenderId != currentUserId).ToList();
@@ -1753,6 +1766,11 @@ public partial class Messages : IAsyncDisposable
             pendingChannelReadReceipts.Clear(); // Clear pending channel read receipts when changing conversations
             pendingMessageAdds.Clear(); // Clear pending message adds when changing conversations
             pageSize = 50; // Reset page size to 50 for new conversation
+
+            // Reset unread separator
+            unreadSeparatorAfterMessageId = null;
+            shouldCalculateUnreadSeparator = conversation.UnreadCount > 0;
+            currentMemberLastReadAtUtc = null;
 
             // Set conversation details AFTER clearing
             selectedConversationId = conversation.Id;
@@ -1922,6 +1940,17 @@ public partial class Messages : IAsyncDisposable
                 {
                     hasMoreMessages = false;
                 }
+
+                // Calculate unread separator position (for channels)
+                if (currentMemberLastReadAtUtc.HasValue)
+                {
+                    CalculateUnreadSeparatorPosition(
+                        messages,
+                        m => m.CreatedAtUtc > currentMemberLastReadAtUtc.Value && m.SenderId != currentUserId,
+                        m => m.Id,
+                        m => m.CreatedAtUtc
+                    );
+                }
             }
         }
         catch (Exception ex)
@@ -2012,6 +2041,11 @@ public partial class Messages : IAsyncDisposable
         pendingChannelReadReceipts.Clear(); // Clear pending channel read receipts when changing channels
         pendingMessageAdds.Clear(); // Clear pending message adds when changing channels
         pageSize = 50; // Reset page size to 50 for new channel
+
+        // Reset unread separator
+        unreadSeparatorAfterMessageId = null;
+        shouldCalculateUnreadSeparator = channel.UnreadCount > 0;
+        currentMemberLastReadAtUtc = channel.CurrentMemberLastReadAtUtc;
 
         // Set channel details AFTER clearing
         selectedChannelId = channel.Id;
@@ -2696,6 +2730,28 @@ public partial class Messages : IAsyncDisposable
             return false;
 
         return Math.Abs((message.CreatedAtUtc - channel.LastMessageAtUtc.Value).TotalSeconds) < 1;
+    }
+
+    private void CalculateUnreadSeparatorPosition<T>(List<T> messages, Func<T, bool> isUnreadPredicate, Func<T, Guid> getIdFunc, Func<T, DateTime> getCreatedAtFunc)
+    {
+        if (!shouldCalculateUnreadSeparator || messages.Count == 0)
+            return;
+
+        var orderedMessages = messages.OrderBy(getCreatedAtFunc).ToList();
+        var unreadMessages = orderedMessages.Where(isUnreadPredicate).ToList();
+
+        if (unreadMessages.Count > 0)
+        {
+            var firstUnread = unreadMessages.First();
+            var firstUnreadIndex = orderedMessages.FindIndex(m => getIdFunc(m).Equals(getIdFunc(firstUnread)));
+
+            if (firstUnreadIndex > 0)
+            {
+                unreadSeparatorAfterMessageId = getIdFunc(orderedMessages[firstUnreadIndex - 1]);
+            }
+        }
+
+        shouldCalculateUnreadSeparator = false;
     }
 
     private void ShowError(string message)

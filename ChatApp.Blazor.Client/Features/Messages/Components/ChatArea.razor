@@ -167,6 +167,13 @@
                                        OnReplyClick="HandleReplyClick"
                                        OnActionCompleted="RefocusInput"
                                        ScrollToBottom="ScrollToBottomAsync" />
+
+                                @if (UnreadSeparatorAfterMessageId.HasValue && message.Id == UnreadSeparatorAfterMessageId.Value)
+                                {
+                                    <div class="unread-separator" id="unread-separator">
+                                        <span>New messages</span>
+                                    </div>
+                                }
                             }
                         </div>
                     </div>
@@ -214,6 +221,13 @@
                                        OnReplyClick="HandleReplyClick"
                                        OnActionCompleted="RefocusInput"
                                        ScrollToBottom="ScrollToBottomAsync" />
+
+                                @if (UnreadSeparatorAfterMessageId.HasValue && message.Id == UnreadSeparatorAfterMessageId.Value)
+                                {
+                                    <div class="unread-separator" id="unread-separator">
+                                        <span>New messages</span>
+                                    </div>
+                                }
                             }
                         </div>
                     </div>
@@ -445,6 +459,9 @@
     [Parameter] public string? ReplyToSenderName { get; set; }
     [Parameter] public string? ReplyToContent { get; set; }
 
+    // Unread separator
+    [Parameter] public Guid? UnreadSeparatorAfterMessageId { get; set; }
+
     // Draft support
     [Parameter] public string? InitialDraft { get; set; }
     [Parameter] public EventCallback<string> OnDraftChanged { get; set; }
@@ -467,6 +484,8 @@
     private object? _savedScrollPosition = null;
     private DateTime _lastScrollCheck = DateTime.MinValue;
     private int _scrollTopOnLastCheck = 0;
+    private bool _hasScrolledToSeparator = false;
+    private Guid? _previousUnreadSeparatorId = null;
 
     // Add member panel state
     private string memberSearchQuery = string.Empty;
@@ -482,6 +501,13 @@
 
     protected override void OnParametersSet()
     {
+        // Reset scroll flag if separator position changed (new conversation selected)
+        if (UnreadSeparatorAfterMessageId != _previousUnreadSeparatorId)
+        {
+            _hasScrolledToSeparator = false;
+            _previousUnreadSeparatorId = UnreadSeparatorAfterMessageId;
+        }
+
         // Check if new messages were added (but not from load more)
         var currentCount = DirectMessages.Count + ChannelMessages.Count;
 
@@ -538,6 +564,13 @@
             _shouldScrollToBottom = false;
             await ScrollToBottomAsync();
         }
+        else if (UnreadSeparatorAfterMessageId.HasValue && !_hasScrolledToSeparator && (DirectMessages.Any() || ChannelMessages.Any()))
+        {
+            // Scroll to unread separator on first render
+            _hasScrolledToSeparator = true;
+            await Task.Delay(100);
+            await ScrollToUnreadSeparatorAsync();
+        }
         else if (firstRender && (DirectMessages.Any() || ChannelMessages.Any()))
         {
             await ScrollToBottomAsync();
@@ -553,6 +586,18 @@
         catch
         {
             // Ignore scroll errors (component may be disposed)
+        }
+    }
+
+    private async Task ScrollToUnreadSeparatorAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("chatAppUtils.scrollToElement", "unread-separator");
+        }
+        catch
+        {
+            // Ignore scroll errors (component may be disposed or element not found)
         }
     }
 
