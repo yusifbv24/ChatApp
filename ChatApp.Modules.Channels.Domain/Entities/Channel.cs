@@ -13,10 +13,10 @@ namespace ChatApp.Modules.Channels.Domain.Entities
         public DateTime? ArchivedAtUtc { get; private set; }
 
         // Navigation properties
-        private readonly List<ChannelMember> _members = new();
+        private readonly List<ChannelMember> _members = [];
         public IReadOnlyCollection<ChannelMember> Members => _members.AsReadOnly();
 
-        private readonly List<ChannelMessage> _messages = new();
+        private readonly List<ChannelMessage> _messages = [];
         public IReadOnlyCollection<ChannelMessage> Messages => _messages.AsReadOnly();
 
         private Channel() : base() { }
@@ -99,10 +99,8 @@ namespace ChatApp.Modules.Channels.Domain.Entities
 
         public void RemoveMember(Guid userId)
         {
-            var member = _members.FirstOrDefault(m => m.UserId == userId);
-
-            if (member == null)
-                throw new InvalidOperationException("User is not a member of this channel");
+            var member = _members.FirstOrDefault(m => m.UserId == userId)
+                ?? throw new InvalidOperationException("User is not a member of this channel");
 
             if (member.Role == MemberRole.Owner)
                 throw new InvalidOperationException("Cannot remove channel owner");
@@ -113,10 +111,8 @@ namespace ChatApp.Modules.Channels.Domain.Entities
 
         public void UpdateMemberRole(Guid userId, MemberRole newRole)
         {
-            var member = _members.FirstOrDefault(m => m.UserId == userId);
-
-            if (member == null)
-                throw new InvalidOperationException("User is not a member of this channel");
+            var member = _members.FirstOrDefault(m => m.UserId == userId) 
+                ?? throw new InvalidOperationException("User is not a member of this channel");
 
             if (member.Role == MemberRole.Owner && newRole != MemberRole.Owner)
                 throw new InvalidOperationException("Cannot change owner role. Transfer ownership first.");
@@ -127,14 +123,11 @@ namespace ChatApp.Modules.Channels.Domain.Entities
 
         public void TransferOwnership(Guid currentOwnerId, Guid newOwnerId)
         {
-            var currentOwner = _members.FirstOrDefault(m => m.UserId == currentOwnerId && m.Role == MemberRole.Owner);
-            var newOwner = _members.FirstOrDefault(m => m.UserId == newOwnerId);
+            var currentOwner = _members.FirstOrDefault(m => m.UserId == currentOwnerId && m.Role == MemberRole.Owner) 
+                ?? throw new InvalidOperationException("Current owner not found");
 
-            if (currentOwner == null)
-                throw new InvalidOperationException("Current owner not found");
-
-            if (newOwner == null)
-                throw new InvalidOperationException("New owner must be a member of the channel");
+            var newOwner = _members.FirstOrDefault(m => m.UserId == newOwnerId)
+                ?? throw new InvalidOperationException("New owner must be a member of the channel");
 
             currentOwner.UpdateRole(MemberRole.Admin);
             newOwner.UpdateRole(MemberRole.Owner);
