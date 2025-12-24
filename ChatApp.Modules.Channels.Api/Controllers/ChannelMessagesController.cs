@@ -344,6 +344,64 @@ namespace ChatApp.Modules.Channels.Api.Controllers
 
 
         /// <summary>
+        /// Toggles a message as "Read Later" for the current user
+        /// If same message clicked -> unmark (toggle off)
+        /// If different message clicked -> mark new one (auto-switches)
+        /// </summary>
+        [HttpPost("{messageId:guid}/mark-later/toggle")]
+        [RequirePermission("Messages.Read")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> ToggleMessageAsLater(
+            [FromRoute] Guid channelId,
+            [FromRoute] Guid messageId,
+            CancellationToken cancellationToken)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == Guid.Empty)
+                return Unauthorized();
+
+            var result = await _mediator.Send(
+                new ToggleMessageAsLaterCommand(channelId, messageId, userId),
+                cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return Ok(new { message = "Read later toggled successfully" });
+        }
+
+
+        /// <summary>
+        /// Unmarks the "Read Later" message for current user (called when leaving channel)
+        /// </summary>
+        [HttpDelete("mark-later")]
+        [RequirePermission("Messages.Read")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> UnmarkMessageAsLater(
+            [FromRoute] Guid channelId,
+            CancellationToken cancellationToken)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == Guid.Empty)
+                return Unauthorized();
+
+            var result = await _mediator.Send(
+                new UnmarkMessageAsLaterCommand(channelId, userId),
+                cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return Ok(new { message = "Read later unmarked successfully" });
+        }
+
+
+
+        /// <summary>
         /// Toggles a reaction on a message (add if not exists, remove if exists)
         /// </summary>
         [HttpPost("{messageId:guid}/reactions/toggle")]

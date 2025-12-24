@@ -27,7 +27,8 @@
         string? AvatarUrl,
         ChannelMemberRole Role,
         DateTime JoinedAtUtc,
-        bool IsActive);
+        bool IsActive,
+        Guid? LastReadLaterMessageId);
 
 
     public enum ChannelMemberRole

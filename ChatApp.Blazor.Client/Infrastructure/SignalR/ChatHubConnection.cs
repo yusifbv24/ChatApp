@@ -1,4 +1,3 @@
-using ChatApp.Blazor.Client.Infrastructure.Auth;
 using Microsoft.AspNetCore.SignalR.Client;
 using System.Net.Http.Json;
 

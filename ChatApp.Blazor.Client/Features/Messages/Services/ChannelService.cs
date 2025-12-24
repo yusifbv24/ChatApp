@@ -159,6 +159,19 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
         }
 
 
+        public async Task<Result> ToggleMessageAsLaterAsync(Guid channelId, Guid messageId)
+        {
+            return await apiClient.PostAsync(
+                $"/api/channels/{channelId}/messages/{messageId}/mark-later/toggle");
+        }
+
+        public async Task<Result> UnmarkMessageAsLaterAsync(Guid channelId)
+        {
+            return await apiClient.DeleteAsync(
+                $"/api/channels/{channelId}/messages/mark-later");
+        }
+
+
         public async Task<Result<List<ChannelMessageReactionDto>>> ToggleReactionAsync(Guid channelId, Guid messageId, string reaction)
         {
             var result = await apiClient.PostAsync<ChannelReactionToggleResponse>(

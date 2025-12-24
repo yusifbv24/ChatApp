@@ -56,6 +56,11 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
         Task<Result> UnPinMessageAsync(Guid channelId, Guid messageId);
 
 
+        Task<Result> ToggleMessageAsLaterAsync(Guid channelId, Guid messageId);
+
+        Task<Result> UnmarkMessageAsLaterAsync(Guid channelId);
+
+
         Task<Result<List<ChannelMessageReactionDto>>> ToggleReactionAsync(Guid channelId, Guid messageId, string reaction);
 
         Task<Result> JoinChannelAsync(Guid channelId);

@@ -230,11 +230,11 @@
                             <span>Add to Favorites</span>
                             <MudIcon Icon="@Icons.Material.Outlined.StarBorder" Size="Size.Small" />
                         </button>
-                        @if (!IsDirectMessage && !IsOwn)
+                        @if (!IsDirectMessage && !IsMarkedAsLater)
                         {
-                            @* Mark to read later - only for channel messages from others *@
-                            <button class="menu-item" @onclick="HandleMarkToReadLaterClick">
-                                <span>Mark to read later</span>
+                            @* Mark as Later - only for channel messages and not already marked *@
+                            <button class="menu-item" @onclick="HandleMarkAsLaterClick">
+                                <span>Mark as Later</span>
                                 <MudIcon Icon="@Icons.Material.Outlined.WatchLater" Size="Size.Small" />
                             </button>
                         }
@@ -321,6 +321,8 @@
     [Parameter] public EventCallback<Guid> OnReplyClick { get; set; }
     [Parameter] public EventCallback OnActionCompleted{ get; set; }
     [Parameter] public EventCallback ScrollToBottom{ get; set; }
+    [Parameter] public Guid? LastReadLaterMessageId { get; set; }
+    [Parameter] public EventCallback<Guid> OnMarkAsLater { get; set; }
 
     private ElementReference messageWrapperRef;
     private bool showReactionPicker = false;
@@ -570,11 +572,12 @@
         return Task.CompletedTask;
     }
 
-    private Task HandleMarkToReadLaterClick()
+    private async Task HandleMarkAsLaterClick()
     {
-        // TODO: Implement Mark to read later functionality
         CloseMoreMenu();
-        return Task.CompletedTask;
+        // Toggle: same messageId -> unmark, different/none -> mark
+        await OnMarkAsLater.InvokeAsync(MessageId);
+        await OnActionCompleted.InvokeAsync();
     }
 
     private Task HandleSelectClick()
@@ -583,6 +586,8 @@
         CloseMoreMenu();
         return Task.CompletedTask;
     }
+
+    private bool IsMarkedAsLater => LastReadLaterMessageId.HasValue && LastReadLaterMessageId.Value == MessageId;
 
     // Helper to get reactions list (works for both MessageReactionDto and ChannelMessageReactionDto)
     private List<dynamic>? GetReactionsList()

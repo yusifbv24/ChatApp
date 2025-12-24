@@ -51,7 +51,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                               user.DisplayName,
                               member.Role,
                               member.JoinedAtUtc,
-                              member.IsActive
+                              member.IsActive,
+                              member.LastReadLaterMessageId
                           ))
                          .ToListAsync(cancellationToken);
         }

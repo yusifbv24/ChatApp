@@ -64,7 +64,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                                      user.DisplayName,
                                      member.Role,
                                      member.JoinedAtUtc,
-                                     member.IsActive
+                                     member.IsActive,
+                                     member.LastReadLaterMessageId
                                  ))
                                 .ToListAsync(cancellationToken);
 
@@ -146,7 +147,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                     lastMessage != null ? lastMessage.DisplayName : null,
                     lastMessage != null ? lastMessage.CreatedAtUtc : (DateTime?)null,
                     unreadCount,
-                    lastReadTime
+                    lastReadTime,
+                    member.LastReadLaterMessageId
                 )
             ).ToListAsync(cancellationToken);
 

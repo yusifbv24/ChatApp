@@ -143,6 +143,10 @@ public partial class Messages : IAsyncDisposable
     private bool shouldCalculateUnreadSeparator;
     private DateTime? currentMemberLastReadAtUtc;
 
+    // Read Later separator state (channel only)
+    private Guid? lastReadLaterMessageId;
+    private Guid? lastReadLaterMessageIdOnEntry; // Track value when entering channel
+
     private bool IsEmpty => !selectedConversationId.HasValue && !selectedChannelId.HasValue && !isPendingConversation;
 
     protected override async Task OnInitializedAsync()
@@ -1767,10 +1771,32 @@ public partial class Messages : IAsyncDisposable
             pendingMessageAdds.Clear(); // Clear pending message adds when changing conversations
             pageSize = 50; // Reset page size to 50 for new conversation
 
+            // Auto-unmark read later if user saw separator
+            if (selectedChannelId.HasValue && lastReadLaterMessageId.HasValue && lastReadLaterMessageIdOnEntry.HasValue)
+            {
+                try
+                {
+                    await ChannelService.ToggleMessageAsLaterAsync(selectedChannelId.Value, lastReadLaterMessageId.Value);
+
+                    // Update channels list
+                    var channelIndex = channels.FindIndex(c => c.Id == selectedChannelId.Value);
+                    if (channelIndex >= 0)
+                    {
+                        channels[channelIndex] = channels[channelIndex] with { LastReadLaterMessageId = null };
+                        channels = channels.ToList();
+                    }
+                }
+                catch { }
+            }
+
             // Reset unread separator
             unreadSeparatorAfterMessageId = null;
             shouldCalculateUnreadSeparator = conversation.UnreadCount > 0;
             currentMemberLastReadAtUtc = null;
+
+            // Reset read later marker (only applies to channels)
+            lastReadLaterMessageId = null;
+            lastReadLaterMessageIdOnEntry = null;
 
             // Set conversation details AFTER clearing
             selectedConversationId = conversation.Id;
@@ -1998,6 +2024,24 @@ public partial class Messages : IAsyncDisposable
                 {
                     // Ignore errors when marking as read
                 }
+
+                // Auto-unmark read later if user saw separator
+                if (lastReadLaterMessageId.HasValue && lastReadLaterMessageIdOnEntry.HasValue)
+                {
+                    try
+                    {
+                        await ChannelService.ToggleMessageAsLaterAsync(selectedChannelId.Value, lastReadLaterMessageId.Value);
+
+                        // Update channels list
+                        var channelIndex = channels.FindIndex(c => c.Id == selectedChannelId.Value);
+                        if (channelIndex >= 0)
+                        {
+                            channels[channelIndex] = channels[channelIndex] with { LastReadLaterMessageId = null };
+                            channels = channels.ToList();
+                        }
+                    }
+                    catch { }
+                }
             }
 
             // Clear pending conversation state
@@ -2046,6 +2090,10 @@ public partial class Messages : IAsyncDisposable
         unreadSeparatorAfterMessageId = null;
         shouldCalculateUnreadSeparator = channel.UnreadCount > 0;
         currentMemberLastReadAtUtc = channel.CurrentMemberLastReadAtUtc;
+
+        // Set read later marker from channel DTO
+        lastReadLaterMessageId = channel.LastReadLaterMessageId;
+        lastReadLaterMessageIdOnEntry = channel.LastReadLaterMessageId; // Track on entry
 
         // Set channel details AFTER clearing
         selectedChannelId = channel.Id;
@@ -3034,5 +3082,54 @@ public partial class Messages : IAsyncDisposable
             await SignalRService.LeaveChannelAsync(selectedChannelId.Value);
         }
     }
+
+    private async Task HandleToggleMarkAsLaterClick(Guid messageId)
+    {
+        if (!selectedChannelId.HasValue) return;
+
+        try
+        {
+            var result = await ChannelService.ToggleMessageAsLaterAsync(selectedChannelId.Value, messageId);
+            if (result.IsSuccess)
+            {
+                // Toggle state
+                if (lastReadLaterMessageId.HasValue && lastReadLaterMessageId.Value == messageId)
+                {
+                    lastReadLaterMessageId = null;
+                    lastReadLaterMessageIdOnEntry = null; // Clear tracking
+                }
+                else
+                {
+                    lastReadLaterMessageId = messageId;
+                    lastReadLaterMessageIdOnEntry = null; // Reset - user just marked, hasn't left yet
+
+                    // "New messages" separator-unu gizlət
+                    unreadSeparatorAfterMessageId = null;
+                }
+
+                // Update channels list
+                var channelIndex = channels.FindIndex(c => c.Id == selectedChannelId.Value);
+                if (channelIndex >= 0)
+                {
+                    var currentChannel = channels[channelIndex];
+                    channels[channelIndex] = currentChannel with { LastReadLaterMessageId = lastReadLaterMessageId };
+                    channels = channels.ToList();
+                }
+
+                StateHasChanged();
+            }
+            else
+            {
+                errorMessage = result.Error ?? "Failed to toggle read later";
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error toggling read later: {ex.Message}";
+            StateHasChanged();
+        }
+    }
+
     #endregion
 }

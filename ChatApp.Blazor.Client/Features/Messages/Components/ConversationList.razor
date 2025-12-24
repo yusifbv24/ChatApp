@@ -127,6 +127,12 @@
                                 {
                                     <span class="unread-badge">@(item.UnreadCount > 99 ? "99+" : item.UnreadCount.ToString())</span>
                                 }
+                                @if (item.LastReadLaterMessageId.HasValue && item.Id != SelectedChannelId)
+                                {
+                                    <span class="read-later-badge">
+                                        <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" />
+                                    </span>
+                                }
                             </div>
                         </div>
                     </div>
@@ -226,6 +232,7 @@
         public int MemberCount { get; set; } // For channels
         public bool HasDraft { get; set; } // Draft indicator
         public string? DraftText { get; set; } // Draft content preview
+        public Guid? LastReadLaterMessageId { get; set; } // For channels: read later marker
 
         // Original references for selection
         public DirectConversationDto? DirectConversation { get; set; }
@@ -301,6 +308,7 @@
                     MemberCount = channel.MemberCount,
                     HasDraft = hasDraft,
                     DraftText = hasDraft ? draftText : null,
+                    LastReadLaterMessageId = channel.LastReadLaterMessageId,
                     Channel = channel
                 });
             }
