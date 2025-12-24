@@ -503,7 +503,6 @@
     private bool _hasScrolledToSeparator = false;
     private Guid? _previousUnreadSeparatorId = null;
     private bool _hasScrolledToReadLaterSeparator = false;
-    private Guid? _previousReadLaterMessageId = null;
 
     // Add member panel state
     private string memberSearchQuery = string.Empty;
@@ -524,13 +523,6 @@
         {
             _hasScrolledToSeparator = false;
             _previousUnreadSeparatorId = UnreadSeparatorAfterMessageId;
-        }
-
-        // Reset scroll flag if read later message changed
-        if (LastReadLaterMessageId != _previousReadLaterMessageId)
-        {
-            _hasScrolledToReadLaterSeparator = false;
-            _previousReadLaterMessageId = LastReadLaterMessageId;
         }
 
         // Check if new messages were added (but not from load more)

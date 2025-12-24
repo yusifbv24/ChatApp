@@ -127,7 +127,7 @@
                                 {
                                     <span class="unread-badge">@(item.UnreadCount > 99 ? "99+" : item.UnreadCount.ToString())</span>
                                 }
-                                @if (item.LastReadLaterMessageId.HasValue && item.Id != SelectedChannelId)
+                                @if (item.LastReadLaterMessageId.HasValue)
                                 {
                                     <span class="read-later-badge">
                                         <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" />
