@@ -324,6 +324,23 @@
     text-overflow: ellipsis;
 }
 
+.conversation-meta {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+    .conversation-meta .status-icon {
+        font-size: 14px !important;
+        flex-shrink: 0;
+        color: var(--gray-400);
+    }
+
+    .conversation-meta .status-icon.read {
+        color: #34B7F1; /* WhatsApp blue */
+    }
+
 .conversation-time {
     font-size: 11px;
     color: var(--gray-500);
@@ -357,6 +374,73 @@
     .preview-text.draft-preview .draft-label {
         color: #e74c3c;
         font-weight: 600;
+    }
+
+/* Message preview with icons (my messages only) */
+.preview-text.my-message-preview {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+    .preview-text.my-message-preview .reply-icon {
+        font-size: 16px !important;
+        flex-shrink: 0;
+        color: var(--gray-400);
+    }
+
+    .preview-text.my-message-preview .message-content {
+        flex: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .preview-text.my-message-preview .status-icon {
+        font-size: 14px !important;
+        flex-shrink: 0;
+        color: var(--gray-400);
+        margin-left: 4px;
+    }
+
+    .preview-text.my-message-preview .status-icon.read {
+        color: #34B7F1; /* WhatsApp blue */
+    }
+
+/* Channel message preview with sender avatar (other users only) */
+.preview-text.other-message-preview {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+    .preview-text.other-message-preview .sender-avatar-preview {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        object-fit: cover;
+        flex-shrink: 0;
+    }
+
+    .preview-text.other-message-preview .sender-avatar-placeholder {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: var(--gray-300);
+        color: var(--white);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        font-weight: 600;
+        flex-shrink: 0;
+    }
+
+    .preview-text.other-message-preview .message-content {
+        flex: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
 .unread-badge {

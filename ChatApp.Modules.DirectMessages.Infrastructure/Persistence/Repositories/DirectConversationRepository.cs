@@ -86,7 +86,7 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                                        let lastMessageInfo = _context.DirectMessages
                                           .Where(m => m.ConversationId == conv.Id)
                                           .OrderByDescending(m => m.CreatedAtUtc)
-                                          .Select(m => new { m.Content, m.IsDeleted })
+                                          .Select(m => new { m.Content, m.IsDeleted, m.SenderId, m.IsRead })
                                           .FirstOrDefault()
                                        let unreadCount = _context.DirectMessages
                                           .Count(m => m.ConversationId == conv.Id &&
@@ -109,7 +109,9 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                                                : null,
                                            conv.LastMessageAtUtc,
                                            UnreadCount=unreadCount,
-                                           LastReadLaterMessageId=lastReadLaterMessageId
+                                           LastReadLaterMessageId=lastReadLaterMessageId,
+                                           LastMessageSenderId = lastMessageInfo != null ? (Guid?)lastMessageInfo.SenderId : null,
+                                           LastMessageIsRead = lastMessageInfo != null && lastMessageInfo.IsRead
                                        })
                                        .ToListAsync(cancellationToken);
 
@@ -122,19 +124,31 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 onlineStatuses[otherUserId] = await _connectionManager.IsUserOnlineAsync(otherUserId);
             }
 
-            // Map to DTOs with actual online status
-            var conversations = conversationsQuery.Select(c => new DirectConversationDto(
-                c.Id,
-                c.OtherUserId,
-                c.Username,
-                c.DisplayName,
-                c.AvatarUrl,
-                c.LastMessage,
-                c.LastMessageAtUtc,
-                c.UnreadCount,
-                onlineStatuses.GetValueOrDefault(c.OtherUserId, false),
-                c.LastReadLaterMessageId
-            )).ToList();
+            // Map to DTOs with actual online status and message status
+            var conversations = conversationsQuery.Select(c =>
+            {
+                // Calculate status for user's own messages only
+                string? status = null;
+                if (c.LastMessageSenderId == userId)
+                {
+                    status = c.LastMessageIsRead ? "Read" : "Sent";
+                }
+
+                return new DirectConversationDto(
+                    c.Id,
+                    c.OtherUserId,
+                    c.Username,
+                    c.DisplayName,
+                    c.AvatarUrl,
+                    c.LastMessage,
+                    c.LastMessageAtUtc,
+                    c.UnreadCount,
+                    onlineStatuses.GetValueOrDefault(c.OtherUserId, false),
+                    c.LastReadLaterMessageId,
+                    c.LastMessageSenderId,
+                    status
+                );
+            }).ToList();
 
 
             return conversations;

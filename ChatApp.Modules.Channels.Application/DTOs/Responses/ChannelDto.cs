@@ -13,10 +13,13 @@ namespace ChatApp.Modules.Channels.Application.DTOs.Responses
         DateTime CreatedAtUtc,
         DateTime? ArchivedAtUtc,
         string? LastMessageContent = null,
-        string? LastMessageSenderName = null,
         DateTime? LastMessageAtUtc = null,
         int UnreadCount = 0,
         DateTime? CurrentMemberLastReadAtUtc = null,
-        Guid? LastReadLaterMessageId = null
+        Guid? LastReadLaterMessageId = null,
+        Guid? LastMessageId = null,
+        Guid? LastMessageSenderId = null,
+        string? LastMessageStatus = null, // Sent, Delivered, Read
+        string? LastMessageSenderAvatarUrl = null
     );
 }

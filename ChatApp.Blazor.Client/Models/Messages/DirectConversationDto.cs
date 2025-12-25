@@ -10,5 +10,7 @@
         DateTime LastMessageAtUtc,
         int UnreadCount,
         bool IsOtherUserOnline,
-        Guid? LastReadLaterMessageId = null);
+        Guid? LastReadLaterMessageId = null,
+        Guid? LastMessageSenderId = null,
+        string? LastMessageStatus = null);
 }

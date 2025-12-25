@@ -113,9 +113,11 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                                    orderby msg.CreatedAtUtc descending
                                    select new
                                    {
+                                       msg.Id,
                                        msg.Content,
                                        msg.IsDeleted,
-                                       sender.DisplayName,
+                                       msg.SenderId,
+                                       sender.AvatarUrl,
                                        msg.CreatedAtUtc
                                    }).FirstOrDefault()
                 // Get member count
@@ -131,28 +133,103 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                     !m.IsDeleted &&
                     m.SenderId != userId &&
                     (lastReadTime == null || m.CreatedAtUtc > lastReadTime.Value))
-                select new ChannelDto(
+                select new
+                {
                     channel.Id,
                     channel.Name,
                     channel.Description,
                     channel.Type,
                     channel.CreatedBy,
-                    memberCount,
+                    MemberCount = memberCount,
                     channel.IsArchived,
                     channel.CreatedAtUtc,
                     channel.ArchivedAtUtc,
-                    lastMessage != null
+                    LastMessageContent = lastMessage != null
                         ? (lastMessage.IsDeleted ? "This message was deleted" : lastMessage.Content)
-                        : null, // SECURITY: Sanitize deleted content in last message preview
-                    lastMessage != null ? lastMessage.DisplayName : null,
-                    lastMessage != null ? lastMessage.CreatedAtUtc : (DateTime?)null,
-                    unreadCount,
-                    lastReadTime,
+                        : null,
+                    LastMessageAtUtc = lastMessage != null ? lastMessage.CreatedAtUtc : (DateTime?)null,
+                    LastMessageId = lastMessage != null ? (Guid?)lastMessage.Id : null,
+                    LastMessageSenderId = lastMessage != null ? (Guid?)lastMessage.SenderId : null,
+                    LastMessageSenderAvatarUrl = lastMessage != null ? lastMessage.AvatarUrl : null,
+                    UnreadCount = unreadCount,
+                    LastReadTime = lastReadTime,
                     member.LastReadLaterMessageId
-                )
+                }
             ).ToListAsync(cancellationToken);
 
-            return channelsWithLastMessage
+            // Batch query: Get read receipts for all last messages to calculate status
+            var lastMessageIds = channelsWithLastMessage
+                .Where(c => c.LastMessageId.HasValue && c.LastMessageSenderId == userId)
+                .Select(c => c.LastMessageId!.Value)
+                .ToList();
+
+            var messageReadCounts = new Dictionary<Guid, int>();
+            if (lastMessageIds.Any())
+            {
+                // Get how many members read each last message (for user's own messages only)
+                messageReadCounts = await (
+                    from read in _context.ChannelMessageReads
+                    where lastMessageIds.Contains(read.MessageId)
+                    group read by read.MessageId into g
+                    select new { MessageId = g.Key, ReadCount = g.Count() }
+                ).ToDictionaryAsync(x => x.MessageId, x => x.ReadCount, cancellationToken);
+            }
+
+            // Map to ChannelDto with calculated status
+            var result = channelsWithLastMessage.Select(c =>
+            {
+                string? status = null;
+                if (c.LastMessageSenderId == userId && c.LastMessageId.HasValue)
+                {
+                    // Calculate status for user's own messages
+                    var readCount = messageReadCounts.GetValueOrDefault(c.LastMessageId.Value, 0);
+                    var totalMembers = c.MemberCount - 1; // Exclude sender
+
+                    if (totalMembers == 0)
+                    {
+                        // No other members - just "Sent"
+                        status = "Sent";
+                    }
+                    else if (readCount >= totalMembers)
+                    {
+                        // All members read
+                        status = "Read";
+                    }
+                    else if (readCount > 0)
+                    {
+                        // Some members read
+                        status = "Delivered";
+                    }
+                    else
+                    {
+                        // No one read yet
+                        status = "Sent";
+                    }
+                }
+
+                return new ChannelDto(
+                    c.Id,
+                    c.Name,
+                    c.Description,
+                    c.Type,
+                    c.CreatedBy,
+                    c.MemberCount,
+                    c.IsArchived,
+                    c.CreatedAtUtc,
+                    c.ArchivedAtUtc,
+                    c.LastMessageContent,
+                    c.LastMessageAtUtc,
+                    c.UnreadCount,
+                    c.LastReadTime,
+                    c.LastReadLaterMessageId,
+                    c.LastMessageId,
+                    c.LastMessageSenderId,
+                    status,
+                    c.LastMessageSenderAvatarUrl
+                );
+            }).ToList();
+
+            return result
                 .OrderByDescending(c => c.LastMessageAtUtc ?? c.CreatedAtUtc)
                 .ToList();
         }

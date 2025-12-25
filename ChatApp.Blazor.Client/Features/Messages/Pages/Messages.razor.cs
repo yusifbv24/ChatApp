@@ -401,37 +401,37 @@ public partial class Messages : IAsyncDisposable
                 }
             }
 
-            // Update conversation list for messages from others (not our own)
-            if (message.SenderId != currentUserId)
+            // Update conversation list (for both sent and received messages)
+            var conversation = conversations.FirstOrDefault(c => c.Id == message.ConversationId);
+            if (conversation != null)
             {
-                var conversation = conversations.FirstOrDefault(c => c.Id == message.ConversationId);
-                if (conversation != null)
+                var isCurrentConversation = message.ConversationId == selectedConversationId;
+                var isMyMessage = message.SenderId == currentUserId;
+
+                // Create updated conversation with new message info
+                var updatedConversation = conversation with
                 {
-                    var isCurrentConversation = message.ConversationId == selectedConversationId;
+                    LastMessageContent = message.Content,
+                    LastMessageAtUtc = message.CreatedAtUtc,
+                    LastMessageSenderId = message.SenderId,
+                    LastMessageStatus = isMyMessage ? (message.IsRead ? "Read" : "Sent") : null,
+                    UnreadCount = isCurrentConversation ? 0 : (isMyMessage ? conversation.UnreadCount : conversation.UnreadCount + 1)
+                };
 
-                    // Create updated conversation with new message info
-                    var updatedConversation = conversation with
-                    {
-                        LastMessageContent = message.Content,
-                        LastMessageAtUtc = message.CreatedAtUtc,
-                        UnreadCount = isCurrentConversation ? 0 : conversation.UnreadCount + 1
-                    };
+                // Remove from current position and add to top (most recent)
+                conversations.Remove(conversation);
+                conversations.Insert(0, updatedConversation);
 
-                    // Remove from current position and add to top (most recent)
-                    conversations.Remove(conversation);
-                    conversations.Insert(0, updatedConversation);
-
-                    // Increment global unread count if not in this conversation
-                    if (!isCurrentConversation)
-                    {
-                        AppState.IncrementUnreadMessages();
-                    }
-                }
-                else
+                // Increment global unread count if not in this conversation and message from others
+                if (!isCurrentConversation && !isMyMessage)
                 {
-                    // New conversation from someone else - reload the list
-                    _ = LoadConversationsAndChannels();
+                    AppState.IncrementUnreadMessages();
                 }
+            }
+            else if (message.SenderId != currentUserId)
+            {
+                // New conversation from someone else - reload the list
+                _ = LoadConversationsAndChannels();
             }
 
             StateHasChanged();
@@ -536,32 +536,56 @@ public partial class Messages : IAsyncDisposable
                 }
             }
 
-            // Update channel list for messages from others (not our own)
-            if (message.SenderId != currentUserId)
+            // Update channel list (for both sent and received messages)
+            var channel = channels.FirstOrDefault(c => c.Id == message.ChannelId);
+            if (channel != null)
             {
-                var channel = channels.FirstOrDefault(c => c.Id == message.ChannelId);
-                if (channel != null)
+                var isCurrentChannel = message.ChannelId == selectedChannelId;
+                var isMyMessage = message.SenderId == currentUserId;
+
+                // Calculate status for own messages
+                string? status = null;
+                if (isMyMessage)
                 {
-                    var isCurrentChannel = message.ChannelId == selectedChannelId;
-
-                    // Create updated channel with new message info
-                    var updatedChannel = channel with
+                    var totalMembers = channel.MemberCount - 1; // Exclude sender
+                    if (totalMembers == 0)
                     {
-                        LastMessageContent = message.Content,
-                        LastMessageAtUtc = message.CreatedAtUtc,
-                        LastMessageSenderName = message.SenderDisplayName,
-                        UnreadCount = isCurrentChannel ? 0 : channel.UnreadCount + 1
-                    };
-
-                    // Remove from current position and add to top (most recent)
-                    channels.Remove(channel);
-                    channels.Insert(0, updatedChannel);
-
-                    // Increment global unread count if not in this channel
-                    if (!isCurrentChannel)
-                    {
-                        AppState.IncrementUnreadMessages();
+                        status = "Sent";
                     }
+                    else if (message.ReadByCount >= totalMembers)
+                    {
+                        status = "Read";
+                    }
+                    else if (message.ReadByCount > 0)
+                    {
+                        status = "Delivered";
+                    }
+                    else
+                    {
+                        status = "Sent";
+                    }
+                }
+
+                // Create updated channel with new message info
+                var updatedChannel = channel with
+                {
+                    LastMessageContent = message.Content,
+                    LastMessageAtUtc = message.CreatedAtUtc,
+                    LastMessageId = message.Id,
+                    LastMessageSenderId = message.SenderId,
+                    LastMessageSenderAvatarUrl = message.SenderAvatarUrl,
+                    LastMessageStatus = status,
+                    UnreadCount = isCurrentChannel ? 0 : (isMyMessage ? channel.UnreadCount : channel.UnreadCount + 1)
+                };
+
+                // Remove from current position and add to top (most recent)
+                channels.Remove(channel);
+                channels.Insert(0, updatedChannel);
+
+                // Increment global unread count if not in this channel and message from others
+                if (!isCurrentChannel && !isMyMessage)
+                {
+                    AppState.IncrementUnreadMessages();
                 }
             }
 
@@ -834,7 +858,6 @@ public partial class Messages : IAsyncDisposable
             {
                 var index = directMessages.IndexOf(message);
                 directMessages[index] = message with { IsRead = true, ReadAtUtc = readAtUtc };
-                StateHasChanged();
             }
             else if (conversationId == selectedConversationId)
             {
@@ -842,6 +865,25 @@ public partial class Messages : IAsyncDisposable
                 // store as pending read receipt (for race condition case)
                 pendingReadReceipts[messageId] = (readBy, readAtUtc);
             }
+
+            // Update conversation list status if this is the last message
+            var conversation = conversations.FirstOrDefault(c => c.Id == conversationId);
+            if (conversation != null && conversation.LastMessageSenderId == currentUserId)
+            {
+                // Update status to "Read" for sender's last message
+                var updatedConversation = conversation with
+                {
+                    LastMessageStatus = "Read"
+                };
+
+                var index = conversations.IndexOf(conversation);
+                if (index >= 0)
+                {
+                    conversations[index] = updatedConversation;
+                }
+            }
+
+            StateHasChanged();
         });
     }
 
@@ -1531,50 +1573,107 @@ public partial class Messages : IAsyncDisposable
     {
         InvokeAsync(() =>
         {
-            // Only process if we're viewing this channel
-            if (!selectedChannelId.HasValue || selectedChannelId.Value != channelId)
-                return;
-
             bool updated = false;
-            var updatedList = new List<ChannelMessageDto>(channelMessages);
 
-            // Update read status for the specified messages without reloading
-            for (int i = 0; i < updatedList.Count; i++)
+            // Update messages in current view if viewing this channel
+            if (selectedChannelId.HasValue && selectedChannelId.Value == channelId)
             {
-                var message = updatedList[i];
-                if (messageIds.Contains(message.Id))
+                var updatedList = new List<ChannelMessageDto>(channelMessages);
+
+                // Update read status for the specified messages without reloading
+                for (int i = 0; i < updatedList.Count; i++)
                 {
-                    // Don't add sender to their own ReadBy list
-                    if (message.SenderId == userId)
-                        continue;
-
-                    // Create new ReadBy list with the userId added
-                    var newReadBy = message.ReadBy != null
-                        ? new List<Guid>(message.ReadBy)
-                        : new List<Guid>();
-
-                    // Add userId if not already present
-                    if (!newReadBy.Contains(userId))
+                    var message = updatedList[i];
+                    if (messageIds.Contains(message.Id))
                     {
-                        newReadBy.Add(userId);
+                        // Don't add sender to their own ReadBy list
+                        if (message.SenderId == userId)
+                            continue;
 
-                        // Replace the message with updated ReadBy and ReadByCount
-                        // This creates a new object reference, triggering Blazor's change detection
-                        updatedList[i] = message with
+                        // Create new ReadBy list with the userId added
+                        var newReadBy = message.ReadBy != null
+                            ? new List<Guid>(message.ReadBy)
+                            : new List<Guid>();
+
+                        // Add userId if not already present
+                        if (!newReadBy.Contains(userId))
                         {
-                            ReadBy = newReadBy,
-                            ReadByCount = newReadBy.Count
-                        };
+                            newReadBy.Add(userId);
 
-                        updated = true;
+                            // Replace the message with updated ReadBy and ReadByCount
+                            // This creates a new object reference, triggering Blazor's change detection
+                            updatedList[i] = message with
+                            {
+                                ReadBy = newReadBy,
+                                ReadByCount = newReadBy.Count
+                            };
+
+                            updated = true;
+                        }
                     }
+                }
+
+                if (updated)
+                {
+                    // Replace the entire list to trigger Blazor's change detection on the parent component
+                    channelMessages = updatedList;
+                }
+            }
+
+            // Update channel list status if last message was sent by current user and was read
+            var channel = channels.FirstOrDefault(c => c.Id == channelId);
+            if (channel != null &&
+                channel.LastMessageSenderId == currentUserId &&
+                channel.LastMessageId.HasValue &&
+                messageIds.Contains(channel.LastMessageId.Value))
+            {
+                // Last message was read by someone
+                // Find the message in current view to get exact ReadByCount
+                var lastMessageInView = channelMessages.FirstOrDefault(m => m.Id == channel.LastMessageId.Value);
+
+                string newStatus;
+                if (lastMessageInView != null)
+                {
+                    // We have the message in view - use its ReadByCount
+                    var totalMembers = channel.MemberCount - 1;
+                    if (totalMembers == 0)
+                    {
+                        newStatus = "Sent";
+                    }
+                    else if (lastMessageInView.ReadByCount >= totalMembers)
+                    {
+                        newStatus = "Read";
+                    }
+                    else if (lastMessageInView.ReadByCount > 0)
+                    {
+                        newStatus = "Delivered";
+                    }
+                    else
+                    {
+                        newStatus = "Sent";
+                    }
+                }
+                else
+                {
+                    // Message not in view - at least one person read it
+                    newStatus = "Delivered";
+                }
+
+                var updatedChannel = channel with
+                {
+                    LastMessageStatus = newStatus
+                };
+
+                var index = channels.IndexOf(channel);
+                if (index >= 0)
+                {
+                    channels[index] = updatedChannel;
+                    updated = true;
                 }
             }
 
             if (updated)
             {
-                // Replace the entire list to trigger Blazor's change detection on the parent component
-                channelMessages = updatedList;
                 StateHasChanged();
             }
         });
@@ -1613,8 +1712,7 @@ public partial class Messages : IAsyncDisposable
             var updatedChannel = channel with
             {
                 LastMessageContent = lastMessage,
-                LastMessageAtUtc = messageTime,
-                LastMessageSenderName = senderName ?? channel.LastMessageSenderName
+                LastMessageAtUtc = messageTime
             };
 
             // Remove from current position
@@ -2786,9 +2884,7 @@ public partial class Messages : IAsyncDisposable
         if (channel != null)
         {
             // Create updated channel with new last message
-            var updatedChannel = senderName != null
-                ? channel with { LastMessageContent = newContent, LastMessageSenderName = senderName }
-                : channel with { LastMessageContent = newContent };
+            var updatedChannel = channel with { LastMessageContent = newContent };
 
             // Remove from current position
             channels.Remove(channel);
