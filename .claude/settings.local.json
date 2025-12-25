@@ -50,7 +50,8 @@
       "Bash(del \"ChatApp.Modules.Channels.Application\\Commands\\MessageConditions\\UnmarkMessageAsLaterCommand.cs\")",
       "Bash(cmd /c del \"ChatApp.Modules.Channels.Application\\Commands\\MessageConditions\\UnmarkMessageAsLaterCommand.cs\")",
       "Bash(cmd /c taskkill /F /PID 17192)",
-      "Bash(cmd /c taskkill /F /PID 22824)"
+      "Bash(cmd /c taskkill /F /PID 22824)",
+      "Bash(cmd /c taskkill /F /PID 21832)"
     ],
     "deny": [],
     "ask": []

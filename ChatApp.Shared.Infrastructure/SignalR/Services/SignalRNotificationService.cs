@@ -269,6 +269,30 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Services
                 .SendAsync("ChannelMessageReactionsUpdated", new { messageId, reactions });
         }
 
+        public async Task NotifyChannelMessageReactionsUpdatedToMembersAsync(Guid channelId, List<Guid> memberUserIds, Guid messageId, object reactions)
+        {
+            _logger?.LogDebug("Broadcasting reactions updated for message {MessageId} to channel {ChannelId} and {MemberCount} members directly",
+                messageId, channelId, memberUserIds.Count);
+
+            // 1. Send to channel group (for users actively viewing the channel - real-time)
+            await _hubContext.Clients
+                .Group($"channel_{channelId}")
+                .SendAsync("ChannelMessageReactionsUpdated", new { messageId, reactions });
+
+            // 2. ALSO send directly to each member's connections (for lazy loading support)
+            // This ensures reactions propagate even if user hasn't joined the channel group yet
+            foreach (var memberId in memberUserIds)
+            {
+                var memberConnections = await _connectionManager.GetUserConnectionsAsync(memberId);
+                if (memberConnections.Count != 0)
+                {
+                    await _hubContext.Clients
+                        .Clients(memberConnections)
+                        .SendAsync("ChannelMessageReactionsUpdated", new { messageId, reactions });
+                }
+            }
+        }
+
 
         public async Task NotifyUserAsync(Guid userId, string eventName, object data)
         {

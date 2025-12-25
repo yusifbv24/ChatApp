@@ -100,9 +100,16 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelReactions
                     request.MessageId,
                     cancellationToken);
 
-                // Send real-time notification with updated reactions list (simplified)
-                await _signalRNotificationService.NotifyChannelMessageReactionsUpdatedAsync(
+                // Get channel member IDs for hybrid notification (group + direct connections)
+                var memberUserIds = await _unitOfWork.Channels.GetMemberUserIdsAsync(
                     message.ChannelId,
+                    cancellationToken);
+
+                // Send real-time notification with updated reactions list using hybrid pattern
+                // This ensures reactions propagate even if users haven't joined the SignalR group yet
+                await _signalRNotificationService.NotifyChannelMessageReactionsUpdatedToMembersAsync(
+                    message.ChannelId,
+                    memberUserIds,
                     request.MessageId,
                     reactionsGrouped);
 

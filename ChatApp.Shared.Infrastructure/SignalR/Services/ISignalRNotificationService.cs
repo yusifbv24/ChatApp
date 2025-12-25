@@ -81,6 +81,12 @@
         /// </summary>
         Task NotifyChannelMessageReactionsUpdatedAsync(Guid channelId, Guid messageId, object reactions);
 
+        /// <summary>
+        /// Notify channel members about message reactions updated (hybrid: group + direct connections)
+        /// Sends to channel group AND each member's connections directly
+        /// </summary>
+        Task NotifyChannelMessageReactionsUpdatedToMembersAsync(Guid channelId, List<Guid> memberUserIds, Guid messageId, object reactions);
+
 
 
         /// <summary>
