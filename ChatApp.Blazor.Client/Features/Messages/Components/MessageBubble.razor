@@ -37,10 +37,6 @@
     }
 
     <div class="message-content-wrapper">
-        @if (!IsOwn && ShowSenderName)
-        {
-            <div class="message-sender">@SenderName</div>
-        }
         <div class="message-bubble @(IsOwn ? "own-bubble" : "other-bubble") @(IsSelectMode && !IsDeleted ? "selectable" : "")"
              @onmouseenter="() => showHoverActions = true"
              @onmouseleave="() => { if (!showMoreMenu && !showReactionPicker) showHoverActions = false; }"
@@ -55,6 +51,12 @@
             else
             {
                 <div class="message-content-block">
+                    @* Show sender name inside bubble for group messages *@
+                    @if (!IsOwn && ShowSenderName)
+                    {
+                        <div class="message-sender-inside">@SenderName</div>
+                    }
+
                     @* Show forwarded indicator *@
                     @if (IsForwarded)
                     {

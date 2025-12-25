@@ -722,16 +722,28 @@
     {
         var list = messages.ToList();
         var index = list.IndexOf(message);
-        if (index == 0) return true;
-        return list[index - 1].SenderId != message.SenderId;
+
+        // Show avatar on the LAST message of consecutive messages from same sender
+        // If this is the last message in the list, show avatar
+        if (index == list.Count - 1) return true;
+
+        // If next message is from a different sender, show avatar (this is the last in the group)
+        return list[index + 1].SenderId != message.SenderId;
     }
 
     private bool ShouldShowSenderName(ChannelMessageDto message, IEnumerable<ChannelMessageDto> messages)
     {
         var list = messages.ToList();
         var index = list.IndexOf(message);
-        if (index == 0) return message.SenderId != CurrentUserId;
+
+        // Never show sender name for own messages
         if (message.SenderId == CurrentUserId) return false;
+
+        // Show sender name on the FIRST message of consecutive messages from same sender
+        // If this is the first message in the list, show sender name
+        if (index == 0) return true;
+
+        // If previous message is from a different sender, show sender name (this is the first in the group)
         return list[index - 1].SenderId != message.SenderId;
     }
 

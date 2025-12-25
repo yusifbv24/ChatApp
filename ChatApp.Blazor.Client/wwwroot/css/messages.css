@@ -876,12 +876,13 @@
     position: relative;
 }
 
-.message-sender {
+/* Sender name inside message bubble (for group messages) */
+.message-sender-inside {
     font-size: 12px;
     font-weight: 600;
-    color: var(--gray-700);
-    margin-bottom: 4px;
-    padding-left: 12px;
+    color: var(--primary-color);
+    margin-bottom: 6px;
+    line-height: 1.2;
 }
 
 .message-bubble {
