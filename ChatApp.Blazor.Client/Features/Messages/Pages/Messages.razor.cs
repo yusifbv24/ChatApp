@@ -144,9 +144,13 @@ public partial class Messages : IAsyncDisposable
     private bool shouldCalculateUnreadSeparator;
     private DateTime? currentMemberLastReadAtUtc;
 
-    // Read Later separator state (channel only)
+    // Read Later separator state
     private Guid? lastReadLaterMessageId;
     private Guid? lastReadLaterMessageIdOnEntry; // Track value when entering channel
+
+    // Selection mode state
+    private bool isSelectMode = false;
+    private HashSet<Guid> selectedMessageIds = new HashSet<Guid>();
 
     private bool IsEmpty => !selectedConversationId.HasValue && !selectedChannelId.HasValue && !isPendingConversation;
 
@@ -1694,6 +1698,12 @@ public partial class Messages : IAsyncDisposable
     }
     private async Task SelectConversation(DirectConversationDto conversation)
     {
+        // Exit selection mode when switching conversations
+        if (isSelectMode)
+        {
+            ToggleSelectMode();
+        }
+
         // Guard: Prevent concurrent selection operations (race condition)
         if (_isSelecting || _disposed)
         {
@@ -2010,6 +2020,12 @@ public partial class Messages : IAsyncDisposable
     }
     private async Task SelectChannel(ChannelDto channel)
     {
+        // Exit selection mode when switching channels
+        if (isSelectMode)
+        {
+            ToggleSelectMode();
+        }
+
         // Guard: Prevent concurrent selection operations (race condition)
         if (_isSelecting || _disposed)
         {
@@ -2393,6 +2409,13 @@ public partial class Messages : IAsyncDisposable
 
                 // Update conversation list locally
                 UpdateConversationLocally(conversationId, content, messageTime);
+
+                // Exit selection mode after successful forward
+                if (isSelectMode)
+                {
+                    ToggleSelectMode();
+                }
+
                 CancelForward();
                 StateHasChanged();
             }
@@ -2470,6 +2493,13 @@ public partial class Messages : IAsyncDisposable
 
                 // Update channel list locally with time (to sort to top)
                 UpdateChannelLocally(channelId, content, messageTime, UserState.CurrentUser?.DisplayName);
+
+                // Exit selection mode after successful forward
+                if (isSelectMode)
+                {
+                    ToggleSelectMode();
+                }
+
                 CancelForward();
                 StateHasChanged();
             }
@@ -3193,6 +3223,93 @@ public partial class Messages : IAsyncDisposable
             errorMessage = $"Error toggling read later: {ex.Message}";
             StateHasChanged();
         }
+    }
+
+    #endregion
+
+    #region Selection Mode
+
+    private void HandleSelectToggle(Guid messageId)
+    {
+        if (!isSelectMode)
+        {
+            // Enter select mode and select this message
+            isSelectMode = true;
+            selectedMessageIds.Add(messageId);
+        }
+        else
+        {
+            // Already in select mode - toggle this message
+            ToggleMessageSelection(messageId);
+        }
+        StateHasChanged();
+    }
+
+    private void ToggleSelectMode()
+    {
+        isSelectMode = !isSelectMode;
+        if (!isSelectMode)
+        {
+            // Exit select mode - clear selections
+            selectedMessageIds.Clear();
+        }
+        StateHasChanged();
+    }
+
+    private void ToggleMessageSelection(Guid messageId)
+    {
+        if (selectedMessageIds.Contains(messageId))
+            selectedMessageIds.Remove(messageId);
+        else
+            selectedMessageIds.Add(messageId);
+
+        StateHasChanged();
+    }
+
+    private bool CanDeleteSelected()
+    {
+        if (!selectedMessageIds.Any())
+            return false;
+
+        // Get all selected messages
+        var selectedMessages = directMessages
+            .Where(m => selectedMessageIds.Contains(m.Id))
+            .Cast<dynamic>()
+            .Concat(channelMessages.Where(m => selectedMessageIds.Contains(m.Id)).Cast<dynamic>());
+
+        // Can only delete if ALL selected messages are owned by current user
+        return selectedMessages.All(m => (Guid)m.SenderId == currentUserId);
+    }
+
+    private async Task DeleteSelectedMessages()
+    {
+        if (!CanDeleteSelected())
+            return;
+
+        var messagesToDelete = selectedMessageIds.ToList();
+
+        foreach (var messageId in messagesToDelete)
+        {
+            await DeleteMessage(messageId);
+        }
+
+        // Exit select mode after deletion
+        ToggleSelectMode();
+    }
+
+    private void ForwardSelectedMessages()
+    {
+        if (!selectedMessageIds.Any())
+            return;
+
+        // Open forward dialog with selected messages
+        // Use existing forward logic but with multiple messages
+        // For now, just forward the first one (will be enhanced)
+        var firstMessageId = selectedMessageIds.First();
+        HandleForward(firstMessageId);
+
+        // Note: Don't exit select mode here - only exit after successful forward
+        // If user cancels the forward dialog, selection mode should remain active
     }
 
     #endregion

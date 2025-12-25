@@ -168,6 +168,9 @@
                                        ReplyToSenderName="@message.ReplyToSenderName"
                                        IsForwarded="@message.IsForwarded"
                                        LastReadLaterMessageId="@LastReadLaterMessageId"
+                                       IsSelectMode="@IsSelectMode"
+                                       IsSelected="@SelectedMessageIds.Contains(message.Id)"
+                                       OnSelectToggle="OnSelectToggle"
                                        OnEdit="()=>StartEditMessage(message.Id,message.Content)"
                                        OnDelete="()=>DeleteMessage(message.Id)"
                                        OnReaction="(emoji)=>AddReaction(message.Id,emoji)"
@@ -233,6 +236,9 @@
                                        ReplyToSenderName="@message.ReplyToSenderName"
                                        IsForwarded="@message.IsForwarded"
                                        LastReadLaterMessageId="@LastReadLaterMessageId"
+                                       IsSelectMode="@IsSelectMode"
+                                       IsSelected="@SelectedMessageIds.Contains(message.Id)"
+                                       OnSelectToggle="OnSelectToggle"
                                        OnEdit="() => StartEditMessage(message.Id, message.Content)"
                                        OnDelete="() => DeleteMessage(message.Id)"
                                        OnReaction="(emoji) => AddReaction(message.Id, emoji)"
@@ -268,24 +274,35 @@
             <div @ref="scrollAnchorRef"></div>
         </div>
 
-        <!-- Message Input -->
-        <MessageInput @ref="messageInputRef"
-                      Placeholder="@GetInputPlaceholder()"
-                      IsEditing="@isEditing"
-                      EditingContent="@editingContent"
-                      IsSending="@IsSending"
-                      ConversationId="@ConversationId"
-                      IsReplying="@IsReplying"
-                      ReplyToSenderName="@ReplyToSenderName"
-                      ReplyToContent="@ReplyToContent"
-                      InitialDraft="@InitialDraft"
-                      OnSend="SendMessage"
-                      OnEdit="EditMessage"
-                      OnCancelEdit="CancelEdit"
-                      OnCancelReply="OnCancelReply"
-                      OnTyping="HandleTyping"
-                      OnAttach="HandleAttach"
-                      OnDraftChanged="OnDraftChanged" />
+        <!-- Message Input or Selection Toolbar -->
+        @if (IsSelectMode)
+        {
+            <SelectionToolbar SelectedCount="@SelectedMessageIds.Count"
+                             CanDelete="@CanDeleteSelected"
+                             OnCancel="OnCancelSelection"
+                             OnDelete="OnDeleteSelected"
+                             OnForward="OnForwardSelected" />
+        }
+        else
+        {
+            <MessageInput @ref="messageInputRef"
+                          Placeholder="@GetInputPlaceholder()"
+                          IsEditing="@isEditing"
+                          EditingContent="@editingContent"
+                          IsSending="@IsSending"
+                          ConversationId="@ConversationId"
+                          IsReplying="@IsReplying"
+                          ReplyToSenderName="@ReplyToSenderName"
+                          ReplyToContent="@ReplyToContent"
+                          InitialDraft="@InitialDraft"
+                          OnSend="SendMessage"
+                          OnEdit="EditMessage"
+                          OnCancelEdit="CancelEdit"
+                          OnCancelReply="OnCancelReply"
+                          OnTyping="HandleTyping"
+                          OnAttach="HandleAttach"
+                          OnDraftChanged="OnDraftChanged" />
+        }
     }
 </div>
 <!-- Info Panel (slide out) -->
@@ -492,6 +509,15 @@
     // Read Later support (both conversations and channels)
     [Parameter] public Guid? LastReadLaterMessageId { get; set; }
     [Parameter] public EventCallback<Guid> OnMarkAsLater { get; set; }
+
+    // Selection mode support
+    [Parameter] public bool IsSelectMode { get; set; }
+    [Parameter] public HashSet<Guid> SelectedMessageIds { get; set; } = new();
+    [Parameter] public EventCallback<Guid> OnSelectToggle { get; set; }
+    [Parameter] public EventCallback OnCancelSelection { get; set; }
+    [Parameter] public EventCallback OnDeleteSelected { get; set; }
+    [Parameter] public EventCallback OnForwardSelected { get; set; }
+    [Parameter] public bool CanDeleteSelected { get; set; }
 
 
     private ElementReference messagesContainerRef;

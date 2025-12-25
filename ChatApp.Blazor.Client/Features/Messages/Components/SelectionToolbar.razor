@@ -1,0 +1,47 @@
+@* Selection Toolbar - replaces MessageInput when in select mode *@
+<div class="selection-toolbar">
+    <div class="selection-toolbar-panel">
+        <div class="selection-toolbar-left">
+            <button class="cancel-btn" @onclick="OnCancel" title="Cancel selection">
+                <MudIcon Icon="@Icons.Material.Outlined.Close" Size="Size.Medium" />
+            </button>
+            <span class="selection-count">@(SelectedCount > 0 ? $"Messages ({SelectedCount})" : "Select Messages")</span>
+        </div>
+
+        <div class="selection-toolbar-right">
+            @if (!CanDelete)
+            {
+                <div class="tooltip-wrapper" data-tooltip="You can only delete your own messages">
+                    <button class="delete-icon-btn" disabled>
+                        <MudIcon Icon="@Icons.Material.Outlined.Delete" Size="Size.Small" />
+                    </button>
+                    <span class="delete-label disabled">Delete</span>
+                </div>
+            }
+            else
+            {
+                <div class="delete-group">
+                    <button class="delete-icon-btn" @onclick="OnDelete">
+                        <MudIcon Icon="@Icons.Material.Outlined.Delete" Size="Size.Small" />
+                    </button>
+                    <span class="delete-label" @onclick="OnDelete">Delete</span>
+                </div>
+            }
+
+            <button class="forward-btn-full" @onclick="OnForward" disabled="@(!IsSelected)">
+                <MudIcon Icon="@Icons.Material.Outlined.Shortcut" Size="Size.Small" />
+                <span>Forward</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int SelectedCount { get; set; }
+    [Parameter] public bool CanDelete { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public EventCallback OnDelete { get; set; }
+    [Parameter] public EventCallback OnForward { get; set; }
+
+    private bool IsSelected => SelectedCount > 0;
+}

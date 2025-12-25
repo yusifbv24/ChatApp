@@ -52,6 +52,9 @@
                   IsSearchingUsers="@isSearchingMembersForAdd"
                   UnreadSeparatorAfterMessageId="@unreadSeparatorAfterMessageId"
                   LastReadLaterMessageId="@lastReadLaterMessageId"
+                  IsSelectMode="@isSelectMode"
+                  SelectedMessageIds="@selectedMessageIds"
+                  CanDeleteSelected="@CanDeleteSelected()"
                   OnSendMessage="SendMessage"
                   OnEditMessage="EditMessage"
                   OnDeleteMessage="DeleteMessage"
@@ -65,6 +68,10 @@
                   OnSearchUsers="SearchUsersForAddMember"
                   OnAddMember="AddMemberToChannel"
                   OnMarkAsLater="HandleToggleMarkAsLaterClick"
+                  OnSelectToggle="HandleSelectToggle"
+                  OnCancelSelection="ToggleSelectMode"
+                  OnDeleteSelected="DeleteSelectedMessages"
+                  OnForwardSelected="ForwardSelectedMessages"
                   InitialDraft="@currentDraft"
                   OnDraftChanged="HandleDraftChanged" />
     </div>

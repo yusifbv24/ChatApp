@@ -1,7 +1,23 @@
 ﻿@inject IJSRuntime JS
 @using ChatApp.Blazor.Client.Models.Messages
 
-<div id="message-@MessageId" class="message-wrapper @(IsOwn ? "own" : "other") @(IsDeleted ? "deleted" : "") @(!IsDirectMessage && !IsOwn ? "group-message" : "")" @ref="messageWrapperRef">
+<div id="message-@MessageId" class="message-wrapper @(IsOwn ? "own" : "other") @(IsDeleted ? "deleted" : "") @(!IsDirectMessage && !IsOwn ? "group-message" : "") @(IsSelectMode ? "select-mode" : "")" @ref="messageWrapperRef">
+
+    @* Selection checkbox - visible only in select mode and not for deleted messages *@
+    @if (IsSelectMode && !IsDeleted)
+    {
+        <div class="message-select-checkbox @(IsSelected ? "selected" : "")" @onclick="HandleBubbleClick" @onclick:stopPropagation="true">
+            @if (IsSelected)
+            {
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Medium" Class="checkbox-icon" />
+            }
+            else
+            {
+                <div class="checkbox-empty"></div>
+            }
+        </div>
+    }
+
     @if (!IsOwn && !IsDirectMessage)
     {
         <!-- Always show avatar space for group messages to maintain alignment -->
@@ -25,9 +41,10 @@
         {
             <div class="message-sender">@SenderName</div>
         }
-        <div class="message-bubble @(IsOwn ? "own-bubble" : "other-bubble")"
+        <div class="message-bubble @(IsOwn ? "own-bubble" : "other-bubble") @(IsSelectMode && !IsDeleted ? "selectable" : "")"
              @onmouseenter="() => showHoverActions = true"
-             @onmouseleave="() => { if (!showMoreMenu && !showReactionPicker) showHoverActions = false; }">
+             @onmouseleave="() => { if (!showMoreMenu && !showReactionPicker) showHoverActions = false; }"
+             @onclick="HandleBubbleClick">
             @if (IsDeleted)
             {
                 <div class="deleted-message">
@@ -178,7 +195,7 @@
             }
 
             <!-- Chevron button - top right corner (visible for both deleted and normal messages) -->
-            @if (showHoverActions || showMoreMenu)
+            @if (!IsSelectMode && (showHoverActions || showMoreMenu))
             {
                 <button class="chevron-more-btn @(showMoreMenu ? "visible" : "")"
                         title="More"
@@ -253,8 +270,8 @@
                 </div>
             }
 
-            <!-- Quick Reaction Icon (Like button in bottom corner) - hidden for deleted messages -->
-            @if (!IsDeleted && (showHoverActions || showReactionPicker))
+            <!-- Quick Reaction Icon (Like button in bottom corner) - hidden for deleted messages and select mode -->
+            @if (!IsSelectMode && !IsDeleted && (showHoverActions || showReactionPicker))
             {
                 <div class="reaction-quick-icon @(showReactionPicker ? "active" : "")"
                      @onmouseenter="HandleReactionIconHover"
@@ -323,6 +340,11 @@
     [Parameter] public EventCallback ScrollToBottom{ get; set; }
     [Parameter] public Guid? LastReadLaterMessageId { get; set; }
     [Parameter] public EventCallback<Guid> OnMarkAsLater { get; set; }
+
+    // Selection mode parameters
+    [Parameter] public bool IsSelectMode { get; set; }
+    [Parameter] public bool IsSelected { get; set; }
+    [Parameter] public EventCallback<Guid> OnSelectToggle { get; set; }
 
     private ElementReference messageWrapperRef;
     private bool showReactionPicker = false;
@@ -580,11 +602,21 @@
         await OnActionCompleted.InvokeAsync();
     }
 
-    private Task HandleSelectClick()
+    private async Task HandleSelectClick()
     {
-        // TODO: Implement Select functionality
         CloseMoreMenu();
-        return Task.CompletedTask;
+        // Trigger selection toggle - this will enter select mode and select this message
+        await OnSelectToggle.InvokeAsync(MessageId);
+        await OnActionCompleted.InvokeAsync();
+    }
+
+    private async Task HandleBubbleClick()
+    {
+        // Only toggle selection if in select mode and message is not deleted
+        if (IsSelectMode && !IsDeleted)
+        {
+            await OnSelectToggle.InvokeAsync(MessageId);
+        }
     }
 
     private bool IsMarkedAsLater => LastReadLaterMessageId.HasValue && LastReadLaterMessageId.Value == MessageId;
