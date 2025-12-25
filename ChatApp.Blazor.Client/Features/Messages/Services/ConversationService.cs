@@ -88,6 +88,13 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
         }
 
 
+        public async Task<Result> ToggleMessageAsLaterAsync(Guid conversationId, Guid messageId)
+        {
+            return await _apiClient.PostAsync(
+                $"/api/conversations/{conversationId}/messages/{messageId}/mark-later/toggle");
+        }
+
+
 
         public async Task<Result<Guid>> SendMessageAsync(Guid conversationId, string content, string? fileId = null, Guid? replyToMessageId = null, bool isForwarded = false)
         {

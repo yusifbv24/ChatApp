@@ -138,6 +138,15 @@
                         <div class="messages-in-group">
                             @foreach(var message in group)
                             {
+                                @* Read Later separator appears BEFORE the marked message *@
+                                @* Only show if there's NO unread separator (unread has priority) *@
+                                @if (LastReadLaterMessageId.HasValue && message.Id == LastReadLaterMessageId.Value && !UnreadSeparatorAfterMessageId.HasValue)
+                                {
+                                    <div class="unread-separator" id="read-later-separator">
+                                        <span>Read Later</span>
+                                    </div>
+                                }
+
                                 <MessageBubble @key="message.Id"
                                        MessageId="message.Id"
                                        Content="@message.Content"
@@ -158,12 +167,14 @@
                                        ReplyToContent="@message.ReplyToContent"
                                        ReplyToSenderName="@message.ReplyToSenderName"
                                        IsForwarded="@message.IsForwarded"
+                                       LastReadLaterMessageId="@LastReadLaterMessageId"
                                        OnEdit="()=>StartEditMessage(message.Id,message.Content)"
                                        OnDelete="()=>DeleteMessage(message.Id)"
                                        OnReaction="(emoji)=>AddReaction(message.Id,emoji)"
                                        OnReply="()=>OnReply.InvokeAsync(message.Id)"
                                        OnPin="()=>{}"
                                        OnForward="()=>OnForward.InvokeAsync(message.Id)"
+                                       OnMarkAsLater="OnMarkAsLater"
                                        OnReplyClick="HandleReplyClick"
                                        OnActionCompleted="RefocusInput"
                                        ScrollToBottom="ScrollToBottomAsync" />
@@ -478,7 +489,7 @@
     [Parameter] public string? InitialDraft { get; set; }
     [Parameter] public EventCallback<string> OnDraftChanged { get; set; }
 
-    // Read Later support (channel messages only)
+    // Read Later support (both conversations and channels)
     [Parameter] public Guid? LastReadLaterMessageId { get; set; }
     [Parameter] public EventCallback<Guid> OnMarkAsLater { get; set; }
 

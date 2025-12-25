@@ -12,7 +12,6 @@ namespace ChatApp.Modules.Channels.Domain.Entities
         public DateTime? LeftAtUtc { get; private set; }
         public bool IsActive { get; private set; }
         public Guid? LastReadLaterMessageId { get; private set; }
-        public DateTime? LastReadLaterAtUtc { get; private set; }
 
         // Navigation properties
         public Channel Channel { get; private set; } = null!;
@@ -52,14 +51,12 @@ namespace ChatApp.Modules.Channels.Domain.Entities
         public void MarkMessageAsLater(Guid messageId)
         {
             LastReadLaterMessageId = messageId;
-            LastReadLaterAtUtc = DateTime.UtcNow;
             UpdateTimestamp();
         }
 
         public void UnmarkMessageAsLater()
         {
             LastReadLaterMessageId = null;
-            LastReadLaterAtUtc = null;
             UpdateTimestamp();
         }
     }

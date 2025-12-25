@@ -1,5 +1,6 @@
 ﻿using ChatApp.Modules.DirectMessages.Application.Commands.DirectMessageReactions;
 using ChatApp.Modules.DirectMessages.Application.Commands.DirectMessages;
+using ChatApp.Modules.DirectMessages.Application.Commands.MessageConditions;
 using ChatApp.Modules.DirectMessages.Application.DTOs.Request;
 using ChatApp.Modules.DirectMessages.Application.DTOs.Response;
 using ChatApp.Modules.DirectMessages.Application.Queries;
@@ -278,6 +279,37 @@ namespace ChatApp.Modules.DirectMessages.Api.Controllers
                 return BadRequest(new { error = result.Error });
 
             return Ok(result.Value);
+        }
+
+
+
+        /// <summary>
+        /// Toggles a message as "Read Later" for the current user
+        /// If same message clicked -> unmark (toggle off)
+        /// If different message clicked -> mark new one (auto-switches)
+        /// </summary>
+        [HttpPost("{messageId:guid}/mark-later/toggle")]
+        [RequirePermission("Messages.Read")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> ToggleMessageAsLater(
+            [FromRoute] Guid conversationId,
+            [FromRoute] Guid messageId,
+            CancellationToken cancellationToken)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == Guid.Empty)
+                return Unauthorized();
+
+            var result = await _mediator.Send(
+                new ToggleMessageAsLaterCommand(conversationId, messageId, userId),
+                cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return Ok(new { message = "Read later toggled successfully" });
         }
 
 

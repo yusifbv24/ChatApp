@@ -22,6 +22,10 @@ namespace ChatApp.Modules.DirectMessages.Domain.Entities
         /// </summary>
         public bool HasMessages { get; private set; }
 
+        // Read Later support (per user)
+        public Guid? User1LastReadLaterMessageId { get; private set; }
+        public Guid? User2LastReadLaterMessageId { get; private set; }
+
 
         // Navigation properties
         public ICollection<DirectMessage> Messages { get; private set; } = [];
@@ -102,6 +106,50 @@ namespace ChatApp.Modules.DirectMessages.Domain.Entities
                 return User2Id;
             if (currentUserId == User2Id)
                 return User1Id;
+
+            throw new InvalidOperationException("User is not a participant in this conversation");
+        }
+
+        public void MarkMessageAsLater(Guid userId, Guid messageId)
+        {
+            if (userId == User1Id)
+            {
+                User1LastReadLaterMessageId = messageId;
+            }
+            else if (userId == User2Id)
+            {
+                User2LastReadLaterMessageId = messageId;
+            }
+            else
+            {
+                throw new InvalidOperationException("User is not a participant in this conversation");
+            }
+            UpdateTimestamp();
+        }
+
+        public void UnmarkMessageAsLater(Guid userId)
+        {
+            if (userId == User1Id)
+            {
+                User1LastReadLaterMessageId = null;
+            }
+            else if (userId == User2Id)
+            {
+                User2LastReadLaterMessageId = null;
+            }
+            else
+            {
+                throw new InvalidOperationException("User is not a participant in this conversation");
+            }
+            UpdateTimestamp();
+        }
+
+        public Guid? GetLastReadLaterMessageId(Guid userId)
+        {
+            if (userId == User1Id)
+                return User1LastReadLaterMessageId;
+            if (userId == User2Id)
+                return User2LastReadLaterMessageId;
 
             throw new InvalidOperationException("User is not a participant in this conversation");
         }

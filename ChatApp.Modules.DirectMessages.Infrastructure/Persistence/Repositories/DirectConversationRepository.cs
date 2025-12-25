@@ -93,6 +93,9 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                                                     m.ReceiverId == userId &&
                                                     !m.IsRead &&
                                                     !m.IsDeleted)
+                                       let lastReadLaterMessageId = conv.User1Id == userId
+                                           ? conv.User1LastReadLaterMessageId
+                                           : conv.User2LastReadLaterMessageId
                                        orderby conv.LastMessageAtUtc descending
                                        select new
                                        {
@@ -105,7 +108,8 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                                                ? (lastMessageInfo.IsDeleted ? "This message was deleted" : lastMessageInfo.Content)
                                                : null,
                                            conv.LastMessageAtUtc,
-                                           UnreadCount=unreadCount
+                                           UnreadCount=unreadCount,
+                                           LastReadLaterMessageId=lastReadLaterMessageId
                                        })
                                        .ToListAsync(cancellationToken);
 
@@ -128,7 +132,8 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 c.LastMessage,
                 c.LastMessageAtUtc,
                 c.UnreadCount,
-                onlineStatuses.GetValueOrDefault(c.OtherUserId, false)
+                onlineStatuses.GetValueOrDefault(c.OtherUserId, false),
+                c.LastReadLaterMessageId
             )).ToList();
 
 

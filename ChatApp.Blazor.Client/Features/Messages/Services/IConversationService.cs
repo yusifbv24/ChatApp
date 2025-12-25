@@ -33,5 +33,8 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
 
 
         Task<Result<ReactionToggleResponse>> ToggleReactionAsync(Guid conversationId, Guid messageId, string reaction);
+
+
+        Task<Result> ToggleMessageAsLaterAsync(Guid conversationId, Guid messageId);
     }
 }

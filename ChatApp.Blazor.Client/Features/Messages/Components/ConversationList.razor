@@ -127,6 +127,12 @@
                                 {
                                     <span class="unread-badge">@(item.UnreadCount > 99 ? "99+" : item.UnreadCount.ToString())</span>
                                 }
+                                @{
+                                    if (item.LastReadLaterMessageId.HasValue)
+                                    {
+                                        Console.WriteLine($"[ConversationList Render] Item {item.Id}: Showing badge for {item.LastReadLaterMessageId}");
+                                    }
+                                }
                                 @if (item.LastReadLaterMessageId.HasValue)
                                 {
                                     <span class="read-later-badge">
@@ -180,6 +186,18 @@
                                 {
                                     <span class="unread-badge">@(item.UnreadCount > 99 ? "99+" : item.UnreadCount.ToString())</span>
                                 }
+                                @{
+                                    if (item.LastReadLaterMessageId.HasValue)
+                                    {
+                                        Console.WriteLine($"[ConversationList Render DM] Item {item.Id}: Showing badge for {item.LastReadLaterMessageId}");
+                                    }
+                                }
+                                @if (item.LastReadLaterMessageId.HasValue)
+                                {
+                                    <span class="read-later-badge">
+                                        <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" />
+                                    </span>
+                                }
                             </div>
                         </div>
                     </div>
@@ -232,7 +250,7 @@
         public int MemberCount { get; set; } // For channels
         public bool HasDraft { get; set; } // Draft indicator
         public string? DraftText { get; set; } // Draft content preview
-        public Guid? LastReadLaterMessageId { get; set; } // For channels: read later marker
+        public Guid? LastReadLaterMessageId { get; set; } // Read later marker (both conversations and channels)
 
         // Original references for selection
         public DirectConversationDto? DirectConversation { get; set; }
@@ -254,6 +272,11 @@
                 MessageDrafts.TryGetValue(draftKey, out var draftText);
                 var hasDraft = !isSelected && !string.IsNullOrWhiteSpace(draftText);
 
+                if (conv.LastReadLaterMessageId.HasValue)
+                {
+                    Console.WriteLine($"[ConversationList] Conv {conv.Id}: LastReadLaterMessageId = {conv.LastReadLaterMessageId}");
+                }
+
                 items.Add(new UnifiedChatItem
                 {
                     Id = conv.Id,
@@ -266,6 +289,7 @@
                     IsChannel = false,
                     HasDraft = hasDraft,
                     DraftText = hasDraft ? draftText : null,
+                    LastReadLaterMessageId = conv.LastReadLaterMessageId,
                     DirectConversation = conv
                 });
             }

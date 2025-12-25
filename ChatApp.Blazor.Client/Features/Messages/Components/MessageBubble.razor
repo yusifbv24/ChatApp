@@ -230,9 +230,9 @@
                             <span>Add to Favorites</span>
                             <MudIcon Icon="@Icons.Material.Outlined.StarBorder" Size="Size.Small" />
                         </button>
-                        @if (!IsDirectMessage && !IsMarkedAsLater)
+                        @if (!IsMarkedAsLater)
                         {
-                            @* Mark as Later - only for channel messages and not already marked *@
+                            @* Mark as Later - for both channel and conversation messages, not already marked *@
                             <button class="menu-item" @onclick="HandleMarkAsLaterClick">
                                 <span>Mark as Later</span>
                                 <MudIcon Icon="@Icons.Material.Outlined.WatchLater" Size="Size.Small" />

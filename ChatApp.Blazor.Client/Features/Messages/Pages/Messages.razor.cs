@@ -2,6 +2,7 @@
 using ChatApp.Blazor.Client.Features.Messages.Services;
 using ChatApp.Blazor.Client.Infrastructure.SignalR;
 using ChatApp.Blazor.Client.Models.Auth;
+using ChatApp.Blazor.Client.Models.Common;
 using ChatApp.Blazor.Client.Models.Messages;
 using ChatApp.Blazor.Client.State;
 using Microsoft.AspNetCore.Components;
@@ -1771,7 +1772,7 @@ public partial class Messages : IAsyncDisposable
             pendingMessageAdds.Clear(); // Clear pending message adds when changing conversations
             pageSize = 50; // Reset page size to 50 for new conversation
 
-            // Auto-unmark read later if user saw separator
+            // Auto-unmark read later if user saw separator (channel)
             if (selectedChannelId.HasValue && lastReadLaterMessageId.HasValue && lastReadLaterMessageIdOnEntry.HasValue)
             {
                 try
@@ -1789,14 +1790,32 @@ public partial class Messages : IAsyncDisposable
                 catch { }
             }
 
+            // Auto-unmark read later if user saw separator (conversation)
+            if (selectedConversationId.HasValue && lastReadLaterMessageId.HasValue && lastReadLaterMessageIdOnEntry.HasValue)
+            {
+                try
+                {
+                    await ConversationService.ToggleMessageAsLaterAsync(selectedConversationId.Value, lastReadLaterMessageId.Value);
+
+                    // Update conversations list
+                    var conversationIndex = conversations.FindIndex(c => c.Id == selectedConversationId.Value);
+                    if (conversationIndex >= 0)
+                    {
+                        conversations[conversationIndex] = conversations[conversationIndex] with { LastReadLaterMessageId = null };
+                        conversations = conversations.ToList();
+                    }
+                }
+                catch { }
+            }
+
             // Reset unread separator
             unreadSeparatorAfterMessageId = null;
             shouldCalculateUnreadSeparator = conversation.UnreadCount > 0;
             currentMemberLastReadAtUtc = null;
 
-            // Reset read later marker (only applies to channels)
-            lastReadLaterMessageId = null;
-            lastReadLaterMessageIdOnEntry = null;
+            // Set read later marker from conversation DTO
+            lastReadLaterMessageId = conversation.LastReadLaterMessageId;
+            lastReadLaterMessageIdOnEntry = conversation.LastReadLaterMessageId; // Track on entry
 
             // Set conversation details AFTER clearing
             selectedConversationId = conversation.Id;
@@ -2058,6 +2077,24 @@ public partial class Messages : IAsyncDisposable
         // Leave previous conversation group if switching from conversation to channel
         if (selectedConversationId.HasValue)
         {
+            // Auto-unmark read later if user saw separator (conversation)
+            if (lastReadLaterMessageId.HasValue && lastReadLaterMessageIdOnEntry.HasValue)
+            {
+                try
+                {
+                    await ConversationService.ToggleMessageAsLaterAsync(selectedConversationId.Value, lastReadLaterMessageId.Value);
+
+                    // Update conversations list
+                    var conversationIndex = conversations.FindIndex(c => c.Id == selectedConversationId.Value);
+                    if (conversationIndex >= 0)
+                    {
+                        conversations[conversationIndex] = conversations[conversationIndex] with { LastReadLaterMessageId = null };
+                        conversations = conversations.ToList();
+                    }
+                }
+                catch { }
+            }
+
             await SignalRService.LeaveConversationAsync(selectedConversationId.Value);
         }
 
@@ -3085,11 +3122,24 @@ public partial class Messages : IAsyncDisposable
 
     private async Task HandleToggleMarkAsLaterClick(Guid messageId)
     {
-        if (!selectedChannelId.HasValue) return;
-
         try
         {
-            var result = await ChannelService.ToggleMessageAsLaterAsync(selectedChannelId.Value, messageId);
+            Result result;
+
+            // Check if we're in a channel or conversation
+            if (selectedChannelId.HasValue)
+            {
+                result = await ChannelService.ToggleMessageAsLaterAsync(selectedChannelId.Value, messageId);
+            }
+            else if (selectedConversationId.HasValue)
+            {
+                result = await ConversationService.ToggleMessageAsLaterAsync(selectedConversationId.Value, messageId);
+            }
+            else
+            {
+                return; // Neither channel nor conversation selected
+            }
+
             if (result.IsSuccess)
             {
                 // Toggle state
@@ -3107,13 +3157,27 @@ public partial class Messages : IAsyncDisposable
                     unreadSeparatorAfterMessageId = null;
                 }
 
-                // Update channels list
-                var channelIndex = channels.FindIndex(c => c.Id == selectedChannelId.Value);
-                if (channelIndex >= 0)
+                // Update channels or conversations list
+                if (selectedChannelId.HasValue)
                 {
-                    var currentChannel = channels[channelIndex];
-                    channels[channelIndex] = currentChannel with { LastReadLaterMessageId = lastReadLaterMessageId };
-                    channels = channels.ToList();
+                    var channelIndex = channels.FindIndex(c => c.Id == selectedChannelId.Value);
+                    if (channelIndex >= 0)
+                    {
+                        var currentChannel = channels[channelIndex];
+                        channels[channelIndex] = currentChannel with { LastReadLaterMessageId = lastReadLaterMessageId };
+                        // Force new reference for Blazor change detection
+                        channels = new List<ChannelDto>(channels);
+                    }
+                }
+                else if (selectedConversationId.HasValue)
+                {
+                    var conversationIndex = conversations.FindIndex(c => c.Id == selectedConversationId.Value);
+                    if (conversationIndex >= 0)
+                    {
+                        conversations[conversationIndex] = conversations[conversationIndex] with { LastReadLaterMessageId = lastReadLaterMessageId };
+                        // Force new reference for Blazor change detection
+                        conversations = new List<DirectConversationDto>(conversations);
+                    }
                 }
 
                 StateHasChanged();

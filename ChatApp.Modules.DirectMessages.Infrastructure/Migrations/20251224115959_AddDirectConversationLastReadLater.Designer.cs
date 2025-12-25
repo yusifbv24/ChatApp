@@ -3,6 +3,7 @@ using System;
 using ChatApp.Modules.DirectMessages.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ChatApp.Modules.DirectMessages.Infrastructure.Migrations
 {
     [DbContext(typeof(DirectMessagesDbContext))]
-    partial class DirectMessagesDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251224115959_AddDirectConversationLastReadLater")]
+    partial class AddDirectConversationLastReadLater
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -92,12 +95,18 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("user1_id");
 
+                    b.Property<DateTime?>("User1LastReadLaterAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<Guid?>("User1LastReadLaterMessageId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("User2Id")
                         .HasColumnType("uuid")
                         .HasColumnName("user2_id");
+
+                    b.Property<DateTime?>("User2LastReadLaterAtUtc")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid?>("User2LastReadLaterMessageId")
                         .HasColumnType("uuid");

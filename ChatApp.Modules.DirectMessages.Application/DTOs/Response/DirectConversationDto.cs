@@ -9,5 +9,6 @@
         string? LastMessageContent,
         DateTime LastMessageAtUtc,
         int UnreadCount,
-        bool IsOtherUserOnline);
+        bool IsOtherUserOnline,
+        Guid? LastReadLaterMessageId = null);
 }
