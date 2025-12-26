@@ -554,6 +554,7 @@
     private bool _hasScrolledToSeparator = false;
     private Guid? _previousUnreadSeparatorId = null;
     private bool _hasScrolledToReadLaterSeparator = false;
+    private Guid? _previousReadLaterMessageId = null;
 
     // Add member panel state
     private string memberSearchQuery = string.Empty;
@@ -574,6 +575,13 @@
         {
             _hasScrolledToSeparator = false;
             _previousUnreadSeparatorId = UnreadSeparatorAfterMessageId;
+        }
+
+        // Reset scroll flag if read later message changed (new conversation/channel selected)
+        if (LastReadLaterMessageId != _previousReadLaterMessageId)
+        {
+            _hasScrolledToReadLaterSeparator = false;
+            _previousReadLaterMessageId = LastReadLaterMessageId;
         }
 
         // Check if new messages were added (but not from load more)
@@ -650,7 +658,7 @@
             await Task.Delay(100);
             await ScrollToUnreadSeparatorAsync();
         }
-        else if (LastReadLaterMessageId.HasValue && !_hasScrolledToReadLaterSeparator && ChannelMessages.Any())
+        else if (LastReadLaterMessageId.HasValue && !_hasScrolledToReadLaterSeparator && (DirectMessages.Any() || ChannelMessages.Any()))
         {
             // Scroll to read later separator on first render if no unread separator (priority 2)
             _hasScrolledToReadLaterSeparator = true;
