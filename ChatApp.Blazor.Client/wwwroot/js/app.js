@@ -221,6 +221,15 @@ window.chatAppUtils = {
         return element.scrollTop;
     },
 
+    // Check if element is near bottom (within threshold pixels)
+    isNearBottom: (element, threshold = 100) => {
+        if (!element) return true;
+        const scrollTop = element.scrollTop;
+        const scrollHeight = element.scrollHeight;
+        const clientHeight = element.clientHeight;
+        return (scrollHeight - scrollTop - clientHeight) <= threshold;
+    },
+
     // Intersection Observer for infinite scroll
     observeLoadMoreTrigger: (triggerElement, dotNetHelper) => {
         if (!triggerElement) return null;

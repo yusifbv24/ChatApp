@@ -274,6 +274,18 @@
             <div @ref="scrollAnchorRef"></div>
         </div>
 
+        <!-- Scroll to Bottom Float Button -->
+        @if (showScrollToBottom)
+        {
+            <button class="scroll-to-bottom-btn" @onclick="ScrollToBottomAndFocusAsync" type="button">
+                <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Medium" />
+                @if (newMessagesCount > 0)
+                {
+                    <span class="new-messages-badge">@(newMessagesCount > 99 ? "99+" : newMessagesCount.ToString())</span>
+                }
+            </button>
+        }
+
         <!-- Message Input or Selection Toolbar -->
         @if (IsSelectMode)
         {
@@ -527,6 +539,8 @@
     private bool showSearch = false;
     private bool showInfoPanel = false;
     private bool showAddMemberPanel = false;
+    private bool showScrollToBottom = false;
+    private int newMessagesCount = 0;
     private string SearchQuery { get; set; } = string.Empty;
     private bool isEditing = false;
     private Guid editingMessageId;
@@ -583,7 +597,18 @@
 
             if (isNewIncomingMessage && !_isLoadingMore && !isEditing)
             {
-                _shouldScrollToBottom = true;
+                // If user is scrolled up (float button visible), don't auto-scroll
+                // Instead, increment the new messages counter
+                if (showScrollToBottom)
+                {
+                    newMessagesCount += messageIncrease;
+                    StateHasChanged();
+                }
+                else
+                {
+                    // User is at bottom, auto-scroll to show new message
+                    _shouldScrollToBottom = true;
+                }
             }
         }
 
@@ -650,6 +675,23 @@
         }
     }
 
+    private async Task ScrollToBottomAndFocusAsync()
+    {
+        // Hide the scroll button immediately and reset counter
+        showScrollToBottom = false;
+        newMessagesCount = 0;
+        StateHasChanged();
+
+        // Scroll to bottom
+        await ScrollToBottomAsync();
+
+        // Focus message input
+        if (messageInputRef != null)
+        {
+            await messageInputRef.FocusAsync();
+        }
+    }
+
     private async Task ScrollToUnreadSeparatorAsync()
     {
         try
@@ -696,11 +738,23 @@
 
     private string FormatDateDivider(DateTime date)
     {
-        var today = DateTime.UtcNow.Date;
-        if (date == today) return "Today";
-        if (date == today.AddDays(-1)) return "Yesterday";
-        if ((today - date).TotalDays < 7) return date.ToString("dddd", System.Globalization.CultureInfo.InvariantCulture);
-        return date.ToString("MMMM d, yyyy", System.Globalization.CultureInfo.InvariantCulture);
+        var now = DateTime.Now;
+        var today = now.Date;
+
+        // Bu günün mesajı - "today" (balaca hərflərlə)
+        if (date == today)
+        {
+            return "today";
+        }
+
+        // Bu ilin mesajı - "Tuesday, December 23" formatı
+        if (date.Year == now.Year)
+        {
+            return date.ToString("dddd, MMMM d", System.Globalization.CultureInfo.InvariantCulture);
+        }
+
+        // Keçən ilin mesajı - "Tuesday, September 17, 2019" formatı
+        return date.ToString("dddd, MMMM d, yyyy", System.Globalization.CultureInfo.InvariantCulture);
     }
 
     private string GetInputPlaceholder()
@@ -869,6 +923,23 @@
         {
             // Get current scroll position
             var scrollTop = await JS.InvokeAsync<int>("chatAppUtils.getScrollTop", messagesContainerRef);
+
+            // Check if user is near bottom (within 300px) to show/hide scroll button
+            var isNearBottom = await JS.InvokeAsync<bool>("chatAppUtils.isNearBottom", messagesContainerRef, 300);
+            var shouldShow = !isNearBottom;
+
+            if (showScrollToBottom != shouldShow)
+            {
+                showScrollToBottom = shouldShow;
+
+                // Reset counter when user scrolls to bottom manually
+                if (!shouldShow)
+                {
+                    newMessagesCount = 0;
+                }
+
+                StateHasChanged();
+            }
 
             // Cancel any pending scroll to bottom when user manually scrolls
             if (_shouldScrollToBottom && scrollTop > 0)
