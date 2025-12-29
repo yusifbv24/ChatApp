@@ -2098,15 +2098,14 @@ public partial class Messages : IAsyncDisposable
                 }
 
                 // Calculate unread separator position (for channels)
-                if (currentMemberLastReadAtUtc.HasValue)
-                {
-                    CalculateUnreadSeparatorPosition(
-                        messages,
-                        m => m.CreatedAtUtc > currentMemberLastReadAtUtc.Value && m.SenderId != currentUserId,
-                        m => m.Id,
-                        m => m.CreatedAtUtc
-                    );
-                }
+                // Use ReadBy property instead of timestamp (same pattern as direct messages)
+                // NOTE: Mark-as-read happens when LEAVING channel, not when loading messages
+                CalculateUnreadSeparatorPosition(
+                    messages,
+                    m => m.SenderId != currentUserId && (m.ReadBy == null || !m.ReadBy.Contains(currentUserId)),
+                    m => m.Id,
+                    m => m.CreatedAtUtc
+                );
             }
         }
         catch (Exception ex)
@@ -2280,49 +2279,13 @@ public partial class Messages : IAsyncDisposable
             }
         }
 
-        // Join SignalR group
-        await SignalRService.JoinChannelAsync(channel.Id);
+            // Join SignalR group
+            await SignalRService.JoinChannelAsync(channel.Id);
 
-        // Load messages and pinned count
-        await LoadChannelMessages();
-        await LoadPinnedMessageCount();
-
-        // CRITICAL: Mark NEW channel as read AFTER loading
-        // This must be called even if previous channel mark-as-read failed
-        // Use smart threshold: 5+ messages = bulk, <5 messages = individual
-        try
-        {
-            var unreadMessages = channelMessages.Where(m =>
-                m.SenderId != currentUserId &&
-                (m.ReadBy == null || !m.ReadBy.Contains(currentUserId))
-            ).ToList();
-
-            if (unreadMessages.Count >= 5)
-            {
-                // Bulk operation for 5+ unread messages
-                var markResult = await ChannelService.MarkAsReadAsync(channel.Id);
-                if (!markResult.IsSuccess)
-                {
-                    Console.WriteLine($"[SelectChannel] Bulk mark-as-read failed: {markResult.Error}");
-                }
-            }
-            else if (unreadMessages.Count > 0)
-            {
-                // Individual operations for 1-4 unread messages
-                foreach (var msg in unreadMessages)
-                {
-                    var markResult = await ChannelService.MarkSingleMessageAsReadAsync(channel.Id, msg.Id);
-                    if (!markResult.IsSuccess)
-                    {
-                        Console.WriteLine($"[SelectChannel] Single mark-as-read failed for message {msg.Id}: {markResult.Error}");
-                    }
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[SelectChannel] Mark-as-read exception: {ex.Message}");
-        }
+            // Load messages and pinned count
+            // NOTE: LoadChannelMessages now handles mark-as-read (same pattern as LoadDirectMessages)
+            await LoadChannelMessages();
+            await LoadPinnedMessageCount();
 
             // Update URL
             NavigationManager.NavigateTo($"/messages/channel/{channel.Id}", false);
