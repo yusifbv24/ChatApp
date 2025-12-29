@@ -358,6 +358,9 @@ public partial class Messages : IAsyncDisposable
         SignalRService.OnChannelMessageReactionsUpdated += HandleChannelMessageReactionsUpdated;
         SignalRService.OnChannelMessagesRead += HandleChannelMessagesRead;
         SignalRService.OnAddedToChannel += HandleAddedToChannel;
+
+        // CRITICAL: Rejoin groups after reconnection
+        SignalRService.OnReconnected += HandleSignalRReconnected;
     }
 
     private void HandleNewDirectMessage(DirectMessageDto message)
@@ -3078,6 +3081,36 @@ public partial class Messages : IAsyncDisposable
                 // Add channel to the list
                 channels.Insert(0, channel);
                 StateHasChanged();
+            }
+        });
+    }
+
+    /// <summary>
+    /// Handles SignalR reconnection - rejoins current channel/conversation group
+    /// CRITICAL for maintaining real-time updates after connection loss
+    /// </summary>
+    private void HandleSignalRReconnected()
+    {
+        InvokeAsync(async () =>
+        {
+            try
+            {
+                // Rejoin current channel group if channel is selected
+                if (selectedChannelId.HasValue)
+                {
+                    await SignalRService.JoinChannelAsync(selectedChannelId.Value);
+                }
+                // Rejoin current conversation group if conversation is selected
+                else if (selectedConversationId.HasValue)
+                {
+                    await SignalRService.JoinConversationAsync(selectedConversationId.Value);
+                }
+
+                StateHasChanged();
+            }
+            catch
+            {
+                // Silently handle reconnection errors - connection will retry automatically
             }
         });
     }

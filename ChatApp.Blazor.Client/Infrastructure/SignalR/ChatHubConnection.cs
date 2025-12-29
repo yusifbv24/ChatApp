@@ -12,6 +12,7 @@ public class ChatHubConnection : IChatHubConnection, IAsyncDisposable
     private readonly HttpClient _httpClient;
     private readonly string _hubUrl;
     private string? _cachedToken;
+    private Timer? _tokenRefreshTimer;
 
     // Connection lifecycle events
     public event Func<Exception?, Task>? Reconnecting;
@@ -43,6 +44,10 @@ public class ChatHubConnection : IChatHubConnection, IAsyncDisposable
                 // Provide access token for authentication
                 options.AccessTokenProvider = () => Task.FromResult(_cachedToken);
             })
+            // CRITICAL: Must match server timeout configuration
+            // Server: KeepAliveInterval = 30s, ClientTimeoutInterval = 2min
+            // Client must wait slightly longer to account for network delays
+            .WithServerTimeout(TimeSpan.FromMinutes(2.5)) // 2min + 30s buffer
             // Aggressive reconnection strategy: keep trying for much longer
             .WithAutomaticReconnect(new[]
             {
@@ -62,7 +67,6 @@ public class ChatHubConnection : IChatHubConnection, IAsyncDisposable
         // Handle reconnection - refresh token when reconnecting
         _hubConnection.Reconnecting += async (error) =>
         {
-            Console.WriteLine($"SignalR reconnecting: {error?.Message}");
             _cachedToken = await GetAccessTokenAsync();
 
             // Propagate event to subscribers
@@ -72,8 +76,6 @@ public class ChatHubConnection : IChatHubConnection, IAsyncDisposable
 
         _hubConnection.Reconnected += async (connectionId) =>
         {
-            Console.WriteLine($"SignalR reconnected with ID: {connectionId}");
-
             // Propagate event to subscribers
             if (Reconnected != null)
                 await Reconnected(connectionId);
@@ -81,15 +83,31 @@ public class ChatHubConnection : IChatHubConnection, IAsyncDisposable
 
         _hubConnection.Closed += async (error) =>
         {
-            Console.WriteLine($"SignalR connection closed: {error?.Message}");
-
             // Propagate event to subscribers
             if (Closed != null)
                 await Closed(error);
         };
 
         await _hubConnection.StartAsync();
-        Console.WriteLine("SignalR connection started successfully");
+
+        // Start token refresh timer for long sessions
+        // Refresh token every 30 minutes to prevent expiration during stable connections
+        // This ensures reconnection succeeds even after 1+ hour sessions
+        _tokenRefreshTimer = new Timer(async _ =>
+        {
+            try
+            {
+                var newToken = await GetAccessTokenAsync();
+                if (!string.IsNullOrEmpty(newToken))
+                {
+                    _cachedToken = newToken;
+                }
+            }
+            catch
+            {
+                // Silently handle token refresh failures
+            }
+        }, null, TimeSpan.FromMinutes(30), TimeSpan.FromMinutes(30));
     }
 
     /// <summary>
@@ -102,9 +120,8 @@ public class ChatHubConnection : IChatHubConnection, IAsyncDisposable
             var response = await _httpClient.GetFromJsonAsync<SignalRTokenResponse>("/api/auth/signalr-token");
             return response?.Token;
         }
-        catch (Exception ex)
+        catch
         {
-            Console.WriteLine($"Failed to get SignalR token: {ex.Message}");
             return null;
         }
     }
@@ -137,7 +154,6 @@ public class ChatHubConnection : IChatHubConnection, IAsyncDisposable
         // Check if connection is active before sending
         if (_hubConnection.State != HubConnectionState.Connected)
         {
-            Console.WriteLine($"SignalR connection is {_hubConnection.State}. Cannot send message: {method}");
             // Silently ignore if connection is not active (graceful degradation)
             return;
         }
@@ -147,9 +163,8 @@ public class ChatHubConnection : IChatHubConnection, IAsyncDisposable
             // Use SendCoreAsync to properly spread the arguments (fire-and-forget)
             await _hubConnection.SendCoreAsync(method, args);
         }
-        catch (Exception ex)
+        catch
         {
-            Console.WriteLine($"Error sending SignalR message '{method}': {ex.Message}");
             // Gracefully handle errors - don't crash the app
         }
     }
@@ -164,7 +179,6 @@ public class ChatHubConnection : IChatHubConnection, IAsyncDisposable
         // Check if connection is active before invoking
         if (_hubConnection.State != HubConnectionState.Connected)
         {
-            Console.WriteLine($"SignalR connection is {_hubConnection.State}. Cannot invoke method: {methodName}");
             throw new InvalidOperationException($"SignalR connection is not active (State: {_hubConnection.State})");
         }
 
@@ -173,9 +187,8 @@ public class ChatHubConnection : IChatHubConnection, IAsyncDisposable
             // Use InvokeAsync to call server method and wait for result
             return await _hubConnection.InvokeCoreAsync<TResult>(methodName, args);
         }
-        catch (Exception ex)
+        catch
         {
-            Console.WriteLine($"Error invoking SignalR method '{methodName}': {ex.Message}");
             throw;
         }
     }
@@ -222,6 +235,9 @@ public class ChatHubConnection : IChatHubConnection, IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        // Dispose token refresh timer
+        _tokenRefreshTimer?.Dispose();
+
         if (_hubConnection != null)
         {
             await _hubConnection.DisposeAsync();

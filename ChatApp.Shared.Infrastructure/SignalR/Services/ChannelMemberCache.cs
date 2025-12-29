@@ -8,11 +8,15 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Services
     /// - User sends message to channel (SendChannelMessageCommand updates cache)
     /// - Members added/removed (AddMemberCommand/RemoveMemberCommand updates cache)
     /// - Channel selected (frontend can trigger cache refresh)
+    ///
+    /// PERFORMANCE: 5-minute expiration reduces stale data while maintaining typing indicator performance
     /// </summary>
     public class ChannelMemberCache : IChannelMemberCache
     {
         private readonly IMemoryCache _cache;
-        private readonly TimeSpan _cacheExpiration = TimeSpan.FromMinutes(30);
+        // OPTIMIZED: Reduced from 30min to 5min to minimize stale member lists
+        // Prevents typing notifications being sent to disconnected users
+        private readonly TimeSpan _cacheExpiration = TimeSpan.FromMinutes(5);
 
         public ChannelMemberCache(IMemoryCache cache)
         {
@@ -37,7 +41,11 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Services
         {
             var cacheKey = GetCacheKey(channelId);
 
-            _cache.Set(cacheKey, memberUserIds, _cacheExpiration);
+            // Configure cache with absolute expiration
+            var cacheOptions = new MemoryCacheEntryOptions()
+                .SetAbsoluteExpiration(_cacheExpiration);
+
+            _cache.Set(cacheKey, memberUserIds, cacheOptions);
 
             return Task.CompletedTask;
         }

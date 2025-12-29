@@ -55,7 +55,8 @@
       "Bash(cmd /c taskkill /F /PID 16564)",
       "Bash(cmd /c taskkill /F /PID 13608)",
       "Bash(cmd /c taskkill /F /PID 19012)",
-      "Bash(cmd /c \"taskkill /F /IM dotnet.exe /T\")"
+      "Bash(cmd /c \"taskkill /F /IM dotnet.exe /T\")",
+      "Bash(cmd /c taskkill /F /PID 17848)"
     ],
     "deny": [],
     "ask": []
