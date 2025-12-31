@@ -20,6 +20,9 @@ namespace ChatApp.Modules.DirectMessages.Domain.Entities
         public DateTime? ReadAtUtc { get; private set; }
         public Guid? ReplyToMessageId { get; private set; }
         public bool IsForwarded { get; private set; }
+        public bool IsPinned { get; private set; }
+        public DateTime? PinnedAtUtc { get; private set; }
+        public Guid? PinnedBy { get; private set; }
 
         // Navigation properties
         public DirectConversation Conversation { get; private set; } = null!;
@@ -50,6 +53,7 @@ namespace ChatApp.Modules.DirectMessages.Domain.Entities
             IsEdited= false;
             IsDeleted= false;
             IsRead= false;
+            IsPinned= false;
             ReplyToMessageId = replyToMessageId;
             IsForwarded = isForwarded;
         }
@@ -121,6 +125,25 @@ namespace ChatApp.Modules.DirectMessages.Domain.Entities
                 Reactions.Remove(reaction);
                 // Don't update UpdatedAtUtc - reactions are child entities and shouldn't modify parent
             }
+        }
+
+        public void Pin(Guid pinnedBy)
+        {
+            if (IsDeleted)
+                throw new InvalidOperationException("Cannot pin deleted message");
+
+            IsPinned = true;
+            PinnedAtUtc = DateTime.UtcNow;
+            PinnedBy = pinnedBy;
+            UpdatedAtUtc = DateTime.UtcNow;
+        }
+
+        public void Unpin()
+        {
+            IsPinned = false;
+            PinnedAtUtc = null;
+            PinnedBy = null;
+            UpdatedAtUtc = DateTime.UtcNow;
         }
     }
 }

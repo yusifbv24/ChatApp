@@ -32,12 +32,17 @@
                   RecipientName="@recipientName"
                   RecipientAvatarUrl="@recipientAvatarUrl"
                   IsRecipientOnline="@isRecipientOnline"
+                  FirstPinnedMessageSender="@firstPinnedDirectMessageSender"
+                  FirstPinnedMessageContent="@firstPinnedDirectMessageContent"
                   ChannelMessages="@channelMessages"
                   ChannelName="@selectedChannelName"
                   ChannelDescription="@selectedChannelDescription"
                   ChannelType="@selectedChannelType"
                   MemberCount="@selectedChannelMemberCount"
                   PinnedCount="@pinnedMessageCount"
+                  PinnedDirectMessageCount="@pinnedDirectMessageCount"
+                  FirstPinnedChannelMessageSender="@firstPinnedChannelMessageSender"
+                  FirstPinnedChannelMessageContent="@firstPinnedChannelMessageContent"
                   IsChannelAdmin="@isChannelAdmin"
                   IsLoading="@isLoadingMessages"
                   IsLoadingMore="@isLoadingMoreMessages"
@@ -65,6 +70,8 @@
                   OnTyping="HandleTyping"
                   OnLoadMore="LoadMoreMessages"
                   OnShowPinnedMessages="ShowPinnedMessages"
+                  OnPinDirectMessage="HandlePinDirectMessage"
+                  OnUnpinDirectMessage="HandleUnpinDirectMessage"
                   OnSearchUsers="SearchUsersForAddMember"
                   OnAddMember="AddMemberToChannel"
                   OnMarkAsLater="HandleToggleMarkAsLaterClick"
@@ -207,7 +214,7 @@
         <div class="dialog-overlay" @onclick="ClosePinnedMessagesDialog">
             <div class="dialog-content pinned-dialog" @onclick:stopPropagation="true">
                 <div class="dialog-header">
-                    <h3>Pinned Messages</h3>
+                    <h3>Pinned Messages (@(isDirectMessage ? pinnedDirectMessages.Count : pinnedMessages.Count))</h3>
                     <button class="dialog-close-btn" @onclick="ClosePinnedMessagesDialog">
                         <MudIcon Icon="@Icons.Material.Filled.Close" />
                     </button>
@@ -220,12 +227,27 @@
                             <span>Loading pinned messages...</span>
                         </div>
                     }
-                    else if (pinnedMessages.Any())
+                    else if (isDirectMessage && pinnedDirectMessages.Any())
+                    {
+                        <div class="pinned-messages-list">
+                            @foreach (var message in pinnedDirectMessages)
+                            {
+                                <div class="pinned-message-item" @onclick="() => ScrollToMessage(message.Id)">
+                                    <div class="pinned-message-header">
+                                        <span class="pinned-sender">@message.SenderDisplayName</span>
+                                        <span class="pinned-date">@message.CreatedAtUtc.ToLocalTime().ToString("MMM d, HH:mm")</span>
+                                    </div>
+                                    <div class="pinned-message-content">@message.Content</div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else if (!isDirectMessage && pinnedMessages.Any())
                     {
                         <div class="pinned-messages-list">
                             @foreach (var message in pinnedMessages)
                             {
-                                <div class="pinned-message-item">
+                                <div class="pinned-message-item" @onclick="() => ScrollToMessage(message.Id)">
                                     <div class="pinned-message-header">
                                         <span class="pinned-sender">@message.SenderDisplayName</span>
                                         <span class="pinned-date">@message.CreatedAtUtc.ToLocalTime().ToString("MMM d, HH:mm")</span>

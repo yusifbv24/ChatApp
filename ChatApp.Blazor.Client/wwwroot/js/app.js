@@ -198,6 +198,23 @@ window.chatAppUtils = {
         }
     },
 
+    // Scroll to a message wrapper and highlight it (for pinned messages)
+    scrollToMessageAndHighlight: (messageId) => {
+        const messageElement = document.getElementById(messageId);
+        if (messageElement) {
+            // Scroll the message into view
+            messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            // Add highlight class to the message wrapper
+            messageElement.classList.add('highlighted');
+
+            // Remove highlight after animation completes (2 seconds to match animation duration)
+            setTimeout(() => {
+                messageElement.classList.remove('highlighted');
+            }, 2000);
+        }
+    },
+
     // Page Visibility API - Check if page is currently visible
     isPageVisible: () => {
         return !document.hidden;

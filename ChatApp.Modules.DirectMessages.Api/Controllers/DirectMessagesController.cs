@@ -4,6 +4,7 @@ using ChatApp.Modules.DirectMessages.Application.Commands.MessageConditions;
 using ChatApp.Modules.DirectMessages.Application.DTOs.Request;
 using ChatApp.Modules.DirectMessages.Application.DTOs.Response;
 using ChatApp.Modules.DirectMessages.Application.Queries;
+using ChatApp.Modules.DirectMessages.Application.Queries.GetPinnedMessages;
 using ChatApp.Shared.Infrastructure.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -90,6 +91,35 @@ namespace ChatApp.Modules.DirectMessages.Api.Controllers
                 return BadRequest(new { error = result.Error });
 
             return Ok(new {unreadCount=result.Value});
+        }
+
+
+
+
+        /// <summary>
+        /// Gets pinned messages in a conversation
+        /// </summary>
+        [HttpGet("pinned")]
+        [RequirePermission("Messages.Read")]
+        [ProducesResponseType(typeof(List<DirectMessageDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<IActionResult> GetPinnedMessages(
+            [FromRoute] Guid conversationId,
+            CancellationToken cancellationToken)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == Guid.Empty)
+                return Unauthorized();
+
+            var result = await _mediator.Send(
+                new GetPinnedMessagesQuery(conversationId, userId),
+                cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return Ok(result.Value);
         }
 
 
@@ -310,6 +340,68 @@ namespace ChatApp.Modules.DirectMessages.Api.Controllers
                 return BadRequest(new { error = result.Error });
 
             return Ok(new { message = "Read later toggled successfully" });
+        }
+
+
+
+
+        /// <summary>
+        /// Pins a message
+        /// </summary>
+        [HttpPost("{messageId:guid}/pin")]
+        [RequirePermission("Messages.Read")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<IActionResult> PinMessage(
+            [FromRoute] Guid conversationId,
+            [FromRoute] Guid messageId,
+            CancellationToken cancellationToken)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == Guid.Empty)
+                return Unauthorized();
+
+            var result = await _mediator.Send(
+                new PinDirectMessageCommand(messageId, userId),
+                cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return Ok(new { message = "Message pinned successfully" });
+        }
+
+
+
+
+        /// <summary>
+        /// Unpins a message
+        /// </summary>
+        [HttpDelete("{messageId:guid}/pin")]
+        [RequirePermission("Messages.Read")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<IActionResult> UnpinMessage(
+            [FromRoute] Guid conversationId,
+            [FromRoute] Guid messageId,
+            CancellationToken cancellationToken)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == Guid.Empty)
+                return Unauthorized();
+
+            var result = await _mediator.Send(
+                new UnpinDirectMessageCommand(messageId, userId),
+                cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return Ok(new { message = "Message unpinned successfully" });
         }
 
 

@@ -21,6 +21,13 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
         }
 
 
+        public Task UpdateAsync(DirectMessage message, CancellationToken cancellationToken = default)
+        {
+            _context.DirectMessages.Update(message);
+            return Task.CompletedTask;
+        }
+
+
         public Task DeleteAsync(DirectMessage message, CancellationToken cancellationToken = default)
         {
             _context.DirectMessages.Remove(message);
@@ -66,9 +73,11 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                             message.IsEdited,
                             message.IsDeleted,
                             message.IsRead,
+                            message.IsPinned,
                             message.CreatedAtUtc,
                             message.EditedAtUtc,
                             message.ReadAtUtc,
+                            message.PinnedAtUtc,
                             ReactionCount = _context.DirectMessageReactions.Count(r => r.MessageId == message.Id),
                             message.ReplyToMessageId,
                             ReplyToContent = repliedMessage != null && !repliedMessage.IsDeleted ? repliedMessage.Content : null,
@@ -104,10 +113,12 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 result.IsEdited,
                 result.IsDeleted,
                 result.IsRead,
+                result.IsPinned,
                 result.ReactionCount,
                 result.CreatedAtUtc,
                 result.EditedAtUtc,
                 result.ReadAtUtc,
+                result.PinnedAtUtc,
                 result.ReplyToMessageId,
                 result.ReplyToIsDeleted ? "This message was deleted" : result.ReplyToContent, // SECURITY: Sanitize deleted reply content
                 result.ReplyToSenderName,
@@ -145,9 +156,11 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                             message.IsEdited,
                             message.IsDeleted,
                             message.IsRead,
+                            message.IsPinned,
                             message.CreatedAtUtc,
                             message.EditedAtUtc,
                             message.ReadAtUtc,
+                            message.PinnedAtUtc,
                             ReactionCount = _context.DirectMessageReactions.Count(r => r.MessageId == message.Id),
                             message.ReplyToMessageId,
                             ReplyToContent = repliedMessage != null && !repliedMessage.IsDeleted ? repliedMessage.Content : null,
@@ -198,10 +211,12 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 r.IsEdited,
                 r.IsDeleted,
                 r.IsRead,
+                r.IsPinned,
                 r.ReactionCount,
                 r.CreatedAtUtc,
                 r.EditedAtUtc,
                 r.ReadAtUtc,
+                r.PinnedAtUtc,
                 r.ReplyToMessageId,
                 r.ReplyToIsDeleted ? "This message was deleted" : r.ReplyToContent, // SECURITY: Sanitize deleted reply content
                 r.ReplyToSenderName,
@@ -237,6 +252,95 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                        !m.IsDeleted)
                 .OrderBy(m => m.CreatedAtUtc)
                 .ToListAsync(cancellationToken);
+        }
+
+
+        public async Task<List<DirectMessageDto>> GetPinnedMessagesAsync(
+            Guid conversationId,
+            CancellationToken cancellationToken = default)
+        {
+            // Database join to get pinned messages with user details
+            var results = await (from message in _context.DirectMessages
+                          join sender in _context.Set<UserReadModel>() on message.SenderId equals sender.Id
+                          join repliedMessage in _context.DirectMessages on message.ReplyToMessageId equals repliedMessage.Id into replyJoin
+                          from repliedMessage in replyJoin.DefaultIfEmpty()
+                          join repliedSender in _context.Set<UserReadModel>() on repliedMessage.SenderId equals repliedSender.Id into repliedSenderJoin
+                          from repliedSender in repliedSenderJoin.DefaultIfEmpty()
+                          where message.ConversationId == conversationId
+                             && message.IsPinned
+                             && !message.IsDeleted
+                          orderby message.PinnedAtUtc descending
+                          select new
+                          {
+                              message.Id,
+                              message.ConversationId,
+                              message.SenderId,
+                              sender.Username,
+                              sender.DisplayName,
+                              sender.AvatarUrl,
+                              message.ReceiverId,
+                              message.Content,
+                              message.FileId,
+                              message.IsEdited,
+                              message.IsDeleted,
+                              message.IsRead,
+                              message.IsPinned,
+                              message.CreatedAtUtc,
+                              message.EditedAtUtc,
+                              message.ReadAtUtc,
+                              message.PinnedAtUtc,
+                              ReactionCount = _context.DirectMessageReactions.Count(r => r.MessageId == message.Id),
+                              message.ReplyToMessageId,
+                              ReplyToContent = repliedMessage != null && !repliedMessage.IsDeleted ? repliedMessage.Content : null,
+                              ReplyToIsDeleted = repliedMessage != null && repliedMessage.IsDeleted,
+                              ReplyToSenderName = repliedSender != null ? repliedSender.DisplayName : null,
+                              message.IsForwarded
+                          }).ToListAsync(cancellationToken);
+
+            // Get message IDs for reactions lookup
+            var messageIds = results.Select(r => r.Id).ToList();
+
+            // Load reactions grouped by message
+            var reactions = await _context.DirectMessageReactions
+                .Where(r => messageIds.Contains(r.MessageId))
+                .GroupBy(r => r.MessageId)
+                .Select(g => new
+                {
+                    MessageId = g.Key,
+                    Reactions = g.GroupBy(r => r.Reaction)
+                        .Select(rg => new DirectMessageReactionDto(
+                            rg.Key,
+                            rg.Count(),
+                            rg.Select(r => r.UserId).ToList()
+                        )).ToList()
+                })
+                .ToDictionaryAsync(x => x.MessageId, x => x.Reactions, cancellationToken);
+
+            return results.Select(r => new DirectMessageDto(
+                r.Id,
+                r.ConversationId,
+                r.SenderId,
+                r.Username,
+                r.DisplayName,
+                r.AvatarUrl,
+                r.ReceiverId,
+                r.Content, // Pinned messages are not deleted, no sanitization needed
+                r.FileId,
+                r.IsEdited,
+                r.IsDeleted,
+                r.IsRead,
+                r.IsPinned,
+                r.ReactionCount,
+                r.CreatedAtUtc,
+                r.EditedAtUtc,
+                r.ReadAtUtc,
+                r.PinnedAtUtc,
+                r.ReplyToMessageId,
+                r.ReplyToIsDeleted ? "This message was deleted" : r.ReplyToContent, // SECURITY: Sanitize deleted reply content
+                r.ReplyToSenderName,
+                r.IsForwarded,
+                reactions.ContainsKey(r.Id) ? reactions[r.Id] : null
+            )).ToList();
         }
     }
 }

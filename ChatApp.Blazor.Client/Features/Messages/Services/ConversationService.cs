@@ -96,6 +96,30 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
 
 
 
+        public async Task<Result<List<DirectMessageDto>>> GetPinnedMessagesAsync(Guid conversationId)
+        {
+            return await _apiClient.GetAsync<List<DirectMessageDto>>(
+                $"/api/conversations/{conversationId}/messages/pinned");
+        }
+
+
+
+        public async Task<Result> PinMessageAsync(Guid conversationId, Guid messageId)
+        {
+            return await _apiClient.PostAsync(
+                $"/api/conversations/{conversationId}/messages/{messageId}/pin");
+        }
+
+
+
+        public async Task<Result> UnpinMessageAsync(Guid conversationId, Guid messageId)
+        {
+            return await _apiClient.DeleteAsync(
+                $"/api/conversations/{conversationId}/messages/{messageId}/pin");
+        }
+
+
+
         public async Task<Result<Guid>> SendMessageAsync(Guid conversationId, string content, string? fileId = null, Guid? replyToMessageId = null, bool isForwarded = false)
         {
             var response = await _apiClient.PostAsync<SendMessageResponse>(

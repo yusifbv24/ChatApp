@@ -36,5 +36,14 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
 
 
         Task<Result> ToggleMessageAsLaterAsync(Guid conversationId, Guid messageId);
+
+
+        Task<Result<List<DirectMessageDto>>> GetPinnedMessagesAsync(Guid conversationId);
+
+
+        Task<Result> PinMessageAsync(Guid conversationId, Guid messageId);
+
+
+        Task<Result> UnpinMessageAsync(Guid conversationId, Guid messageId);
     }
 }

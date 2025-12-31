@@ -105,6 +105,50 @@
             </div>
         }
 
+        <!-- Pinned Messages Header -->
+        @if (IsDirectMessage && PinnedDirectMessageCount > 0)
+        {
+            <div class="pinned-messages-header" @onclick="TogglePinnedMessages">
+                <div class="pinned-header-content">
+                    <div class="pinned-header-left">
+                        <MudIcon Icon="@Icons.Material.Filled.PushPin" Size="Size.Small" Class="pinned-icon" />
+                        <div class="pinned-message-info">
+                            <span class="pinned-label">Pinned messages</span>
+                            @if (!string.IsNullOrEmpty(FirstPinnedMessageSender) && !string.IsNullOrEmpty(FirstPinnedMessageContent))
+                            {
+                                <span class="pinned-preview">@FirstPinnedMessageSender: @(FirstPinnedMessageContent.Length > 50 ? FirstPinnedMessageContent.Substring(0, 50) + "..." : FirstPinnedMessageContent)</span>
+                            }
+                        </div>
+                    </div>
+                    <div class="pinned-header-right">
+                        <MudIcon Icon="@Icons.Material.Filled.PushPin" Size="Size.Small" />
+                        <span class="pinned-count">@PinnedDirectMessageCount</span>
+                    </div>
+                </div>
+            </div>
+        }
+        else if (!IsDirectMessage && PinnedCount > 0)
+        {
+            <div class="pinned-messages-header" @onclick="TogglePinnedMessages">
+                <div class="pinned-header-content">
+                    <div class="pinned-header-left">
+                        <MudIcon Icon="@Icons.Material.Filled.PushPin" Size="Size.Small" Class="pinned-icon" />
+                        <div class="pinned-message-info">
+                            <span class="pinned-label">Pinned messages</span>
+                            @if (!string.IsNullOrEmpty(FirstPinnedChannelMessageSender) && !string.IsNullOrEmpty(FirstPinnedChannelMessageContent))
+                            {
+                                <span class="pinned-preview">@FirstPinnedChannelMessageSender: @(FirstPinnedChannelMessageContent.Length > 50 ? FirstPinnedChannelMessageContent.Substring(0, 50) + "..." : FirstPinnedChannelMessageContent)</span>
+                            }
+                        </div>
+                    </div>
+                    <div class="pinned-header-right">
+                        <MudIcon Icon="@Icons.Material.Filled.PushPin" Size="Size.Small" />
+                        <span class="pinned-count">@PinnedCount</span>
+                    </div>
+                </div>
+            </div>
+        }
+
         <!-- Messages Area -->
         <div class="messages-container" @ref="messagesContainerRef" @onscroll="HandleScroll">
             @if (IsLoading)
@@ -157,6 +201,7 @@
                                        IsEdited="@message.IsEdited"
                                        IsDeleted="@message.IsDeleted"
                                        IsRead="@message.IsRead"
+                                       IsPinned="@message.IsPinned"
                                        ReactionCount="@message.ReactionCount"
                                        Reactions="@message.Reactions"
                                        CurrentUserId="@CurrentUserId"
@@ -175,7 +220,7 @@
                                        OnDelete="()=>DeleteMessage(message.Id)"
                                        OnReaction="(emoji)=>AddReaction(message.Id,emoji)"
                                        OnReply="()=>OnReply.InvokeAsync(message.Id)"
-                                       OnPin="()=>{}"
+                                       OnPin="()=>PinDirectMessage(message.Id,message.IsPinned)"
                                        OnForward="()=>OnForward.InvokeAsync(message.Id)"
                                        OnMarkAsLater="OnMarkAsLater"
                                        OnReplyClick="HandleReplyClick"
@@ -472,6 +517,8 @@
     [Parameter] public string RecipientName { get; set; } = string.Empty;
     [Parameter] public string? RecipientAvatarUrl { get; set; }
     [Parameter] public bool IsRecipientOnline { get; set; }
+    [Parameter] public string? FirstPinnedMessageSender { get; set; }
+    [Parameter] public string? FirstPinnedMessageContent { get; set; }
 
     // Channel Parameters
     [Parameter] public List<ChannelMessageDto> ChannelMessages { get; set; } = new();
@@ -480,6 +527,9 @@
     [Parameter] public ChannelType ChannelType { get; set; }
     [Parameter] public int MemberCount { get; set; }
     [Parameter] public int PinnedCount { get; set; }
+    [Parameter] public int PinnedDirectMessageCount { get; set; }
+    [Parameter] public string? FirstPinnedChannelMessageSender { get; set; }
+    [Parameter] public string? FirstPinnedChannelMessageContent { get; set; }
     [Parameter] public bool IsChannelAdmin { get; set; }
 
     // Common Parameters
@@ -497,6 +547,8 @@
     [Parameter] public EventCallback<bool> OnTyping { get; set; }
     [Parameter] public EventCallback OnLoadMore { get; set; }
     [Parameter] public EventCallback OnShowPinnedMessages { get; set; }
+    [Parameter] public EventCallback<Guid> OnPinDirectMessage { get; set; }
+    [Parameter] public EventCallback<Guid> OnUnpinDirectMessage { get; set; }
     [Parameter] public EventCallback<Guid> OnReply { get; set; }
     [Parameter] public EventCallback<Guid> OnForward { get; set; }
     [Parameter] public EventCallback OnCancelReply { get; set; }
@@ -904,6 +956,18 @@
     {
         // Pin/unpin functionality will be implemented when needed
         await Task.CompletedTask;
+    }
+
+    private async Task PinDirectMessage(Guid messageId, bool isPinned)
+    {
+        if (isPinned)
+        {
+            await OnUnpinDirectMessage.InvokeAsync(messageId);
+        }
+        else
+        {
+            await OnPinDirectMessage.InvokeAsync(messageId);
+        }
     }
 
     private async Task HandleReplyClick(Guid repliedMessageId)

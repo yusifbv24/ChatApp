@@ -30,6 +30,7 @@ public partial class Messages : IAsyncDisposable
     private List<DirectMessageDto> directMessages = [];
     private List<ChannelMessageDto> channelMessages = [];
     private List<ChannelMessageDto> pinnedMessages = [];
+    private List<DirectMessageDto> pinnedDirectMessages = [];
 
     // Selection
     private Guid? selectedConversationId;
@@ -41,6 +42,9 @@ public partial class Messages : IAsyncDisposable
     private string? recipientAvatarUrl;
     private Guid recipientUserId;
     private bool isRecipientOnline;
+    private int pinnedDirectMessageCount;
+    private string? firstPinnedDirectMessageSender;
+    private string? firstPinnedDirectMessageContent;
 
     // Pending conversation (user selected but conversation not created yet)
     private bool isPendingConversation;
@@ -52,6 +56,8 @@ public partial class Messages : IAsyncDisposable
     private ChannelType selectedChannelType;
     private int selectedChannelMemberCount;
     private int pinnedMessageCount;
+    private string? firstPinnedChannelMessageSender;
+    private string? firstPinnedChannelMessageContent;
     private bool isChannelAdmin;
     private ChannelMemberRole currentUserChannelRole;
 
@@ -1152,10 +1158,12 @@ public partial class Messages : IAsyncDisposable
                         false,                                          // IsEdited - new message is never edited
                         false,                                          // IsDeleted
                         hasReadReceipt,                                 // IsRead - apply pending read receipt if exists
+                        false,                                          // IsPinned - new message is never pinned
                         0,                                              // ReactionCount
                         messageTime,                                    // CreatedAtUtc
                         null,                                           // EditedAtUtc
                         hasReadReceipt ? readReceipt.readAtUtc : null,  // ReadAtUtc
+                        null,                                           // PinnedAtUtc - new message is never pinned
                         replyToMessageId,
                         replyToContent,
                         replyToSenderName,
@@ -1947,6 +1955,9 @@ public partial class Messages : IAsyncDisposable
             // Load messages
             await LoadDirectMessages();
 
+            // Load pinned message count
+            await LoadPinnedDirectMessageCount();
+
             // Update URL
             NavigationManager.NavigateTo($"/messages/conversation/{conversation.Id}", false);
 
@@ -2347,7 +2358,15 @@ public partial class Messages : IAsyncDisposable
 
         try
         {
-            if (selectedChannelId.HasValue)
+            if (isDirectMessage && selectedConversationId.HasValue)
+            {
+                var result = await ConversationService.GetPinnedMessagesAsync(selectedConversationId.Value);
+                if (result.IsSuccess)
+                {
+                    pinnedDirectMessages = result.Value ?? [];
+                }
+            }
+            else if (selectedChannelId.HasValue)
             {
                 var result = await ChannelService.GetPinnedMessagesAsync(selectedChannelId.Value);
                 if (result.IsSuccess)
@@ -2362,6 +2381,26 @@ public partial class Messages : IAsyncDisposable
             StateHasChanged();
         }
     }
+
+    private async Task ScrollToMessage(Guid messageId)
+    {
+        try
+        {
+            // Close the pinned messages dialog
+            ClosePinnedMessagesDialog();
+
+            // Wait for dialog to close and DOM to update
+            await Task.Delay(100);
+
+            // Scroll to the message and highlight it
+            await JS.InvokeVoidAsync("chatAppUtils.scrollToMessageAndHighlight", $"message-{messageId}");
+        }
+        catch
+        {
+            // Message might not be loaded yet or element not found
+        }
+    }
+
     private async Task LoadPinnedMessageCount()
     {
         try
@@ -2370,11 +2409,121 @@ public partial class Messages : IAsyncDisposable
             if (result.IsSuccess && result.Value != null)
             {
                 pinnedMessageCount = result.Value.Count;
+
+                // Get first pinned message details
+                var firstPinned = result.Value.FirstOrDefault();
+                if (firstPinned != null)
+                {
+                    firstPinnedChannelMessageSender = firstPinned.SenderDisplayName;
+                    firstPinnedChannelMessageContent = firstPinned.Content;
+                }
+                else
+                {
+                    firstPinnedChannelMessageSender = null;
+                    firstPinnedChannelMessageContent = null;
+                }
             }
         }
         catch
         {
             pinnedMessageCount = 0;
+            firstPinnedChannelMessageSender = null;
+            firstPinnedChannelMessageContent = null;
+        }
+    }
+
+    private async Task LoadPinnedDirectMessageCount()
+    {
+        try
+        {
+            var result = await ConversationService.GetPinnedMessagesAsync(selectedConversationId!.Value);
+            if (result.IsSuccess && result.Value != null)
+            {
+                pinnedDirectMessageCount = result.Value.Count;
+
+                // Get first pinned message details
+                var firstPinned = result.Value.FirstOrDefault();
+                if (firstPinned != null)
+                {
+                    firstPinnedDirectMessageSender = firstPinned.SenderDisplayName;
+                    firstPinnedDirectMessageContent = firstPinned.Content;
+                }
+                else
+                {
+                    firstPinnedDirectMessageSender = null;
+                    firstPinnedDirectMessageContent = null;
+                }
+            }
+        }
+        catch
+        {
+            pinnedDirectMessageCount = 0;
+            firstPinnedDirectMessageSender = null;
+            firstPinnedDirectMessageContent = null;
+        }
+    }
+
+    private async Task HandlePinDirectMessage(Guid messageId)
+    {
+        if (!selectedConversationId.HasValue) return;
+
+        try
+        {
+            var result = await ConversationService.PinMessageAsync(selectedConversationId.Value, messageId);
+            if (result.IsSuccess)
+            {
+                // Update local message state
+                var message = directMessages.FirstOrDefault(m => m.Id == messageId);
+                if (message != null)
+                {
+                    var index = directMessages.IndexOf(message);
+                    directMessages[index] = message with { IsPinned = true, PinnedAtUtc = DateTime.UtcNow };
+                }
+
+                // Update pinned count
+                await LoadPinnedDirectMessageCount();
+                StateHasChanged();
+            }
+            else
+            {
+                ShowError(result.Error ?? "Failed to pin message");
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowError("Failed to pin message: " + ex.Message);
+        }
+    }
+
+    private async Task HandleUnpinDirectMessage(Guid messageId)
+    {
+        if (!selectedConversationId.HasValue) return;
+
+        try
+        {
+            var result = await ConversationService.UnpinMessageAsync(selectedConversationId.Value, messageId);
+            if (result.IsSuccess)
+            {
+                // Update local message state
+                var message = directMessages.FirstOrDefault(m => m.Id == messageId);
+                if (message != null)
+                {
+                    var index = directMessages.IndexOf(message);
+                    directMessages[index] = message with { IsPinned = false, PinnedAtUtc = null };
+                }
+
+                // Update pinned count
+                await LoadPinnedDirectMessageCount();
+                StateHasChanged();
+            }
+            else
+            {
+                ShowError(result.Error ?? "Failed to unpin message");
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowError("Failed to unpin message: " + ex.Message);
         }
     }
     #endregion
@@ -2447,18 +2596,20 @@ public partial class Messages : IAsyncDisposable
                         UserState.CurrentUser?.AvatarUrl,
                         conversation?.OtherUserId ?? Guid.Empty,
                         content,
-                        null,
-                        false,
-                        false,
-                        false,
-                        0,
-                        messageTime,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        true);
+                        null,                   // FileId
+                        false,                  // IsEdited
+                        false,                  // IsDeleted
+                        false,                  // IsRead
+                        false,                  // IsPinned
+                        0,                      // ReactionCount
+                        messageTime,            // CreatedAtUtc
+                        null,                   // EditedAtUtc
+                        null,                   // ReadAtUtc
+                        null,                   // PinnedAtUtc
+                        null,                   // ReplyToMessageId
+                        null,                   // ReplyToContent
+                        null,                   // ReplyToSenderName
+                        true);                  // IsForwarded
 
                     // Before adding optimistic message, check if it already exists
                     // (in case SignalR arrived faster than HTTP response)
