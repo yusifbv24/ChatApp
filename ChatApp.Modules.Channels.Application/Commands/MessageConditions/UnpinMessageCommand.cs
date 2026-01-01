@@ -1,5 +1,4 @@
 ﻿using ChatApp.Modules.Channels.Application.Interfaces;
-using ChatApp.Modules.Channels.Domain.Enums;
 using ChatApp.Shared.Kernel.Common;
 using ChatApp.Shared.Kernel.Exceptions;
 using FluentValidation;
@@ -53,16 +52,14 @@ namespace ChatApp.Modules.Channels.Application.Commands.MessageConditions
                 if (message == null)
                     throw new NotFoundException($"Message with ID {request.MessageId} not found");
 
-                // Only admin/owner can unpin messages
-                var userRole = await _unitOfWork.ChannelMembers.GetUserRoleAsync(
+                // Verify user is a member of the channel
+                var member = await _unitOfWork.ChannelMembers.GetMemberAsync(
                     message.ChannelId,
                     request.RequestedBy,
                     cancellationToken);
 
-                if (userRole != MemberRole.Admin && userRole != MemberRole.Owner)
-                {
-                    return Result.Failure("Only admins and owners can unpin messages");
-                }
+                if (member == null)
+                    return Result.Failure("You must be a member of this channel to unpin messages");
 
                 if (!message.IsPinned)
                 {

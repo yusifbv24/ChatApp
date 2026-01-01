@@ -2488,6 +2488,38 @@ public partial class Messages : IAsyncDisposable
         }
     }
 
+    private async Task HandlePinChannelMessage(Guid messageId)
+    {
+        if (!selectedChannelId.HasValue) return;
+
+        try
+        {
+            var result = await ChannelService.PinMessageAsync(selectedChannelId.Value, messageId);
+            if (result.IsSuccess)
+            {
+                // Update local message state
+                var message = channelMessages.FirstOrDefault(m => m.Id == messageId);
+                if (message != null)
+                {
+                    var index = channelMessages.IndexOf(message);
+                    channelMessages[index] = message with { IsPinned = true, PinnedAtUtc = DateTime.UtcNow };
+                }
+
+                // Update pinned count and list
+                await LoadPinnedMessageCount();
+                StateHasChanged();
+            }
+            else
+            {
+                ShowError(result.Error ?? "Failed to pin message");
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowError("Failed to pin message: " + ex.Message);
+        }
+    }
+
     private async Task HandleUnpinChannelMessage(Guid messageId)
     {
         if (!selectedChannelId.HasValue) return;

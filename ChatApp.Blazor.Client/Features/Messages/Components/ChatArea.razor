@@ -353,7 +353,7 @@
                                        OnDelete="() => DeleteMessage(message.Id)"
                                        OnReaction="(emoji) => AddReaction(message.Id, emoji)"
                                        OnReply="()=>OnReply.InvokeAsync(message.Id)"
-                                       OnPin="()=>PinMessage(message.Id)"
+                                       OnPin="()=>PinChannelMessage(message.Id, message.IsPinned)"
                                        OnForward="()=>OnForward.InvokeAsync(message.Id)"
                                        OnMarkAsLater="OnMarkAsLater"
                                        OnReplyClick="HandleReplyClick"
@@ -618,6 +618,7 @@
     [Parameter] public EventCallback OnLoadMore { get; set; }
     [Parameter] public EventCallback<Guid> OnPinDirectMessage { get; set; }
     [Parameter] public EventCallback<Guid> OnUnpinDirectMessage { get; set; }
+    [Parameter] public EventCallback<Guid> OnPinChannelMessage { get; set; }
     [Parameter] public EventCallback<Guid> OnUnpinChannelMessage { get; set; }
     [Parameter] public EventCallback<Guid> OnReply { get; set; }
     [Parameter] public EventCallback<Guid> OnForward { get; set; }
@@ -1142,10 +1143,16 @@
         }
     }
 
-    private async Task PinMessage(Guid messageId)
+    private async Task PinChannelMessage(Guid messageId, bool isPinned)
     {
-        // Pin/unpin functionality will be implemented when needed
-        await Task.CompletedTask;
+        if (isPinned)
+        {
+            await OnUnpinChannelMessage.InvokeAsync(messageId);
+        }
+        else
+        {
+            await OnPinChannelMessage.InvokeAsync(messageId);
+        }
     }
 
     private async Task PinDirectMessage(Guid messageId, bool isPinned)
