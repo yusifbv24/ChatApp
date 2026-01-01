@@ -69,7 +69,6 @@ public partial class Messages : IAsyncDisposable
     private bool isLoadingList;
     private bool isLoadingMessages;
     private bool isLoadingMoreMessages;
-    private bool isLoadingPinnedMessages;
     private bool isSendingMessage;
     private bool isSearchingUsers;
     private bool isCreatingChannel;
@@ -113,7 +112,6 @@ public partial class Messages : IAsyncDisposable
     // Dialogs
     private bool showNewConversationDialog;
     private bool showNewChannelDialog;
-    private bool showPinnedMessagesDialog;
 
     // Search
     private string userSearchQuery = string.Empty;
@@ -1059,11 +1057,6 @@ public partial class Messages : IAsyncDisposable
     private void CloseNewChannelDialog()
     {
         showNewChannelDialog = false;
-        StateHasChanged();
-    }
-    private void ClosePinnedMessagesDialog()
-    {
-        showPinnedMessagesDialog = false;
         StateHasChanged();
     }
 
@@ -2350,48 +2343,10 @@ public partial class Messages : IAsyncDisposable
     #endregion
 
     #region Pinned Messages
-    private async Task ShowPinnedMessages()
-    {
-        showPinnedMessagesDialog = true;
-        isLoadingPinnedMessages = true;
-        StateHasChanged();
-
-        try
-        {
-            if (isDirectMessage && selectedConversationId.HasValue)
-            {
-                var result = await ConversationService.GetPinnedMessagesAsync(selectedConversationId.Value);
-                if (result.IsSuccess)
-                {
-                    pinnedDirectMessages = result.Value ?? [];
-                }
-            }
-            else if (selectedChannelId.HasValue)
-            {
-                var result = await ChannelService.GetPinnedMessagesAsync(selectedChannelId.Value);
-                if (result.IsSuccess)
-                {
-                    pinnedMessages = result.Value ?? [];
-                }
-            }
-        }
-        finally
-        {
-            isLoadingPinnedMessages = false;
-            StateHasChanged();
-        }
-    }
-
-    private async Task ScrollToMessage(Guid messageId)
+    private async Task NavigateToPinnedMessage(Guid messageId)
     {
         try
         {
-            // Close the pinned messages dialog
-            ClosePinnedMessagesDialog();
-
-            // Wait for dialog to close and DOM to update
-            await Task.Delay(100);
-
             // Scroll to the message and highlight it
             await JS.InvokeVoidAsync("chatAppUtils.scrollToMessageAndHighlight", $"message-{messageId}");
         }
@@ -2408,6 +2363,8 @@ public partial class Messages : IAsyncDisposable
             var result = await ChannelService.GetPinnedMessagesAsync(selectedChannelId!.Value);
             if (result.IsSuccess && result.Value != null)
             {
+                // Store full list for cycling
+                pinnedMessages = result.Value;
                 pinnedMessageCount = result.Value.Count;
 
                 // Get first pinned message details
@@ -2426,6 +2383,7 @@ public partial class Messages : IAsyncDisposable
         }
         catch
         {
+            pinnedMessages = [];
             pinnedMessageCount = 0;
             firstPinnedChannelMessageSender = null;
             firstPinnedChannelMessageContent = null;
@@ -2439,6 +2397,8 @@ public partial class Messages : IAsyncDisposable
             var result = await ConversationService.GetPinnedMessagesAsync(selectedConversationId!.Value);
             if (result.IsSuccess && result.Value != null)
             {
+                // Store full list for cycling
+                pinnedDirectMessages = result.Value;
                 pinnedDirectMessageCount = result.Value.Count;
 
                 // Get first pinned message details
@@ -2457,6 +2417,7 @@ public partial class Messages : IAsyncDisposable
         }
         catch
         {
+            pinnedDirectMessages = [];
             pinnedDirectMessageCount = 0;
             firstPinnedDirectMessageSender = null;
             firstPinnedDirectMessageContent = null;
@@ -2514,6 +2475,38 @@ public partial class Messages : IAsyncDisposable
 
                 // Update pinned count
                 await LoadPinnedDirectMessageCount();
+                StateHasChanged();
+            }
+            else
+            {
+                ShowError(result.Error ?? "Failed to unpin message");
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowError("Failed to unpin message: " + ex.Message);
+        }
+    }
+
+    private async Task HandleUnpinChannelMessage(Guid messageId)
+    {
+        if (!selectedChannelId.HasValue) return;
+
+        try
+        {
+            var result = await ChannelService.UnPinMessageAsync(selectedChannelId.Value, messageId);
+            if (result.IsSuccess)
+            {
+                // Update local message state
+                var message = channelMessages.FirstOrDefault(m => m.Id == messageId);
+                if (message != null)
+                {
+                    var index = channelMessages.IndexOf(message);
+                    channelMessages[index] = message with { IsPinned = false, PinnedAtUtc = null };
+                }
+
+                // Update pinned count and list
+                await LoadPinnedMessageCount();
                 StateHasChanged();
             }
             else

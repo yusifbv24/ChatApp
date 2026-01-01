@@ -200,7 +200,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                           where message.ChannelId == channelId
                              && message.IsPinned
                              && !message.IsDeleted
-                          orderby message.PinnedAtUtc descending
+                          orderby message.PinnedAtUtc ascending
                           select new ChannelMessageDto(
                               message.Id,
                               message.ChannelId,

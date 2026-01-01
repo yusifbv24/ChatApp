@@ -269,3 +269,107 @@ Identity | Channels | DirectMessages | Files | Notifications | Search | Settings
   - ✅ Conversation/channel list-də son mesaj silinibsə "This message was deleted" göstərilir
   - ✅ Silinmiş mesaja reply edərkən parent content "This message was deleted" göstərilir
   - ✅ DTO layer-də centralized sanitization (consistent və secure)
+
+### Session 13 (2026-01-01): Pinned Messages Panel Redesign
+**Pinned Messages Header Yenidən Dizayn:**
+- **Tələblər:**
+  1. Sol tərəfdəki pin iconu ləğv edilsin
+  2. Pin iconunun rəngi (primary color) pinned message preview-a tətbiq edilsin
+  3. İstifadəçi adı ilə mesaj texti arasında vizual fərq olsun
+  4. Sağ tərəfdəki pin iconu üfüqi (horizontal) görünsün
+  5. Pin sayı "1/3" formatında göstərilsin (cari/ümumi)
+  6. Panelə klik edəndə həmin pinlənmiş mesaja scroll edilsin
+  7. Hər klikdə növbəti pinlənmiş mesaja keçilsin (cycling)
+
+- **Solution:**
+  - **ChatArea.razor:**
+    - Yeni parametrlər: `PinnedChannelMessages`, `PinnedDirectMessages`, `OnNavigateToPinnedMessage`
+    - State: `currentPinnedIndex` - cari pin index-i track edir
+    - `_previousConversationId`, `_previousChannelId` - conversation/channel dəyişdikdə index sıfırlanır
+    - Helper metodlar:
+      - `GetCurrentPinnedDirectMessage()` - cari DM pin mesajını qaytarır
+      - `GetCurrentPinnedChannelMessage()` - cari channel pin mesajını qaytarır
+      - `TruncateText()` - mətni qısaldır (50 char)
+      - `HandlePinnedMessageClick()` - mesaja naviqasiya + növbəti pinə keçid
+    - HTML: Sol pin iconu silindi, sender/message ayrı span-larda, sağda üfüqi pin + index
+
+  - **Messages.razor:**
+    - Yeni parametrlər ChatArea-ya ötürülür: `PinnedChannelMessages`, `PinnedDirectMessages`, `OnNavigateToPinnedMessage`
+
+  - **Messages.razor.cs:**
+    - `LoadPinnedMessageCount()` - tam siyahını `pinnedMessages`-ə saxlayır
+    - `LoadPinnedDirectMessageCount()` - tam siyahını `pinnedDirectMessages`-ə saxlayır
+    - Yeni metod: `NavigateToPinnedMessage(Guid messageId)` - mesaja scroll və highlight
+
+  - **messages.css:**
+    - `.pinned-preview` - primary color, flex layout
+    - `.pinned-sender-name` - bold font
+    - `.pinned-message-text` - normal font, ellipsis
+    - `.pinned-header-right` - flex-direction: column (şaquli layout)
+    - `.pinned-icon-horizontal` - transform: rotate(45deg)
+    - `.pinned-index` - "1/3" formatı, kiçik font
+
+- **Result:**
+  - ✅ Sol pin iconu silindi
+  - ✅ Preview mətn primary color-da (yaşıl)
+  - ✅ Sender adı bold, mesaj texti normal font
+  - ✅ Sağ pin iconu 45° çevrilmiş (üfüqi görünüş)
+  - ✅ Index göstəricisi "1/3" formatında pin iconunun altında
+  - ✅ Klik edəndə həmin mesaja scroll + highlight olunur
+  - ✅ Hər klikdə növbəti pinə keçilir (1→2→3→1...)
+  - ✅ Conversation/channel dəyişdikdə index sıfırlanır
+
+**Pinned Messages Dropdown Panel Yenidən Dizayn:**
+- **Tələblər:**
+  1. Ən yuxarıda "Pinned messages" yazısı (bənövşəyi rəngdə)
+  2. Altında istifadəçi adı (solğun qara) + ":" + mesaj contenti (normal qara)
+  3. Sağ tərəfdə pin iconu + say - klik edəndə dropdown panel açılır
+  4. Dropdown panel üzü aşağı açılır, 3 mesaj sığır, scroll aktiv
+  5. Panel açıq olduqda pin iconu yerinə close (X) butonu görünür
+  6. Hər mesajın sağında unpin iconu olur (fərqli icon)
+
+- **Solution:**
+  - **ChatArea.razor:**
+    - Yeni state: `showPinnedDropdown` - dropdown panel açıq/bağlı
+    - Yeni HTML struktur: `.pinned-messages-header-wrapper` ilə position relative
+    - `.pinned-title` - "Pinned messages" başlığı (bənövşəyi)
+    - `.pinned-preview` - sender + separator + content
+    - Sağda: `pinned-toggle-btn` (pin icon + count) və ya `pinned-close-btn` (X)
+    - `.pinned-dropdown-panel` - üzü aşağı açılan panel
+    - `.pinned-dropdown-item` - hər pinned message
+    - `.unpin-btn` - unpin iconu (outlined PushPin)
+    - Yeni metodlar: `TogglePinnedDropdown()`, `ClosePinnedDropdown()`, `NavigateToPinnedMessage()`, `HandleUnpinMessage()`, `HandleUnpinChannelMessage()`
+    - Yeni EventCallback: `OnUnpinChannelMessage`
+
+  - **Messages.razor:**
+    - `OnUnpinChannelMessage="HandleUnpinChannelMessage"` əlavə edildi
+
+  - **Messages.razor.cs:**
+    - Yeni metod: `HandleUnpinChannelMessage(Guid messageId)` - channel mesajını unpin edir
+
+  - **messages.css:**
+    - `.pinned-messages-header-wrapper` - position: relative
+    - `.pinned-title` - bənövşəyi rəng (#7c3aed), bold
+    - `.pinned-sender-name` - solğun qara (gray-500)
+    - `.pinned-separator` - ":" ayırıcı
+    - `.pinned-message-text` - normal qara (gray-900)
+    - `.pinned-toggle-btn` - pin icon + badge
+    - `.pinned-count` - primary color badge
+    - `.pinned-close-btn` - X butonu
+    - `.pinned-dropdown-panel` - absolute positioned, max-height: 192px (3 item), overflow-y: auto
+    - `.pinned-dropdown-item` - min-height: 64px
+    - `.pinned-item-sender` - bold, qara
+    - `.pinned-item-text` - solğun qara
+    - `.unpin-btn` - dairəvi, hover-da qırmızı
+
+- **Result:**
+  - ✅ "Pinned messages" başlığı bənövşəyi rəngdə görünür
+  - ✅ İstifadəçi adı solğun, mesaj contenti normal qara
+  - ✅ ":" ayırıcı istifadə olunur
+  - ✅ Sağda pin iconu + say görünür
+  - ✅ Pin iconuna klik edəndə dropdown panel aşağı açılır
+  - ✅ 3 mesaj sığır, artıq olduqda scroll aktiv
+  - ✅ Panel açıq olduqda X (close) butonu görünür
+  - ✅ Hər mesajın sağında unpin iconu var
+  - ✅ Unpin iconu fərqlidir (outlined style)
+  - ✅ Mesaja klik edəndə scroll + highlight olunur və panel bağlanır

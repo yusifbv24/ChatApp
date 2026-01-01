@@ -2631,12 +2631,17 @@
 }
 
 /* Pinned Messages Header */
+.pinned-messages-header-wrapper {
+    position: relative;
+}
+
 .pinned-messages-header {
     background: var(--white);
     border-bottom: 1px solid var(--gray-200);
-    padding: 12px 16px;
+    padding: 10px 16px;
     cursor: pointer;
     transition: background-color 0.2s ease;
+    min-height: 52px; /* Fixed height to prevent layout shift */
 }
 
 .pinned-messages-header:hover {
@@ -2652,36 +2657,60 @@
 
 .pinned-header-left {
     display: flex;
-    align-items: flex-start;
-    gap: 12px;
+    align-items: center;
     flex: 1;
-    min-width: 0; /* Enable text ellipsis */
-}
-
-.pinned-header-left .pinned-icon {
-    color: var(--primary-color);
-    margin-top: 2px;
-    flex-shrink: 0;
+    min-width: 0;
 }
 
 .pinned-message-info {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    min-width: 0; /* Enable text ellipsis */
+    min-width: 0;
     flex: 1;
+    gap: 2px;
 }
 
-.pinned-label {
+.pinned-title {
     font-size: 13px;
     font-weight: 600;
-    color: var(--gray-900);
+    color: #7c3aed; /* Purple color */
+}
+
+.pinned-title-expanded {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gray-900); /* Dark black */
+}
+
+.pinned-title-count {
+    font-weight: 500;
+    color: var(--gray-500); /* Lighter color */
 }
 
 .pinned-preview {
     font-size: 13px;
-    color: var(--gray-600);
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: baseline;
+    gap: 0;
+}
+
+.pinned-sender-name {
+    font-weight: 500;
+    color: var(--gray-500); /* Faded black */
+    flex-shrink: 0;
+}
+
+.pinned-separator {
+    color: var(--gray-500);
+    margin-right: 6px;
+}
+
+.pinned-message-text {
+    font-weight: 400;
+    color: var(--gray-900); /* Normal black */
     overflow: hidden;
     text-overflow: ellipsis;
 }
@@ -2689,18 +2718,209 @@
 .pinned-header-right {
     display: flex;
     align-items: center;
-    gap: 6px;
     flex-shrink: 0;
 }
 
-.pinned-header-right .mud-icon {
+.pinned-toggle-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px 8px;
+    border-radius: var(--radius-md);
+    transition: background-color 0.2s ease;
+}
+
+.pinned-toggle-btn:hover {
+    background: var(--gray-100);
+}
+
+.pinned-toggle-btn-vertical {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: var(--radius-md);
+    transition: background-color 0.2s ease;
+}
+
+.pinned-toggle-btn-vertical:hover {
+    background: var(--gray-100);
+}
+
+.pinned-icon-horizontal {
     color: var(--primary-color);
+    transform: rotate(45deg);
+}
+
+.pinned-icon-dark {
+    color: var(--gray-600);
+    transform: rotate(45deg);
 }
 
 .pinned-count {
-    font-size: 14px;
+    font-size: 12px;
     font-weight: 600;
     color: var(--primary-color);
+    background: var(--primary-light);
+    padding: 2px 6px;
+    border-radius: 10px;
+}
+
+.pinned-count-dark {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--gray-600);
+}
+
+.pinned-close-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    border-radius: 50%;
+    color: var(--gray-500);
+    transition: all 0.2s ease;
+}
+
+.pinned-close-btn:hover {
+    background: var(--gray-100);
+    color: var(--gray-700);
+}
+
+.pinned-count-text {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--gray-600);
+    margin-right: 8px;
+}
+
+/* Pinned Dropdown Panel */
+.pinned-dropdown-panel {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-top: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    max-height: 168px; /* Fits 3 items (56px each) */
+    overflow-y: auto;
+}
+
+.pinned-dropdown-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.pinned-dropdown-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 16px;
+    gap: 10px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    border-bottom: 1px solid var(--gray-100);
+    min-height: 56px;
+}
+
+.pinned-dropdown-item:last-child {
+    border-bottom: none;
+}
+
+.pinned-dropdown-item:hover {
+    background: var(--gray-50);
+}
+
+.pinned-item-avatar {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+}
+
+.pinned-item-avatar img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.pinned-item-avatar .avatar-placeholder {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: var(--primary-light);
+    color: var(--primary-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.pinned-item-content {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.pinned-item-sender {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.pinned-item-text {
+    font-size: 11px;
+    color: var(--gray-500);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.unpin-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    border-radius: 50%;
+    color: var(--gray-400);
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    opacity: 0;
+    visibility: hidden;
+}
+
+.pinned-dropdown-item:hover .unpin-btn {
+    opacity: 1;
+    visibility: visible;
+}
+
+.unpin-btn:hover {
+    background: var(--error-light, #fee2e2);
+    color: var(--error-color, #ef4444);
+}
+
+.unpin-btn .mud-icon-root {
+    transform: rotate(45deg);
 }
 
 /* Pinned Messages Dialog */

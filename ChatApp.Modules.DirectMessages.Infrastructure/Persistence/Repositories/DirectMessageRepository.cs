@@ -269,7 +269,7 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                           where message.ConversationId == conversationId
                              && message.IsPinned
                              && !message.IsDeleted
-                          orderby message.PinnedAtUtc descending
+                          orderby message.PinnedAtUtc ascending
                           select new
                           {
                               message.Id,

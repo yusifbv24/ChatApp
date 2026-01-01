@@ -106,46 +106,111 @@
         }
 
         <!-- Pinned Messages Header -->
-        @if (IsDirectMessage && PinnedDirectMessageCount > 0)
+        @if ((IsDirectMessage && PinnedDirectMessageCount > 0) || (!IsDirectMessage && PinnedCount > 0))
         {
-            <div class="pinned-messages-header" @onclick="TogglePinnedMessages">
-                <div class="pinned-header-content">
-                    <div class="pinned-header-left">
-                        <MudIcon Icon="@Icons.Material.Filled.PushPin" Size="Size.Small" Class="pinned-icon" />
-                        <div class="pinned-message-info">
-                            <span class="pinned-label">Pinned messages</span>
-                            @if (!string.IsNullOrEmpty(FirstPinnedMessageSender) && !string.IsNullOrEmpty(FirstPinnedMessageContent))
+            <div class="pinned-messages-header-wrapper">
+                <div class="pinned-messages-header" @onclick="HandlePinnedHeaderClick">
+                    <div class="pinned-header-content">
+                        <div class="pinned-header-left">
+                            <div class="pinned-message-info">
+                                @if (showPinnedDropdown)
+                                {
+                                    <span class="pinned-title-expanded">Pinned messages : <span class="pinned-title-count">@(IsDirectMessage ? PinnedDirectMessageCount : PinnedCount)</span></span>
+                                }
+                                else
+                                {
+                                    <span class="pinned-title">Pinned messages</span>
+                                    var firstPinned = IsDirectMessage ? GetFirstPinnedDirectMessage() : null;
+                                    var firstChannelPinned = !IsDirectMessage ? GetFirstPinnedChannelMessage() : null;
+                                    var senderName = firstPinned?.SenderDisplayName ?? firstChannelPinned?.SenderDisplayName;
+                                    var messageContent = firstPinned?.Content ?? firstChannelPinned?.Content;
+
+                                    if (!string.IsNullOrEmpty(senderName))
+                                    {
+                                        <span class="pinned-preview">
+                                            <span class="pinned-sender-name">@senderName</span>
+                                            <span class="pinned-separator">:</span>
+                                            <span class="pinned-message-text">@TruncateText(messageContent, 50)</span>
+                                        </span>
+                                    }
+                                }
+                            </div>
+                        </div>
+                        <div class="pinned-header-right">
+                            @if (showPinnedDropdown)
                             {
-                                <span class="pinned-preview">@FirstPinnedMessageSender: @(FirstPinnedMessageContent.Length > 50 ? FirstPinnedMessageContent.Substring(0, 50) + "..." : FirstPinnedMessageContent)</span>
+                                <button class="pinned-close-btn" @onclick="ClosePinnedDropdown" @onclick:stopPropagation="true">
+                                    <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" />
+                                </button>
+                            }
+                            else
+                            {
+                                <button class="pinned-toggle-btn-vertical" @onclick="TogglePinnedDropdown" @onclick:stopPropagation="true">
+                                    <MudIcon Icon="@Icons.Material.Outlined.PushPin" Size="Size.Small" Class="pinned-icon-dark" />
+                                    <span class="pinned-count-dark">@(currentPinnedIndex + 1)/@(IsDirectMessage ? PinnedDirectMessageCount : PinnedCount)</span>
+                                </button>
                             }
                         </div>
                     </div>
-                    <div class="pinned-header-right">
-                        <MudIcon Icon="@Icons.Material.Filled.PushPin" Size="Size.Small" />
-                        <span class="pinned-count">@PinnedDirectMessageCount</span>
-                    </div>
                 </div>
-            </div>
-        }
-        else if (!IsDirectMessage && PinnedCount > 0)
-        {
-            <div class="pinned-messages-header" @onclick="TogglePinnedMessages">
-                <div class="pinned-header-content">
-                    <div class="pinned-header-left">
-                        <MudIcon Icon="@Icons.Material.Filled.PushPin" Size="Size.Small" Class="pinned-icon" />
-                        <div class="pinned-message-info">
-                            <span class="pinned-label">Pinned messages</span>
-                            @if (!string.IsNullOrEmpty(FirstPinnedChannelMessageSender) && !string.IsNullOrEmpty(FirstPinnedChannelMessageContent))
+
+                @if (showPinnedDropdown)
+                {
+                    <div class="pinned-dropdown-panel">
+                        <div class="pinned-dropdown-list">
+                            @if (IsDirectMessage)
                             {
-                                <span class="pinned-preview">@FirstPinnedChannelMessageSender: @(FirstPinnedChannelMessageContent.Length > 50 ? FirstPinnedChannelMessageContent.Substring(0, 50) + "..." : FirstPinnedChannelMessageContent)</span>
+                                @foreach (var message in PinnedDirectMessages)
+                                {
+                                    <div class="pinned-dropdown-item" @onclick="() => NavigateToPinnedMessage(message.Id)">
+                                        <div class="pinned-item-avatar">
+                                            @if (!string.IsNullOrEmpty(message.SenderAvatarUrl))
+                                            {
+                                                <img src="@message.SenderAvatarUrl" alt="@message.SenderDisplayName" />
+                                            }
+                                            else
+                                            {
+                                                <div class="avatar-placeholder">@GetInitials(message.SenderDisplayName)</div>
+                                            }
+                                        </div>
+                                        <div class="pinned-item-content">
+                                            <span class="pinned-item-sender">@message.SenderDisplayName</span>
+                                            <span class="pinned-item-text">@TruncateText(message.Content, 60)</span>
+                                        </div>
+                                        <button class="unpin-btn" @onclick="() => HandleUnpinMessage(message.Id)" @onclick:stopPropagation="true" title="Unpin">
+                                            <MudIcon Icon="@Icons.Material.Outlined.PushPin" Size="Size.Small" />
+                                        </button>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                @foreach (var message in PinnedChannelMessages)
+                                {
+                                    <div class="pinned-dropdown-item" @onclick="() => NavigateToPinnedMessage(message.Id)">
+                                        <div class="pinned-item-avatar">
+                                            @if (!string.IsNullOrEmpty(message.SenderAvatarUrl))
+                                            {
+                                                <img src="@message.SenderAvatarUrl" alt="@message.SenderDisplayName" />
+                                            }
+                                            else
+                                            {
+                                                <div class="avatar-placeholder">@GetInitials(message.SenderDisplayName)</div>
+                                            }
+                                        </div>
+                                        <div class="pinned-item-content">
+                                            <span class="pinned-item-sender">@message.SenderDisplayName</span>
+                                            <span class="pinned-item-text">@TruncateText(message.Content, 60)</span>
+                                        </div>
+                                        <button class="unpin-btn" @onclick="() => HandleUnpinChannelMessage(message.Id)" @onclick:stopPropagation="true" title="Unpin">
+                                            <MudIcon Icon="@Icons.Material.Outlined.PushPin" Size="Size.Small" />
+                                        </button>
+                                    </div>
+                                }
                             }
                         </div>
                     </div>
-                    <div class="pinned-header-right">
-                        <MudIcon Icon="@Icons.Material.Filled.PushPin" Size="Size.Small" />
-                        <span class="pinned-count">@PinnedCount</span>
-                    </div>
-                </div>
+                }
             </div>
         }
 
@@ -530,6 +595,11 @@
     [Parameter] public int PinnedDirectMessageCount { get; set; }
     [Parameter] public string? FirstPinnedChannelMessageSender { get; set; }
     [Parameter] public string? FirstPinnedChannelMessageContent { get; set; }
+
+    // Pinned messages for cycling
+    [Parameter] public List<ChannelMessageDto> PinnedChannelMessages { get; set; } = new();
+    [Parameter] public List<DirectMessageDto> PinnedDirectMessages { get; set; } = new();
+    [Parameter] public EventCallback<Guid> OnNavigateToPinnedMessage { get; set; }
     [Parameter] public bool IsChannelAdmin { get; set; }
 
     // Common Parameters
@@ -546,9 +616,9 @@
     [Parameter] public EventCallback<(Guid messageId, string emoji)> OnAddReaction { get; set; }
     [Parameter] public EventCallback<bool> OnTyping { get; set; }
     [Parameter] public EventCallback OnLoadMore { get; set; }
-    [Parameter] public EventCallback OnShowPinnedMessages { get; set; }
     [Parameter] public EventCallback<Guid> OnPinDirectMessage { get; set; }
     [Parameter] public EventCallback<Guid> OnUnpinDirectMessage { get; set; }
+    [Parameter] public EventCallback<Guid> OnUnpinChannelMessage { get; set; }
     [Parameter] public EventCallback<Guid> OnReply { get; set; }
     [Parameter] public EventCallback<Guid> OnForward { get; set; }
     [Parameter] public EventCallback OnCancelReply { get; set; }
@@ -620,8 +690,24 @@
     private CancellationTokenSource? _memberSearchCts;
     private int _previousChannelMessagesHash = 0;
 
+    // Pinned messages cycling state
+    private int currentPinnedIndex = 0;
+    private bool showPinnedDropdown = false;
+
+    private Guid? _previousConversationId;
+    private Guid? _previousChannelId;
+
     protected override void OnParametersSet()
     {
+        // Reset pinned index and close dropdown when conversation/channel changes
+        if (ConversationId != _previousConversationId || ChannelId != _previousChannelId)
+        {
+            currentPinnedIndex = 0;
+            showPinnedDropdown = false;
+            _previousConversationId = ConversationId;
+            _previousChannelId = ChannelId;
+        }
+
         // Reset scroll flag if separator position changed (new conversation selected)
         if (UnreadSeparatorAfterMessageId != _previousUnreadSeparatorId)
         {
@@ -877,9 +963,113 @@
         showInfoPanel = false;
     }
 
-    private async Task TogglePinnedMessages()
+    private DirectMessageDto? GetCurrentPinnedDirectMessage()
     {
-        await OnShowPinnedMessages.InvokeAsync();
+        if (PinnedDirectMessages == null || PinnedDirectMessages.Count == 0)
+            return null;
+
+        // Ensure index is within bounds
+        var safeIndex = currentPinnedIndex % PinnedDirectMessages.Count;
+        return PinnedDirectMessages[safeIndex];
+    }
+
+    private ChannelMessageDto? GetCurrentPinnedChannelMessage()
+    {
+        if (PinnedChannelMessages == null || PinnedChannelMessages.Count == 0)
+            return null;
+
+        // Ensure index is within bounds
+        var safeIndex = currentPinnedIndex % PinnedChannelMessages.Count;
+        return PinnedChannelMessages[safeIndex];
+    }
+
+    private DirectMessageDto? GetFirstPinnedDirectMessage()
+    {
+        if (PinnedDirectMessages == null || PinnedDirectMessages.Count == 0)
+            return null;
+
+        return PinnedDirectMessages[0];
+    }
+
+    private ChannelMessageDto? GetFirstPinnedChannelMessage()
+    {
+        if (PinnedChannelMessages == null || PinnedChannelMessages.Count == 0)
+            return null;
+
+        return PinnedChannelMessages[0];
+    }
+
+    private string TruncateText(string? text, int maxLength)
+    {
+        if (string.IsNullOrEmpty(text))
+            return string.Empty;
+
+        return text.Length > maxLength ? text.Substring(0, maxLength) + "..." : text;
+    }
+
+    private async Task HandlePinnedHeaderClick()
+    {
+        // When dropdown is closed, clicking header navigates to current pinned message
+        if (!showPinnedDropdown)
+        {
+            Guid? messageIdToNavigate = null;
+
+            if (IsDirectMessage)
+            {
+                var currentPinned = GetCurrentPinnedDirectMessage();
+                if (currentPinned != null)
+                {
+                    messageIdToNavigate = currentPinned.Id;
+                    // Move to next pinned message for next click
+                    currentPinnedIndex = (currentPinnedIndex + 1) % PinnedDirectMessageCount;
+                }
+            }
+            else
+            {
+                var currentPinned = GetCurrentPinnedChannelMessage();
+                if (currentPinned != null)
+                {
+                    messageIdToNavigate = currentPinned.Id;
+                    // Move to next pinned message for next click
+                    currentPinnedIndex = (currentPinnedIndex + 1) % PinnedCount;
+                }
+            }
+
+            if (messageIdToNavigate.HasValue)
+            {
+                await OnNavigateToPinnedMessage.InvokeAsync(messageIdToNavigate.Value);
+                StateHasChanged();
+            }
+        }
+    }
+
+    private void TogglePinnedDropdown()
+    {
+        showPinnedDropdown = !showPinnedDropdown;
+    }
+
+    private void ClosePinnedDropdown()
+    {
+        showPinnedDropdown = false;
+    }
+
+    private async Task NavigateToPinnedMessage(Guid messageId)
+    {
+        await OnNavigateToPinnedMessage.InvokeAsync(messageId);
+        showPinnedDropdown = false;
+        StateHasChanged();
+    }
+
+    private async Task HandleUnpinMessage(Guid messageId)
+    {
+        await OnUnpinDirectMessage.InvokeAsync(messageId);
+        // Dropdown will update automatically when PinnedDirectMessages changes
+    }
+
+    private async Task HandleUnpinChannelMessage(Guid messageId)
+    {
+        await OnUnpinChannelMessage.InvokeAsync(messageId);
+        // Dropdown will update automatically when PinnedChannelMessages changes
     }
 
     private async Task LoadMoreMessages()
