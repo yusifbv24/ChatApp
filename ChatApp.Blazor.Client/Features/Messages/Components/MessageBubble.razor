@@ -79,7 +79,7 @@
                     }
 
                     <!-- Message text -->
-                    <div class="message-text">@Content</div>
+                    <div class="message-text">@((MarkupString)ParseLinks(Content))</div>
 
                     <!-- Footer Row: Reactions (left) and Time/Status (right) -->
                     <div class="message-footer-row">
@@ -392,6 +392,25 @@
         if (string.IsNullOrEmpty(text)) return "";
         if (text.Length <= maxLength) return text;
         return text.Substring(0, maxLength) + "...";
+    }
+
+    private static readonly System.Text.RegularExpressions.Regex UrlRegex = new(
+        @"(https?://[^\s<>""']+)",
+        System.Text.RegularExpressions.RegexOptions.Compiled | System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+    private string ParseLinks(string? text)
+    {
+        if (string.IsNullOrEmpty(text)) return "";
+
+        // First, HTML encode the text to prevent XSS
+        var encoded = System.Net.WebUtility.HtmlEncode(text);
+
+        // Then replace URLs with anchor tags
+        return UrlRegex.Replace(encoded, match =>
+        {
+            var url = match.Value;
+            return $"<a href=\"{url}\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"message-link\">{url}</a>";
+        });
     }
 
     private async Task OnEditClick()

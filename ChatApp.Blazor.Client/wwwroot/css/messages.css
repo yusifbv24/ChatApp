@@ -1009,6 +1009,26 @@
     color: var(--white);
 }
 
+/* Message links */
+.message-link {
+    color: var(--primary-600);
+    text-decoration: underline;
+    word-break: break-all;
+}
+
+.message-link:hover {
+    color: var(--primary-700);
+}
+
+.own-bubble .message-link {
+    color: var(--white);
+    text-decoration: underline;
+}
+
+.own-bubble .message-link:hover {
+    color: rgba(255, 255, 255, 0.85);
+}
+
 /* Message footer row - contains reactions and footer side by side */
 .message-footer-row {
     display: flex;
