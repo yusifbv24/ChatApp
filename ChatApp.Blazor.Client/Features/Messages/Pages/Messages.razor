@@ -83,6 +83,8 @@
                   OnCancelSelection="ToggleSelectMode"
                   OnDeleteSelected="DeleteSelectedMessages"
                   OnForwardSelected="ForwardSelectedMessages"
+                  FavoriteMessageIds="@favoriteMessageIds"
+                  OnToggleFavorite="HandleToggleFavorite"
                   InitialDraft="@currentDraft"
                   OnDraftChanged="HandleDraftChanged" />
     </div>

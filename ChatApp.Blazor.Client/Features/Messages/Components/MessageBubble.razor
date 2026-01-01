@@ -256,9 +256,9 @@
                                         <span>@(IsPinned ? "Unpin" : "Pin")</span>
                                         <MudIcon Icon="@Icons.Material.Outlined.PushPin" Size="Size.Small" />
                                     </button>
-                                    <button class="menu-item" @onclick="HandleAddToFavoritesClick">
-                                        <span>Add to Favorites</span>
-                                        <MudIcon Icon="@Icons.Material.Outlined.StarBorder" Size="Size.Small" />
+                                    <button class="menu-item" @onclick="HandleToggleFavoriteClick">
+                                        <span>@(IsFavorite ? "Remove from Favorites" : "Add to Favorites")</span>
+                                        <MudIcon Icon="@(IsFavorite ? Icons.Material.Filled.Star : Icons.Material.Outlined.StarBorder)" Size="Size.Small" />
                                     </button>
                                     @if (!IsMarkedAsLater)
                                     {
@@ -360,6 +360,8 @@
     [Parameter] public bool IsSelectMode { get; set; }
     [Parameter] public bool IsSelected { get; set; }
     [Parameter] public EventCallback<Guid> OnSelectToggle { get; set; }
+    [Parameter] public bool IsFavorite { get; set; }
+    [Parameter] public EventCallback OnToggleFavorite { get; set; }
 
     private ElementReference messageWrapperRef;
     private bool showReactionPicker = false;
@@ -608,11 +610,11 @@
         await OnActionCompleted.InvokeAsync();
     }
 
-    private Task HandleAddToFavoritesClick()
+    private async Task HandleToggleFavoriteClick()
     {
-        // TODO: Implement Add to Favorites functionality
         CloseMoreMenu();
-        return Task.CompletedTask;
+        await OnToggleFavorite.InvokeAsync();
+        await OnActionCompleted.InvokeAsync();
     }
 
     private async Task HandleMarkAsLaterClick()

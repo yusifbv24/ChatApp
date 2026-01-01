@@ -7,6 +7,7 @@
         IChannelMessageRepository ChannelMessages { get; }
         IChannelMessageReadRepository ChannelMessageReads { get; }
         IChannelMessageReactionRepository ChannelMessageReactions { get; }
+        IUserFavoriteChannelMessageRepository Favorites { get; }
 
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
         Task BeginTransactionAsync(CancellationToken cancellationToken = default);

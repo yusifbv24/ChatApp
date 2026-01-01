@@ -157,8 +157,23 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
         }
 
 
-        private record StartConversationResponse(Guid ConversationId,string Message);
-        private record SendMessageResponse(Guid MessageId,string Message);
+        public async Task<Result<bool>> ToggleFavoriteAsync(Guid conversationId, Guid messageId)
+        {
+            var result = await _apiClient.PostAsync<FavoriteToggleResponse>(
+                $"/api/conversations/{conversationId}/messages/{messageId}/favorite/toggle");
+
+            if (result.IsSuccess && result.Value != null)
+            {
+                return Result.Success(result.Value.IsFavorite);
+            }
+
+            return Result.Failure<bool>(result.Error ?? "Failed to toggle favorite");
+        }
+
+
+        private record StartConversationResponse(Guid ConversationId, string Message);
+        private record SendMessageResponse(Guid MessageId, string Message);
         private record UnreadCountResponse(int UnreadCount);
+        private record FavoriteToggleResponse(bool IsFavorite, string Message);
     }
 }

@@ -12,6 +12,7 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
         public IDirectConversationRepository Conversations { get; }
         public IDirectMessageRepository Messages { get; }
         public IDirectMessageReactionRepository Reactions { get; }
+        public IUserFavoriteMessageRepository Favorites { get; }
 
         public UnitOfWork(DirectMessagesDbContext context,IConnectionManager connectionManager)
         {
@@ -19,6 +20,7 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
             Conversations = new DirectConversationRepository(context,connectionManager);
             Messages = new DirectMessageRepository(context);
             Reactions = new DirectMessageReactionRepository(context);
+            Favorites = new UserFavoriteMessageRepository(context);
         }
 
         public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

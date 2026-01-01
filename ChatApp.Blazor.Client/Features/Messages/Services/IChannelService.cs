@@ -74,5 +74,8 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
 
 
         Task<Result> RemoveMemberAsync(Guid channelId, Guid userId);
+
+
+        Task<Result<bool>> ToggleFavoriteAsync(Guid channelId, Guid messageId);
     }
 }

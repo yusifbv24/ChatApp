@@ -374,6 +374,34 @@ namespace ChatApp.Modules.Channels.Api.Controllers
 
 
         /// <summary>
+        /// Toggles a message as favorite for the current user
+        /// </summary>
+        [HttpPost("{messageId:guid}/favorite/toggle")]
+        [RequirePermission("Messages.Read")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> ToggleFavorite(
+            [FromRoute] Guid channelId,
+            [FromRoute] Guid messageId,
+            CancellationToken cancellationToken)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == Guid.Empty)
+                return Unauthorized();
+
+            var result = await _mediator.Send(
+                new ToggleFavoriteCommand(channelId, messageId, userId),
+                cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return Ok(new { isFavorite = result.Value, message = result.Value ? "Added to favorites" : "Removed from favorites" });
+        }
+
+
+        /// <summary>
         /// Toggles a reaction on a message (add if not exists, remove if exists)
         /// </summary>
         [HttpPost("{messageId:guid}/reactions/toggle")]

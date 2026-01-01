@@ -267,6 +267,7 @@
                                        IsDeleted="@message.IsDeleted"
                                        IsRead="@message.IsRead"
                                        IsPinned="@message.IsPinned"
+                                       IsFavorite="@FavoriteMessageIds.Contains(message.Id)"
                                        ReactionCount="@message.ReactionCount"
                                        Reactions="@message.Reactions"
                                        CurrentUserId="@CurrentUserId"
@@ -287,6 +288,7 @@
                                        OnReply="()=>OnReply.InvokeAsync(message.Id)"
                                        OnPin="()=>PinDirectMessage(message.Id,message.IsPinned)"
                                        OnForward="()=>OnForward.InvokeAsync(message.Id)"
+                                       OnToggleFavorite="()=>OnToggleFavorite.InvokeAsync(message.Id)"
                                        OnMarkAsLater="OnMarkAsLater"
                                        OnReplyClick="HandleReplyClick"
                                        OnActionCompleted="RefocusInput"
@@ -333,6 +335,7 @@
                                        IsEdited="@message.IsEdited"
                                        IsDeleted="@message.IsDeleted"
                                        IsPinned="@message.IsPinned"
+                                       IsFavorite="@FavoriteMessageIds.Contains(message.Id)"
                                        ReactionCount="@message.ReactionCount"
                                        Reactions="@message.Reactions"
                                        CurrentUserId="@CurrentUserId"
@@ -355,6 +358,7 @@
                                        OnReply="()=>OnReply.InvokeAsync(message.Id)"
                                        OnPin="()=>PinChannelMessage(message.Id, message.IsPinned)"
                                        OnForward="()=>OnForward.InvokeAsync(message.Id)"
+                                       OnToggleFavorite="()=>OnToggleFavorite.InvokeAsync(message.Id)"
                                        OnMarkAsLater="OnMarkAsLater"
                                        OnReplyClick="HandleReplyClick"
                                        OnActionCompleted="RefocusInput"
@@ -653,6 +657,10 @@
     [Parameter] public EventCallback OnDeleteSelected { get; set; }
     [Parameter] public EventCallback OnForwardSelected { get; set; }
     [Parameter] public bool CanDeleteSelected { get; set; }
+
+    // Favorites support
+    [Parameter] public HashSet<Guid> FavoriteMessageIds { get; set; } = new();
+    [Parameter] public EventCallback<Guid> OnToggleFavorite { get; set; }
 
 
     private ElementReference messagesContainerRef;

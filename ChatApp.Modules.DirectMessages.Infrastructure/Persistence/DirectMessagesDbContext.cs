@@ -14,6 +14,7 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence
         public DbSet<DirectConversation> DirectConversations => Set<DirectConversation>();
         public DbSet<DirectMessage> DirectMessages => Set<DirectMessage>();
         public DbSet<DirectMessageReaction> DirectMessageReactions => Set<DirectMessageReaction>();
+        public DbSet<UserFavoriteMessage> UserFavoriteMessages => Set<UserFavoriteMessage>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -23,6 +24,7 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence
             modelBuilder.ApplyConfiguration(new DirectConversationConfiguration());
             modelBuilder.ApplyConfiguration(new DirectMessageConfiguration());
             modelBuilder.ApplyConfiguration(new DirectMessageReactionConfiguration());
+            modelBuilder.ApplyConfiguration(new UserFavoriteMessageConfiguration());
 
             // Map Identity module's users table (read-only for queries)
             modelBuilder.Entity<UserReadModel>(entity =>

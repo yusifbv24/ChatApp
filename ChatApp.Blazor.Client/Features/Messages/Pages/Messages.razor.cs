@@ -156,6 +156,9 @@ public partial class Messages : IAsyncDisposable
     private bool isSelectMode = false;
     private HashSet<Guid> selectedMessageIds = new HashSet<Guid>();
 
+    // Favorites state
+    private HashSet<Guid> favoriteMessageIds = new HashSet<Guid>();
+
     private bool IsEmpty => !selectedConversationId.HasValue && !selectedChannelId.HasValue && !isPendingConversation;
 
     protected override async Task OnInitializedAsync()
@@ -1882,6 +1885,7 @@ public partial class Messages : IAsyncDisposable
             pendingReadReceipts.Clear(); // Clear pending read receipts when changing conversations
             pendingChannelReadReceipts.Clear(); // Clear pending channel read receipts when changing conversations
             pendingMessageAdds.Clear(); // Clear pending message adds when changing conversations
+            favoriteMessageIds.Clear(); // Clear favorites when changing conversations
             pageSize = 50; // Reset page size to 50 for new conversation
 
             // Auto-unmark read later if user saw separator (channel)
@@ -2241,6 +2245,7 @@ public partial class Messages : IAsyncDisposable
         pendingReadReceipts.Clear(); // Clear pending read receipts when changing channels
         pendingChannelReadReceipts.Clear(); // Clear pending channel read receipts when changing channels
         pendingMessageAdds.Clear(); // Clear pending message adds when changing channels
+        favoriteMessageIds.Clear(); // Clear favorites when changing channels
         pageSize = 50; // Reset page size to 50 for new channel
 
         // Reset unread separator
@@ -3489,6 +3494,53 @@ public partial class Messages : IAsyncDisposable
         catch (Exception ex)
         {
             errorMessage = $"Error toggling read later: {ex.Message}";
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleToggleFavorite(Guid messageId)
+    {
+        try
+        {
+            Result<bool> result;
+
+            // Check if we're in a channel or conversation
+            if (selectedChannelId.HasValue)
+            {
+                result = await ChannelService.ToggleFavoriteAsync(selectedChannelId.Value, messageId);
+            }
+            else if (selectedConversationId.HasValue)
+            {
+                result = await ConversationService.ToggleFavoriteAsync(selectedConversationId.Value, messageId);
+            }
+            else
+            {
+                return; // Neither channel nor conversation selected
+            }
+
+            if (result.IsSuccess)
+            {
+                // Update local state based on returned value
+                if (result.Value)
+                {
+                    favoriteMessageIds.Add(messageId);
+                }
+                else
+                {
+                    favoriteMessageIds.Remove(messageId);
+                }
+
+                StateHasChanged();
+            }
+            else
+            {
+                errorMessage = result.Error ?? "Failed to toggle favorite";
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error toggling favorite: {ex.Message}";
             StateHasChanged();
         }
     }

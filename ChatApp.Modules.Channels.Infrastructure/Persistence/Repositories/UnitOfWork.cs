@@ -13,6 +13,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
         public IChannelMessageRepository ChannelMessages { get; }
         public IChannelMessageReadRepository ChannelMessageReads { get; }
         public IChannelMessageReactionRepository ChannelMessageReactions { get; }
+        public IUserFavoriteChannelMessageRepository Favorites { get; }
 
         public UnitOfWork(ChannelsDbContext context)
         {
@@ -22,6 +23,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
             ChannelMessages = new ChannelMessageRepository(context);
             ChannelMessageReads = new ChannelMessageReadRepository(context);
             ChannelMessageReactions = new ChannelMessageReactionRepository(context);
+            Favorites = new UserFavoriteChannelMessageRepository(context);
         }
 
         public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

@@ -45,5 +45,8 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
 
 
         Task<Result> UnpinMessageAsync(Guid conversationId, Guid messageId);
+
+
+        Task<Result<bool>> ToggleFavoriteAsync(Guid conversationId, Guid messageId);
     }
 }

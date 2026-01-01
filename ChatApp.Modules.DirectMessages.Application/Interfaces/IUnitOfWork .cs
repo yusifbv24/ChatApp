@@ -5,6 +5,7 @@
         IDirectConversationRepository Conversations { get; }
         IDirectMessageRepository Messages { get; }
         IDirectMessageReactionRepository Reactions { get; }
+        IUserFavoriteMessageRepository Favorites { get; }
 
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
         Task BeginTransactionAsync(CancellationToken cancellationToken = default);
