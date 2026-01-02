@@ -82,20 +82,52 @@
                   FavoriteMessageIds="@favoriteMessageIds"
                   OnToggleFavorite="HandleToggleFavorite"
                   OnToggleSearchPanel="ToggleSearchPanel"
+                  OnToggleSidebar="ToggleSidebar"
+                  IsSearchPanelOpen="@showSearchPanel"
+                  IsSidebarOpen="@showSidebar"
                   InitialDraft="@currentDraft"
                   OnDraftChanged="HandleDraftChanged" />
     </div>
 
-    <!-- Search Panel -->
-    @if (showSearchPanel)
+    <!-- Right Panel Container (Sidebar and Search Panel share same space) -->
+    @if (showSidebar || showSearchPanel)
     {
-        <div class="messages-search-panel">
-            <SearchPanel ConversationId="@selectedConversationId"
-                         ChannelId="@selectedChannelId"
-                         IsDirectMessage="@isDirectMessage"
-                         SearchFunc="@SearchMessagesAsync"
-                         OnClose="CloseSearchPanel"
-                         OnNavigateToMessage="NavigateToSearchResult" />
+        <div class="messages-right-panel">
+            <!-- Sidebar Panel (underneath) -->
+            @if (showSidebar)
+            {
+                <div class="messages-sidebar-panel @(showSearchPanel ? "hidden" : "")">
+                    <Sidebar IsDirectMessage="@isDirectMessage"
+                             RecipientName="@recipientName"
+                             RecipientAvatarUrl="@recipientAvatarUrl"
+                             ChannelName="@selectedChannelName"
+                             MemberCount="@selectedChannelMemberCount"
+                             ConversationId="@selectedConversationId"
+                             ChannelId="@selectedChannelId"
+                             FavoriteCount="@(isDirectMessage ? (sidebarFavoriteDirectMessages?.Count ?? 0) : (sidebarFavoriteChannelMessages?.Count ?? 0))"
+                             FileCount="0"
+                             LinkCount="0"
+                             FavoriteDirectMessages="@sidebarFavoriteDirectMessages"
+                             FavoriteChannelMessages="@sidebarFavoriteChannelMessages"
+                             OnLoadFavorites="LoadSidebarFavorites"
+                             OnNavigateToMessage="NavigateToFavoriteMessage"
+                             OnRemoveFromFavorites="HandleRemoveFromFavoritesInSidebar"
+                             OnClose="CloseSidebar" />
+                </div>
+            }
+
+            <!-- Search Panel (on top) -->
+            @if (showSearchPanel)
+            {
+                <div class="messages-search-panel">
+                    <SearchPanel ConversationId="@selectedConversationId"
+                                 ChannelId="@selectedChannelId"
+                                 IsDirectMessage="@isDirectMessage"
+                                 SearchFunc="@SearchMessagesAsync"
+                                 OnClose="CloseSearchPanel"
+                                 OnNavigateToMessage="NavigateToSearchResult" />
+                </div>
+            }
         </div>
     }
 </div>

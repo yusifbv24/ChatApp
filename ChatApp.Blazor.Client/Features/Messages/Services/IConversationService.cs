@@ -41,6 +41,9 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
         Task<Result<List<DirectMessageDto>>> GetPinnedMessagesAsync(Guid conversationId);
 
 
+        Task<Result<List<FavoriteDirectMessageDto>>> GetFavoriteMessagesAsync(Guid conversationId);
+
+
         Task<Result> PinMessageAsync(Guid conversationId, Guid messageId);
 
 

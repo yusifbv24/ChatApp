@@ -160,6 +160,9 @@ public partial class Messages : IAsyncDisposable
     // Search panel state
     private bool showSearchPanel = false;
 
+    // Sidebar state (persists across conversation/channel changes)
+    private bool showSidebar = false;
+
     private bool IsEmpty => !selectedConversationId.HasValue && !selectedChannelId.HasValue && !isPendingConversation;
 
     protected override async Task OnInitializedAsync()
@@ -1533,10 +1536,9 @@ public partial class Messages : IAsyncDisposable
                     UpdateMessageReactions(messageId, reactions);
                 }
             }
-            catch (Exception ex)
+            catch
             {
                 // Silently handle exceptions to prevent runtime crash
-                Console.WriteLine($"Error handling reaction toggled: {ex.Message}");
             }
         });
     }
@@ -1569,10 +1571,9 @@ public partial class Messages : IAsyncDisposable
                     StateHasChanged();
                 }
             }
-            catch (Exception ex)
+            catch
             {
                 // Silently handle exceptions to prevent runtime crash
-                Console.WriteLine($"Error handling channel message reactions updated: {ex.Message}");
             }
         });
     }
@@ -1957,6 +1958,9 @@ public partial class Messages : IAsyncDisposable
             // Load pinned message count
             await LoadPinnedDirectMessageCount();
 
+            // Load favorite messages for count
+            await LoadFavoriteDirectMessages();
+
             // Update URL
             NavigationManager.NavigateTo($"/messages/conversation/{conversation.Id}", false);
 
@@ -2299,6 +2303,9 @@ public partial class Messages : IAsyncDisposable
             await LoadChannelMessages();
             await LoadPinnedMessageCount();
 
+            // Load favorite messages for count
+            await LoadFavoriteChannelMessages();
+
             // Update URL
             NavigationManager.NavigateTo($"/messages/channel/{channel.Id}", false);
 
@@ -2353,42 +2360,7 @@ public partial class Messages : IAsyncDisposable
     #region Pinned Messages
     private async Task NavigateToPinnedMessage(Guid messageId)
     {
-        try
-        {
-            // Check if message is already loaded
-            bool messageExists = isDirectMessage
-                ? directMessages.Any(m => m.Id == messageId)
-                : channelMessages.Any(m => m.Id == messageId);
-
-            // Keep loading more messages until we find the target message
-            int maxAttempts = 20; // Prevent infinite loop (20 * 50 = 1000 messages max)
-            int attempts = 0;
-
-            while (!messageExists && hasMoreMessages && attempts < maxAttempts)
-            {
-                await LoadMoreMessages();
-                attempts++;
-
-                messageExists = isDirectMessage
-                    ? directMessages.Any(m => m.Id == messageId)
-                    : channelMessages.Any(m => m.Id == messageId);
-
-                StateHasChanged();
-                await Task.Delay(50); // Small delay for DOM update
-            }
-
-            if (messageExists)
-            {
-                // Wait for DOM to fully render
-                await Task.Delay(100);
-                // Scroll to the message and highlight it
-                await JS.InvokeVoidAsync("chatAppUtils.scrollToMessageAndHighlight", $"message-{messageId}");
-            }
-        }
-        catch
-        {
-            // Message might not be loaded yet or element not found
-        }
+        await ScrollToAndHighlightMessage(messageId);
     }
 
     private async Task LoadPinnedMessageCount()
@@ -2424,6 +2396,48 @@ public partial class Messages : IAsyncDisposable
         {
             pinnedDirectMessages = [];
             pinnedDirectMessageCount = 0;
+        }
+    }
+
+    private async Task LoadFavoriteDirectMessages()
+    {
+        try
+        {
+            if (!selectedConversationId.HasValue) return;
+
+            var result = await ConversationService.GetFavoriteMessagesAsync(selectedConversationId.Value);
+            if (result.IsSuccess && result.Value != null)
+            {
+                sidebarFavoriteDirectMessages = result.Value;
+                // Populate favoriteMessageIds for the message bubbles
+                favoriteMessageIds = new HashSet<Guid>(result.Value.Select(f => f.Id));
+            }
+        }
+        catch
+        {
+            sidebarFavoriteDirectMessages = null;
+            favoriteMessageIds.Clear();
+        }
+    }
+
+    private async Task LoadFavoriteChannelMessages()
+    {
+        try
+        {
+            if (!selectedChannelId.HasValue) return;
+
+            var result = await ChannelService.GetFavoriteMessagesAsync(selectedChannelId.Value);
+            if (result.IsSuccess && result.Value != null)
+            {
+                sidebarFavoriteChannelMessages = result.Value;
+                // Populate favoriteMessageIds for the message bubbles
+                favoriteMessageIds = new HashSet<Guid>(result.Value.Select(f => f.Id));
+            }
+        }
+        catch
+        {
+            sidebarFavoriteChannelMessages = null;
+            favoriteMessageIds.Clear();
         }
     }
 
@@ -3328,11 +3342,7 @@ public partial class Messages : IAsyncDisposable
                     memberData.userId,
                     memberData.role);
 
-                if (roleResult.IsFailure)
-                {
-                    // Member added but role update failed - log but don't throw
-                    Console.WriteLine($"Member added but role update failed: {roleResult.Error}");
-                }
+                // Ignore role update failure - member was added successfully
             }
 
             // Update member count
@@ -3528,6 +3538,16 @@ public partial class Messages : IAsyncDisposable
                     favoriteMessageIds.Remove(messageId);
                 }
 
+                // Reload sidebar favorites to update count and list
+                if (isDirectMessage && selectedConversationId.HasValue)
+                {
+                    await LoadFavoriteDirectMessages();
+                }
+                else if (!isDirectMessage && selectedChannelId.HasValue)
+                {
+                    await LoadFavoriteChannelMessages();
+                }
+
                 StateHasChanged();
             }
             else
@@ -3549,13 +3569,124 @@ public partial class Messages : IAsyncDisposable
 
     private void ToggleSearchPanel()
     {
+        // Toggle search panel - sidebar state unchanged
         showSearchPanel = !showSearchPanel;
     }
 
     private void CloseSearchPanel()
     {
+        // Just close search panel - sidebar will become visible if open
         showSearchPanel = false;
     }
+
+    #endregion
+
+    #region Sidebar
+
+    private void ToggleSidebar()
+    {
+        // If search panel is open, close it first
+        if (showSearchPanel)
+        {
+            showSearchPanel = false;
+            return;
+        }
+
+        // Otherwise toggle sidebar
+        showSidebar = !showSidebar;
+    }
+
+    private void CloseSidebar()
+    {
+        showSidebar = false;
+    }
+
+    // Sidebar favorites
+    private List<FavoriteDirectMessageDto>? sidebarFavoriteDirectMessages;
+    private List<FavoriteChannelMessageDto>? sidebarFavoriteChannelMessages;
+
+    private async Task LoadSidebarFavorites()
+    {
+        try
+        {
+            // Reload favorites from backend
+            if (isDirectMessage && selectedConversationId.HasValue)
+            {
+                await LoadFavoriteDirectMessages();
+            }
+            else if (!isDirectMessage && selectedChannelId.HasValue)
+            {
+                await LoadFavoriteChannelMessages();
+            }
+        }
+        catch
+        {
+            // Silently handle error
+        }
+    }
+
+    private async Task NavigateToFavoriteMessage(Guid messageId)
+    {
+        await ScrollToAndHighlightMessage(messageId);
+    }
+
+    private async Task HandleRemoveFromFavoritesInSidebar(Guid messageId)
+    {
+        try
+        {
+            Result<bool> result;
+
+            // Call the toggle API (will remove since it's already favorited)
+            if (isDirectMessage && selectedConversationId.HasValue)
+            {
+                result = await ConversationService.ToggleFavoriteAsync(selectedConversationId.Value, messageId);
+            }
+            else if (!isDirectMessage && selectedChannelId.HasValue)
+            {
+                result = await ChannelService.ToggleFavoriteAsync(selectedChannelId.Value, messageId);
+            }
+            else
+            {
+                return;
+            }
+
+            if (result.IsSuccess)
+            {
+                // Update local state
+                favoriteMessageIds.Remove(messageId);
+
+                // Remove from sidebar lists
+                if (isDirectMessage && sidebarFavoriteDirectMessages != null)
+                {
+                    sidebarFavoriteDirectMessages = sidebarFavoriteDirectMessages
+                        .Where(m => m.Id != messageId)
+                        .ToList();
+                }
+                else if (!isDirectMessage && sidebarFavoriteChannelMessages != null)
+                {
+                    sidebarFavoriteChannelMessages = sidebarFavoriteChannelMessages
+                        .Where(m => m.Id != messageId)
+                        .ToList();
+                }
+
+                StateHasChanged();
+            }
+            else
+            {
+                errorMessage = result.Error ?? "Failed to remove from favorites";
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error removing from favorites: {ex.Message}";
+            StateHasChanged();
+        }
+    }
+
+    #endregion
+
+    #region Search Functionality
 
     private async Task<SearchResultsDto?> SearchMessagesAsync(Guid targetId, string searchTerm, int page, int pageSize)
     {
@@ -3582,10 +3713,11 @@ public partial class Messages : IAsyncDisposable
 
     private async Task NavigateToSearchResult(Guid messageId)
     {
-        // Close search panel
-        showSearchPanel = false;
-        StateHasChanged();
+        await ScrollToAndHighlightMessage(messageId);
+    }
 
+    private async Task ScrollToAndHighlightMessage(Guid messageId)
+    {
         try
         {
             // Check if message is already loaded
@@ -3614,16 +3746,14 @@ public partial class Messages : IAsyncDisposable
             {
                 // Wait for DOM to fully render
                 await Task.Delay(100);
-                // Scroll to the message
-                await JS.InvokeVoidAsync("chatAppUtils.scrollToMessageById", $"message-{messageId}");
+                // Scroll to the message and highlight it
+                await JS.InvokeVoidAsync("chatAppUtils.scrollToMessageAndHighlight", $"message-{messageId}");
             }
         }
-        catch (Exception ex)
+        catch
         {
-            Console.WriteLine($"Error navigating to search result: {ex.Message}");
+            // Silently handle error
         }
-
-        StateHasChanged();
     }
 
     #endregion

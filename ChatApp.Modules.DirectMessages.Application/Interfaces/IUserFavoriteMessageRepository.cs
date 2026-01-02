@@ -1,3 +1,4 @@
+using ChatApp.Modules.DirectMessages.Application.DTOs.Response;
 using ChatApp.Modules.DirectMessages.Domain.Entities;
 
 namespace ChatApp.Modules.DirectMessages.Application.Interfaces
@@ -6,6 +7,7 @@ namespace ChatApp.Modules.DirectMessages.Application.Interfaces
     {
         Task<UserFavoriteMessage?> GetAsync(Guid userId, Guid messageId, CancellationToken cancellationToken = default);
         Task<List<Guid>> GetFavoriteMessageIdsAsync(Guid userId, Guid conversationId, CancellationToken cancellationToken = default);
+        Task<List<FavoriteDirectMessageDto>> GetFavoriteMessagesAsync(Guid userId, Guid conversationId, CancellationToken cancellationToken = default);
         Task<bool> IsFavoriteAsync(Guid userId, Guid messageId, CancellationToken cancellationToken = default);
         Task AddAsync(UserFavoriteMessage favorite, CancellationToken cancellationToken = default);
         Task RemoveAsync(UserFavoriteMessage favorite, CancellationToken cancellationToken = default);

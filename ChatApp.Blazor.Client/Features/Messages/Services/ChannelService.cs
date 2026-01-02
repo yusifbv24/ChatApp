@@ -82,6 +82,13 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
         }
 
 
+        public async Task<Result<List<FavoriteChannelMessageDto>>> GetFavoriteMessagesAsync(Guid channelId)
+        {
+            return await apiClient.GetAsync<List<FavoriteChannelMessageDto>>(
+                $"/api/channels/{channelId}/messages/favorites");
+        }
+
+
         public async Task<Result<int>> GetUnreadCountAsync(Guid channelId)
         {
             var response = await apiClient.GetAsync<UnreadCountResponse>(

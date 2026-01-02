@@ -30,7 +30,7 @@
                 }
                 else
                 {
-                    <div class="avatar-placeholder">@GetInitials(SenderName)</div>
+                    <div class="avatar-placeholder">@StringHelper.GetInitials(SenderName)</div>
                 }
             }
         </div>
@@ -122,7 +122,7 @@
                                                                 }
                                                                 else
                                                                 {
-                                                                    <div class="avatar-placeholder-small">@GetInitials(displayName)</div>
+                                                                    <div class="avatar-placeholder-small">@StringHelper.GetInitials(displayName)</div>
                                                                 }
                                                             </div>
                                                             <span class="reaction-user-name">@displayName</span>
@@ -372,15 +372,6 @@
     private int? hoveredReactionIndex = null;
     private CancellationTokenSource? hideReactionPanelCts;
     private readonly string[] CommonReactions = { "👍", "❤️", "😂", "😮", "😢", "🎉" };
-
-    private string GetInitials(string name)
-    {
-        if (string.IsNullOrEmpty(name)) return "?";
-        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        return parts.Length >= 2
-            ? $"{parts[0][0]}{parts[1][0]}".ToUpper()
-            : name[0].ToString().ToUpper();
-    }
 
     private string FormatTime(DateTime dateTime)
     {

@@ -84,8 +84,7 @@
                     <div class="conversation-item @(SelectedChannelId == item.Id ? "selected" : "")"
                          @onclick="()=> SelectChannelItem(item)">
                         <div class="conversation-avatar group-avatar">
-                            <MudIcon Icon="@(item.IsPrivate ? Icons.Material.Filled.Lock : Icons.Material.Filled.Group)"
-                                     Class="group-icon" />
+                            <span class="group-initials">@StringHelper.GetInitials(item.Name)</span>
                         </div>
                         <div class="conversation-info">
                             <div class="conversation-header">
@@ -181,7 +180,7 @@
                             }
                             else
                             {
-                                <div class="avatar-placeholder">@GetInitials(item.Name)</div>
+                                <div class="avatar-placeholder">@StringHelper.GetInitials(item.Name)</div>
                             }
                             <span class="online-indicator @(item.IsOnline ? "online" : "offline")"></span>
                         </div>
@@ -422,15 +421,6 @@
     {
         showNewMenu = false;
         await OnNewChannel.InvokeAsync();
-    }
-
-    private static string GetInitials(string name)
-    {
-        if (string.IsNullOrWhiteSpace(name)) return "?";
-        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        return parts.Length >= 2
-            ? $"{parts[0][0]}{parts[1][0]}".ToUpper()
-            : name[0].ToString().ToUpper();
     }
 
     private string FormatTime(DateTime dateTime)

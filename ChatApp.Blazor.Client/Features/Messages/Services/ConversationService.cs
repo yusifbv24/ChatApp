@@ -105,6 +105,14 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
 
 
 
+        public async Task<Result<List<FavoriteDirectMessageDto>>> GetFavoriteMessagesAsync(Guid conversationId)
+        {
+            return await _apiClient.GetAsync<List<FavoriteDirectMessageDto>>(
+                $"/api/conversations/{conversationId}/messages/favorites");
+        }
+
+
+
         public async Task<Result> PinMessageAsync(Guid conversationId, Guid messageId)
         {
             return await _apiClient.PostAsync(

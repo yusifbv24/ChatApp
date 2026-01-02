@@ -1,6 +1,8 @@
+using ChatApp.Modules.Channels.Application.DTOs.Responses;
 using ChatApp.Modules.Channels.Application.Interfaces;
 using ChatApp.Modules.Channels.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+// UserReadModel is in Application.DTOs.Responses namespace, already imported
 
 namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
 {
@@ -26,6 +28,29 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 join message in _context.ChannelMessages on favorite.MessageId equals message.Id
                 where favorite.UserId == userId && message.ChannelId == channelId
                 select favorite.MessageId
+            ).ToListAsync(cancellationToken);
+        }
+
+        public async Task<List<FavoriteChannelMessageDto>> GetFavoriteMessagesAsync(Guid userId, Guid channelId, CancellationToken cancellationToken = default)
+        {
+            return await (
+                from favorite in _context.UserFavoriteChannelMessages
+                join message in _context.ChannelMessages on favorite.MessageId equals message.Id
+                join user in _context.Set<UserReadModel>() on message.SenderId equals user.Id
+                where favorite.UserId == userId && message.ChannelId == channelId
+                orderby favorite.FavoritedAtUtc descending
+                select new FavoriteChannelMessageDto(
+                    message.Id,
+                    message.ChannelId,
+                    user.Id,
+                    user.Username,
+                    user.DisplayName,
+                    user.AvatarUrl,
+                    message.IsDeleted ? "This message was deleted" : message.Content,
+                    message.IsDeleted,
+                    DateTime.SpecifyKind(message.CreatedAtUtc, DateTimeKind.Utc),
+                    DateTime.SpecifyKind(favorite.FavoritedAtUtc, DateTimeKind.Utc)
+                )
             ).ToListAsync(cancellationToken);
         }
 

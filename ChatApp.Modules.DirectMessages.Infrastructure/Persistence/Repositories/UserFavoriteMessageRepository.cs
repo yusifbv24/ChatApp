@@ -1,3 +1,5 @@
+using ChatApp.Modules.DirectMessages.Application.DTOs.Request;
+using ChatApp.Modules.DirectMessages.Application.DTOs.Response;
 using ChatApp.Modules.DirectMessages.Application.Interfaces;
 using ChatApp.Modules.DirectMessages.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -26,6 +28,29 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 join message in _context.DirectMessages on favorite.MessageId equals message.Id
                 where favorite.UserId == userId && message.ConversationId == conversationId
                 select favorite.MessageId
+            ).ToListAsync(cancellationToken);
+        }
+
+        public async Task<List<FavoriteDirectMessageDto>> GetFavoriteMessagesAsync(Guid userId, Guid conversationId, CancellationToken cancellationToken = default)
+        {
+            return await (
+                from favorite in _context.UserFavoriteMessages
+                join message in _context.DirectMessages on favorite.MessageId equals message.Id
+                join sender in _context.Set<UserReadModel>() on message.SenderId equals sender.Id
+                where favorite.UserId == userId && message.ConversationId == conversationId
+                orderby favorite.FavoritedAtUtc descending
+                select new FavoriteDirectMessageDto(
+                    message.Id,
+                    message.ConversationId,
+                    message.SenderId,
+                    sender.Username,
+                    sender.DisplayName,
+                    sender.AvatarUrl,
+                    message.IsDeleted ? "This message was deleted" : message.Content,
+                    message.IsDeleted,
+                    DateTime.SpecifyKind(message.CreatedAtUtc, DateTimeKind.Utc),
+                    DateTime.SpecifyKind(favorite.FavoritedAtUtc, DateTimeKind.Utc)
+                )
             ).ToListAsync(cancellationToken);
         }
 

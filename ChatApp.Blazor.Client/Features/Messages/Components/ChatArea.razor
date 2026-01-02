@@ -28,7 +28,7 @@
                         }
                         else
                         {
-                            <div class="avatar-placeholder">@GetInitials(RecipientName)</div>
+                            <div class="avatar-placeholder">@StringHelper.GetInitials(RecipientName)</div>
                         }
                         <span class="online-indicator @(IsRecipientOnline ? "online" : "offline")"></span>
                     </div>
@@ -46,8 +46,8 @@
                 }
                 else
                 {
-                    <div class="header-channel-icon">
-                        <MudIcon Icon="@(ChannelType==ChannelType.Private ? Icons.Material.Filled.Lock : Icons.Material.Filled.Tag)" />
+                    <div class="header-avatar">
+                        <div class="avatar-placeholder channel-avatar">@StringHelper.GetInitials(ChannelName)</div>
                     </div>
                     <div class="header-details">
                         <h3 class="header-name">@ChannelName</h3>
@@ -82,11 +82,11 @@
                         <MudIcon Icon="@Icons.Material.Filled.PersonAdd" />
                     </button>
                 }
-                <button class="header-action-btn" title="Search" @onclick="() => OnToggleSearchPanel.InvokeAsync()">
+                <button class="header-action-btn @(IsSearchPanelOpen ? "active" : "")" title="Search" @onclick="() => OnToggleSearchPanel.InvokeAsync()">
                     <MudIcon Icon="@Icons.Material.Filled.Search" />
                 </button>
-                <button class="header-action-btn" title="Info" @onclick="ToggleInfoPanel">
-                    <MudIcon Icon="@Icons.Material.Filled.Info" />
+                <button class="header-action-btn @(IsSidebarOpen || IsSearchPanelOpen ? "active" : "")" title="Sidebar" @onclick="() => OnToggleSidebar.InvokeAsync()">
+                    <MudIcon Icon="@Icons.Material.Outlined.ViewSidebar" />
                 </button>
             </div>
         </div>
@@ -156,7 +156,7 @@
                                             }
                                             else
                                             {
-                                                <div class="avatar-placeholder">@GetInitials(message.SenderDisplayName)</div>
+                                                <div class="avatar-placeholder">@StringHelper.GetInitials(message.SenderDisplayName)</div>
                                             }
                                         </div>
                                         <div class="pinned-item-content">
@@ -181,7 +181,7 @@
                                             }
                                             else
                                             {
-                                                <div class="avatar-placeholder">@GetInitials(message.SenderDisplayName)</div>
+                                                <div class="avatar-placeholder">@StringHelper.GetInitials(message.SenderDisplayName)</div>
                                             }
                                         </div>
                                         <div class="pinned-item-content">
@@ -417,50 +417,6 @@
         }
     }
 </div>
-<!-- Info Panel (slide out) -->
-@if (showInfoPanel)
-{
-    <div class="info-panel-overlay" @onclick="CloseInfoPanel">
-        <div class="info-panel" @onclick:stopPropagation="true">
-            <div class="info-panel-header">
-                <h3>@(IsDirectMessage? "Contact Info" : "Channel Info")</h3>
-                <button class="close-panel-btn" @onclick="CloseInfoPanel">
-                    <MudIcon Icon="@Icons.Material.Filled.Close" />
-                </button>
-            </div>
-            <div class="info-panel-content">
-                @if (IsDirectMessage)
-                {
-                    <div class="info-avatar-section">
-                        @if (!string.IsNullOrEmpty(RecipientAvatarUrl))
-                        {
-                            <img src="@RecipientAvatarUrl" alt="@RecipientName" class="info-avatar" />
-                        }
-                        else
-                        {
-                            <div class="info-avatar-placeholder">@GetInitials(RecipientName)></div>
-                        }
-                        <h4>@RecipientName</h4>
-                        <span class="info-status @(IsRecipientOnline ? "online" : "")">
-                            @(IsRecipientOnline ? "Online" : "Offline")
-                        </span>
-                    </div>
-                }
-                else
-                {
-                    <div class="info-channel-section">
-                        <div class="info-channel-icon">
-                            <MudIcon Icon="@(ChannelType == ChannelType.Private ? Icons.Material.Filled.Lock : Icons.Material.Filled.Tag)" />
-                        </div>
-                        <h4>@ChannelName</h4>
-                        <p class="info-description">@ChannelDescription</p>
-                        <span class="info-members">@MemberCount members</span>
-                    </div>
-                }
-            </div>
-        </div>
-    </div>
-}
 
 <!-- Add Member Dialog -->
 @if (showAddMemberPanel)
@@ -504,7 +460,7 @@
                                         }
                                         else
                                         {
-                                            <div class="avatar-placeholder">@GetInitials(user.DisplayName)</div>
+                                            <div class="avatar-placeholder">@StringHelper.GetInitials(user.DisplayName)</div>
                                         }
                                     </div>
                                     <div class="member-info">
@@ -646,13 +602,17 @@
 
     // Search panel
     [Parameter] public EventCallback OnToggleSearchPanel { get; set; }
+    [Parameter] public bool IsSearchPanelOpen { get; set; }
+
+    // Sidebar
+    [Parameter] public EventCallback OnToggleSidebar { get; set; }
+    [Parameter] public bool IsSidebarOpen { get; set; }
 
 
     private ElementReference messagesContainerRef;
     private ElementReference scrollAnchorRef;
     private ElementReference loadMoreTriggerRef;
     private MessageInput? messageInputRef;
-    private bool showInfoPanel = false;
     private bool showAddMemberPanel = false;
     private bool showScrollToBottom = false;
     private int newMessagesCount = 0;
@@ -869,15 +829,6 @@
             .OrderBy(m => m.CreatedAtUtc)
             .GroupBy(m => m.CreatedAtUtc.Date);
 
-    private static string GetInitials(string name)
-    {
-        if (string.IsNullOrWhiteSpace(name)) return "?";
-        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        return parts.Length >= 2
-            ? $"{parts[0][0]}{parts[1][0]}".ToUpper()
-            : name[0].ToString().ToUpper();
-    }
-
     private string FormatDateDivider(DateTime date)
     {
         var now = DateTime.Now;
@@ -941,16 +892,6 @@
 
         // If previous message is from a different sender, show sender name (this is the first in the group)
         return list[index - 1].SenderId != message.SenderId;
-    }
-
-    private void ToggleInfoPanel()
-    {
-        showInfoPanel = !showInfoPanel;
-    }
-
-    private void CloseInfoPanel()
-    {
-        showInfoPanel = false;
     }
 
     private DirectMessageDto? GetCurrentPinnedDirectMessage()

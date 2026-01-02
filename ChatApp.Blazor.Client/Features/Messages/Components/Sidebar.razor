@@ -1,0 +1,520 @@
+@using ChatApp.Blazor.Client.Models.Messages
+@using System.Globalization
+
+<div class="sidebar-panel" @onclick="CloseAllMenus" @onclick:stopPropagation="false">
+    @if (showFavoritesPanel)
+    {
+        <!-- Favorites Panel -->
+        <div class="sidebar-favorites-panel">
+            <div class="sidebar-header-panel">
+                <div class="sidebar-header">
+                    <div class="sidebar-header-left">
+                        <button class="sidebar-close-btn" @onclick="CloseFavoritesPanel" @onclick:stopPropagation="true">
+                            <MudIcon Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small" />
+                        </button>
+                        <span class="sidebar-title">Favorite messages</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar-favorites-content">
+                @if (isLoadingFavorites)
+                {
+                    <div class="favorites-loading">
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                    </div>
+                }
+                else if (IsDirectMessage && (FavoriteDirectMessages == null || !FavoriteDirectMessages.Any()))
+                {
+                    <div class="favorites-empty">
+                        <MudIcon Icon="@Icons.Material.Outlined.StarBorder" Size="Size.Large" Class="favorites-empty-icon" />
+                        <span>No favorite messages</span>
+                    </div>
+                }
+                else if (!IsDirectMessage && (FavoriteChannelMessages == null || !FavoriteChannelMessages.Any()))
+                {
+                    <div class="favorites-empty">
+                        <MudIcon Icon="@Icons.Material.Outlined.StarBorder" Size="Size.Large" Class="favorites-empty-icon" />
+                        <span>No favorite messages</span>
+                    </div>
+                }
+                else
+                {
+                    @if (IsDirectMessage && FavoriteDirectMessages != null)
+                    {
+                        @foreach (var group in FavoriteDirectMessages.GroupBy(m => m.FavoritedAtUtc.Date).OrderByDescending(g => g.Key))
+                        {
+                            <div class="favorites-date-divider">
+                                <span>@FormatFavoriteDate(group.Key)</span>
+                            </div>
+                            @foreach (var message in group.OrderByDescending(m => m.FavoritedAtUtc))
+                            {
+                                <div class="favorites-message-item"
+                                     @onmouseenter="() => hoveredMessageId = message.Id"
+                                     @onmouseleave="() => { if (activeMenuMessageId != message.Id) hoveredMessageId = null; }">
+                                    <div class="favorites-message-avatar">
+                                        @if (!string.IsNullOrEmpty(message.SenderAvatarUrl))
+                                        {
+                                            <img src="@message.SenderAvatarUrl" alt="@message.SenderDisplayName" />
+                                        }
+                                        else
+                                        {
+                                            <div class="favorites-avatar-placeholder">@StringHelper.GetInitials(message.SenderDisplayName)</div>
+                                        }
+                                    </div>
+                                    <div class="favorites-message-content" @onclick="() => NavigateToMessage(message.Id)">
+                                        <div class="favorites-sender-name">@message.SenderDisplayName</div>
+                                        <div class="favorites-message-text @(message.IsDeleted ? "deleted" : "")">
+                                            @message.Content
+                                        </div>
+                                    </div>
+                                    <div class="favorites-message-actions">
+                                        @if (hoveredMessageId == message.Id || activeMenuMessageId == message.Id)
+                                        {
+                                            <button class="favorites-menu-btn" @onclick="() => ToggleMessageMenu(message.Id)" @onclick:stopPropagation="true">
+                                                <MudIcon Icon="@Icons.Material.Filled.MoreHoriz" Size="Size.Small" />
+                                            </button>
+                                        }
+                                        @if (activeMenuMessageId == message.Id)
+                                        {
+                                            <div class="favorites-context-menu" @onclick:stopPropagation="true">
+                                                <button class="context-menu-item" @onclick="() => HandleViewContext(message.Id)">
+                                                    <span>View context</span>
+                                                </button>
+                                                <button class="context-menu-item" @onclick="() => HandleRemoveFromFavorites(message.Id)">
+                                                    <span>Remove from favorites</span>
+                                                </button>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        }
+                    }
+                    else if (!IsDirectMessage && FavoriteChannelMessages != null)
+                    {
+                        @foreach (var group in FavoriteChannelMessages.GroupBy(m => m.FavoritedAtUtc.Date).OrderByDescending(g => g.Key))
+                        {
+                            <div class="favorites-date-divider">
+                                <span>@FormatFavoriteDate(group.Key)</span>
+                            </div>
+                            @foreach (var message in group.OrderByDescending(m => m.FavoritedAtUtc))
+                            {
+                                <div class="favorites-message-item"
+                                     @onmouseenter="() => hoveredMessageId = message.Id"
+                                     @onmouseleave="() => { if (activeMenuMessageId != message.Id) hoveredMessageId = null; }">
+                                    <div class="favorites-message-avatar">
+                                        @if (!string.IsNullOrEmpty(message.SenderAvatarUrl))
+                                        {
+                                            <img src="@message.SenderAvatarUrl" alt="@message.SenderDisplayName" />
+                                        }
+                                        else
+                                        {
+                                            <div class="favorites-avatar-placeholder">@StringHelper.GetInitials(message.SenderDisplayName)</div>
+                                        }
+                                    </div>
+                                    <div class="favorites-message-content" @onclick="() => NavigateToMessage(message.Id)">
+                                        <div class="favorites-sender-name">@message.SenderDisplayName</div>
+                                        <div class="favorites-message-text @(message.IsDeleted ? "deleted" : "")">
+                                            @message.Content
+                                        </div>
+                                    </div>
+                                    <div class="favorites-message-actions">
+                                        @if (hoveredMessageId == message.Id || activeMenuMessageId == message.Id)
+                                        {
+                                            <button class="favorites-menu-btn" @onclick="() => ToggleMessageMenu(message.Id)" @onclick:stopPropagation="true">
+                                                <MudIcon Icon="@Icons.Material.Filled.MoreHoriz" Size="Size.Small" />
+                                            </button>
+                                        }
+                                        @if (activeMenuMessageId == message.Id)
+                                        {
+                                            <div class="favorites-context-menu" @onclick:stopPropagation="true">
+                                                <button class="context-menu-item" @onclick="() => HandleViewContext(message.Id)">
+                                                    <span>View context</span>
+                                                </button>
+                                                <button class="context-menu-item" @onclick="() => HandleRemoveFromFavorites(message.Id)">
+                                                    <span>Remove from favorites</span>
+                                                </button>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        }
+                    }
+                }
+            </div>
+        </div>
+    }
+    else if (showLinksPanel)
+    {
+        <!-- Links Panel -->
+        <div class="sidebar-favorites-panel">
+            <div class="sidebar-header-panel">
+                <div class="sidebar-header">
+                    <div class="sidebar-header-left">
+                        <button class="sidebar-close-btn" @onclick="CloseLinksPanel" @onclick:stopPropagation="true">
+                            <MudIcon Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small" />
+                        </button>
+                        <span class="sidebar-title">All links</span>
+                    </div>
+                </div>
+            </div>
+            <div class="sidebar-favorites-content">
+                <div class="favorites-empty">
+                    <MudIcon Icon="@Icons.Material.Outlined.Link" Size="Size.Large" Class="favorites-empty-icon" />
+                    <span>No links yet</span>
+                </div>
+            </div>
+        </div>
+    }
+    else if (showFilesPanel)
+    {
+        <!-- Files and Media Panel -->
+        <div class="sidebar-favorites-panel">
+            <div class="sidebar-header-panel">
+                <div class="sidebar-header">
+                    <div class="sidebar-header-left">
+                        <button class="sidebar-close-btn" @onclick="CloseFilesPanel" @onclick:stopPropagation="true">
+                            <MudIcon Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small" />
+                        </button>
+                        <span class="sidebar-title">Files and media</span>
+                    </div>
+                </div>
+            </div>
+            <div class="sidebar-favorites-content">
+                <div class="favorites-empty">
+                    <MudIcon Icon="@Icons.Material.Outlined.PhotoLibrary" Size="Size.Large" Class="favorites-empty-icon" />
+                    <span>No files or media yet</span>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- Main Sidebar Content -->
+        <div class="sidebar-header-panel">
+            <div class="sidebar-header">
+                <div class="sidebar-header-left">
+                    <button class="sidebar-close-btn" @onclick="() => OnClose.InvokeAsync()" @onclick:stopPropagation="true">
+                        <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" />
+                    </button>
+                    <span class="sidebar-title">About chat</span>
+                </div>
+                <div class="sidebar-header-right">
+                    <button class="sidebar-menu-btn" @onclick="ToggleContextMenu" @onclick:stopPropagation="true">
+                        <MudIcon Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" />
+                    </button>
+
+                    @if (showContextMenu)
+                    {
+                        <div class="sidebar-context-menu" @onclick:stopPropagation="true">
+                            <button class="context-menu-item" @onclick="HandlePin">
+                                <span>Pin</span>
+                            </button>
+                            @if (IsDirectMessage)
+                            {
+                                <button class="context-menu-item" @onclick="HandleViewProfile">
+                                    <span>View profile</span>
+                                </button>
+                                <button class="context-menu-item" @onclick="HandleFindChat">
+                                    <span>Find chat with this user</span>
+                                </button>
+                            }
+                            else
+                            {
+                                <button class="context-menu-item" @onclick="HandleAddMembers">
+                                    <span>Add members</span>
+                                </button>
+                            }
+                            <button class="context-menu-item" @onclick="HandleHide">
+                                <span>Hide</span>
+                            </button>
+                            @if (!IsDirectMessage)
+                            {
+                                <button class="context-menu-item context-menu-item-danger" @onclick="HandleLeave">
+                                    <span>Leave</span>
+                                </button>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="sidebar-content">
+            <div class="sidebar-info-panel">
+                @if (IsDirectMessage)
+                {
+                    <div class="sidebar-avatar-container">
+                        @if (!string.IsNullOrEmpty(RecipientAvatarUrl))
+                        {
+                            <img src="@RecipientAvatarUrl" alt="@RecipientName" class="sidebar-avatar" />
+                        }
+                        else
+                        {
+                            <div class="sidebar-avatar-placeholder">@StringHelper.GetInitials(RecipientName)</div>
+                        }
+                    </div>
+                    <div class="sidebar-user-name">@(string.IsNullOrEmpty(RecipientName) ? "Unknown User" : RecipientName)</div>
+                    <div class="sidebar-user-role">User</div>
+                }
+                else
+                {
+                    <div class="sidebar-avatar-container">
+                        <div class="sidebar-avatar-placeholder">@StringHelper.GetInitials(ChannelName)</div>
+                    </div>
+                    <div class="sidebar-user-name">@(string.IsNullOrEmpty(ChannelName) ? "Unknown Group" : ChannelName)</div>
+                    <div class="sidebar-user-role">@MemberCount members</div>
+                }
+            </div>
+
+            <div class="sidebar-details-panel">
+                <div class="sidebar-details-header">
+                    <MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" Class="details-header-icon" />
+                    <span class="details-header-text">@(IsDirectMessage ? "User" : "Group chat")</span>
+                </div>
+
+                <div class="sidebar-section-item" @onclick:stopPropagation="true">
+                    <div class="sidebar-section-left">
+                        <MudIcon Icon="@(IsMuted ? Icons.Material.Outlined.VolumeOff : Icons.Material.Outlined.VolumeUp)" Size="Size.Small" Class="section-icon section-icon-primary" />
+                        <span class="section-text section-text-primary">Sound</span>
+                    </div>
+                    <div class="sidebar-section-right">
+                        <label class="toggle-switch">
+                            <input type="checkbox" checked="@(!IsMuted)" @onchange="HandleSoundToggle" />
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="sidebar-section-item" @onclick="OpenFavoritesPanel">
+                    <div class="sidebar-section-left">
+                        <MudIcon Icon="@Icons.Material.Outlined.StarBorder" Size="Size.Small" Class="section-icon section-icon-primary" />
+                        <span class="section-text section-text-primary">Favorite messages</span>
+                    </div>
+                    <div class="sidebar-section-right">
+                        <span class="sidebar-section-count">@FavoriteCount</span>
+                        <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Class="sidebar-section-arrow" />
+                    </div>
+                </div>
+
+                <div class="sidebar-section-item" @onclick="OpenLinksPanel">
+                    <div class="sidebar-section-left">
+                        <MudIcon Icon="@Icons.Material.Outlined.Link" Size="Size.Small" Class="section-icon section-icon-primary" />
+                        <span class="section-text section-text-primary">All links</span>
+                    </div>
+                    <div class="sidebar-section-right">
+                        <span class="sidebar-section-count">@LinkCount</span>
+                        <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Class="sidebar-section-arrow" />
+                    </div>
+                </div>
+
+                <div class="sidebar-section-item" @onclick="OpenFilesPanel">
+                    <div class="sidebar-section-left">
+                        <MudIcon Icon="@Icons.Material.Outlined.PhotoLibrary" Size="Size.Small" Class="section-icon section-icon-primary" />
+                        <span class="section-text section-text-primary">Files and media</span>
+                    </div>
+                    <div class="sidebar-section-right">
+                        <span class="sidebar-section-count">@FileCount</span>
+                        <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Class="sidebar-section-arrow" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public bool IsDirectMessage { get; set; }
+    [Parameter] public string RecipientName { get; set; } = string.Empty;
+    [Parameter] public string? RecipientAvatarUrl { get; set; }
+
+    [Parameter] public string ChannelName { get; set; } = string.Empty;
+    [Parameter] public int MemberCount { get; set; }
+
+    // Track current conversation/channel to reset sub-panels on change
+    [Parameter] public Guid? ConversationId { get; set; }
+    [Parameter] public Guid? ChannelId { get; set; }
+
+    [Parameter] public int FavoriteCount { get; set; }
+    [Parameter] public int FileCount { get; set; }
+    [Parameter] public int LinkCount { get; set; }
+
+    [Parameter] public bool IsMuted { get; set; }
+    [Parameter] public EventCallback<bool> OnMuteToggle { get; set; }
+
+    [Parameter] public List<FavoriteDirectMessageDto>? FavoriteDirectMessages { get; set; }
+    [Parameter] public List<FavoriteChannelMessageDto>? FavoriteChannelMessages { get; set; }
+    [Parameter] public EventCallback OnLoadFavorites { get; set; }
+    [Parameter] public EventCallback<Guid> OnNavigateToMessage { get; set; }
+    [Parameter] public EventCallback<Guid> OnRemoveFromFavorites { get; set; }
+
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private bool showContextMenu;
+    private bool showFavoritesPanel;
+    private bool showLinksPanel;
+    private bool showFilesPanel;
+    private bool isLoadingFavorites;
+    private Guid? hoveredMessageId;
+    private Guid? activeMenuMessageId;
+
+    // Track previous IDs to detect changes
+    private Guid? _previousConversationId;
+    private Guid? _previousChannelId;
+
+    protected override void OnParametersSet()
+    {
+        // Reset sub-panels when conversation or channel changes
+        if (_previousConversationId != ConversationId || _previousChannelId != ChannelId)
+        {
+            showFavoritesPanel = false;
+            showLinksPanel = false;
+            showFilesPanel = false;
+            showContextMenu = false;
+            activeMenuMessageId = null;
+            hoveredMessageId = null;
+
+            _previousConversationId = ConversationId;
+            _previousChannelId = ChannelId;
+        }
+    }
+
+    private void CloseAllMenus()
+    {
+        if (showContextMenu) showContextMenu = false;
+        if (activeMenuMessageId.HasValue)
+        {
+            activeMenuMessageId = null;
+            hoveredMessageId = null;
+        }
+    }
+
+    private void ToggleContextMenu()
+    {
+        showContextMenu = !showContextMenu;
+    }
+
+    private void ToggleMessageMenu(Guid messageId)
+    {
+        if (activeMenuMessageId == messageId)
+        {
+            activeMenuMessageId = null;
+        }
+        else
+        {
+            activeMenuMessageId = messageId;
+        }
+    }
+
+    private async Task OpenFavoritesPanel()
+    {
+        isLoadingFavorites = true;
+        showFavoritesPanel = true;
+        StateHasChanged();
+
+        await OnLoadFavorites.InvokeAsync();
+
+        isLoadingFavorites = false;
+        StateHasChanged();
+    }
+
+    private void CloseFavoritesPanel()
+    {
+        showFavoritesPanel = false;
+        activeMenuMessageId = null;
+        hoveredMessageId = null;
+    }
+
+    private void OpenLinksPanel()
+    {
+        showLinksPanel = true;
+    }
+
+    private void CloseLinksPanel()
+    {
+        showLinksPanel = false;
+    }
+
+    private void OpenFilesPanel()
+    {
+        showFilesPanel = true;
+    }
+
+    private void CloseFilesPanel()
+    {
+        showFilesPanel = false;
+    }
+
+    private async Task NavigateToMessage(Guid messageId)
+    {
+        // Just scroll to message, keep sidebar and favorites panel open
+        await OnNavigateToMessage.InvokeAsync(messageId);
+    }
+
+    private async Task HandleViewContext(Guid messageId)
+    {
+        activeMenuMessageId = null;
+        // Just scroll to message, keep sidebar and favorites panel open
+        await OnNavigateToMessage.InvokeAsync(messageId);
+    }
+
+    private async Task HandleRemoveFromFavorites(Guid messageId)
+    {
+        activeMenuMessageId = null;
+        await OnRemoveFromFavorites.InvokeAsync(messageId);
+    }
+
+    private static string FormatFavoriteDate(DateTime date)
+    {
+        var today = DateTime.UtcNow.Date;
+        if (date == today)
+            return "Today";
+        if (date == today.AddDays(-1))
+            return "Yesterday";
+        return date.ToString("MMMM d, yyyy", CultureInfo.InvariantCulture);
+    }
+
+    private async Task HandleSoundToggle(ChangeEventArgs e)
+    {
+        var isEnabled = (bool)(e.Value ?? false);
+        await OnMuteToggle.InvokeAsync(!isEnabled);
+    }
+
+    private void HandlePin()
+    {
+        showContextMenu = false;
+        // TODO: Implement pin functionality
+    }
+
+    private void HandleViewProfile()
+    {
+        showContextMenu = false;
+        // TODO: Implement view profile functionality
+    }
+
+    private void HandleFindChat()
+    {
+        showContextMenu = false;
+        // TODO: Implement find chat functionality
+    }
+
+    private void HandleAddMembers()
+    {
+        showContextMenu = false;
+        // TODO: Implement add members functionality
+    }
+
+    private void HandleHide()
+    {
+        showContextMenu = false;
+        // TODO: Implement hide functionality
+    }
+
+    private void HandleLeave()
+    {
+        showContextMenu = false;
+        // TODO: Implement leave functionality
+    }
+}

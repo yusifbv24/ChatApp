@@ -4,6 +4,7 @@ using ChatApp.Modules.DirectMessages.Application.Commands.MessageConditions;
 using ChatApp.Modules.DirectMessages.Application.DTOs.Request;
 using ChatApp.Modules.DirectMessages.Application.DTOs.Response;
 using ChatApp.Modules.DirectMessages.Application.Queries;
+using ChatApp.Modules.DirectMessages.Application.Queries.GetFavoriteMessages;
 using ChatApp.Modules.DirectMessages.Application.Queries.GetPinnedMessages;
 using ChatApp.Shared.Infrastructure.Authorization;
 using MediatR;
@@ -124,8 +125,31 @@ namespace ChatApp.Modules.DirectMessages.Api.Controllers
             return Ok(result.Value);
         }
 
+        /// <summary>
+        /// Gets favorite messages in a conversation
+        /// </summary>
+        [HttpGet("favorites")]
+        [RequirePermission("Messages.Read")]
+        [ProducesResponseType(typeof(List<FavoriteDirectMessageDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<IActionResult> GetFavoriteMessages(
+            [FromRoute] Guid conversationId,
+            CancellationToken cancellationToken)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == Guid.Empty)
+                return Unauthorized();
 
+            var result = await _mediator.Send(
+                new GetFavoriteMessagesQuery(conversationId, userId),
+                cancellationToken);
 
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return Ok(result.Value);
+        }
 
         /// <summary>
         /// Sends a message in the conversation

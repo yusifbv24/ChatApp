@@ -1,3 +1,4 @@
+using ChatApp.Modules.Channels.Application.DTOs.Responses;
 using ChatApp.Modules.Channels.Domain.Entities;
 
 namespace ChatApp.Modules.Channels.Application.Interfaces
@@ -6,6 +7,7 @@ namespace ChatApp.Modules.Channels.Application.Interfaces
     {
         Task<UserFavoriteChannelMessage?> GetAsync(Guid userId, Guid messageId, CancellationToken cancellationToken = default);
         Task<List<Guid>> GetFavoriteMessageIdsAsync(Guid userId, Guid channelId, CancellationToken cancellationToken = default);
+        Task<List<FavoriteChannelMessageDto>> GetFavoriteMessagesAsync(Guid userId, Guid channelId, CancellationToken cancellationToken = default);
         Task<bool> IsFavoriteAsync(Guid userId, Guid messageId, CancellationToken cancellationToken = default);
         Task AddAsync(UserFavoriteChannelMessage favorite, CancellationToken cancellationToken = default);
         Task RemoveAsync(UserFavoriteChannelMessage favorite, CancellationToken cancellationToken = default);

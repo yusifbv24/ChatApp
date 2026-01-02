@@ -4,6 +4,7 @@ using ChatApp.Modules.Channels.Application.Commands.MessageConditions;
 using ChatApp.Modules.Channels.Application.DTOs.Requests;
 using ChatApp.Modules.Channels.Application.DTOs.Responses;
 using ChatApp.Modules.Channels.Application.Queries.GetChannelMessages;
+using ChatApp.Modules.Channels.Application.Queries.GetFavoriteMessages;
 using ChatApp.Modules.Channels.Application.Queries.GetPinnedMessages;
 using ChatApp.Modules.Channels.Application.Queries.GetUnreadCount;
 using ChatApp.Shared.Infrastructure.Authorization;
@@ -100,7 +101,31 @@ namespace ChatApp.Modules.Channels.Api.Controllers
             return Ok(result.Value);
         }
 
+        /// <summary>
+        /// Gets favorite messages in a channel
+        /// </summary>
+        [HttpGet("favorites")]
+        [RequirePermission("Messages.Read")]
+        [ProducesResponseType(typeof(List<FavoriteChannelMessageDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<IActionResult> GetFavoriteMessages(
+            [FromRoute] Guid channelId,
+            CancellationToken cancellationToken)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == Guid.Empty)
+                return Unauthorized();
 
+            var result = await _mediator.Send(
+                new GetFavoriteMessagesQuery(channelId, userId),
+                cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return Ok(result.Value);
+        }
 
         /// <summary>
         /// Gets unread message count for the current user in this channel

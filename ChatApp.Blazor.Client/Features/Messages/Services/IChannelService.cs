@@ -32,6 +32,9 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
         Task<Result<List<ChannelMessageDto>>> GetPinnedMessagesAsync(Guid channelId);
 
 
+        Task<Result<List<FavoriteChannelMessageDto>>> GetFavoriteMessagesAsync(Guid channelId);
+
+
         Task<Result<int>> GetUnreadCountAsync(Guid channelId);
 
 
