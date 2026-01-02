@@ -32,8 +32,6 @@
                   RecipientName="@recipientName"
                   RecipientAvatarUrl="@recipientAvatarUrl"
                   IsRecipientOnline="@isRecipientOnline"
-                  FirstPinnedMessageSender="@firstPinnedDirectMessageSender"
-                  FirstPinnedMessageContent="@firstPinnedDirectMessageContent"
                   ChannelMessages="@channelMessages"
                   ChannelName="@selectedChannelName"
                   ChannelDescription="@selectedChannelDescription"
@@ -41,8 +39,6 @@
                   MemberCount="@selectedChannelMemberCount"
                   PinnedCount="@pinnedMessageCount"
                   PinnedDirectMessageCount="@pinnedDirectMessageCount"
-                  FirstPinnedChannelMessageSender="@firstPinnedChannelMessageSender"
-                  FirstPinnedChannelMessageContent="@firstPinnedChannelMessageContent"
                   PinnedChannelMessages="@pinnedMessages"
                   PinnedDirectMessages="@pinnedDirectMessages"
                   OnNavigateToPinnedMessage="NavigateToPinnedMessage"
@@ -85,9 +81,23 @@
                   OnForwardSelected="ForwardSelectedMessages"
                   FavoriteMessageIds="@favoriteMessageIds"
                   OnToggleFavorite="HandleToggleFavorite"
+                  OnToggleSearchPanel="ToggleSearchPanel"
                   InitialDraft="@currentDraft"
                   OnDraftChanged="HandleDraftChanged" />
     </div>
+
+    <!-- Search Panel -->
+    @if (showSearchPanel)
+    {
+        <div class="messages-search-panel">
+            <SearchPanel ConversationId="@selectedConversationId"
+                         ChannelId="@selectedChannelId"
+                         IsDirectMessage="@isDirectMessage"
+                         SearchFunc="@SearchMessagesAsync"
+                         OnClose="CloseSearchPanel"
+                         OnNavigateToMessage="NavigateToSearchResult" />
+        </div>
+    }
 </div>
 
     <!-- New Conversation Dialog-->

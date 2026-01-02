@@ -73,6 +73,8 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
         }
 
 
+
+
         public async Task<Result<List<ChannelMessageDto>>> GetPinnedMessagesAsync(Guid channelId)
         {
             return await apiClient.GetAsync<List<ChannelMessageDto>>(

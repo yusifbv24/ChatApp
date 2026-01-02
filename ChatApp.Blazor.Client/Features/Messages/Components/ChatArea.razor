@@ -82,7 +82,7 @@
                         <MudIcon Icon="@Icons.Material.Filled.PersonAdd" />
                     </button>
                 }
-                <button class="header-action-btn" title="Search" @onclick="ToggleSearch">
+                <button class="header-action-btn" title="Search" @onclick="() => OnToggleSearchPanel.InvokeAsync()">
                     <MudIcon Icon="@Icons.Material.Filled.Search" />
                 </button>
                 <button class="header-action-btn" title="Info" @onclick="ToggleInfoPanel">
@@ -90,20 +90,6 @@
                 </button>
             </div>
         </div>
-
-        @if (showSearch)
-        {
-            <div class="chat-search-bar">
-                <MudIcon Icon="@Icons.Material.Filled.Search" Size="Size.Small" />
-                <input type="text"
-                       placeholder="Search in conversation..."
-                       @bind="SearchQuery"
-                       @bind:event="oninput" />
-                <button class="close-search-btn" @onclick="ToggleSearch">
-                    <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small"/>
-                </button>
-            </div>
-        }
 
         <!-- Pinned Messages Header -->
         @if ((IsDirectMessage && PinnedDirectMessageCount > 0) || (!IsDirectMessage && PinnedCount > 0))
@@ -120,10 +106,10 @@
                                 else
                                 {
                                     <span class="pinned-title">Pinned messages</span>
-                                    var firstPinned = IsDirectMessage ? GetFirstPinnedDirectMessage() : null;
-                                    var firstChannelPinned = !IsDirectMessage ? GetFirstPinnedChannelMessage() : null;
-                                    var senderName = firstPinned?.SenderDisplayName ?? firstChannelPinned?.SenderDisplayName;
-                                    var messageContent = firstPinned?.Content ?? firstChannelPinned?.Content;
+                                    var currentPinned = IsDirectMessage ? GetCurrentPinnedDirectMessage() : null;
+                                    var currentChannelPinned = !IsDirectMessage ? GetCurrentPinnedChannelMessage() : null;
+                                    var senderName = currentPinned?.SenderDisplayName ?? currentChannelPinned?.SenderDisplayName;
+                                    var messageContent = currentPinned?.Content ?? currentChannelPinned?.Content;
 
                                     if (!string.IsNullOrEmpty(senderName))
                                     {
@@ -586,8 +572,6 @@
     [Parameter] public string RecipientName { get; set; } = string.Empty;
     [Parameter] public string? RecipientAvatarUrl { get; set; }
     [Parameter] public bool IsRecipientOnline { get; set; }
-    [Parameter] public string? FirstPinnedMessageSender { get; set; }
-    [Parameter] public string? FirstPinnedMessageContent { get; set; }
 
     // Channel Parameters
     [Parameter] public List<ChannelMessageDto> ChannelMessages { get; set; } = new();
@@ -597,8 +581,6 @@
     [Parameter] public int MemberCount { get; set; }
     [Parameter] public int PinnedCount { get; set; }
     [Parameter] public int PinnedDirectMessageCount { get; set; }
-    [Parameter] public string? FirstPinnedChannelMessageSender { get; set; }
-    [Parameter] public string? FirstPinnedChannelMessageContent { get; set; }
 
     // Pinned messages for cycling
     [Parameter] public List<ChannelMessageDto> PinnedChannelMessages { get; set; } = new();
@@ -662,17 +644,18 @@
     [Parameter] public HashSet<Guid> FavoriteMessageIds { get; set; } = new();
     [Parameter] public EventCallback<Guid> OnToggleFavorite { get; set; }
 
+    // Search panel
+    [Parameter] public EventCallback OnToggleSearchPanel { get; set; }
+
 
     private ElementReference messagesContainerRef;
     private ElementReference scrollAnchorRef;
     private ElementReference loadMoreTriggerRef;
     private MessageInput? messageInputRef;
-    private bool showSearch = false;
     private bool showInfoPanel = false;
     private bool showAddMemberPanel = false;
     private bool showScrollToBottom = false;
     private int newMessagesCount = 0;
-    private string SearchQuery { get; set; } = string.Empty;
     private bool isEditing = false;
     private Guid editingMessageId;
     private string editingContent = string.Empty;
@@ -796,6 +779,10 @@
         else if (_shouldScrollToBottom)
         {
             _shouldScrollToBottom = false;
+            // Small delay to allow pinned header to render before scrolling
+            // Without this, scroll happens before pinned header is visible,
+            // causing scroll position to be incorrect
+            await Task.Delay(50);
             await ScrollToBottomAsync();
         }
         else if (UnreadSeparatorAfterMessageId.HasValue && !_hasScrolledToSeparator && (DirectMessages.Any() || ChannelMessages.Any()))
@@ -956,12 +943,6 @@
         return list[index - 1].SenderId != message.SenderId;
     }
 
-    private void ToggleSearch()
-    {
-        showSearch = !showSearch;
-        if (!showSearch) SearchQuery = string.Empty;
-    }
-
     private void ToggleInfoPanel()
     {
         showInfoPanel = !showInfoPanel;
@@ -990,22 +971,6 @@
         // Ensure index is within bounds
         var safeIndex = currentPinnedIndex % PinnedChannelMessages.Count;
         return PinnedChannelMessages[safeIndex];
-    }
-
-    private DirectMessageDto? GetFirstPinnedDirectMessage()
-    {
-        if (PinnedDirectMessages == null || PinnedDirectMessages.Count == 0)
-            return null;
-
-        return PinnedDirectMessages[0];
-    }
-
-    private ChannelMessageDto? GetFirstPinnedChannelMessage()
-    {
-        if (PinnedChannelMessages == null || PinnedChannelMessages.Count == 0)
-            return null;
-
-        return PinnedChannelMessages[0];
     }
 
     private string TruncateText(string? text, int maxLength)

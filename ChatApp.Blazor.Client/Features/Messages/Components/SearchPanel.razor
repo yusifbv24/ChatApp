@@ -1,0 +1,188 @@
+@using ChatApp.Blazor.Client.Models.Search
+
+<div class="search-panel">
+    <div class="search-panel-header">
+        <button class="search-panel-close" @onclick="() => OnClose.InvokeAsync()">
+            <MudIcon Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small" />
+        </button>
+        <div class="search-input-container">
+            <MudIcon Icon="@Icons.Material.Filled.Search" Size="Size.Small" Class="search-input-icon" />
+            <input type="text"
+                   class="search-input"
+                   placeholder="Search..."
+                   @bind="searchQuery"
+                   @bind:event="oninput"
+                   @onkeyup="HandleSearchInput" />
+            @if (!string.IsNullOrEmpty(searchQuery))
+            {
+                <button class="search-clear-btn" @onclick="ClearSearch">
+                    <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" />
+                </button>
+            }
+        </div>
+    </div>
+
+    <div class="search-results-container">
+        @if (isSearching)
+        {
+            <div class="search-loading">
+                <div class="loading-spinner small"></div>
+                <span>Searching...</span>
+            </div>
+        }
+        else if (searchResults != null && searchResults.Results.Any())
+        {
+            <div class="search-results-list">
+                @foreach (var group in GroupedResults)
+                {
+                    <div class="search-date-divider">
+                        <span>@FormatDate(group.Key)</span>
+                    </div>
+                    @foreach (var result in group)
+                    {
+                        <div class="search-result-item" @onclick="() => NavigateToMessage(result.MessageId)">
+                            <div class="search-result-avatar">
+                                @if (!string.IsNullOrEmpty(result.SenderAvatarUrl))
+                                {
+                                    <img src="@result.SenderAvatarUrl" alt="@result.SenderDisplayName" />
+                                }
+                                else
+                                {
+                                    <div class="avatar-placeholder">@GetInitials(result.SenderDisplayName)</div>
+                                }
+                            </div>
+                            <div class="search-result-content">
+                                <span class="search-result-sender">@result.SenderDisplayName</span>
+                                <div class="search-result-text">@((MarkupString)result.HighlightedContent)</div>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(searchQuery) && searchQuery.Length >= 3 && !isSearching)
+        {
+            <div class="search-no-results">
+                <MudIcon Icon="@Icons.Material.Outlined.SearchOff" Size="Size.Large" />
+                <span>No messages found</span>
+            </div>
+        }
+        else if (string.IsNullOrEmpty(searchQuery) || searchQuery.Length < 3)
+        {
+            <div class="search-hint">
+                <MudIcon Icon="@Icons.Material.Outlined.Search" Size="Size.Large" />
+                <span>Enter at least 3 characters to search</span>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public Guid? ConversationId { get; set; }
+    [Parameter] public Guid? ChannelId { get; set; }
+    [Parameter] public bool IsDirectMessage { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<Guid> OnNavigateToMessage { get; set; }
+    [Parameter] public Func<Guid, string, int, int, Task<SearchResultsDto?>>? SearchFunc { get; set; }
+
+    private string searchQuery = string.Empty;
+    private bool isSearching = false;
+    private SearchResultsDto? searchResults;
+    private CancellationTokenSource? _searchCts;
+
+    private IEnumerable<IGrouping<DateTime, SearchResultDto>> GroupedResults =>
+        searchResults?.Results
+            .OrderByDescending(r => r.CreatedAtUtc)
+            .GroupBy(r => r.CreatedAtUtc.Date) ?? Enumerable.Empty<IGrouping<DateTime, SearchResultDto>>();
+
+    private async Task HandleSearchInput()
+    {
+        // Cancel previous search
+        _searchCts?.Cancel();
+        _searchCts = new CancellationTokenSource();
+        var token = _searchCts.Token;
+
+        if (string.IsNullOrWhiteSpace(searchQuery) || searchQuery.Length < 3)
+        {
+            searchResults = null;
+            isSearching = false;
+            StateHasChanged();
+            return;
+        }
+
+        // Debounce - wait 300ms before searching
+        try
+        {
+            await Task.Delay(300, token);
+        }
+        catch (TaskCanceledException)
+        {
+            return;
+        }
+
+        await PerformSearch(token);
+    }
+
+    private async Task PerformSearch(CancellationToken token)
+    {
+        if (token.IsCancellationRequested) return;
+
+        isSearching = true;
+        StateHasChanged();
+
+        try
+        {
+            if (SearchFunc != null)
+            {
+                var targetId = IsDirectMessage ? ConversationId!.Value : ChannelId!.Value;
+                searchResults = await SearchFunc(targetId, searchQuery, 1, 50);
+            }
+        }
+        catch (Exception)
+        {
+            searchResults = null;
+        }
+        finally
+        {
+            if (!token.IsCancellationRequested)
+            {
+                isSearching = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private void ClearSearch()
+    {
+        searchQuery = string.Empty;
+        searchResults = null;
+        _searchCts?.Cancel();
+        isSearching = false;
+    }
+
+    private async Task NavigateToMessage(Guid messageId)
+    {
+        await OnNavigateToMessage.InvokeAsync(messageId);
+    }
+
+    private static string GetInitials(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "?";
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length >= 2
+            ? $"{parts[0][0]}{parts[1][0]}".ToUpper()
+            : name[0].ToString().ToUpper();
+    }
+
+    private string FormatDate(DateTime date)
+    {
+        var today = DateTime.Today;
+        if (date == today)
+            return "Today";
+        if (date == today.AddDays(-1))
+            return "Yesterday";
+        if (date.Year == today.Year)
+            return date.ToString("MMMM d", System.Globalization.CultureInfo.InvariantCulture);
+        return date.ToString("MMMM d, yyyy", System.Globalization.CultureInfo.InvariantCulture);
+    }
+}

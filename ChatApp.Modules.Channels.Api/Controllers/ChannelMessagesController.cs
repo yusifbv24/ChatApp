@@ -72,6 +72,8 @@ namespace ChatApp.Modules.Channels.Api.Controllers
 
 
 
+
+
         /// <summary>
         /// Gets pinned messages in a channel
         /// </summary>

@@ -30,6 +30,7 @@ public static class ServiceCollectionExtensions
         // Messaging Services
         services.AddScoped<IConversationService, ConversationService>();
         services.AddScoped<IChannelService, ChannelService>();
+        services.AddScoped<ISearchService, SearchService>();
 
         return services;
     }

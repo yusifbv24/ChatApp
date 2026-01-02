@@ -58,7 +58,12 @@
       "Bash(cmd /c \"taskkill /F /IM dotnet.exe /T\")",
       "Bash(cmd /c taskkill /F /PID 17848)",
       "Bash(cmd /c taskkill /F /PID 24348)",
-      "Bash(cmd /c taskkill /F /PID 13600)"
+      "Bash(cmd /c taskkill /F /PID 13600)",
+      "Bash(cmd /c taskkill /F /PID 7512)",
+      "Bash(del \"C:\\Users\\Joseph\\Desktop\\ChatApp\\ChatApp.Modules.DirectMessages.Application\\Queries\\GetMessagesAroundQuery.cs\")",
+      "Bash(cmd /c del \"C:\\Users\\Joseph\\Desktop\\ChatApp\\ChatApp.Modules.DirectMessages.Application\\Queries\\GetMessagesAroundQuery.cs\")",
+      "Bash(cmd /c rmdir /s /q \"C:\\Users\\Joseph\\Desktop\\ChatApp\\ChatApp.Modules.Channels.Application\\Queries\\GetMessagesAround\")",
+      "Bash(cmd /c rmdir /S /Q \"C:\\Users\\Joseph\\Desktop\\ChatApp\\ChatApp.Modules.Channels.Application\\Queries\\GetMessagesAround\")"
     ],
     "deny": [],
     "ask": []

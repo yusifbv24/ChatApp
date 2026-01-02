@@ -4,6 +4,7 @@ using ChatApp.Blazor.Client.Infrastructure.SignalR;
 using ChatApp.Blazor.Client.Models.Auth;
 using ChatApp.Blazor.Client.Models.Common;
 using ChatApp.Blazor.Client.Models.Messages;
+using ChatApp.Blazor.Client.Models.Search;
 using ChatApp.Blazor.Client.State;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
@@ -15,6 +16,7 @@ public partial class Messages : IAsyncDisposable
     [Inject] private IConversationService ConversationService { get; set; } = default!;
     [Inject] private IChannelService ChannelService { get; set; } = default!;
     [Inject] private IUserService UserService { get; set; } = default!;
+    [Inject] private ISearchService SearchService { get; set; } = default!;
     [Inject] private ISignalRService SignalRService { get; set; } = default!;
     [Inject] private UserState UserState { get; set; } = default!;
     [Inject] private AppState AppState { get; set; } = default!;
@@ -43,8 +45,6 @@ public partial class Messages : IAsyncDisposable
     private Guid recipientUserId;
     private bool isRecipientOnline;
     private int pinnedDirectMessageCount;
-    private string? firstPinnedDirectMessageSender;
-    private string? firstPinnedDirectMessageContent;
 
     // Pending conversation (user selected but conversation not created yet)
     private bool isPendingConversation;
@@ -56,8 +56,6 @@ public partial class Messages : IAsyncDisposable
     private ChannelType selectedChannelType;
     private int selectedChannelMemberCount;
     private int pinnedMessageCount;
-    private string? firstPinnedChannelMessageSender;
-    private string? firstPinnedChannelMessageContent;
     private bool isChannelAdmin;
     private ChannelMemberRole currentUserChannelRole;
 
@@ -158,6 +156,9 @@ public partial class Messages : IAsyncDisposable
 
     // Favorites state
     private HashSet<Guid> favoriteMessageIds = new HashSet<Guid>();
+
+    // Search panel state
+    private bool showSearchPanel = false;
 
     private bool IsEmpty => !selectedConversationId.HasValue && !selectedChannelId.HasValue && !isPendingConversation;
 
@@ -1886,6 +1887,7 @@ public partial class Messages : IAsyncDisposable
             pendingChannelReadReceipts.Clear(); // Clear pending channel read receipts when changing conversations
             pendingMessageAdds.Clear(); // Clear pending message adds when changing conversations
             favoriteMessageIds.Clear(); // Clear favorites when changing conversations
+            showSearchPanel = false; // Close search panel when changing conversations
             pageSize = 50; // Reset page size to 50 for new conversation
 
             // Auto-unmark read later if user saw separator (channel)
@@ -2246,6 +2248,7 @@ public partial class Messages : IAsyncDisposable
         pendingChannelReadReceipts.Clear(); // Clear pending channel read receipts when changing channels
         pendingMessageAdds.Clear(); // Clear pending message adds when changing channels
         favoriteMessageIds.Clear(); // Clear favorites when changing channels
+        showSearchPanel = false; // Close search panel when changing channels
         pageSize = 50; // Reset page size to 50 for new channel
 
         // Reset unread separator
@@ -2352,8 +2355,35 @@ public partial class Messages : IAsyncDisposable
     {
         try
         {
-            // Scroll to the message and highlight it
-            await JS.InvokeVoidAsync("chatAppUtils.scrollToMessageAndHighlight", $"message-{messageId}");
+            // Check if message is already loaded
+            bool messageExists = isDirectMessage
+                ? directMessages.Any(m => m.Id == messageId)
+                : channelMessages.Any(m => m.Id == messageId);
+
+            // Keep loading more messages until we find the target message
+            int maxAttempts = 20; // Prevent infinite loop (20 * 50 = 1000 messages max)
+            int attempts = 0;
+
+            while (!messageExists && hasMoreMessages && attempts < maxAttempts)
+            {
+                await LoadMoreMessages();
+                attempts++;
+
+                messageExists = isDirectMessage
+                    ? directMessages.Any(m => m.Id == messageId)
+                    : channelMessages.Any(m => m.Id == messageId);
+
+                StateHasChanged();
+                await Task.Delay(50); // Small delay for DOM update
+            }
+
+            if (messageExists)
+            {
+                // Wait for DOM to fully render
+                await Task.Delay(100);
+                // Scroll to the message and highlight it
+                await JS.InvokeVoidAsync("chatAppUtils.scrollToMessageAndHighlight", $"message-{messageId}");
+            }
         }
         catch
         {
@@ -2368,30 +2398,14 @@ public partial class Messages : IAsyncDisposable
             var result = await ChannelService.GetPinnedMessagesAsync(selectedChannelId!.Value);
             if (result.IsSuccess && result.Value != null)
             {
-                // Store full list for cycling
                 pinnedMessages = result.Value;
                 pinnedMessageCount = result.Value.Count;
-
-                // Get first pinned message details
-                var firstPinned = result.Value.FirstOrDefault();
-                if (firstPinned != null)
-                {
-                    firstPinnedChannelMessageSender = firstPinned.SenderDisplayName;
-                    firstPinnedChannelMessageContent = firstPinned.Content;
-                }
-                else
-                {
-                    firstPinnedChannelMessageSender = null;
-                    firstPinnedChannelMessageContent = null;
-                }
             }
         }
         catch
         {
             pinnedMessages = [];
             pinnedMessageCount = 0;
-            firstPinnedChannelMessageSender = null;
-            firstPinnedChannelMessageContent = null;
         }
     }
 
@@ -2402,30 +2416,14 @@ public partial class Messages : IAsyncDisposable
             var result = await ConversationService.GetPinnedMessagesAsync(selectedConversationId!.Value);
             if (result.IsSuccess && result.Value != null)
             {
-                // Store full list for cycling
                 pinnedDirectMessages = result.Value;
                 pinnedDirectMessageCount = result.Value.Count;
-
-                // Get first pinned message details
-                var firstPinned = result.Value.FirstOrDefault();
-                if (firstPinned != null)
-                {
-                    firstPinnedDirectMessageSender = firstPinned.SenderDisplayName;
-                    firstPinnedDirectMessageContent = firstPinned.Content;
-                }
-                else
-                {
-                    firstPinnedDirectMessageSender = null;
-                    firstPinnedDirectMessageContent = null;
-                }
             }
         }
         catch
         {
             pinnedDirectMessages = [];
             pinnedDirectMessageCount = 0;
-            firstPinnedDirectMessageSender = null;
-            firstPinnedDirectMessageContent = null;
         }
     }
 
@@ -3543,6 +3541,89 @@ public partial class Messages : IAsyncDisposable
             errorMessage = $"Error toggling favorite: {ex.Message}";
             StateHasChanged();
         }
+    }
+
+    #endregion
+
+    #region Search Panel
+
+    private void ToggleSearchPanel()
+    {
+        showSearchPanel = !showSearchPanel;
+    }
+
+    private void CloseSearchPanel()
+    {
+        showSearchPanel = false;
+    }
+
+    private async Task<SearchResultsDto?> SearchMessagesAsync(Guid targetId, string searchTerm, int page, int pageSize)
+    {
+        try
+        {
+            Result<SearchResultsDto> result;
+
+            if (isDirectMessage)
+            {
+                result = await SearchService.SearchInConversationAsync(targetId, searchTerm, page, pageSize);
+            }
+            else
+            {
+                result = await SearchService.SearchInChannelAsync(targetId, searchTerm, page, pageSize);
+            }
+
+            return result.IsSuccess ? result.Value : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private async Task NavigateToSearchResult(Guid messageId)
+    {
+        // Close search panel
+        showSearchPanel = false;
+        StateHasChanged();
+
+        try
+        {
+            // Check if message is already loaded
+            bool messageExists = isDirectMessage
+                ? directMessages.Any(m => m.Id == messageId)
+                : channelMessages.Any(m => m.Id == messageId);
+
+            // Keep loading more messages until we find the target message
+            int maxAttempts = 20; // Prevent infinite loop (20 * 50 = 1000 messages max)
+            int attempts = 0;
+
+            while (!messageExists && hasMoreMessages && attempts < maxAttempts)
+            {
+                await LoadMoreMessages();
+                attempts++;
+
+                messageExists = isDirectMessage
+                    ? directMessages.Any(m => m.Id == messageId)
+                    : channelMessages.Any(m => m.Id == messageId);
+
+                StateHasChanged();
+                await Task.Delay(50); // Small delay for DOM update
+            }
+
+            if (messageExists)
+            {
+                // Wait for DOM to fully render
+                await Task.Delay(100);
+                // Scroll to the message
+                await JS.InvokeVoidAsync("chatAppUtils.scrollToMessageById", $"message-{messageId}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error navigating to search result: {ex.Message}");
+        }
+
+        StateHasChanged();
     }
 
     #endregion
