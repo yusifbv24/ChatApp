@@ -24,7 +24,7 @@ public interface ISignalRService
     event Action<DirectMessageDto>? OnNewDirectMessage;
     event Action<DirectMessageDto>? OnDirectMessageEdited;
     event Action<DirectMessageDto>? OnDirectMessageDeleted;
-    event Action<Guid, Guid, Guid, DateTime>? OnMessageRead;
+    event Action<Guid, Guid, Guid>? OnMessageRead;
 
 
     // Channel message events
@@ -69,5 +69,5 @@ public interface ISignalRService
 
 
     // Online status
-    Task<Dictionary<Guid, bool>> GetOnlineStatusAsync(List<Guid> userIds);
+    Task<bool> IsUserOnlineAsync(Guid userId);
 }

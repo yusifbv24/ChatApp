@@ -206,11 +206,11 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Services
             }
         }
 
-        public async Task NotifyMessageReadAsync(Guid conversationId, Guid messageId, Guid readBy, Guid senderId, DateTime readAtUtc)
+        public async Task NotifyMessageReadAsync(Guid conversationId, Guid messageId, Guid readBy, Guid senderId)
         {
             _logger?.LogDebug("Broadcasting message read for message {MessageId} to sender {SenderId}", messageId, senderId);
 
-            var notification = new { conversationId, messageId, readBy, readAtUtc };
+            var notification = new { conversationId, messageId, readBy };
 
             // Send to conversation group (both users if they're in the group)
             await _hubContext.Clients
@@ -324,7 +324,7 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Services
         }
 
 
-        public async Task NotifyUserTypingInChannelToMembersAsync(Guid channelId, List<Guid> memberUserIds, Guid typingUserId, string username, bool isTyping)
+        public async Task NotifyUserTypingInChannelToMembersAsync(Guid channelId, List<Guid> memberUserIds, Guid typingUserId, string displayName, bool isTyping)
         {
             _logger?.LogDebug("Broadcasting typing indicator to channel {ChannelId} and {MemberCount} members directly",
                 channelId, memberUserIds.Count);
@@ -332,7 +332,7 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Services
             // 1. Send to channel group (for users actively viewing the channel - real-time, no delay)
             await _hubContext.Clients
                 .Group($"channel_{channelId}")
-                .SendAsync("UserTypingInChannel", channelId, typingUserId, username, isTyping);
+                .SendAsync("UserTypingInChannel", channelId, typingUserId, displayName, isTyping);
 
             // 2. ALSO send directly to each member's connections (for lazy loading support)
             // This allows typing indicators to appear in conversation list even if user hasn't joined the channel
@@ -343,7 +343,7 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Services
                 {
                     await _hubContext.Clients
                         .Clients(memberConnections)
-                        .SendAsync("UserTypingInChannel", channelId, typingUserId, username, isTyping);
+                        .SendAsync("UserTypingInChannel", channelId, typingUserId, displayName, isTyping);
                 }
             }
         }

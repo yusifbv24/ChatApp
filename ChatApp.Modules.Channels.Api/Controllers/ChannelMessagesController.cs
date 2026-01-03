@@ -4,6 +4,7 @@ using ChatApp.Modules.Channels.Application.Commands.MessageConditions;
 using ChatApp.Modules.Channels.Application.DTOs.Requests;
 using ChatApp.Modules.Channels.Application.DTOs.Responses;
 using ChatApp.Modules.Channels.Application.Queries.GetChannelMessages;
+using ChatApp.Modules.Channels.Application.Queries.GetChannelMessagesAround;
 using ChatApp.Modules.Channels.Application.Queries.GetFavoriteMessages;
 using ChatApp.Modules.Channels.Application.Queries.GetPinnedMessages;
 using ChatApp.Modules.Channels.Application.Queries.GetUnreadCount;
@@ -70,7 +71,36 @@ namespace ChatApp.Modules.Channels.Api.Controllers
             return Ok(result.Value);
         }
 
+        /// <summary>
+        /// Gets messages around a specific message (for navigation to pinned/favorite messages)
+        /// </summary>
+        [HttpGet("around/{messageId:guid}")]
+        [RequirePermission("Messages.Read")]
+        [ProducesResponseType(typeof(List<ChannelMessageDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<IActionResult> GetMessagesAround(
+            [FromRoute] Guid channelId,
+            [FromRoute] Guid messageId,
+            [FromQuery] int count = 50,
+            CancellationToken cancellationToken = default)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == Guid.Empty)
+                return Unauthorized();
 
+            if (count < 1 || count > 100)
+                return BadRequest(new { error = "Count must be between 1 and 100" });
+
+            var result = await _mediator.Send(
+                new GetChannelMessagesAroundQuery(channelId, messageId, userId, count),
+                cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return Ok(result.Value);
+        }
 
 
 

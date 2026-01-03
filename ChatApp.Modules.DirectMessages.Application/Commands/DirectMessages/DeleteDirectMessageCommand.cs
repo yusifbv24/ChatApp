@@ -92,7 +92,6 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectMessages
                     ReactionCount: 0,
                     CreatedAtUtc: message.CreatedAtUtc,
                     EditedAtUtc: message.EditedAtUtc,
-                    ReadAtUtc: message.ReadAtUtc,
                     PinnedAtUtc: message.PinnedAtUtc,
                     ReplyToMessageId: message.ReplyToMessageId,
                     ReplyToContent: null,

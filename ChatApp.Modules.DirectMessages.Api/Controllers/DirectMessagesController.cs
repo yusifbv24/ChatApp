@@ -65,7 +65,36 @@ namespace ChatApp.Modules.DirectMessages.Api.Controllers
             return Ok(result.Value);
         }
 
+        /// <summary>
+        /// Gets messages around a specific message (for navigation to pinned/favorite messages)
+        /// </summary>
+        [HttpGet("around/{messageId:guid}")]
+        [RequirePermission("Messages.Read")]
+        [ProducesResponseType(typeof(List<DirectMessageDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<IActionResult> GetMessagesAround(
+            [FromRoute] Guid conversationId,
+            [FromRoute] Guid messageId,
+            [FromQuery] int count = 50,
+            CancellationToken cancellationToken = default)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == Guid.Empty)
+                return Unauthorized();
 
+            if (count < 1 || count > 100)
+                return BadRequest(new { error = "Count must be between 1 and 100" });
+
+            var result = await _mediator.Send(
+                new GetConversationMessagesAroundQuery(conversationId, messageId, userId, count),
+                cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return Ok(result.Value);
+        }
 
 
 

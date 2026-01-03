@@ -66,7 +66,9 @@
       "Bash(cmd /c rmdir /S /Q \"C:\\Users\\Joseph\\Desktop\\ChatApp\\ChatApp.Modules.Channels.Application\\Queries\\GetMessagesAround\")",
       "Bash(cmd /c taskkill /F /PID 10040)",
       "Bash(cmd /c taskkill /F /PID 14628)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(for file in Messages*.cs)",
+      "Bash(done)"
     ],
     "deny": [],
     "ask": []

@@ -59,10 +59,6 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Configuratio
                 .HasColumnName("deleted_at_utc")
                 .HasColumnType("timestamp with time zone");
 
-            builder.Property(m => m.ReadAtUtc)
-                .HasColumnName("read_at_utc")
-                .HasColumnType("timestamp with time zone");
-
             builder.Property(m => m.CreatedAtUtc)
                 .HasColumnName("created_at_utc")
                 .HasColumnType("timestamp with time zone")

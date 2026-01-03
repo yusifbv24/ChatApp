@@ -1,5 +1,4 @@
 ﻿using ChatApp.Modules.DirectMessages.Application.Interfaces;
-using ChatApp.Shared.Infrastructure.SignalR.Services;
 using Microsoft.EntityFrameworkCore.Storage;
 
 namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
@@ -14,10 +13,10 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
         public IDirectMessageReactionRepository Reactions { get; }
         public IUserFavoriteMessageRepository Favorites { get; }
 
-        public UnitOfWork(DirectMessagesDbContext context,IConnectionManager connectionManager)
+        public UnitOfWork(DirectMessagesDbContext context)
         {
             _context = context;
-            Conversations = new DirectConversationRepository(context,connectionManager);
+            Conversations = new DirectConversationRepository(context);
             Messages = new DirectMessageRepository(context);
             Reactions = new DirectMessageReactionRepository(context);
             Favorites = new UserFavoriteMessageRepository(context);

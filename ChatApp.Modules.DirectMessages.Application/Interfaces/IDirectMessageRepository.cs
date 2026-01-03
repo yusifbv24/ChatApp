@@ -13,6 +13,11 @@ namespace ChatApp.Modules.DirectMessages.Application.Interfaces
             int pageSize = 50,
             DateTime? beforeUtc = null,
             CancellationToken cancellationToken = default);
+        Task<List<DirectMessageDto>> GetMessagesAroundAsync(
+            Guid conversationId,
+            Guid messageId,
+            int count = 50,
+            CancellationToken cancellationToken = default);
         Task<List<DirectMessageDto>> GetPinnedMessagesAsync(Guid conversationId, CancellationToken cancellationToken = default);
         Task<int> GetUnreadCountAsync(Guid conversationId, Guid userId, CancellationToken cancellationToken = default);
         Task<List<DirectMessage>> GetUnreadMessagesForUserAsync(Guid conversationId, Guid userId, CancellationToken cancellationToken = default);

@@ -73,6 +73,14 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
         }
 
 
+        public async Task<Result<List<ChannelMessageDto>>> GetMessagesAroundAsync(
+            Guid channelId,
+            Guid messageId,
+            int count = 50)
+        {
+            return await apiClient.GetAsync<List<ChannelMessageDto>>(
+                $"/api/channels/{channelId}/messages/around/{messageId}?count={count}");
+        }
 
 
         public async Task<Result<List<ChannelMessageDto>>> GetPinnedMessagesAsync(Guid channelId)

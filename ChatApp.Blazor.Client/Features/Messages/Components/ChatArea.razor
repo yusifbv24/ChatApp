@@ -201,18 +201,12 @@
         }
 
         <!-- Messages Area -->
-        <div class="messages-container" @ref="messagesContainerRef" @onscroll="HandleScroll">
+        <div id="chat-messages" class="messages-container" @ref="messagesContainerRef" @onscroll="HandleScroll">
             @if (IsLoading)
             {
                 <div class="messages-loading">
                     <div class="loading-spinner"></div>
                     <span>Loading messages...</span>
-                </div>
-            }
-            else if (HasMoreMessages && !IsLoadingMore)
-            {
-                <div class="load-more-trigger" @ref="loadMoreTriggerRef">
-                    <!-- Invisible trigger element for infinite scroll -->
                 </div>
             }
             else if (IsLoadingMore)
@@ -371,13 +365,21 @@
                     </MudIcon>
                 </div>
             }
-            <div @ref="scrollAnchorRef"></div>
         </div>
 
-        <!-- Scroll to Bottom Float Button -->
-        @if (showScrollToBottom)
+        <!-- Jump to Latest Float Button (Context mode-da görünür) -->
+        @if (IsViewingAroundMessage)
         {
-            <button class="scroll-to-bottom-btn" @onclick="ScrollToBottomAndFocusAsync" type="button">
+            <button class="jump-to-latest-btn" @onclick="() => OnJumpToLatest.InvokeAsync()" type="button">
+                <MudIcon Icon="@Icons.Material.Filled.KeyboardDoubleArrowDown" Size="Size.Small" />
+                <span>Jump to latest</span>
+            </button>
+        }
+
+        <!-- Scroll to Bottom Float Button -->
+        @if (showScrollToBottom && !IsViewingAroundMessage)
+        {
+            <button class="scroll-to-bottom-btn @(IsSidebarOpen || IsSearchPanelOpen ? "panel-open" : "")" @onclick="ScrollToBottomAndFocusAsync" type="button">
                 <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Medium" />
                 @if (newMessagesCount > 0)
                 {
@@ -608,10 +610,12 @@
     [Parameter] public EventCallback OnToggleSidebar { get; set; }
     [Parameter] public bool IsSidebarOpen { get; set; }
 
+    // Jump to latest (context mode - pinned/favorite mesaja jump etdikdə görünür)
+    [Parameter] public bool IsViewingAroundMessage { get; set; }
+    [Parameter] public EventCallback OnJumpToLatest { get; set; }
+
 
     private ElementReference messagesContainerRef;
-    private ElementReference scrollAnchorRef;
-    private ElementReference loadMoreTriggerRef;
     private MessageInput? messageInputRef;
     private bool showAddMemberPanel = false;
     private bool showScrollToBottom = false;
@@ -1083,15 +1087,9 @@
 
     private async Task HandleReplyClick(Guid repliedMessageId)
     {
-        try
-        {
-            // Use querySelector to find the message by ID
-            await JS.InvokeVoidAsync("chatAppUtils.scrollToMessageById", $"message-{repliedMessageId}");
-        }
-        catch
-        {
-            // Message not loaded yet or element not found
-        }
+        // OnNavigateToPinnedMessage-i ümumi naviqasiya üçün istifadə edirik
+        // Mesaj yüklənməyibsə GetMessagesAround ilə yüklənəcək
+        await OnNavigateToPinnedMessage.InvokeAsync(repliedMessageId);
     }
 
     private async Task HandleScroll()

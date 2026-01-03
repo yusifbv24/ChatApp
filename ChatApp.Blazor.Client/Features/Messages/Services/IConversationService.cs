@@ -14,6 +14,9 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
         Task<Result<List<DirectMessageDto>>> GetMessagesAsync(Guid conversationId, int pageSize = 50, DateTime? before = null);
 
 
+        Task<Result<List<DirectMessageDto>>> GetMessagesAroundAsync(Guid conversationId, Guid messageId, int count = 50);
+
+
         Task<Result<int>> GetUnreadCountAsync(Guid conversationId);
 
 

@@ -297,24 +297,6 @@
     font-weight: 600;
 }
 
-.online-indicator {
-    position: absolute;
-    bottom: 2px;
-    right: 2px;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    border: 2px solid var(--white);
-}
-
-    .online-indicator.online {
-        background: var(--success-color);
-    }
-
-    .online-indicator.offline {
-        background: var(--gray-400);
-    }
-
 .conversation-info {
     flex: 1;
     min-width: 0;
@@ -816,6 +798,7 @@
 }
 
 .chat-area {
+    position: relative;
     display: flex;
     flex-direction: column;
     height: 100%;
@@ -1026,6 +1009,7 @@
 .messages-container {
     flex: 1;
     overflow-y: auto;
+    overscroll-behavior: contain;
     padding: 20px;
     display: flex;
     flex-direction: column;
@@ -1096,12 +1080,6 @@
         opacity: 1;
         transform: translateY(0);
     }
-}
-
-.load-more-trigger {
-    height: 1px;
-    width: 100%;
-    visibility: hidden;
 }
 
 .load-more-btn {
@@ -3277,6 +3255,39 @@
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     border: 2px solid var(--white);
 }
+
+/* Jump to Latest Button (Context mode-da görünür) */
+.jump-to-latest-btn {
+    position: absolute;
+    bottom: 90px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 8px 16px;
+    border-radius: 20px;
+    background: var(--primary-color);
+    border: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: all var(--transition-base);
+    z-index: 100;
+    color: var(--white);
+    font-size: 13px;
+    font-weight: 500;
+}
+
+    .jump-to-latest-btn:hover {
+        background: var(--primary-dark);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+        transform: translateX(-50%) translateY(-2px);
+    }
+
+    .jump-to-latest-btn:active {
+        transform: translateX(-50%) translateY(0);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    }
 
 /* ===================================
    RESPONSIVE DESIGN

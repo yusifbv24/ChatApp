@@ -1,21 +1,19 @@
 ﻿@page "/messages"
-@page "/messages/conversation/{ConversationId:guid}"
-@page "/messages/channel/{ChannelId:guid}"
 @attribute [Authorize]
 @implements IAsyncDisposable
 
 <div class="messages-page">
     <!-- Left Panel : Conversation List -->
     <div class="messages-sidebar">
-        <ConversationList Conversations="conversations"
-                          Channels="channels"
+        <ConversationList Conversations="directConversations"
+                          Channels="channelConversations"
                           SelectedConversationId="@selectedConversationId"
                           SelectedChannelId="@selectedChannelId"
-                          IsLoading="@isLoadingList"
+                          IsLoading="@isLoadingConversationList"
                           ConversationTypingState="@conversationTypingState"
                           ChannelTypingUsers="@channelTypingUsers"
                           MessageDrafts="@messageDrafts"
-                          OnConversationSelected="SelectConversation"
+                          OnConversationSelected="SelectDirectConversation"
                           OnChannelSelected="SelectChannel"
                           OnNewConversation="OpenNewConversationDialog"
                           OnNewChannel="OpenNewChannelDialog" />
@@ -37,9 +35,9 @@
                   ChannelDescription="@selectedChannelDescription"
                   ChannelType="@selectedChannelType"
                   MemberCount="@selectedChannelMemberCount"
-                  PinnedCount="@pinnedMessageCount"
+                  PinnedCount="@pinnedChannelMessageCount"
                   PinnedDirectMessageCount="@pinnedDirectMessageCount"
-                  PinnedChannelMessages="@pinnedMessages"
+                  PinnedChannelMessages="@pinnedChannelMessages"
                   PinnedDirectMessages="@pinnedDirectMessages"
                   OnNavigateToPinnedMessage="NavigateToPinnedMessage"
                   IsChannelAdmin="@isChannelAdmin"
@@ -56,7 +54,7 @@
                   IsSearchingUsers="@isSearchingMembersForAdd"
                   UnreadSeparatorAfterMessageId="@unreadSeparatorAfterMessageId"
                   LastReadLaterMessageId="@lastReadLaterMessageId"
-                  IsSelectMode="@isSelectMode"
+                  IsSelectMode="@isSelectingMessageBuble"
                   SelectedMessageIds="@selectedMessageIds"
                   CanDeleteSelected="@CanDeleteSelected()"
                   OnSendMessage="SendMessage"
@@ -85,6 +83,8 @@
                   OnToggleSidebar="ToggleSidebar"
                   IsSearchPanelOpen="@showSearchPanel"
                   IsSidebarOpen="@showSidebar"
+                  IsViewingAroundMessage="@isViewingAroundMessage"
+                  OnJumpToLatest="JumpToLatestAsync"
                   InitialDraft="@currentDraft"
                   OnDraftChanged="HandleDraftChanged" />
     </div>

@@ -33,7 +33,7 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
     public event Action<DirectMessageDto>? OnNewDirectMessage;
     public event Action<DirectMessageDto>? OnDirectMessageEdited;
     public event Action<DirectMessageDto>? OnDirectMessageDeleted;
-    public event Action<Guid, Guid, Guid, DateTime>? OnMessageRead;
+    public event Action<Guid, Guid, Guid>? OnMessageRead;
 
 
     // Channel message events
@@ -228,14 +228,12 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
 
                 if (root.TryGetProperty("conversationId", out var convIdProp) &&
                    root.TryGetProperty("messageId", out var msgIdProp) &&
-                   root.TryGetProperty("readBy", out var readByProp) &&
-                   root.TryGetProperty("readAtUtc", out var readAtProp))
+                   root.TryGetProperty("readBy", out var readByProp))
                 {
                     var conversationId = convIdProp.GetGuid();
                     var messageId = msgIdProp.GetGuid();
                     var readBy = readByProp.GetGuid();
-                    var readAtUtc = readAtProp.GetDateTime();
-                    OnMessageRead?.Invoke(conversationId, messageId, readBy, readAtUtc);
+                    OnMessageRead?.Invoke(conversationId, messageId, readBy);
                 }
             }
             catch (Exception ex)
@@ -247,9 +245,9 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
 
         // Typing indicators
         _subscriptions.Add(hubConnection.On<Guid, Guid, string, bool>("UserTypingInChannel",
-            (channelId, userId, username, isTyping) =>
+            (channelId, userId, displayName, isTyping) =>
             {
-                OnUserTypingInChannel?.Invoke(channelId, userId, username, isTyping);
+                OnUserTypingInChannel?.Invoke(channelId, userId, displayName, isTyping);
             }));
 
         _subscriptions.Add(hubConnection.On<Guid, Guid, bool>("UserTypingInConversation",
@@ -459,21 +457,22 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
         }
     }
 
-    public async Task<Dictionary<Guid, bool>> GetOnlineStatusAsync(List<Guid> userIds)
+    public async Task<bool> IsUserOnlineAsync(Guid userId)
     {
         if (!_isInitialized)
         {
-            return [];
+            return false;
         }
 
         try
         {
-            return await hubConnection.InvokeAsync<Dictionary<Guid, bool>>("GetOnlineStatus", userIds);
+            // Backend List<Guid> qəbul edir, biz tək user göndəririk
+            var result = await hubConnection.InvokeAsync<Dictionary<Guid, bool>>("GetOnlineStatus", new List<Guid> { userId });
+            return result.TryGetValue(userId, out var isOnline) && isOnline;
         }
-        catch (Exception ex)
+        catch
         {
-            Console.WriteLine($"Error getting online status: {ex.Message}");
-            return [];
+            return false;
         }
     }
 

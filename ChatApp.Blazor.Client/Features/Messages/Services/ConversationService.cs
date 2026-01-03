@@ -50,6 +50,14 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
         }
 
 
+        public async Task<Result<List<DirectMessageDto>>> GetMessagesAroundAsync(
+            Guid conversationId,
+            Guid messageId,
+            int count = 50)
+        {
+            return await _apiClient.GetAsync<List<DirectMessageDto>>(
+                $"/api/conversations/{conversationId}/messages/around/{messageId}?count={count}");
+        }
 
 
         public async Task<Result<int>> GetUnreadCountAsync(Guid conversationId)

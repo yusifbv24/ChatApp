@@ -31,25 +31,6 @@ document.addEventListener('click', (e) => {
 
 // Utilities
 window.chatAppUtils = {
-    focusElement: (element) => {
-        if (element) {
-            element.focus();
-        }
-    },
-
-    scrollToTop: () => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    },
-
-    copyToClipboard: async (text) => {
-        try {
-            await navigator.clipboard.writeText(text);
-            return true;
-        } catch {
-            return false;
-        }
-    },
-
     // Subscribe to outside click events
     subscribeToOutsideClick: (dotNetHelper) => {
         const handler = () => dotNetHelper.invokeMethodAsync('CloseUserMenuFromJS');
@@ -61,6 +42,14 @@ window.chatAppUtils = {
 
     // Scroll element to bottom (used for chat messages)
     scrollToBottom: (element) => {
+        if (element) {
+            element.scrollTop = element.scrollHeight;
+        }
+    },
+
+    // Scroll container to bottom by ID (used for Jump to Latest)
+    scrollToBottomById: (elementId) => {
+        const element = document.getElementById(elementId);
         if (element) {
             element.scrollTop = element.scrollHeight;
         }
@@ -155,41 +144,43 @@ window.chatAppUtils = {
         element.scrollTop = newScrollTop;
     },
 
-    // Scroll to a message by ID and highlight it (highlights the bubble)
-    scrollToMessageById: (messageId) => {
-        const messageElement = document.getElementById(messageId);
-        if (messageElement) {
-            // Scroll the message into view
-            messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-            // Add highlight class to the bubble inside
-            const bubble = messageElement.querySelector('.message-bubble');
-            if (bubble) {
-                bubble.classList.add('highlighted');
-
-                // Remove highlight after animation completes
-                setTimeout(() => {
-                    bubble.classList.remove('highlighted');
-                }, 2000);
-            }
-        }
-    },
-
-    // Scroll to a message wrapper and highlight it (for pinned messages)
+    // Scroll to a message wrapper and highlight it
     scrollToMessageAndHighlight: (messageId) => {
         const messageElement = document.getElementById(messageId);
-        if (messageElement) {
-            // Scroll the message into view
-            messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        if (!messageElement) return;
 
-            // Add highlight class to the message wrapper
-            messageElement.classList.add('highlighted');
+        const container = document.getElementById('chat-messages');
+        if (container) {
+            // Use getBoundingClientRect for accurate positioning
+            const containerRect = container.getBoundingClientRect();
+            const messageRect = messageElement.getBoundingClientRect();
 
-            // Remove highlight after animation completes (2 seconds to match animation duration)
-            setTimeout(() => {
-                messageElement.classList.remove('highlighted');
-            }, 2000);
+            // Calculate message position relative to container's current scroll
+            const messageTopRelativeToContainer = messageRect.top - containerRect.top + container.scrollTop;
+            const messageHeight = messageRect.height;
+            const containerHeight = containerRect.height;
+
+            // Calculate target scroll position (center the message)
+            let targetScrollTop = messageTopRelativeToContainer - (containerHeight / 2) + (messageHeight / 2);
+
+            // Clamp to valid scroll range
+            const maxScroll = container.scrollHeight - containerHeight;
+            targetScrollTop = Math.max(0, Math.min(targetScrollTop, maxScroll));
+
+            // Use instant scroll to prevent any bounce effect
+            container.scrollTo({ top: targetScrollTop, behavior: 'instant' });
+        } else {
+            // Fallback if container not found
+            messageElement.scrollIntoView({ behavior: 'instant', block: 'center' });
         }
+
+        // Add highlight class to the message wrapper
+        messageElement.classList.add('highlighted');
+
+        // Remove highlight after animation completes (2 seconds to match animation duration)
+        setTimeout(() => {
+            messageElement.classList.remove('highlighted');
+        }, 2000);
     },
 
     // Page Visibility API - Check if page is currently visible
@@ -222,29 +213,5 @@ window.chatAppUtils = {
         const scrollHeight = element.scrollHeight;
         const clientHeight = element.clientHeight;
         return (scrollHeight - scrollTop - clientHeight) <= threshold;
-    },
-
-    // Intersection Observer for infinite scroll
-    observeLoadMoreTrigger: (triggerElement, dotNetHelper) => {
-        if (!triggerElement) return null;
-
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    // Trigger element is visible, load more messages
-                    dotNetHelper.invokeMethodAsync('OnLoadMoreTriggered');
-                }
-            });
-        }, {
-            root: null, // viewport
-            rootMargin: '50px', // trigger 50px before element is visible
-            threshold: 0.1
-        });
-
-        observer.observe(triggerElement);
-
-        return {
-            dispose: () => observer.disconnect()
-        };
     }
 };

@@ -152,7 +152,6 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                     LastMessageSenderId = lastMessage != null ? (Guid?)lastMessage.SenderId : null,
                     LastMessageSenderAvatarUrl = lastMessage != null ? lastMessage.AvatarUrl : null,
                     UnreadCount = unreadCount,
-                    LastReadTime = lastReadTime,
                     member.LastReadLaterMessageId
                 }
             ).ToListAsync(cancellationToken);
@@ -220,7 +219,6 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                     c.LastMessageContent,
                     c.LastMessageAtUtc,
                     c.UnreadCount,
-                    c.LastReadTime,
                     c.LastReadLaterMessageId,
                     c.LastMessageId,
                     c.LastMessageSenderId,

@@ -2,22 +2,13 @@
 using ChatApp.Modules.DirectMessages.Application.DTOs.Response;
 using ChatApp.Modules.DirectMessages.Application.Interfaces;
 using ChatApp.Modules.DirectMessages.Domain.Entities;
-using ChatApp.Shared.Infrastructure.SignalR.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
 {
-    public class DirectConversationRepository : IDirectConversationRepository
+    public class DirectConversationRepository(DirectMessagesDbContext context) : IDirectConversationRepository
     {
-        private readonly DirectMessagesDbContext _context;
-        private readonly IConnectionManager _connectionManager;
-        public DirectConversationRepository(
-            DirectMessagesDbContext context,
-            IConnectionManager connectionManager)
-        {
-            _context = context;
-            _connectionManager = connectionManager;
-        }
+        private readonly DirectMessagesDbContext _context = context;
 
         public async Task AddAsync(DirectConversation conversation, CancellationToken cancellationToken = default)
         {
@@ -86,7 +77,7 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                                        let lastMessageInfo = _context.DirectMessages
                                           .Where(m => m.ConversationId == conv.Id)
                                           .OrderByDescending(m => m.CreatedAtUtc)
-                                          .Select(m => new { m.Content, m.IsDeleted, m.SenderId, m.IsRead })
+                                          .Select(m => new { m.Id, m.Content, m.IsDeleted, m.SenderId, m.IsRead })
                                           .FirstOrDefault()
                                        let unreadCount = _context.DirectMessages
                                           .Count(m => m.ConversationId == conv.Id &&
@@ -111,20 +102,12 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                                            UnreadCount=unreadCount,
                                            LastReadLaterMessageId=lastReadLaterMessageId,
                                            LastMessageSenderId = lastMessageInfo != null ? (Guid?)lastMessageInfo.SenderId : null,
-                                           LastMessageIsRead = lastMessageInfo != null && lastMessageInfo.IsRead
+                                           LastMessageIsRead = lastMessageInfo != null && lastMessageInfo.IsRead,
+                                           LastMessageId = lastMessageInfo != null ? (Guid?)lastMessageInfo.Id : null
                                        })
                                        .ToListAsync(cancellationToken);
 
-            // Get online status for all other users
-            var otherUserIds = conversationsQuery.Select(c => c.OtherUserId).ToList();
-            var onlineStatuses = new Dictionary<Guid, bool>();
-
-            foreach(var otherUserId in otherUserIds)
-            {
-                onlineStatuses[otherUserId] = await _connectionManager.IsUserOnlineAsync(otherUserId);
-            }
-
-            // Map to DTOs with actual online status and message status
+            // Map to DTOs with message status
             var conversations = conversationsQuery.Select(c =>
             {
                 // Calculate status for user's own messages only
@@ -143,13 +126,12 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                     c.LastMessage,
                     c.LastMessageAtUtc,
                     c.UnreadCount,
-                    onlineStatuses.GetValueOrDefault(c.OtherUserId, false),
                     c.LastReadLaterMessageId,
                     c.LastMessageSenderId,
-                    status
+                    status,
+                    c.LastMessageId
                 );
             }).ToList();
-
 
             return conversations;
         }

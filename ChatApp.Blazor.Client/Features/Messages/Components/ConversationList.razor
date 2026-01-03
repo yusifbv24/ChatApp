@@ -182,7 +182,6 @@
                             {
                                 <div class="avatar-placeholder">@StringHelper.GetInitials(item.Name)</div>
                             }
-                            <span class="online-indicator @(item.IsOnline ? "online" : "offline")"></span>
                         </div>
                         <div class="conversation-info">
                             <div class="conversation-header">
@@ -285,7 +284,6 @@
         public string? LastMessage { get; set; }
         public DateTime? LastActivityTime { get; set; }
         public int UnreadCount { get; set; }
-        public bool IsOnline { get; set; }
         public bool IsChannel { get; set; }
         public bool IsPrivate { get; set; } // For channels: private or public
         public int MemberCount { get; set; } // For channels
@@ -324,7 +322,6 @@
                     LastMessage = conv.LastMessageContent,
                     LastActivityTime = conv.LastMessageAtUtc,
                     UnreadCount = conv.UnreadCount,
-                    IsOnline = conv.IsOtherUserOnline,
                     IsChannel = false,
                     HasDraft = hasDraft,
                     DraftText = hasDraft ? draftText : null,

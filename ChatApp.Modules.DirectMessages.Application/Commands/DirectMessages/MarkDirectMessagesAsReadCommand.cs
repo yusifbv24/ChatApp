@@ -81,14 +81,10 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectMessages
 
                 if (unreadMessages.Any())
                 {
-                    var readAtUtc = DateTime.UtcNow;
-                    Guid? senderId = null;
-
                     // Mark all messages as read
                     foreach (var message in unreadMessages)
                     {
                         message.MarkAsRead();
-                        senderId = message.SenderId; // Store sender ID for SignalR notification
                     }
 
                     // Save all changes in one transaction
@@ -101,16 +97,14 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectMessages
                             message.ConversationId,
                             message.Id,
                             request.UserId,
-                            message.SenderId,
-                            readAtUtc);
+                            message.SenderId);
 
                         // Publish domain event for internal processing
                         await _eventBus.PublishAsync(
                             new MessageReadEvent(
                                 message.Id,
                                 message.ConversationId,
-                                request.UserId,
-                                readAtUtc),
+                                request.UserId),
                             cancellationToken);
                     }
 

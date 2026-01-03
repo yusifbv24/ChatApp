@@ -5,7 +5,6 @@ namespace ChatApp.Modules.DirectMessages.Domain.Events
     public record MessageReadEvent(
         Guid MessageId,
         Guid ConversationId,
-        Guid ReadBy,
-        DateTime ReadAtUtc
+        Guid ReadBy
     ): DomainEvent;
 }

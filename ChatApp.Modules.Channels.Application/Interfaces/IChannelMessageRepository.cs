@@ -13,6 +13,11 @@ namespace ChatApp.Modules.Channels.Application.Interfaces
             int pageSize = 50,
             DateTime? beforeUtc = null,
             CancellationToken cancellationToken = default);
+        Task<List<ChannelMessageDto>> GetMessagesAroundAsync(
+            Guid channelId,
+            Guid messageId,
+            int count = 50,
+            CancellationToken cancellationToken = default);
         Task<List<ChannelMessageDto>> GetPinnedMessagesAsync(Guid channelId, CancellationToken cancellationToken = default);
         Task<int> GetUnreadCountAsync(Guid channelId, Guid userId, CancellationToken cancellationToken = default);
         Task AddAsync(ChannelMessage message, CancellationToken cancellationToken = default);

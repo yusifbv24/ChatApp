@@ -17,7 +17,6 @@
         int ReactionCount,
         DateTime CreatedAtUtc,
         DateTime? EditedAtUtc,
-        DateTime? ReadAtUtc,
         DateTime? PinnedAtUtc,
         Guid? ReplyToMessageId,
         string? ReplyToContent,

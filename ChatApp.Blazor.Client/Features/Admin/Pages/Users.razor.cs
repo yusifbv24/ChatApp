@@ -591,15 +591,10 @@ public partial class Users
             var rolesToAdd = selectedRoleIds.Except(currentRoleIds).ToList();
             var rolesToRemove = currentRoleIds.Except(selectedRoleIds).ToList();
 
-            foreach (var roleId in rolesToAdd)
-            {
-                await UserService.AssignRoleAsync(managingRolesUser.Id, roleId);
-            }
-
-            foreach (var roleId in rolesToRemove)
-            {
-                await UserService.RemoveRoleAsync(managingRolesUser.Id, roleId);
-            }
+            // Paralel olaraq bütün rol dəyişikliklərini tətbiq et
+            var addTasks = rolesToAdd.Select(roleId => UserService.AssignRoleAsync(managingRolesUser.Id, roleId));
+            var removeTasks = rolesToRemove.Select(roleId => UserService.RemoveRoleAsync(managingRolesUser.Id, roleId));
+            await Task.WhenAll(addTasks.Concat(removeTasks));
 
             rolesSuccess = true;
             rolesMessage = "Roles updated successfully!";

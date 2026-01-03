@@ -26,6 +26,7 @@ namespace ChatApp.Modules.Identity.Infrastructure.Services
             {
                 new(JwtRegisteredClaimNames.Sub,user.Id.ToString()),
                 new(JwtRegisteredClaimNames.UniqueName,user.Username),
+                new(JwtRegisteredClaimNames.GivenName,user.DisplayName),
                 new(JwtRegisteredClaimNames.Email,user.Email),
                 new(JwtRegisteredClaimNames.Jti,Guid.NewGuid().ToString()),
                 new("isAdmin",user.IsAdmin.ToString())

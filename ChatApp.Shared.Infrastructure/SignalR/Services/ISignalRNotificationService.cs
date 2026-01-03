@@ -93,7 +93,7 @@
         /// Notify about message read (for direct messages)
         /// Sends notification to both conversation group AND sender specifically
         /// </summary>
-        Task NotifyMessageReadAsync(Guid conversationId, Guid messageId, Guid readBy, Guid senderId, DateTime readAtUtc);
+        Task NotifyMessageReadAsync(Guid conversationId, Guid messageId, Guid readBy, Guid senderId);
 
 
         /// <summary>
@@ -120,7 +120,7 @@
         /// Sends typing indicator to channel group AND each member's connections directly
         /// This allows typing indicators to work with lazy loading (user doesn't need to JOIN channel)
         /// </summary>
-        Task NotifyUserTypingInChannelToMembersAsync(Guid channelId, List<Guid> memberUserIds, Guid typingUserId, string username, bool isTyping);
+        Task NotifyUserTypingInChannelToMembersAsync(Guid channelId, List<Guid> memberUserIds, Guid typingUserId, string displayName, bool isTyping);
 
         /// <summary>
         /// Notify conversation members about typing indicator (hybrid: group + direct connections)
