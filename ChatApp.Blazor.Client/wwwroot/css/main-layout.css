@@ -421,7 +421,7 @@
    =================================== */
 
 .top-header {
-    height: 70px;
+    height: 60px;
     background: var(--white);
     border-bottom: 1px solid var(--gray-200);
     display: flex;

@@ -68,7 +68,8 @@
       "Bash(cmd /c taskkill /F /PID 14628)",
       "Bash(grep:*)",
       "Bash(for file in Messages*.cs)",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(wc:*)"
     ],
     "deny": [],
     "ask": []
