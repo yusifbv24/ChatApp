@@ -19,8 +19,9 @@ namespace ChatApp.Blazor.Client.Features.Messages.Components;
 /// - SearchPanel.razor: HTML template
 /// - SearchPanel.razor.cs: C# code-behind (bu fayl)
 /// </summary>
-public partial class SearchPanel
+public partial class SearchPanel : IAsyncDisposable
 {
+    private bool _disposed = false;
     #region Parameters
 
     /// <summary>
@@ -78,17 +79,33 @@ public partial class SearchPanel
     /// </summary>
     private CancellationTokenSource? _searchCts;
 
+    /// <summary>
+    /// Cache-lənmiş qruplanmış nəticələr.
+    /// </summary>
+    private List<IGrouping<DateTime, SearchResultDto>>? _cachedGroupedResults;
+
     #endregion
 
     #region Computed Properties
 
     /// <summary>
     /// Nəticələri tarixə görə qruplaşdırır.
+    /// Cache-lənmiş - yalnız searchResults dəyişdikdə yenidən hesablanır.
     /// </summary>
-    private IEnumerable<IGrouping<DateTime, SearchResultDto>> GroupedResults =>
-        searchResults?.Results
-            .OrderByDescending(r => r.CreatedAtUtc)
-            .GroupBy(r => r.CreatedAtUtc.Date) ?? Enumerable.Empty<IGrouping<DateTime, SearchResultDto>>();
+    private List<IGrouping<DateTime, SearchResultDto>> GroupedResults
+    {
+        get
+        {
+            if (_cachedGroupedResults == null && searchResults?.Results != null)
+            {
+                _cachedGroupedResults = searchResults.Results
+                    .OrderByDescending(r => r.CreatedAtUtc)
+                    .GroupBy(r => r.CreatedAtUtc.Date)
+                    .ToList();
+            }
+            return _cachedGroupedResults ?? new List<IGrouping<DateTime, SearchResultDto>>();
+        }
+    }
 
     #endregion
 
@@ -142,11 +159,13 @@ public partial class SearchPanel
             {
                 var targetId = IsDirectMessage ? ConversationId!.Value : ChannelId!.Value;
                 searchResults = await SearchFunc(targetId, searchQuery, 1, 50);
+                _cachedGroupedResults = null; // Cache invalidate
             }
         }
         catch
         {
             searchResults = null;
+            _cachedGroupedResults = null; // Cache invalidate
         }
         finally
         {
@@ -165,6 +184,7 @@ public partial class SearchPanel
     {
         searchQuery = string.Empty;
         searchResults = null;
+        _cachedGroupedResults = null; // Cache invalidate
         _searchCts?.Cancel();
         isSearching = false;
     }
@@ -195,6 +215,25 @@ public partial class SearchPanel
         if (date.Year == today.Year)
             return date.ToString("MMMM d", CultureInfo.InvariantCulture);
         return date.ToString("MMMM d, yyyy", CultureInfo.InvariantCulture);
+    }
+
+    #endregion
+
+    #region IAsyncDisposable
+
+    public ValueTask DisposeAsync()
+    {
+        if (_disposed) return ValueTask.CompletedTask;
+        _disposed = true;
+
+        _searchCts?.Cancel();
+        _searchCts?.Dispose();
+        _searchCts = null;
+
+        _cachedGroupedResults = null;
+        searchResults = null;
+
+        return ValueTask.CompletedTask;
     }
 
     #endregion

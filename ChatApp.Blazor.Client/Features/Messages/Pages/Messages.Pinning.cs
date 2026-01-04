@@ -79,6 +79,7 @@ public partial class Messages
                 {
                     var index = directMessages.IndexOf(message);
                     directMessages[index] = message with { IsPinned = true, PinnedAtUtc = DateTime.UtcNow };
+                    InvalidateMessageCache();
                 }
 
                 // Pinned count-u yenilə
@@ -114,6 +115,7 @@ public partial class Messages
                 {
                     var index = directMessages.IndexOf(message);
                     directMessages[index] = message with { IsPinned = false, PinnedAtUtc = null };
+                    InvalidateMessageCache();
                 }
 
                 // Pinned count-u yenilə
@@ -154,6 +156,7 @@ public partial class Messages
                 {
                     var index = channelMessages.IndexOf(message);
                     channelMessages[index] = message with { IsPinned = true, PinnedAtUtc = DateTime.UtcNow };
+                    InvalidateMessageCache();
                 }
 
                 // Pinned count və list-i yenilə
@@ -189,6 +192,7 @@ public partial class Messages
                 {
                     var index = channelMessages.IndexOf(message);
                     channelMessages[index] = message with { IsPinned = false, PinnedAtUtc = null };
+                    InvalidateMessageCache();
                 }
 
                 // Pinned count və list-i yenilə

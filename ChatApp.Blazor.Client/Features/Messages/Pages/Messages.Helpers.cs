@@ -1,4 +1,5 @@
 using ChatApp.Blazor.Client.Models.Common;
+using ChatApp.Blazor.Client.Models.Messages;
 using ChatApp.Blazor.Client.Models.Search;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
@@ -327,12 +328,14 @@ public partial class Messages
             var updatedConversation = conversation with
             {
                 LastMessageContent = lastMessage,
-                LastMessageAtUtc = messageTime
+                LastMessageAtUtc = messageTime,
+                LastMessageSenderId = currentUserId
             };
 
-            // List-in başına köçür (ən son mesaj olan üstdə)
-            directConversations.Remove(conversation);
-            directConversations.Insert(0, updatedConversation);
+            // Yeni list yaradırıq ki cache invalidate olsun (ReferenceEquals)
+            var newList = new List<DirectConversationDto>(directConversations.Count) { updatedConversation };
+            newList.AddRange(directConversations.Where(c => c.Id != conversationId));
+            directConversations = newList;
 
             StateHasChanged();
         }
@@ -349,11 +352,14 @@ public partial class Messages
             var updatedChannel = channel with
             {
                 LastMessageContent = lastMessage,
-                LastMessageAtUtc = messageTime
+                LastMessageAtUtc = messageTime,
+                LastMessageSenderId = currentUserId
             };
 
-            channelConversations.Remove(channel);
-            channelConversations.Insert(0, updatedChannel);
+            // Yeni list yaradırıq ki cache invalidate olsun (ReferenceEquals)
+            var newList = new List<ChannelDto>(channelConversations.Count) { updatedChannel };
+            newList.AddRange(channelConversations.Where(c => c.Id != channelId));
+            channelConversations = newList;
 
             StateHasChanged();
         }
@@ -369,7 +375,10 @@ public partial class Messages
         if (convIndex >= 0)
         {
             var conv = directConversations[convIndex];
-            directConversations[convIndex] = conv with { LastMessageContent = newContent };
+            // Yeni list yaradırıq ki cache invalidate olsun (ReferenceEquals)
+            var newList = new List<DirectConversationDto>(directConversations);
+            newList[convIndex] = conv with { LastMessageContent = newContent };
+            directConversations = newList;
         }
     }
 
@@ -378,13 +387,14 @@ public partial class Messages
     /// </summary>
     private void UpdateChannelLastMessage(Guid channelId, string newContent, string? senderName = null)
     {
-        var channel = channelConversations.FirstOrDefault(c => c.Id == channelId);
-        if (channel != null)
+        var channelIndex = channelConversations.FindIndex(c => c.Id == channelId);
+        if (channelIndex >= 0)
         {
-            var updatedChannel = channel with { LastMessageContent = newContent };
-            channelConversations.Remove(channel);
-            channelConversations.Insert(0, updatedChannel);
-            StateHasChanged();
+            var channel = channelConversations[channelIndex];
+            // Yeni list yaradırıq ki cache invalidate olsun (ReferenceEquals)
+            var newList = new List<ChannelDto>(channelConversations);
+            newList[channelIndex] = channel with { LastMessageContent = newContent };
+            channelConversations = newList;
         }
     }
 
@@ -395,6 +405,16 @@ public partial class Messages
     {
         var totalUnread = directConversations.Sum(c => c.UnreadCount) + channelConversations.Sum(c => c.UnreadCount);
         AppState.UnreadMessageCount = totalUnread;
+    }
+
+    /// <summary>
+    /// Mesaj cache version-u artır.
+    /// ChatArea cache-i invalidate etmək üçün çağrılır.
+    /// In-place mesaj dəyişikliklərindən sonra (edit/delete/reaction/pin/read) çağrılmalıdır.
+    /// </summary>
+    private void InvalidateMessageCache()
+    {
+        messageCacheVersion++;
     }
 
     #endregion

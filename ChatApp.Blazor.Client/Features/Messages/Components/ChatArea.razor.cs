@@ -42,6 +42,12 @@ public partial class ChatArea : IAsyncDisposable
     /// </summary>
     [Parameter] public Guid? ChannelId { get; set; }
 
+    /// <summary>
+    /// Mesaj cache version - mesaj edit/delete/reaction/pin olduqda artır.
+    /// Cache invalidation üçün istifadə olunur.
+    /// </summary>
+    [Parameter] public int CacheVersion { get; set; }
+
     #endregion
 
     #region Parameters - Direct Message
@@ -580,6 +586,11 @@ public partial class ChatArea : IAsyncDisposable
     /// </summary>
     private CancellationTokenSource? _memberSearchCts;
 
+    /// <summary>
+    /// Komponent dispose olunub?
+    /// </summary>
+    private bool _disposed = false;
+
     #endregion
 
     #region Private Fields - Pinned Messages
@@ -606,13 +617,48 @@ public partial class ChatArea : IAsyncDisposable
 
     #endregion
 
-    #region Private Fields - Performance
+    #region Private Fields - Performance & Cache
 
     /// <summary>
     /// ChannelMessages list-in hash-i - reference dəyişikliyini track etmək üçün.
     /// ReadByCount kimi field-lərin yenilənməsini təmin edir.
     /// </summary>
     private int _previousChannelMessagesHash = 0;
+
+    /// <summary>
+    /// Cache-lənmiş Direct Messages qrupları.
+    /// </summary>
+    private List<IGrouping<DateTime, DirectMessageDto>>? _cachedGroupedDirectMessages;
+
+    /// <summary>
+    /// Cache-lənmiş Channel Messages qrupları.
+    /// </summary>
+    private List<IGrouping<DateTime, ChannelMessageDto>>? _cachedGroupedChannelMessages;
+
+    /// <summary>
+    /// Əvvəlki DirectMessages reference.
+    /// </summary>
+    private List<DirectMessageDto>? _previousDirectMessages;
+
+    /// <summary>
+    /// Əvvəlki DirectMessages sayı.
+    /// </summary>
+    private int _previousDirectMessagesCount;
+
+    /// <summary>
+    /// Əvvəlki ChannelMessages reference.
+    /// </summary>
+    private List<ChannelMessageDto>? _previousChannelMessages;
+
+    /// <summary>
+    /// Əvvəlki ChannelMessages sayı.
+    /// </summary>
+    private int _previousChannelMessagesCount;
+
+    /// <summary>
+    /// Əvvəlki CacheVersion - mesaj edit/delete/reaction/pin detection üçün.
+    /// </summary>
+    private int _previousCacheVersion;
 
     #endregion
 
@@ -635,6 +681,41 @@ public partial class ChatArea : IAsyncDisposable
 
         // ChannelMessages reference dəyişikliyini track et
         HandleChannelMessagesChange();
+
+        // Message cache invalidation - yalnız dəyişiklik olduqda
+        InvalidateMessageCacheIfNeeded();
+    }
+
+    /// <summary>
+    /// Mesaj cache-ini yalnız lazım olduqda yeniləyir.
+    /// </summary>
+    private void InvalidateMessageCacheIfNeeded()
+    {
+        // CacheVersion dəyişibsə (edit/delete/reaction/pin) - hər iki cache-i invalidate et
+        if (CacheVersion != _previousCacheVersion)
+        {
+            _cachedGroupedDirectMessages = null;
+            _cachedGroupedChannelMessages = null;
+            _previousCacheVersion = CacheVersion;
+        }
+
+        // DirectMessages dəyişibsə cache-i invalidate et
+        if (!ReferenceEquals(DirectMessages, _previousDirectMessages) ||
+            DirectMessages.Count != _previousDirectMessagesCount)
+        {
+            _cachedGroupedDirectMessages = null;
+            _previousDirectMessages = DirectMessages;
+            _previousDirectMessagesCount = DirectMessages.Count;
+        }
+
+        // ChannelMessages dəyişibsə cache-i invalidate et
+        if (!ReferenceEquals(ChannelMessages, _previousChannelMessages) ||
+            ChannelMessages.Count != _previousChannelMessagesCount)
+        {
+            _cachedGroupedChannelMessages = null;
+            _previousChannelMessages = ChannelMessages;
+            _previousChannelMessagesCount = ChannelMessages.Count;
+        }
     }
 
     /// <summary>
@@ -938,19 +1019,41 @@ public partial class ChatArea : IAsyncDisposable
 
     /// <summary>
     /// Direct mesajları tarixə görə qruplaşdırır.
+    /// Cache-lənmiş - yalnız mesajlar dəyişdikdə yenidən hesablanır.
     /// </summary>
-    private IEnumerable<IGrouping<DateTime, DirectMessageDto>> GroupedDirectMessages =>
-        DirectMessages
-            .OrderBy(m => m.CreatedAtUtc)
-            .GroupBy(m => m.CreatedAtUtc.Date);
+    private List<IGrouping<DateTime, DirectMessageDto>> GroupedDirectMessages
+    {
+        get
+        {
+            if (_cachedGroupedDirectMessages == null)
+            {
+                _cachedGroupedDirectMessages = DirectMessages
+                    .OrderBy(m => m.CreatedAtUtc)
+                    .GroupBy(m => m.CreatedAtUtc.Date)
+                    .ToList();
+            }
+            return _cachedGroupedDirectMessages;
+        }
+    }
 
     /// <summary>
     /// Channel mesajlarını tarixə görə qruplaşdırır.
+    /// Cache-lənmiş - yalnız mesajlar dəyişdikdə yenidən hesablanır.
     /// </summary>
-    private IEnumerable<IGrouping<DateTime, ChannelMessageDto>> GroupedChannelMessages =>
-        ChannelMessages
-            .OrderBy(m => m.CreatedAtUtc)
-            .GroupBy(m => m.CreatedAtUtc.Date);
+    private List<IGrouping<DateTime, ChannelMessageDto>> GroupedChannelMessages
+    {
+        get
+        {
+            if (_cachedGroupedChannelMessages == null)
+            {
+                _cachedGroupedChannelMessages = ChannelMessages
+                    .OrderBy(m => m.CreatedAtUtc)
+                    .GroupBy(m => m.CreatedAtUtc.Date)
+                    .ToList();
+            }
+            return _cachedGroupedChannelMessages;
+        }
+    }
 
     /// <summary>
     /// Tarix divider-i formatlanır.
@@ -1405,9 +1508,13 @@ public partial class ChatArea : IAsyncDisposable
             // Uğur halında 1 saniyə sonra panel-i bağla
             if (!string.IsNullOrEmpty(addMemberSuccess))
             {
-                _ = Task.Delay(1000).ContinueWith(_ =>
+                _ = Task.Run(async () =>
                 {
-                    InvokeAsync(CloseAddMemberPanel);
+                    await Task.Delay(1000);
+                    if (!_disposed)
+                    {
+                        await InvokeAsync(CloseAddMemberPanel);
+                    }
                 });
             }
         }
@@ -1422,6 +1529,9 @@ public partial class ChatArea : IAsyncDisposable
     /// </summary>
     public async ValueTask DisposeAsync()
     {
+        if (_disposed) return;
+        _disposed = true;
+
         _memberSearchCts?.Cancel();
         _memberSearchCts?.Dispose();
         await Task.CompletedTask;

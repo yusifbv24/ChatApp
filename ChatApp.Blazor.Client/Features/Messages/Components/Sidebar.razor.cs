@@ -197,6 +197,82 @@ public partial class Sidebar
 
     #endregion
 
+    #region Private Fields - Cache
+
+    /// <summary>
+    /// Cache-lənmiş qruplanmış DM favorites.
+    /// </summary>
+    private List<IGrouping<DateTime, FavoriteDirectMessageDto>>? _cachedGroupedDirectFavorites;
+
+    /// <summary>
+    /// Cache-lənmiş qruplanmış Channel favorites.
+    /// </summary>
+    private List<IGrouping<DateTime, FavoriteChannelMessageDto>>? _cachedGroupedChannelFavorites;
+
+    /// <summary>
+    /// Əvvəlki FavoriteDirectMessages reference.
+    /// </summary>
+    private List<FavoriteDirectMessageDto>? _previousFavoriteDirectMessages;
+
+    /// <summary>
+    /// Əvvəlki FavoriteChannelMessages reference.
+    /// </summary>
+    private List<FavoriteChannelMessageDto>? _previousFavoriteChannelMessages;
+
+    #endregion
+
+    #region Computed Properties - Cached
+
+    /// <summary>
+    /// Qruplanmış DM favorites - cache-lənmiş.
+    /// </summary>
+    private List<IGrouping<DateTime, FavoriteDirectMessageDto>> GroupedDirectFavorites
+    {
+        get
+        {
+            if (_cachedGroupedDirectFavorites == null && FavoriteDirectMessages != null)
+            {
+                _cachedGroupedDirectFavorites = FavoriteDirectMessages
+                    .GroupBy(m => m.FavoritedAtUtc.Date)
+                    .OrderByDescending(g => g.Key)
+                    .ToList();
+            }
+            return _cachedGroupedDirectFavorites ?? new List<IGrouping<DateTime, FavoriteDirectMessageDto>>();
+        }
+    }
+
+    /// <summary>
+    /// Qruplanmış Channel favorites - cache-lənmiş.
+    /// </summary>
+    private List<IGrouping<DateTime, FavoriteChannelMessageDto>> GroupedChannelFavorites
+    {
+        get
+        {
+            if (_cachedGroupedChannelFavorites == null && FavoriteChannelMessages != null)
+            {
+                _cachedGroupedChannelFavorites = FavoriteChannelMessages
+                    .GroupBy(m => m.FavoritedAtUtc.Date)
+                    .OrderByDescending(g => g.Key)
+                    .ToList();
+            }
+            return _cachedGroupedChannelFavorites ?? new List<IGrouping<DateTime, FavoriteChannelMessageDto>>();
+        }
+    }
+
+    /// <summary>
+    /// Qrup içindəki mesajları sıralayır - cache olunmuş data ilə.
+    /// </summary>
+    private static IEnumerable<FavoriteDirectMessageDto> GetOrderedDirectMessages(IGrouping<DateTime, FavoriteDirectMessageDto> group)
+        => group.OrderByDescending(m => m.FavoritedAtUtc);
+
+    /// <summary>
+    /// Qrup içindəki mesajları sıralayır - cache olunmuş data ilə.
+    /// </summary>
+    private static IEnumerable<FavoriteChannelMessageDto> GetOrderedChannelMessages(IGrouping<DateTime, FavoriteChannelMessageDto> group)
+        => group.OrderByDescending(m => m.FavoritedAtUtc);
+
+    #endregion
+
     #region Lifecycle Methods
 
     /// <summary>
@@ -209,6 +285,19 @@ public partial class Sidebar
             ResetAllPanels();
             _previousConversationId = ConversationId;
             _previousChannelId = ChannelId;
+        }
+
+        // Favorites cache invalidation
+        if (!ReferenceEquals(FavoriteDirectMessages, _previousFavoriteDirectMessages))
+        {
+            _cachedGroupedDirectFavorites = null;
+            _previousFavoriteDirectMessages = FavoriteDirectMessages;
+        }
+
+        if (!ReferenceEquals(FavoriteChannelMessages, _previousFavoriteChannelMessages))
+        {
+            _cachedGroupedChannelFavorites = null;
+            _previousFavoriteChannelMessages = FavoriteChannelMessages;
         }
     }
 

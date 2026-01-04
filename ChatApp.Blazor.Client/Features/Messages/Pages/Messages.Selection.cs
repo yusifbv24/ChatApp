@@ -138,11 +138,13 @@ public partial class Messages
             {
                 AppState.DecrementUnreadMessages(conversation.UnreadCount);
 
-                // Local list-i də yenilə
+                // Yeni list yaradırıq ki cache invalidate olsun (ReferenceEquals)
                 var index = directConversations.IndexOf(conversation);
                 if (index >= 0)
                 {
-                    directConversations[index] = conversation with { UnreadCount = 0 };
+                    var newList = new List<DirectConversationDto>(directConversations);
+                    newList[index] = conversation with { UnreadCount = 0 };
+                    directConversations = newList;
                 }
             }
 
@@ -380,10 +382,13 @@ public partial class Messages
             if (channel.UnreadCount > 0)
             {
                 AppState.DecrementUnreadMessages(channel.UnreadCount);
+                // Yeni list yaradırıq ki cache invalidate olsun (ReferenceEquals)
                 var index = channelConversations.IndexOf(channel);
                 if (index >= 0)
                 {
-                    channelConversations[index] = channel with { UnreadCount = 0 };
+                    var newList = new List<ChannelDto>(channelConversations);
+                    newList[index] = channel with { UnreadCount = 0 };
+                    channelConversations = newList;
                 }
             }
 
@@ -895,14 +900,16 @@ public partial class Messages
             // Member count artır
             selectedChannelMemberCount++;
 
-            // Channel list-i yenilə
+            // Yeni list yaradırıq ki cache invalidate olsun (ReferenceEquals)
             var channelIndex = channelConversations.FindIndex(c => c.Id == selectedChannelId.Value);
             if (channelIndex >= 0)
             {
-                channelConversations[channelIndex] = channelConversations[channelIndex] with
+                var newList = new List<ChannelDto>(channelConversations);
+                newList[channelIndex] = channelConversations[channelIndex] with
                 {
                     MemberCount = selectedChannelMemberCount
                 };
+                channelConversations = newList;
             }
 
             StateHasChanged();

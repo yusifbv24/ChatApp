@@ -23,8 +23,9 @@ namespace ChatApp.Blazor.Client.Features.Messages.Components;
 /// - MessageBubble.razor: HTML template
 /// - MessageBubble.razor.cs: C# code-behind (bu fayl)
 /// </summary>
-public partial class MessageBubble
+public partial class MessageBubble : IAsyncDisposable
 {
+    private bool _disposed = false;
     #region Injected Services
 
     [Inject] private IJSRuntime JS { get; set; } = default!;
@@ -780,6 +781,26 @@ public partial class MessageBubble
         public double ChatHeaderBottom { get; set; }
         public double ActualSpaceBelow { get; set; }
         public double ActualSpaceAbove { get; set; }
+    }
+
+    #endregion
+
+    #region IAsyncDisposable
+
+    public ValueTask DisposeAsync()
+    {
+        if (_disposed) return ValueTask.CompletedTask;
+        _disposed = true;
+
+        hideReactionPanelCts?.Cancel();
+        hideReactionPanelCts?.Dispose();
+        hideReactionPanelCts = null;
+
+        showReactionPickerCts?.Cancel();
+        showReactionPickerCts?.Dispose();
+        showReactionPickerCts = null;
+
+        return ValueTask.CompletedTask;
     }
 
     #endregion

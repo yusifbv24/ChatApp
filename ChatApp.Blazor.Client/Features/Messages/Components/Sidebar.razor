@@ -39,12 +39,12 @@
                 {
                     @if (IsDirectMessage && FavoriteDirectMessages != null)
                     {
-                        @foreach (var group in FavoriteDirectMessages.GroupBy(m => m.FavoritedAtUtc.Date).OrderByDescending(g => g.Key))
+                        @foreach (var group in GroupedDirectFavorites)
                         {
                             <div class="favorites-date-divider">
                                 <span>@FormatFavoriteDate(group.Key)</span>
                             </div>
-                            @foreach (var message in group.OrderByDescending(m => m.FavoritedAtUtc))
+                            @foreach (var message in GetOrderedDirectMessages(group))
                             {
                                 <div class="favorites-message-item"
                                      @onmouseenter="() => hoveredMessageId = message.Id"
@@ -90,12 +90,12 @@
                     }
                     else if (!IsDirectMessage && FavoriteChannelMessages != null)
                     {
-                        @foreach (var group in FavoriteChannelMessages.GroupBy(m => m.FavoritedAtUtc.Date).OrderByDescending(g => g.Key))
+                        @foreach (var group in GroupedChannelFavorites)
                         {
                             <div class="favorites-date-divider">
                                 <span>@FormatFavoriteDate(group.Key)</span>
                             </div>
-                            @foreach (var message in group.OrderByDescending(m => m.FavoritedAtUtc))
+                            @foreach (var message in GetOrderedChannelMessages(group))
                             {
                                 <div class="favorites-message-item"
                                      @onmouseenter="() => hoveredMessageId = message.Id"

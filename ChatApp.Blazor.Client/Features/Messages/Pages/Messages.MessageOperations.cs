@@ -222,6 +222,7 @@ public partial class Messages
                         var index = directMessages.IndexOf(message);
                         var updatedMessage = message with { Content = edit.content, IsEdited = true };
                         directMessages[index] = updatedMessage;
+                        InvalidateMessageCache();
 
                         // Conversation list-i də yenilə (son mesaj isə)
                         if (IsLastMessageInConversation(selectedConversationId.Value, updatedMessage.Id))
@@ -253,6 +254,7 @@ public partial class Messages
                         var index = channelMessages.IndexOf(message);
                         var updatedMessage = message with { Content = edit.content, IsEdited = true };
                         channelMessages[index] = updatedMessage;
+                        InvalidateMessageCache();
 
                         if (IsLastMessageInChannel(selectedChannelId.Value, updatedMessage.Id))
                         {
@@ -302,6 +304,7 @@ public partial class Messages
                         // Content-i boşalt, IsDeleted=true
                         var deletedMessage = message with { IsDeleted = true, Content = "" };
                         directMessages[index] = deletedMessage;
+                        InvalidateMessageCache();
 
                         // Son mesaj isə, conversation list-i yenilə
                         if (IsLastMessageInConversation(selectedConversationId.Value, deletedMessage.Id))
@@ -332,6 +335,7 @@ public partial class Messages
                         var index = channelMessages.IndexOf(message);
                         var deletedMessage = message with { IsDeleted = true, Content = "" };
                         channelMessages[index] = deletedMessage;
+                        InvalidateMessageCache();
 
                         if (IsLastMessageInChannel(selectedChannelId.Value, deletedMessage.Id))
                         {
@@ -416,6 +420,7 @@ public partial class Messages
             };
 
             directMessages[index] = updatedMessage;
+            InvalidateMessageCache();
             StateHasChanged();
         }
     }
@@ -438,6 +443,7 @@ public partial class Messages
             };
 
             channelMessages[index] = updatedMessage;
+            InvalidateMessageCache();
             StateHasChanged();
         }
     }
@@ -511,6 +517,7 @@ public partial class Messages
                             directMessages[index] = message with { IsRead = true };
                         }
                     }
+                    InvalidateMessageCache();
                     StateHasChanged();
                 }
                 catch

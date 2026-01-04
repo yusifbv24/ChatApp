@@ -69,6 +69,12 @@ public partial class Messages : IAsyncDisposable
     /// </summary>
     private List<DirectMessageDto> pinnedDirectMessages = [];
 
+    /// <summary>
+    /// Mesaj cache version - ChatArea cache invalidation üçün.
+    /// Mesaj edit/delete/reaction/pin olduqda artırılır.
+    /// </summary>
+    private int messageCacheVersion = 0;
+
     #endregion
 
     #region Selection State - Seçim state-i

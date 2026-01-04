@@ -114,12 +114,58 @@ public partial class ConversationList
     /// <summary>
     /// Axtarış termini.
     /// </summary>
-    private string SearchTerm { get; set; } = string.Empty;
+    private string _searchTerm = string.Empty;
+    private string SearchTerm
+    {
+        get => _searchTerm;
+        set
+        {
+            if (_searchTerm != value)
+            {
+                _searchTerm = value;
+                InvalidateCache();
+            }
+        }
+    }
 
     /// <summary>
     /// New chat menu-su açıqdır?
     /// </summary>
     private bool showNewMenu = false;
+
+    #endregion
+
+    #region Private Fields - Cache
+
+    /// <summary>
+    /// Cached unified list - yalnız data dəyişdikdə yenilənir.
+    /// </summary>
+    private List<UnifiedChatItem>? _cachedUnifiedList;
+
+    /// <summary>
+    /// Cache-in etibarlı olub-olmadığı.
+    /// </summary>
+    private bool _isCacheValid = false;
+
+    /// <summary>
+    /// Əvvəlki Conversations reference-i (dəyişiklik detect üçün).
+    /// </summary>
+    private List<DirectConversationDto>? _previousConversations;
+
+    /// <summary>
+    /// Əvvəlki Channels reference-i (dəyişiklik detect üçün).
+    /// </summary>
+    private List<ChannelDto>? _previousChannels;
+
+    /// <summary>
+    /// Əvvəlki seçilmiş conversation ID.
+    /// </summary>
+    private Guid? _previousSelectedConversationId;
+
+    /// <summary>
+    /// Əvvəlki seçilmiş channel ID.
+    /// </summary>
+    private Guid? _previousSelectedChannelId;
 
     #endregion
 
@@ -219,42 +265,91 @@ public partial class ConversationList
 
     #endregion
 
+    #region Lifecycle Methods
+
+    /// <summary>
+    /// Parameter dəyişiklikləri olduqda cache-i yenilə.
+    /// </summary>
+    protected override void OnParametersSet()
+    {
+        // Data reference dəyişibsə cache-i invalidate et
+        if (!ReferenceEquals(Conversations, _previousConversations) ||
+            !ReferenceEquals(Channels, _previousChannels) ||
+            SelectedConversationId != _previousSelectedConversationId ||
+            SelectedChannelId != _previousSelectedChannelId)
+        {
+            InvalidateCache();
+            _previousConversations = Conversations;
+            _previousChannels = Channels;
+            _previousSelectedConversationId = SelectedConversationId;
+            _previousSelectedChannelId = SelectedChannelId;
+        }
+    }
+
+    #endregion
+
+    #region Cache Management
+
+    /// <summary>
+    /// Cache-i etibarsız edir - növbəti access-də yenidən hesablanacaq.
+    /// </summary>
+    private void InvalidateCache()
+    {
+        _isCacheValid = false;
+    }
+
+    /// <summary>
+    /// Cache-i yenidən qurur.
+    /// </summary>
+    private void RebuildCache()
+    {
+        var items = new List<UnifiedChatItem>(Conversations.Count + Channels.Count);
+
+        // Direct conversation-ları əlavə et
+        foreach (var conv in Conversations)
+        {
+            items.Add(CreateConversationItem(conv));
+        }
+
+        // Channel-ları əlavə et
+        foreach (var channel in Channels)
+        {
+            items.Add(CreateChannelItem(channel));
+        }
+
+        // Axtarış filtri
+        if (!string.IsNullOrEmpty(_searchTerm))
+        {
+            items = items.Where(i =>
+                i.Name.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase)
+            ).ToList();
+        }
+
+        // Son aktivliyə görə sırala (ən yeni birinci)
+        items.Sort((a, b) =>
+            (b.LastActivityTime ?? DateTime.MinValue).CompareTo(a.LastActivityTime ?? DateTime.MinValue));
+
+        _cachedUnifiedList = items;
+        _isCacheValid = true;
+    }
+
+    #endregion
+
     #region Computed Properties
 
     /// <summary>
     /// Conversation və Channel-ların birləşmiş siyahısı.
-    /// Son aktivliyə görə sıralanır.
+    /// Cache-lənmiş - yalnız data dəyişdikdə yenidən hesablanır.
     /// </summary>
-    private IEnumerable<UnifiedChatItem> UnifiedList
+    private List<UnifiedChatItem> UnifiedList
     {
         get
         {
-            var items = new List<UnifiedChatItem>();
-
-            // Direct conversation-ları əlavə et
-            foreach (var conv in Conversations)
+            if (!_isCacheValid || _cachedUnifiedList == null)
             {
-                var item = CreateConversationItem(conv);
-                items.Add(item);
+                RebuildCache();
             }
-
-            // Channel-ları əlavə et
-            foreach (var channel in Channels)
-            {
-                var item = CreateChannelItem(channel);
-                items.Add(item);
-            }
-
-            // Axtarış filtri
-            if (!string.IsNullOrEmpty(SearchTerm))
-            {
-                items = items.Where(i =>
-                    i.Name.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase)
-                ).ToList();
-            }
-
-            // Son aktivliyə görə sırala (ən yeni birinci)
-            return items.OrderByDescending(i => i.LastActivityTime ?? DateTime.MinValue);
+            return _cachedUnifiedList!;
         }
     }
 

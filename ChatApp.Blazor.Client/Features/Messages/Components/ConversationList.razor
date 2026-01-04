@@ -79,7 +79,7 @@
                 @if (item.IsChannel)
                 {
                     <!-- Channel Item -->
-                    <div class="conversation-item @(SelectedChannelId == item.Id ? "selected" : "")"
+                    <div @key="item.Id" class="conversation-item @(SelectedChannelId == item.Id ? "selected" : "")"
                          @onclick="()=> SelectChannelItem(item)">
                         <div class="conversation-avatar group-avatar">
                             <span class="group-initials">@StringHelper.GetInitials(item.Name)</span>
@@ -169,7 +169,7 @@
                 else
                 {
                     <!-- Direct Conversation Item -->
-                    <div class="conversation-item @(SelectedConversationId == item.Id ? "selected": "")"
+                    <div @key="item.Id" class="conversation-item @(SelectedConversationId == item.Id ? "selected": "")"
                          @onclick="()=>SelectConversationItem(item)">
                         <div class="conversation-avatar">
                             @if (!string.IsNullOrEmpty(item.AvatarUrl))

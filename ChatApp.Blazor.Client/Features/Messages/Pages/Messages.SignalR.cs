@@ -152,9 +152,10 @@ public partial class Messages
                     UnreadCount = isCurrentConversation ? 0 : (isMyMessage ? conversation.UnreadCount : conversation.UnreadCount + 1)
                 };
 
-                // Conversation-u list-in ən başına köçür (son mesaj olan üstdə olmalıdır)
-                directConversations.Remove(conversation);
-                directConversations.Insert(0, updatedConversation);
+                // Yeni list yaradırıq ki cache invalidate olsun (ReferenceEquals)
+                var newList = new List<DirectConversationDto>(directConversations.Count) { updatedConversation };
+                newList.AddRange(directConversations.Where(c => c.Id != conversation.Id));
+                directConversations = newList;
 
                 // Global unread badge-i artır (header-dakı notification icon)
                 if (!isCurrentConversation && !isMyMessage)
@@ -257,8 +258,10 @@ public partial class Messages
                     UnreadCount = isCurrentChannel ? 0 : (isMyMessage ? channel.UnreadCount : channel.UnreadCount + 1)
                 };
 
-                channelConversations.Remove(channel);
-                channelConversations.Insert(0, updatedChannel);
+                // Yeni list yaradırıq ki cache invalidate olsun (ReferenceEquals)
+                var newList = new List<ChannelDto>(channelConversations.Count) { updatedChannel };
+                newList.AddRange(channelConversations.Where(c => c.Id != channel.Id));
+                channelConversations = newList;
 
                 if (!isCurrentChannel && !isMyMessage)
                 {
@@ -300,6 +303,7 @@ public partial class Messages
                     {
                         var index = directMessages.IndexOf(message);
                         directMessages[index] = editedMessage;
+                        InvalidateMessageCache();
                         needsStateUpdate = true;
 
                         // Son mesaj idisə conversation list-i də yenilə
@@ -317,6 +321,7 @@ public partial class Messages
                         if (msg.ReplyToMessageId == editedMessage.Id && msg.ReplyToContent != editedMessage.Content)
                         {
                             directMessages[i] = msg with { ReplyToContent = editedMessage.Content };
+                            InvalidateMessageCache();
                         }
                     }
                 }
@@ -366,6 +371,7 @@ public partial class Messages
                     {
                         var index = directMessages.IndexOf(message);
                         directMessages[index] = deletedMessage;
+                        InvalidateMessageCache();
                         needsStateUpdate = true;
 
                         // Reply preview-ları yenilə
@@ -375,6 +381,7 @@ public partial class Messages
                             if (msg.ReplyToMessageId == deletedMessage.Id)
                             {
                                 directMessages[i] = msg with { ReplyToContent = "This message was deleted" };
+                                InvalidateMessageCache();
                             }
                         }
                     }
@@ -430,6 +437,7 @@ public partial class Messages
                         };
 
                         channelMessages[index] = updatedMessage;
+                        InvalidateMessageCache();
                         needsStateUpdate = true;
 
                         if (IsLastMessageInChannel(editedMessage.ChannelId, updatedMessage.Id))
@@ -445,6 +453,7 @@ public partial class Messages
                         if (msg.ReplyToMessageId == editedMessage.Id && msg.ReplyToContent != editedMessage.Content)
                         {
                             channelMessages[i] = msg with { ReplyToContent = editedMessage.Content };
+                            InvalidateMessageCache();
                         }
                     }
                 }
@@ -490,6 +499,7 @@ public partial class Messages
                     {
                         var index = channelMessages.IndexOf(message);
                         channelMessages[index] = deletedMessage;
+                        InvalidateMessageCache();
                         needsStateUpdate = true;
 
                         for (int i = 0; i < channelMessages.Count; i++)
@@ -498,6 +508,7 @@ public partial class Messages
                             if (msg.ReplyToMessageId == deletedMessage.Id)
                             {
                                 channelMessages[i] = msg with { ReplyToContent = "This message was deleted" };
+                                InvalidateMessageCache();
                             }
                         }
                     }
@@ -545,6 +556,7 @@ public partial class Messages
             {
                 var index = directMessages.IndexOf(message);
                 directMessages[index] = message with { IsRead = true };
+                InvalidateMessageCache();
             }
             else if (conversationId == selectedConversationId)
             {
@@ -562,10 +574,13 @@ public partial class Messages
                     LastMessageStatus = "Read"
                 };
 
+                // Yeni list yaradırıq ki cache invalidate olsun (ReferenceEquals)
                 var index = directConversations.IndexOf(conversation);
                 if (index >= 0)
                 {
-                    directConversations[index] = updatedConversation;
+                    var newList = new List<DirectConversationDto>(directConversations);
+                    newList[index] = updatedConversation;
+                    directConversations = newList;
                 }
             }
 
@@ -616,6 +631,7 @@ public partial class Messages
                 if (updated)
                 {
                     channelMessages = updatedList;
+                    InvalidateMessageCache();
                 }
             }
 
@@ -647,10 +663,13 @@ public partial class Messages
                 }
 
                 var updatedChannel = channel with { LastMessageStatus = newStatus };
+                // Yeni list yaradırıq ki cache invalidate olsun (ReferenceEquals)
                 var index = channelConversations.IndexOf(channel);
                 if (index >= 0)
                 {
-                    channelConversations[index] = updatedChannel;
+                    var newList = new List<ChannelDto>(channelConversations);
+                    newList[index] = updatedChannel;
+                    channelConversations = newList;
                     updated = true;
                 }
             }
@@ -857,6 +876,7 @@ public partial class Messages
                     };
 
                     channelMessages[index] = updatedMessage;
+                    InvalidateMessageCache();
                     StateHasChanged();
                 }
             }
@@ -882,7 +902,10 @@ public partial class Messages
             // Artıq list-dədir?
             if (!channelConversations.Any(c => c.Id == channel.Id))
             {
-                channelConversations.Insert(0, channel);
+                // Yeni list yaradırıq ki cache invalidate olsun (ReferenceEquals)
+                var newList = new List<ChannelDto>(channelConversations.Count + 1) { channel };
+                newList.AddRange(channelConversations);
+                channelConversations = newList;
                 StateHasChanged();
             }
         });
