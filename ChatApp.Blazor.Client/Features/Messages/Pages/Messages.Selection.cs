@@ -882,34 +882,12 @@ public partial class Messages
     }
 
     /// <summary>
-    /// Ən son mesajlara qayıdır (Jump to Latest).
-    /// Context mode-dan çıxır və son mesajları yükləyir.
+    /// Ən aşağıya scroll edir (Scroll to Bottom).
+    /// Around mode-da olsa belə, sadəcə scroll edir (clear etmir).
+    /// İstifadəçi aşağı scroll etdikcə newer messages avtomatik yüklənir.
     /// </summary>
-    private async Task JumpToLatestAsync()
+    private async Task ScrollToBottomAsync()
     {
-        if (!isViewingAroundMessage) return;
-
-        // Reset pagination state
-        oldestMessageDate = null;
-        newestMessageDate = null;
-        hasMoreNewerMessages = false;
-        isViewingAroundMessage = false;
-        pageSize = 50;
-
-        if (isDirectMessage && selectedConversationId.HasValue)
-        {
-            directMessages.Clear();
-            await LoadDirectMessages();
-        }
-        else if (!isDirectMessage && selectedChannelId.HasValue)
-        {
-            channelMessages.Clear();
-            await LoadChannelMessages();
-        }
-
-        // Scroll to bottom
-        StateHasChanged();
-        await Task.Delay(50);
         await JS.InvokeVoidAsync("chatAppUtils.scrollToBottomById", "chat-messages");
     }
     #endregion

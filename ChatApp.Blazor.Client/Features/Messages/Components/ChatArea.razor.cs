@@ -420,18 +420,13 @@ public partial class ChatArea : IAsyncDisposable
 
     #endregion
 
-    #region Parameters - Jump to Latest (Context Mode)
+    #region Parameters - Around Mode State
 
     /// <summary>
-    /// Kontekst modunda olub-olmadığı.
-    /// Pinned/favorite mesaja jump etdikdə aktivləşir.
+    /// Around mode aktiv? (pinned/favorite mesaja jump edəndə).
+    /// Scroll to bottom button visibility üçün istifadə olunur.
     /// </summary>
     [Parameter] public bool IsViewingAroundMessage { get; set; }
-
-    /// <summary>
-    /// Ən son mesajlara jump callback-i.
-    /// </summary>
-    [Parameter] public EventCallback OnJumpToLatest { get; set; }
 
     #endregion
 

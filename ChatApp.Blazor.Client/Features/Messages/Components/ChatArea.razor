@@ -365,17 +365,8 @@
             }
         </div>
 
-        <!-- Jump to Latest Float Button (Context mode-da görünür) -->
-        @if (IsViewingAroundMessage)
-        {
-            <button class="jump-to-latest-btn" @onclick="() => OnJumpToLatest.InvokeAsync()" type="button">
-                <MudIcon Icon="@Icons.Material.Filled.KeyboardDoubleArrowDown" Size="Size.Small" />
-                <span>Jump to latest</span>
-            </button>
-        }
-
-        <!-- Scroll to Bottom Float Button -->
-        @if (showScrollToBottom && !IsViewingAroundMessage)
+        <!-- Scroll to Bottom Float Button (həm normal, həm around mode) -->
+        @if (showScrollToBottom)
         {
             <button class="scroll-to-bottom-btn @(IsSidebarOpen || IsSearchPanelOpen ? "panel-open" : "")" @onclick="ScrollToBottomAndFocusAsync" type="button">
                 <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Medium" />
