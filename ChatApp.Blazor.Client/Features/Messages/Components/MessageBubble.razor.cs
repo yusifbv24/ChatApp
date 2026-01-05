@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using ChatApp.Blazor.Client.Models.Messages;
-using ChatApp.Blazor.Client.Helpers;
 using System.Text.RegularExpressions;
 
 namespace ChatApp.Blazor.Client.Features.Messages.Components;
@@ -262,6 +261,12 @@ public partial class MessageBubble : IAsyncDisposable
     /// Menu position hesablaması üçün.
     /// </summary>
     private ElementReference messageWrapperRef;
+
+    /// <summary>
+    /// Chevron wrapper-ın DOM reference-i.
+    /// Menu position hesablaması üçün (menu chevron-a nisbətən açılır).
+    /// </summary>
+    private ElementReference chevronWrapperRef;
 
     #endregion
 
@@ -590,28 +595,18 @@ public partial class MessageBubble : IAsyncDisposable
     {
         try
         {
-            var position = await JS.InvokeAsync<MenuPositionInfo>("chatAppUtils.getElementPosition", messageWrapperRef);
-            if (position != null)
+            var position = await JS.InvokeAsync<MenuPositionInfo>("chatAppUtils.getElementPosition", chevronWrapperRef);
+            if (position == null)
             {
-                // Menu max height: 9 item × 42px = 378px + padding = ~420px
-                var menuHeight = 420;
-
-                var actualSpaceBelow = position.ActualSpaceBelow;
-                var actualSpaceAbove = position.ActualSpaceAbove;
-
-                if (actualSpaceBelow >= menuHeight)
-                {
-                    menuPositionAbove = false;
-                }
-                else if (actualSpaceAbove >= menuHeight)
-                {
-                    menuPositionAbove = true;
-                }
-                else
-                {
-                    menuPositionAbove = actualSpaceAbove > actualSpaceBelow;
-                }
+                menuPositionAbove = false;
+                return;
             }
+
+            const int menuHeight = 420; // 9 items × 42px + padding
+
+            // Open above if more space above, otherwise below
+            menuPositionAbove = position.ActualSpaceBelow < menuHeight
+                && position.ActualSpaceAbove > position.ActualSpaceBelow;
         }
         catch
         {
@@ -772,13 +767,6 @@ public partial class MessageBubble : IAsyncDisposable
     /// </summary>
     private record MenuPositionInfo
     {
-        public double Top { get; set; }
-        public double Bottom { get; set; }
-        public double ViewportHeight { get; set; }
-        public double ChatHeaderHeight { get; set; }
-        public double MessageInputHeight { get; set; }
-        public double MessageInputTop { get; set; }
-        public double ChatHeaderBottom { get; set; }
         public double ActualSpaceBelow { get; set; }
         public double ActualSpaceAbove { get; set; }
     }

@@ -373,3 +373,33 @@ Identity | Channels | DirectMessages | Files | Notifications | Search | Settings
   - ✅ Hər mesajın sağında unpin iconu var
   - ✅ Unpin iconu fərqlidir (outlined style)
   - ✅ Mesaja klik edəndə scroll + highlight olunur və panel bağlanır
+
+### Session 14 (2026-01-05): Long Text Word Break + Chevron Menu Positioning
+
+**Long Text Overflow Fix:**
+- **Problem:** Uzun boşluqsuz mətn (məsələn "asdddddd...") horizontal scroll yaradır və UI pozulur
+- **Solution:**
+  - `MessageBubble.razor:1238-1245` - `word-break: break-word`, `overflow-wrap: anywhere` əlavə edildi
+  - `.chat-area`, `.messages-container` - `overflow-x: hidden` əlavə edildi
+  - `.message-content-wrapper`, `.message-wrapper` - `min-width: 0` (flex child overflow fix)
+- **Result:** Uzun mətn bubble içində wrap olur, UI pozulmur ✅
+
+**Chevron More Menu Positioning (Final Fix):**
+- **Problem:**
+  - Own messages: Menu sola açılır (düzgün) ✅
+  - Other messages: Menu sola açılır (səhv - conversation list altında qalır) ❌
+- **Root Cause:** Menu chevron-wrapper içində idi, wrapper 22px genişlikdə idi, menu 220px-ə sığmırdı
+- **Solution:**
+  - **HTML Struktur:** Menu chevron-wrapper-dan kənara çıxarıldı, bubble-a nisbətən position edildi
+  - **CSS:**
+    - `.chevron-more-menu` - `top: 30px`, `right: 4px` (own messages üçün sola açılır)
+    - `.message-wrapper.other .chevron-more-menu` - `left: 4px !important`, `right: auto !important` (other messages üçün sağa açılır)
+    - `.messages-sidebar` - `z-index: 1` (menu z-index: 10000-dən aşağıda)
+  - **C# Cleanup:**
+    - `MenuPositionInfo` - İstifadə olunmayan property-lər silindi (Left, Right, ViewportWidth, Top, Bottom, etc.)
+    - `CheckMenuPosition()` - Sadələşdirildi (10 sətr)
+- **Result:**
+  - ✅ Own messages (sağda): Menu sola açılır
+  - ✅ Other messages (solda): Menu sağa açılır (conversation list-dən uzaqlaşır)
+  - ✅ Menu heç vaxt conversation list altında qalmır
+  - ✅ Kod təmizləndi və optimize edildi

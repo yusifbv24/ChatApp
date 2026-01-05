@@ -22,6 +22,8 @@
     display: flex;
     flex-direction: column;
     transition: transform 0.3s ease;
+    position: relative;
+    z-index: 1;
 }
 
 .conversation-list {
@@ -1479,10 +1481,16 @@
    CHEVRON MORE BUTTON (Top-right corner of bubble)
    =================================== */
 
-.chevron-more-btn {
+/* Wrapper for chevron button and menu - anchors menu to button */
+.chevron-wrapper {
     position: absolute;
     top: 4px;
     right: 4px;
+    z-index: 10;
+}
+
+.chevron-more-btn {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1496,13 +1504,18 @@
     transition: opacity 0.15s ease, background 0.15s ease;
     padding: 0;
     opacity: 0;
-    z-index: 10;
+}
+
+/* Hidden button - not visible but still renders for position calculation */
+.chevron-more-btn.hidden-btn {
+    pointer-events: none;
 }
 
 /* Show chevron on hover or when menu is open */
 .message-wrapper:hover .chevron-more-btn,
 .chevron-more-btn.visible {
     opacity: 1;
+    pointer-events: auto;
 }
 
 .own-bubble .chevron-more-btn {
@@ -1522,16 +1535,17 @@
     font-size: 14px !important;
 }
 
-/* Chevron more menu - dropdown menu */
+/* Chevron more menu - opens to LEFT on own messages, RIGHT on other messages */
 .chevron-more-menu {
     position: absolute;
-    top: 28px;
+    top: 30px;
     right: 4px;
+    left: auto;
     min-width: 220px;
     background: var(--white);
     border-radius: var(--radius-lg);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-    z-index: 9999;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    z-index: 10000;
     overflow: visible;
     border: 1px solid var(--gray-200);
     animation: fadeInDown 0.15s ease-out;
@@ -1540,14 +1554,14 @@
 /* Menu opens above when close to bottom */
 .chevron-more-menu.menu-above {
     top: auto;
-    bottom: 28px;
+    bottom: 30px;
     animation: fadeInUp 0.15s ease-out;
 }
 
-/* For other messages - menu aligned to left */
+/* Other messages: opens to the RIGHT (away from conversation list) */
 .message-wrapper.other .chevron-more-menu {
-    right: auto;
-    left: 4px;
+    right: auto !important;
+    left: 4px !important;
 }
 
 /* Quick Reaction Icon - Bitrix24 style flat button */
@@ -1871,8 +1885,8 @@
     min-width: 180px;
     background: var(--white);
     border-radius: var(--radius-lg);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-    z-index: 10000;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    z-index: 10001;
     border: 1px solid var(--gray-200);
     animation: fadeIn 0.1s ease-out;
 }
@@ -1901,7 +1915,7 @@
     position: fixed;
     inset: 0;
     background: transparent;
-    z-index: 99;
+    z-index: 9999;
     cursor: default;
 }
 

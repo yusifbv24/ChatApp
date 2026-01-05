@@ -193,19 +193,21 @@
                 </div>
             }
 
-            <!-- Chevron button - top right corner (visible for both deleted and normal messages) -->
-            @if (!IsSelectMode && (showHoverActions || showMoreMenu))
+            <!-- Chevron button - top right corner -->
+            @if (!IsSelectMode)
             {
-                <button class="chevron-more-btn @(showMoreMenu ? "visible" : "")"
-                        title="More"
-                        @onclick="ToggleMoreMenu"
-                        @onclick:stopPropagation="true">
-                    <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" />
-                </button>
+                <div class="chevron-wrapper" @ref="chevronWrapperRef">
+                    <button class="chevron-more-btn @(showMoreMenu ? "visible" : "") @((showHoverActions || showMoreMenu) ? "" : "hidden-btn")"
+                            title="More"
+                            @onclick="ToggleMoreMenu"
+                            @onclick:stopPropagation="true">
+                        <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" />
+                    </button>
+                </div>
             }
 
-            <!-- More Menu (content depends on IsDeleted) -->
-            @if (showMoreMenu)
+            <!-- More Menu (positioned relative to bubble, not chevron) -->
+            @if (!IsSelectMode && showMoreMenu)
             {
                 <div class="chevron-more-menu @(menuPositionAbove ? "menu-above" : "")" @onclick:stopPropagation="true">
                     @if (IsDeleted)
