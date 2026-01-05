@@ -2,27 +2,9 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 using ChatApp.Blazor.Client.State;
-using System.Timers;
 
 namespace ChatApp.Blazor.Client.Features.Messages.Components;
 
-/// <summary>
-/// MessageInput - Mesaj göndərmə input komponenti.
-///
-/// Bu komponent aşağıdakı funksionallıqları təmin edir:
-/// - Mesaj yazma və göndərmə
-/// - Mesaj redaktə etmə
-/// - Reply mode
-/// - Typing indicator
-/// - Emoji picker
-/// - Draft saxlama
-/// - Character limit
-/// - Auto-resize textarea
-///
-/// Komponent partial class pattern istifadə edir:
-/// - MessageInput.razor: HTML template
-/// - MessageInput.razor.cs: C# code-behind (bu fayl)
-/// </summary>
 public partial class MessageInput : IDisposable
 {
     #region Injected Services
@@ -37,7 +19,7 @@ public partial class MessageInput : IDisposable
     /// <summary>
     /// Input placeholder texti.
     /// </summary>
-    [Parameter] public string Placeholder { get; set; } = "Type a message...";
+    [Parameter] public string Placeholder { get; set; } = string.Empty;
 
     /// <summary>
     /// Mesaj göndərilir?
@@ -263,6 +245,7 @@ public partial class MessageInput : IDisposable
             wasEditing = true;
             shouldFocus = true;
         }
+
         else if (wasEditing && !IsEditing)
         {
             // Edit ləğv edildi/tamamlandı
@@ -277,6 +260,7 @@ public partial class MessageInput : IDisposable
             shouldFocus = true;
             wasReplying = true;
         }
+
         else if (!IsReplying && wasReplying)
         {
             wasReplying = false;
@@ -395,7 +379,7 @@ public partial class MessageInput : IDisposable
         if (isTyping)
         {
             isTyping = false;
-            await InvokeAsync(async () => await OnTyping.InvokeAsync(false));
+            await InvokeAsync(() => OnTyping.InvokeAsync(false));
         }
     }
 
@@ -421,6 +405,7 @@ public partial class MessageInput : IDisposable
 
         // Textarea height reset
         await JS.InvokeVoidAsync("chatAppUtils.resetTextareaHeight", textAreaRef);
+
 
         if (IsEditing)
         {
@@ -513,11 +498,11 @@ public partial class MessageInput : IDisposable
     /// <summary>
     /// Mətni qısaldır.
     /// </summary>
-    private string TruncateText(string? text, int maxLength)
+    private static string TruncateText(string? text, int maxLength)
     {
         if (string.IsNullOrEmpty(text)) return "";
         if (text.Length <= maxLength) return text;
-        return text.Substring(0, maxLength) + "...";
+        return string.Concat(text.AsSpan(0, maxLength), "...");
     }
 
     /// <summary>
@@ -565,6 +550,7 @@ public partial class MessageInput : IDisposable
     public void Dispose()
     {
         typingTimer?.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     #endregion
