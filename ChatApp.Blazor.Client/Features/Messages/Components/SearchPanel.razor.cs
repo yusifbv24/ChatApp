@@ -1,27 +1,11 @@
 using Microsoft.AspNetCore.Components;
 using ChatApp.Blazor.Client.Models.Search;
-using ChatApp.Blazor.Client.Helpers;
 using System.Globalization;
 
 namespace ChatApp.Blazor.Client.Features.Messages.Components;
 
-/// <summary>
-/// SearchPanel - Mesaj axtarışı paneli.
-///
-/// Bu komponent aşağıdakı funksionallıqları təmin edir:
-/// - Conversation/Channel daxilində mesaj axtarışı
-/// - Debounced search (300ms)
-/// - Axtarış nəticələrinin tarixə görə qruplaşdırılması
-/// - Highlighted content göstərilməsi
-/// - Mesaja naviqasiya
-///
-/// Komponent partial class pattern istifadə edir:
-/// - SearchPanel.razor: HTML template
-/// - SearchPanel.razor.cs: C# code-behind (bu fayl)
-/// </summary>
 public partial class SearchPanel : IAsyncDisposable
 {
-    private bool _disposed = false;
     #region Parameters
 
     /// <summary>
@@ -58,6 +42,8 @@ public partial class SearchPanel : IAsyncDisposable
     #endregion
 
     #region Private Fields
+
+    private bool _disposed = false;
 
     /// <summary>
     /// Axtarış sorğusu.
@@ -103,7 +89,7 @@ public partial class SearchPanel : IAsyncDisposable
                     .GroupBy(r => r.CreatedAtUtc.Date)
                     .ToList();
             }
-            return _cachedGroupedResults ?? new List<IGrouping<DateTime, SearchResultDto>>();
+            return _cachedGroupedResults ?? [];
         }
     }
 
@@ -205,7 +191,7 @@ public partial class SearchPanel : IAsyncDisposable
     /// Tarixi formatlanır.
     /// "Today", "Yesterday", "December 23", "December 23, 2024"
     /// </summary>
-    private string FormatDate(DateTime date)
+    private static string FormatDate(DateTime date)
     {
         var today = DateTime.Today;
         if (date == today)
@@ -232,6 +218,7 @@ public partial class SearchPanel : IAsyncDisposable
 
         _cachedGroupedResults = null;
         searchResults = null;
+        GC.SuppressFinalize(this);
 
         return ValueTask.CompletedTask;
     }

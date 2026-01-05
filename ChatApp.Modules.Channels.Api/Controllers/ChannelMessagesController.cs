@@ -344,7 +344,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         /// Pins a message (admin/owner only)
         /// </summary>
         [HttpPost("{messageId:guid}/pin")]
-        [RequirePermission("Groups.Manage")]
+        [RequirePermission("Messages.Send")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -374,7 +374,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         /// Unpins a message (admin/owner only)
         /// </summary>
         [HttpDelete("{messageId:guid}/pin")]
-        [RequirePermission("Groups.Manage")]
+        [RequirePermission("Messages.Send")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]

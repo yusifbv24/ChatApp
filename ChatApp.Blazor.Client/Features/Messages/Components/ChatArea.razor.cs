@@ -149,9 +149,9 @@ public partial class ChatArea : IAsyncDisposable
     [Parameter] public bool IsLoading { get; set; }
 
     /// <summary>
-    /// Daha çox mesaj yükləmə statusu (pagination).
+    /// Daha çox mesaj yükləmə statusu (backend HTTP request).
     /// </summary>
-    [Parameter] public bool IsLoadingMore { get; set; }
+    [Parameter] public bool IsLoadingMoreMessages { get; set; }
 
     /// <summary>
     /// Daha çox mesaj olub-olmadığı (pagination).
@@ -492,10 +492,10 @@ public partial class ChatArea : IAsyncDisposable
     private bool _shouldScrollToBottom;
 
     /// <summary>
-    /// Load more əməliyyatı davam edirmi?
-    /// Scroll position restore üçün istifadə olunur.
+    /// Scroll position restore əməliyyatı davam edirmi?
+    /// Load more sonrası DOM manipulyasiyası üçün istifadə olunur.
     /// </summary>
-    private bool _isLoadingMore = false;
+    private bool _isRestoringScrollPosition = false;
 
     /// <summary>
     /// Load more əvvəl scroll position-un saxlanması.
@@ -725,7 +725,7 @@ public partial class ChatArea : IAsyncDisposable
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         // Load more sonrası scroll position restore
-        if (_isLoadingMore && _savedScrollPosition != null)
+        if (_isRestoringScrollPosition && _savedScrollPosition != null)
         {
             await RestoreScrollPositionAfterLoadMore();
         }
@@ -812,7 +812,7 @@ public partial class ChatArea : IAsyncDisposable
             var messageIncrease = currentCount - _previousMessageCount;
             var isNewIncomingMessage = messageIncrease > 0 && messageIncrease <= 5;
 
-            if (isNewIncomingMessage && !_isLoadingMore && !isEditing)
+            if (isNewIncomingMessage && !_isRestoringScrollPosition && !isEditing)
             {
                 if (showScrollToBottom)
                 {
@@ -857,7 +857,7 @@ public partial class ChatArea : IAsyncDisposable
     {
         await Task.Delay(100); // DOM update gözlə
         await JS.InvokeVoidAsync("chatAppUtils.restoreScrollPosition", messagesContainerRef, _savedScrollPosition);
-        _isLoadingMore = false;
+        _isRestoringScrollPosition = false;
         _savedScrollPosition = null;
     }
 
@@ -937,7 +937,7 @@ public partial class ChatArea : IAsyncDisposable
     private async Task HandleScroll()
     {
         // Loading zamanı scroll handle etmə
-        if (_isLoadingMore || IsLoadingMore) return;
+        if (_isRestoringScrollPosition || IsLoadingMoreMessages) return;
 
         try
         {
@@ -995,8 +995,8 @@ public partial class ChatArea : IAsyncDisposable
         _lastScrollCheck = now;
         _scrollTopOnLastCheck = scrollTop;
 
-        // Yuxarıya 300px yaxınlaşdıqda load more
-        if (scrollTop < 300)
+        // Yuxarıya 500px yaxınlaşdıqda load more (preemptive loading - smooth UX)
+        if (scrollTop < 500)
         {
             await LoadMoreMessages();
         }
@@ -1009,7 +1009,7 @@ public partial class ChatArea : IAsyncDisposable
     private async Task LoadMoreMessages()
     {
         _savedScrollPosition = await JS.InvokeAsync<object>("chatAppUtils.saveScrollPosition", messagesContainerRef);
-        _isLoadingMore = true;
+        _isRestoringScrollPosition = true;
         await OnLoadMore.InvokeAsync();
     }
 
@@ -1025,13 +1025,10 @@ public partial class ChatArea : IAsyncDisposable
     {
         get
         {
-            if (_cachedGroupedDirectMessages == null)
-            {
-                _cachedGroupedDirectMessages = DirectMessages
+            _cachedGroupedDirectMessages ??= DirectMessages
                     .OrderBy(m => m.CreatedAtUtc)
                     .GroupBy(m => m.CreatedAtUtc.Date)
                     .ToList();
-            }
             return _cachedGroupedDirectMessages;
         }
     }
@@ -1044,13 +1041,10 @@ public partial class ChatArea : IAsyncDisposable
     {
         get
         {
-            if (_cachedGroupedChannelMessages == null)
-            {
-                _cachedGroupedChannelMessages = ChannelMessages
+            _cachedGroupedChannelMessages ??= ChannelMessages
                     .OrderBy(m => m.CreatedAtUtc)
                     .GroupBy(m => m.CreatedAtUtc.Date)
                     .ToList();
-            }
             return _cachedGroupedChannelMessages;
         }
     }
@@ -1086,7 +1080,7 @@ public partial class ChatArea : IAsyncDisposable
     /// <summary>
     /// Channel-da avatar göstərilməli olub-olmadığını müəyyən edir.
     /// </summary>
-    private static bool ShouldShowChannelAvatar(ChannelMessageDto message, IEnumerable<ChannelMessageDto> messages)
+    private static bool ShouldShowAvatarInChannel(ChannelMessageDto message, IEnumerable<ChannelMessageDto> messages)
     {
         var list = messages.ToList();
         var index = list.IndexOf(message);
@@ -1188,7 +1182,7 @@ public partial class ChatArea : IAsyncDisposable
     private void TogglePinnedDropdown() => showPinnedDropdown = !showPinnedDropdown;
 
     /// <summary>
-    /// Pinned dropdown bağlama.
+    /// Pinned dropdown bağla.
     /// </summary>
     private void ClosePinnedDropdown() => showPinnedDropdown = false;
 
@@ -1264,7 +1258,7 @@ public partial class ChatArea : IAsyncDisposable
     {
         isEditing = false;
         editingMessageId = Guid.Empty;
-        editingContent = "";
+        editingContent = string.Empty;
     }
 
     /// <summary>
@@ -1388,7 +1382,7 @@ public partial class ChatArea : IAsyncDisposable
     /// </summary>
     private async Task OnMemberSearchInput(ChangeEventArgs e)
     {
-        memberSearchQuery = e.Value?.ToString() ?? "";
+        memberSearchQuery = e.Value?.ToString() ?? string.Empty;
         addMemberError = null;
         addMemberSuccess = null;
 

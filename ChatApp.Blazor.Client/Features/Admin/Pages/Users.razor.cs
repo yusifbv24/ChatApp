@@ -147,15 +147,6 @@ public partial class Users
         ApplyFilters();
     }
 
-    private string GetInitials(string displayName)
-    {
-        if (string.IsNullOrWhiteSpace(displayName)) return "?";
-        var parts = displayName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        return parts.Length >= 2
-            ? $"{parts[0][0]}{parts[1][0]}".ToUpper()
-            : displayName[0].ToString().ToUpper();
-    }
-
     private string FormatFileSize(long bytes)
     {
         string[] sizes = { "B", "KB", "MB", "GB" };

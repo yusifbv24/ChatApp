@@ -35,7 +35,7 @@
                                 else
                                 {
                                     <div class="profile-avatar-placeholder">
-                                        @GetInitials(UserState.CurrentUser.DisplayName)
+                                        @StringHelper.GetInitials(UserState.CurrentUser.DisplayName)
                                     </div>
                                 }
                             </div>
@@ -279,18 +279,6 @@
     {
         IsOpen = false;
         await IsOpenChanged.InvokeAsync(false);
-    }
-
-    private string GetInitials(string displayName)
-    {
-        if (string.IsNullOrWhiteSpace(displayName))
-            return "?";
-
-        var parts = displayName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length >= 2)
-            return $"{parts[0][0]}{parts[1][0]}".ToUpper();
-
-        return displayName[0].ToString().ToUpper();
     }
 
     private async Task HandleUpdateProfile()

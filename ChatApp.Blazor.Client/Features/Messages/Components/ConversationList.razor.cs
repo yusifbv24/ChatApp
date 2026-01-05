@@ -2,26 +2,10 @@ using Microsoft.AspNetCore.Components;
 using ChatApp.Blazor.Client.Models.Messages;
 using ChatApp.Blazor.Client.State;
 using MudBlazor;
+using System.Globalization;
 
 namespace ChatApp.Blazor.Client.Features.Messages.Components;
 
-/// <summary>
-/// ConversationList - Sol paneldə conversation/channel siyahısını göstərən komponent.
-///
-/// Bu komponent aşağıdakı funksionallıqları təmin edir:
-/// - Direct conversation və channel-ların unified siyahısı
-/// - Axtarış funksionallığı
-/// - New message/channel menu
-/// - Typing indicator
-/// - Draft indicator
-/// - Unread badge
-/// - Read Later badge
-/// - Last message status (Sent, Delivered, Read)
-///
-/// Komponent partial class pattern istifadə edir:
-/// - ConversationList.razor: HTML template
-/// - ConversationList.razor.cs: C# code-behind (bu fayl)
-/// </summary>
 public partial class ConversationList
 {
     #region Injected Services
@@ -35,12 +19,12 @@ public partial class ConversationList
     /// <summary>
     /// Direct conversation siyahısı.
     /// </summary>
-    [Parameter] public List<DirectConversationDto> Conversations { get; set; } = new();
+    [Parameter] public List<DirectConversationDto> Conversations { get; set; } = [];
 
     /// <summary>
     /// Channel siyahısı.
     /// </summary>
-    [Parameter] public List<ChannelDto> Channels { get; set; } = new();
+    [Parameter] public List<ChannelDto> Channels { get; set; } = [];
 
     /// <summary>
     /// Seçilmiş conversation ID-si.
@@ -65,13 +49,13 @@ public partial class ConversationList
     /// Hər conversation üçün typing statusu.
     /// Key: ConversationId, Value: true = typing
     /// </summary>
-    [Parameter] public Dictionary<Guid, bool> ConversationTypingState { get; set; } = new();
+    [Parameter] public Dictionary<Guid, bool> ConversationTypingState { get; set; } = [];
 
     /// <summary>
     /// Hər channel üçün typing edən istifadəçilər.
     /// Key: ChannelId, Value: List of display names
     /// </summary>
-    [Parameter] public Dictionary<Guid, List<string>> ChannelTypingUsers { get; set; } = new();
+    [Parameter] public Dictionary<Guid, List<string>> ChannelTypingUsers { get; set; } = [];
 
     #endregion
 
@@ -81,7 +65,7 @@ public partial class ConversationList
     /// Mesaj draft-ları.
     /// Key: "conv_{id}" və ya "chan_{id}", Value: draft text
     /// </summary>
-    [Parameter] public Dictionary<string, string> MessageDrafts { get; set; } = new();
+    [Parameter] public Dictionary<string, string> MessageDrafts { get; set; } = [];
 
     #endregion
 
@@ -177,89 +161,38 @@ public partial class ConversationList
     /// </summary>
     private class UnifiedChatItem
     {
-        /// <summary>
-        /// Conversation və ya Channel ID-si.
-        /// </summary>
         public Guid Id { get; set; }
 
-        /// <summary>
-        /// Göstərilən ad (conversation: digər istifadəçi, channel: channel adı).
-        /// </summary>
-        public string Name { get; set; } = "";
+        public string Name { get; set; } = string.Empty;
 
-        /// <summary>
-        /// Avatar URL-i (yalnız conversation üçün).
-        /// </summary>
         public string? AvatarUrl { get; set; }
 
-        /// <summary>
-        /// Son mesajın məzmunu.
-        /// </summary>
         public string? LastMessage { get; set; }
 
-        /// <summary>
-        /// Son aktivlik vaxtı (sıralama üçün).
-        /// </summary>
         public DateTime? LastActivityTime { get; set; }
 
-        /// <summary>
-        /// Oxunmamış mesaj sayı.
-        /// </summary>
         public int UnreadCount { get; set; }
 
-        /// <summary>
-        /// Bu item channel-dır? (false = conversation)
-        /// </summary>
         public bool IsChannel { get; set; }
 
-        /// <summary>
-        /// Channel private-dır? (yalnız channel üçün)
-        /// </summary>
         public bool IsPrivate { get; set; }
 
-        /// <summary>
-        /// Channel üzv sayı (yalnız channel üçün).
-        /// </summary>
         public int MemberCount { get; set; }
 
-        /// <summary>
-        /// Draft var?
-        /// </summary>
         public bool HasDraft { get; set; }
 
-        /// <summary>
-        /// Draft mətni.
-        /// </summary>
         public string? DraftText { get; set; }
 
-        /// <summary>
-        /// Read Later marker ID-si.
-        /// </summary>
         public Guid? LastReadLaterMessageId { get; set; }
 
-        /// <summary>
-        /// Son mesaj cari istifadəçi tərəfindən göndərilib?
-        /// </summary>
         public bool IsMyLastMessage { get; set; }
 
-        /// <summary>
-        /// Son mesajın statusu (Sent, Delivered, Read).
-        /// </summary>
         public string? LastMessageStatus { get; set; }
 
-        /// <summary>
-        /// Channel son mesajını göndərənin avatar URL-i.
-        /// </summary>
         public string? LastMessageSenderAvatarUrl { get; set; }
 
-        /// <summary>
-        /// Orijinal DirectConversationDto (seçim üçün).
-        /// </summary>
         public DirectConversationDto? DirectConversation { get; set; }
 
-        /// <summary>
-        /// Orijinal ChannelDto (seçim üçün).
-        /// </summary>
         public ChannelDto? Channel { get; set; }
     }
 
@@ -501,7 +434,7 @@ public partial class ConversationList
     /// Tarixi formatlanmış string-ə çevirir.
     /// "Now", "5m", "14:30", "Mon", "15/01/24"
     /// </summary>
-    private string FormatTime(DateTime dateTime)
+    private static string FormatTime(DateTime dateTime)
     {
         var now = DateTime.UtcNow;
         var diff = now - dateTime;
@@ -509,14 +442,14 @@ public partial class ConversationList
         if (diff.TotalMinutes < 1) return "Now";
         if (diff.TotalHours < 1) return $"{(int)diff.TotalMinutes}m";
         if (diff.TotalHours < 24) return dateTime.ToLocalTime().ToString("HH:mm");
-        if (diff.TotalDays < 7) return dateTime.ToLocalTime().ToString("ddd", System.Globalization.CultureInfo.InvariantCulture);
+        if (diff.TotalDays < 7) return dateTime.ToLocalTime().ToString("ddd", CultureInfo.InvariantCulture);
         return dateTime.ToLocalTime().ToString("dd/MM/yy");
     }
 
     /// <summary>
     /// Mesajı qısaldır (35 simvol).
     /// </summary>
-    private string TruncateMessage(string? message)
+    private static string TruncateMessage(string? message)
     {
         if (string.IsNullOrEmpty(message)) return "No messages yet";
         return message.Length > 35 ? message[..35] + "..." : message;
@@ -525,7 +458,7 @@ public partial class ConversationList
     /// <summary>
     /// Mesaj statusuna görə icon qaytarır.
     /// </summary>
-    private string GetStatusIcon(string status)
+    private static string GetStatusIcon(string status)
     {
         return status switch
         {

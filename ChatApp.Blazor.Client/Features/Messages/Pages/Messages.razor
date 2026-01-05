@@ -43,7 +43,7 @@
                   OnNavigateToPinnedMessage="NavigateToPinnedMessage"
                   IsChannelAdmin="@isChannelAdmin"
                   IsLoading="@isLoadingMessages"
-                  IsLoadingMore="@isLoadingMoreMessages"
+                  IsLoadingMoreMessages="@isLoadingMoreMessages"
                   HasMoreMessages="@hasMoreMessages"
                   IsSending="@isSendingMessage"
                   TypingUsers="@typingUsers"
@@ -173,7 +173,7 @@
                                     }
                                     else
                                     {
-                                        <div class="user-result-avatar-placeholder">@GetInitials(user.DisplayName)</div>
+                                        <div class="user-result-avatar-placeholder">@StringHelper.GetInitials(user.DisplayName)</div>
                                     }
                                     <div class="user-result-info">
                                         <span class="user-result-name">@user.DisplayName</span>
@@ -296,7 +296,7 @@
                                 }
                                 else
                                 {
-                                    <span class="avatar-initials">@GetInitials(item.Name)</span>
+                                    <span class="avatar-initials">@StringHelper.GetInitials(item.Name)</span>
                                 }
                             </div>
                             <span class="forward-chat-name">@item.Name</span>

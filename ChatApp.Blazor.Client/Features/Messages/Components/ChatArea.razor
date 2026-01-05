@@ -207,7 +207,7 @@
                     <span>Loading messages...</span>
                 </div>
             }
-            else if (IsLoadingMore)
+            else if (IsLoadingMoreMessages)
             {
                 <div class="load-more-container">
                     <div class="loading-spinner small"></div>
@@ -320,7 +320,7 @@
                                        ReadByCount="@message.ReadByCount"
                                        TotalMemberCount="@message.TotalMemberCount"
                                        IsDirectMessage="false"
-                                       ShowAvatar="@ShouldShowChannelAvatar(message, group)"
+                                       ShowAvatar="@ShouldShowAvatarInChannel(message, group)"
                                        ShowSenderName="@ShouldShowSenderName(message, group)"
                                        ReplyToMessageId="@message.ReplyToMessageId"
                                        ReplyToContent="@message.ReplyToContent"

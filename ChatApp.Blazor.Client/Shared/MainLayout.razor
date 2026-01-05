@@ -69,7 +69,7 @@
                         else
                         {
                             <div class="user-avatar-placeholder">
-                                @GetInitials(UserState.CurrentUser.DisplayName)
+                                @StringHelper.GetInitials(UserState.CurrentUser.DisplayName)
                             </div>
                         }
                         <span class="user-status @(UserState.CurrentUser.IsActive ? "status-active" : "status-inactive")"></span>
@@ -89,7 +89,7 @@
                         else
                         {
                             <div class="user-avatar-placeholder">
-                                @GetInitials(UserState.CurrentUser.DisplayName)
+                                @StringHelper.GetInitials(UserState.CurrentUser.DisplayName)
                             </div>
                         }
                         <span class="user-status @(UserState.CurrentUser.IsActive ? "status-active" : "status-inactive")"></span>
@@ -205,7 +205,7 @@
                             else
                             {
                                 <div class="user-menu-avatar-placeholder">
-                                    @GetInitials(UserState.CurrentUser.DisplayName)
+                                    @StringHelper.GetInitials(UserState.CurrentUser.DisplayName)
                                 </div>
                             }
                         }
@@ -369,18 +369,6 @@
     {
         var currentPath = new Uri(Navigation.Uri).AbsolutePath;
         return currentPath == path || currentPath.StartsWith(path + "/") ? "active" : "";
-    }
-
-    private string GetInitials(string displayName)
-    {
-        if (string.IsNullOrWhiteSpace(displayName))
-            return "?";
-
-        var parts = displayName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length >= 2)
-            return $"{parts[0][0]}{parts[1][0]}".ToUpper();
-
-        return displayName[0].ToString().ToUpper();
     }
 
     public void Dispose()
