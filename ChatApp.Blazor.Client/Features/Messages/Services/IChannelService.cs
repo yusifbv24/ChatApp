@@ -32,6 +32,12 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
         Task<Result<List<ChannelMessageDto>>> GetMessagesAroundAsync(Guid channelId, Guid messageId, int count = 50);
 
 
+        Task<Result<List<ChannelMessageDto>>> GetMessagesBeforeAsync(Guid channelId, DateTime beforeUtc, int limit = 100);
+
+
+        Task<Result<List<ChannelMessageDto>>> GetMessagesAfterAsync(Guid channelId, DateTime afterUtc, int limit = 100);
+
+
         Task<Result<List<ChannelMessageDto>>> GetPinnedMessagesAsync(Guid channelId);
 
 

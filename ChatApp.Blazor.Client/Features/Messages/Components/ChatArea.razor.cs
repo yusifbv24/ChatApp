@@ -154,9 +154,14 @@ public partial class ChatArea : IAsyncDisposable
     [Parameter] public bool IsLoadingMoreMessages { get; set; }
 
     /// <summary>
-    /// Daha çox mesaj olub-olmadığı (pagination).
+    /// Daha çox mesaj olub-olmadığı (pagination - yuxarı scroll).
     /// </summary>
     [Parameter] public bool HasMoreMessages { get; set; }
+
+    /// <summary>
+    /// Daha yeni mesajlar olub-olmadığı (around mode - aşağı scroll).
+    /// </summary>
+    [Parameter] public bool HasMoreNewerMessages { get; set; }
 
     /// <summary>
     /// Mesaj göndərmə statusu - input disabled olur.
@@ -199,9 +204,14 @@ public partial class ChatArea : IAsyncDisposable
     [Parameter] public EventCallback<bool> OnTyping { get; set; }
 
     /// <summary>
-    /// Daha çox mesaj yükləmə callback-i (pagination).
+    /// Daha çox mesaj yükləmə callback-i (pagination - yuxarı scroll).
     /// </summary>
     [Parameter] public EventCallback OnLoadMore { get; set; }
+
+    /// <summary>
+    /// Yeni mesajlar yükləmə callback-i (around mode - aşağı scroll).
+    /// </summary>
+    [Parameter] public EventCallback OnLoadNewer { get; set; }
 
     #endregion
 
@@ -933,6 +943,7 @@ public partial class ChatArea : IAsyncDisposable
     /// <summary>
     /// Scroll event handler.
     /// Scroll to bottom button visibility və load more trigger edir.
+    /// Around mode-da bi-directional loading (yuxarı və aşağı).
     /// </summary>
     private async Task HandleScroll()
     {
@@ -952,8 +963,14 @@ public partial class ChatArea : IAsyncDisposable
                 _shouldScrollToBottom = false;
             }
 
-            // Load more trigger
+            // Load more trigger (yuxarı scroll - köhnə mesajlar)
             await TriggerLoadMoreIfNeeded(scrollTop);
+
+            // Load newer trigger (aşağı scroll - yeni mesajlar, around mode)
+            if (IsViewingAroundMessage)
+            {
+                await TriggerLoadNewerIfNeeded();
+            }
         }
         catch
         {
@@ -1003,7 +1020,7 @@ public partial class ChatArea : IAsyncDisposable
     }
 
     /// <summary>
-    /// Daha çox mesaj yükləyir (pagination).
+    /// Daha çox mesaj yükləyir (pagination - yuxarı scroll).
     /// Scroll position saxlanılır və restore edilir.
     /// </summary>
     private async Task LoadMoreMessages()
@@ -1011,6 +1028,29 @@ public partial class ChatArea : IAsyncDisposable
         _savedScrollPosition = await JS.InvokeAsync<object>("chatAppUtils.saveScrollPosition", messagesContainerRef);
         _isRestoringScrollPosition = true;
         await OnLoadMore.InvokeAsync();
+    }
+
+    /// <summary>
+    /// Around mode-da aşağıya scroll edildikdə yeni mesajlar yükləyir (APPEND).
+    /// Throttling tətbiq edilir.
+    /// </summary>
+    private async Task TriggerLoadNewerIfNeeded()
+    {
+        if (!HasMoreNewerMessages) return;
+
+        // Is near bottom check
+        var isNearBottom = await JS.InvokeAsync<bool>("chatAppUtils.isNearBottom", messagesContainerRef, 500);
+        if (!isNearBottom) return;
+
+        // Throttle: eyni throttling pattern-i load more ilə
+        var now = DateTime.UtcNow;
+        var timeSinceLastCheck = (now - _lastScrollCheck).TotalMilliseconds;
+        if (timeSinceLastCheck < 300) return;
+
+        _lastScrollCheck = now;
+
+        // Load newer messages (APPEND - aşağıya doğru)
+        await OnLoadNewer.InvokeAsync();
     }
 
     #endregion

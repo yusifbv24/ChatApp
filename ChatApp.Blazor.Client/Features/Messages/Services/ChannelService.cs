@@ -83,6 +83,30 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
         }
 
 
+        public async Task<Result<List<ChannelMessageDto>>> GetMessagesBeforeAsync(
+            Guid channelId,
+            DateTime beforeUtc,
+            int limit = 100)
+        {
+            // Ensure DateTime is UTC and properly formatted for API
+            var beforeUtcSpecified = DateTime.SpecifyKind(beforeUtc, DateTimeKind.Utc);
+            var url = $"/api/channels/{channelId}/messages/before?date={beforeUtcSpecified:O}&limit={limit}";
+            return await apiClient.GetAsync<List<ChannelMessageDto>>(url);
+        }
+
+
+        public async Task<Result<List<ChannelMessageDto>>> GetMessagesAfterAsync(
+            Guid channelId,
+            DateTime afterUtc,
+            int limit = 100)
+        {
+            // Ensure DateTime is UTC and properly formatted for API
+            var afterUtcSpecified = DateTime.SpecifyKind(afterUtc, DateTimeKind.Utc);
+            var url = $"/api/channels/{channelId}/messages/after?date={afterUtcSpecified:O}&limit={limit}";
+            return await apiClient.GetAsync<List<ChannelMessageDto>>(url);
+        }
+
+
         public async Task<Result<List<ChannelMessageDto>>> GetPinnedMessagesAsync(Guid channelId)
         {
             return await apiClient.GetAsync<List<ChannelMessageDto>>(

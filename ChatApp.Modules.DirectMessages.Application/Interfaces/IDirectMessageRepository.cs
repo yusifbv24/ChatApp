@@ -18,6 +18,16 @@ namespace ChatApp.Modules.DirectMessages.Application.Interfaces
             Guid messageId,
             int count = 50,
             CancellationToken cancellationToken = default);
+        Task<List<DirectMessageDto>> GetMessagesBeforeDateAsync(
+            Guid conversationId,
+            DateTime beforeUtc,
+            int limit = 100,
+            CancellationToken cancellationToken = default);
+        Task<List<DirectMessageDto>> GetMessagesAfterDateAsync(
+            Guid conversationId,
+            DateTime afterUtc,
+            int limit = 100,
+            CancellationToken cancellationToken = default);
         Task<List<DirectMessageDto>> GetPinnedMessagesAsync(Guid conversationId, CancellationToken cancellationToken = default);
         Task<int> GetUnreadCountAsync(Guid conversationId, Guid userId, CancellationToken cancellationToken = default);
         Task<List<DirectMessage>> GetUnreadMessagesForUserAsync(Guid conversationId, Guid userId, CancellationToken cancellationToken = default);

@@ -96,6 +96,68 @@ namespace ChatApp.Modules.DirectMessages.Api.Controllers
             return Ok(result.Value);
         }
 
+        /// <summary>
+        /// Gets messages before a specific date (for bi-directional loading)
+        /// </summary>
+        [HttpGet("before")]
+        [RequirePermission("Messages.Read")]
+        [ProducesResponseType(typeof(List<DirectMessageDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<IActionResult> GetMessagesBefore(
+            [FromRoute] Guid conversationId,
+            [FromQuery] DateTime date,
+            [FromQuery] int limit = 100,
+            CancellationToken cancellationToken = default)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == Guid.Empty)
+                return Unauthorized();
+
+            if (limit < 1 || limit > 100)
+                return BadRequest(new { error = "Limit must be between 1 and 100" });
+
+            var result = await _mediator.Send(
+                new GetMessagesBeforeDateQuery(conversationId, date, userId, limit),
+                cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return Ok(result.Value);
+        }
+
+        /// <summary>
+        /// Gets messages after a specific date (for bi-directional loading)
+        /// </summary>
+        [HttpGet("after")]
+        [RequirePermission("Messages.Read")]
+        [ProducesResponseType(typeof(List<DirectMessageDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<IActionResult> GetMessagesAfter(
+            [FromRoute] Guid conversationId,
+            [FromQuery] DateTime date,
+            [FromQuery] int limit = 100,
+            CancellationToken cancellationToken = default)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == Guid.Empty)
+                return Unauthorized();
+
+            if (limit < 1 || limit > 100)
+                return BadRequest(new { error = "Limit must be between 1 and 100" });
+
+            var result = await _mediator.Send(
+                new GetMessagesAfterDateQuery(conversationId, date, userId, limit),
+                cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return Ok(result.Value);
+        }
+
 
 
 

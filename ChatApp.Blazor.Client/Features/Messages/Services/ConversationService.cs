@@ -60,6 +60,30 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
         }
 
 
+        public async Task<Result<List<DirectMessageDto>>> GetMessagesBeforeAsync(
+            Guid conversationId,
+            DateTime beforeUtc,
+            int limit = 100)
+        {
+            // Ensure DateTime is UTC and properly formatted for API
+            var beforeUtcSpecified = DateTime.SpecifyKind(beforeUtc, DateTimeKind.Utc);
+            var url = $"/api/conversations/{conversationId}/messages/before?date={beforeUtcSpecified:O}&limit={limit}";
+            return await _apiClient.GetAsync<List<DirectMessageDto>>(url);
+        }
+
+
+        public async Task<Result<List<DirectMessageDto>>> GetMessagesAfterAsync(
+            Guid conversationId,
+            DateTime afterUtc,
+            int limit = 100)
+        {
+            // Ensure DateTime is UTC and properly formatted for API
+            var afterUtcSpecified = DateTime.SpecifyKind(afterUtc, DateTimeKind.Utc);
+            var url = $"/api/conversations/{conversationId}/messages/after?date={afterUtcSpecified:O}&limit={limit}";
+            return await _apiClient.GetAsync<List<DirectMessageDto>>(url);
+        }
+
+
         public async Task<Result<int>> GetUnreadCountAsync(Guid conversationId)
         {
             var response = await _apiClient.GetAsync<UnreadCountResponse>(

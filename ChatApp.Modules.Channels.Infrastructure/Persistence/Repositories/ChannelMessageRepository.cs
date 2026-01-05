@@ -306,6 +306,194 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
             )).ToList();
         }
 
+        public async Task<List<ChannelMessageDto>> GetMessagesBeforeDateAsync(
+            Guid channelId,
+            DateTime beforeUtc,
+            int limit = 100,
+            CancellationToken cancellationToken = default)
+        {
+            // Base query with all joins
+            var query = from message in _context.ChannelMessages
+                        join user in _context.Set<UserReadModel>() on message.SenderId equals user.Id
+                        join repliedMessage in _context.ChannelMessages on message.ReplyToMessageId equals repliedMessage.Id into replyJoin
+                        from repliedMessage in replyJoin.DefaultIfEmpty()
+                        join repliedSender in _context.Set<UserReadModel>() on repliedMessage.SenderId equals repliedSender.Id into repliedSenderJoin
+                        from repliedSender in repliedSenderJoin.DefaultIfEmpty()
+                        where message.ChannelId == channelId
+                           && message.CreatedAtUtc < beforeUtc
+                        select new
+                        {
+                            message.Id,
+                            message.ChannelId,
+                            message.SenderId,
+                            user.Username,
+                            user.DisplayName,
+                            user.AvatarUrl,
+                            message.Content,
+                            message.FileId,
+                            message.IsEdited,
+                            message.IsDeleted,
+                            message.IsPinned,
+                            message.CreatedAtUtc,
+                            message.EditedAtUtc,
+                            message.PinnedAtUtc,
+                            ReactionCount = _context.ChannelMessageReactions.Count(r => r.MessageId == message.Id),
+                            message.ReplyToMessageId,
+                            ReplyToContent = repliedMessage != null && !repliedMessage.IsDeleted ? repliedMessage.Content : null,
+                            ReplyToIsDeleted = repliedMessage != null && repliedMessage.IsDeleted,
+                            ReplyToSenderName = repliedSender != null ? repliedSender.DisplayName : null,
+                            message.IsForwarded,
+                            ReadByCount = _context.ChannelMessageReads.Count(r =>
+                                r.MessageId == message.Id &&
+                                r.UserId != message.SenderId),
+                            TotalMemberCount = _context.ChannelMembers.Count(m =>
+                                m.ChannelId == channelId &&
+                                m.IsActive &&
+                                m.UserId != message.SenderId),
+                            ReadBy = _context.ChannelMessageReads
+                                .Where(r => r.MessageId == message.Id && r.UserId != message.SenderId)
+                                .Select(r => r.UserId)
+                                .ToList(),
+                            Reactions = (from reaction in _context.ChannelMessageReactions
+                                        join reactionUser in _context.Set<UserReadModel>() on reaction.UserId equals reactionUser.Id
+                                        where reaction.MessageId == message.Id
+                                        group new { reaction, reactionUser } by reaction.Reaction into g
+                                        select new ChannelMessageReactionDto(
+                                            g.Key,
+                                            g.Count(),
+                                            g.Select(x => x.reaction.UserId).ToList(),
+                                            g.Select(x => x.reactionUser.DisplayName).ToList(),
+                                            g.Select(x => x.reactionUser.AvatarUrl).ToList()
+                                        ))
+                                .ToList()
+                        };
+
+            var results = await query
+                .OrderByDescending(m => m.CreatedAtUtc)
+                .Take(limit)
+                .ToListAsync(cancellationToken);
+
+            return results.Select(r => new ChannelMessageDto(
+                r.Id,
+                r.ChannelId,
+                r.SenderId,
+                r.Username,
+                r.DisplayName,
+                r.AvatarUrl,
+                r.IsDeleted ? "This message was deleted" : r.Content,
+                r.FileId,
+                r.IsEdited,
+                r.IsDeleted,
+                r.IsPinned,
+                r.ReactionCount,
+                r.CreatedAtUtc,
+                r.EditedAtUtc,
+                r.PinnedAtUtc,
+                r.ReplyToMessageId,
+                r.ReplyToIsDeleted ? "This message was deleted" : r.ReplyToContent,
+                r.ReplyToSenderName,
+                r.IsForwarded,
+                r.ReadByCount,
+                r.TotalMemberCount,
+                r.ReadBy,
+                r.Reactions
+            )).ToList();
+        }
+
+        public async Task<List<ChannelMessageDto>> GetMessagesAfterDateAsync(
+            Guid channelId,
+            DateTime afterUtc,
+            int limit = 100,
+            CancellationToken cancellationToken = default)
+        {
+            // Base query with all joins
+            var query = from message in _context.ChannelMessages
+                        join user in _context.Set<UserReadModel>() on message.SenderId equals user.Id
+                        join repliedMessage in _context.ChannelMessages on message.ReplyToMessageId equals repliedMessage.Id into replyJoin
+                        from repliedMessage in replyJoin.DefaultIfEmpty()
+                        join repliedSender in _context.Set<UserReadModel>() on repliedMessage.SenderId equals repliedSender.Id into repliedSenderJoin
+                        from repliedSender in repliedSenderJoin.DefaultIfEmpty()
+                        where message.ChannelId == channelId
+                           && message.CreatedAtUtc > afterUtc
+                        select new
+                        {
+                            message.Id,
+                            message.ChannelId,
+                            message.SenderId,
+                            user.Username,
+                            user.DisplayName,
+                            user.AvatarUrl,
+                            message.Content,
+                            message.FileId,
+                            message.IsEdited,
+                            message.IsDeleted,
+                            message.IsPinned,
+                            message.CreatedAtUtc,
+                            message.EditedAtUtc,
+                            message.PinnedAtUtc,
+                            ReactionCount = _context.ChannelMessageReactions.Count(r => r.MessageId == message.Id),
+                            message.ReplyToMessageId,
+                            ReplyToContent = repliedMessage != null && !repliedMessage.IsDeleted ? repliedMessage.Content : null,
+                            ReplyToIsDeleted = repliedMessage != null && repliedMessage.IsDeleted,
+                            ReplyToSenderName = repliedSender != null ? repliedSender.DisplayName : null,
+                            message.IsForwarded,
+                            ReadByCount = _context.ChannelMessageReads.Count(r =>
+                                r.MessageId == message.Id &&
+                                r.UserId != message.SenderId),
+                            TotalMemberCount = _context.ChannelMembers.Count(m =>
+                                m.ChannelId == channelId &&
+                                m.IsActive &&
+                                m.UserId != message.SenderId),
+                            ReadBy = _context.ChannelMessageReads
+                                .Where(r => r.MessageId == message.Id && r.UserId != message.SenderId)
+                                .Select(r => r.UserId)
+                                .ToList(),
+                            Reactions = (from reaction in _context.ChannelMessageReactions
+                                        join reactionUser in _context.Set<UserReadModel>() on reaction.UserId equals reactionUser.Id
+                                        where reaction.MessageId == message.Id
+                                        group new { reaction, reactionUser } by reaction.Reaction into g
+                                        select new ChannelMessageReactionDto(
+                                            g.Key,
+                                            g.Count(),
+                                            g.Select(x => x.reaction.UserId).ToList(),
+                                            g.Select(x => x.reactionUser.DisplayName).ToList(),
+                                            g.Select(x => x.reactionUser.AvatarUrl).ToList()
+                                        ))
+                                .ToList()
+                        };
+
+            var results = await query
+                .OrderBy(m => m.CreatedAtUtc)
+                .Take(limit)
+                .ToListAsync(cancellationToken);
+
+            return results.Select(r => new ChannelMessageDto(
+                r.Id,
+                r.ChannelId,
+                r.SenderId,
+                r.Username,
+                r.DisplayName,
+                r.AvatarUrl,
+                r.IsDeleted ? "This message was deleted" : r.Content,
+                r.FileId,
+                r.IsEdited,
+                r.IsDeleted,
+                r.IsPinned,
+                r.ReactionCount,
+                r.CreatedAtUtc,
+                r.EditedAtUtc,
+                r.PinnedAtUtc,
+                r.ReplyToMessageId,
+                r.ReplyToIsDeleted ? "This message was deleted" : r.ReplyToContent,
+                r.ReplyToSenderName,
+                r.IsForwarded,
+                r.ReadByCount,
+                r.TotalMemberCount,
+                r.ReadBy,
+                r.Reactions
+            )).ToList();
+        }
+
         public async Task<List<ChannelMessageDto>> GetPinnedMessagesAsync(Guid channelId, CancellationToken cancellationToken = default)
         {
             // Database join to get pinned messages with user details

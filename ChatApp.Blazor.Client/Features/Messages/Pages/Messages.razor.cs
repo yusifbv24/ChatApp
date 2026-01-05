@@ -232,9 +232,19 @@ public partial class Messages : IAsyncDisposable
     private bool hasMoreMessages = true;
 
     /// <summary>
+    /// Daha yeni mesajlar var? (pagination üçün - around mode-da aşağı scroll)
+    /// </summary>
+    private bool hasMoreNewerMessages = false;
+
+    /// <summary>
     /// Ən köhnə mesajın tarixi (pagination üçün - yuxarı scroll).
     /// </summary>
     private DateTime? oldestMessageDate;
+
+    /// <summary>
+    /// Ən yeni mesajın tarixi (pagination üçün - aşağı scroll, around mode).
+    /// </summary>
+    private DateTime? newestMessageDate;
 
     /// <summary>
     /// Context mode-dayıq? (pinned/favorite mesaja jump edəndə)

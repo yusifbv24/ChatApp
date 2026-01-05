@@ -5,6 +5,8 @@ using ChatApp.Modules.Channels.Application.DTOs.Requests;
 using ChatApp.Modules.Channels.Application.DTOs.Responses;
 using ChatApp.Modules.Channels.Application.Queries.GetChannelMessages;
 using ChatApp.Modules.Channels.Application.Queries.GetChannelMessagesAround;
+using ChatApp.Modules.Channels.Application.Queries.GetMessagesBeforeDate;
+using ChatApp.Modules.Channels.Application.Queries.GetMessagesAfterDate;
 using ChatApp.Modules.Channels.Application.Queries.GetFavoriteMessages;
 using ChatApp.Modules.Channels.Application.Queries.GetPinnedMessages;
 using ChatApp.Modules.Channels.Application.Queries.GetUnreadCount;
@@ -94,6 +96,68 @@ namespace ChatApp.Modules.Channels.Api.Controllers
 
             var result = await _mediator.Send(
                 new GetChannelMessagesAroundQuery(channelId, messageId, userId, count),
+                cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return Ok(result.Value);
+        }
+
+        /// <summary>
+        /// Gets messages before a specific date (for bi-directional loading)
+        /// </summary>
+        [HttpGet("before")]
+        [RequirePermission("Messages.Read")]
+        [ProducesResponseType(typeof(List<ChannelMessageDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<IActionResult> GetMessagesBefore(
+            [FromRoute] Guid channelId,
+            [FromQuery] DateTime date,
+            [FromQuery] int limit = 100,
+            CancellationToken cancellationToken = default)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == Guid.Empty)
+                return Unauthorized();
+
+            if (limit < 1 || limit > 100)
+                return BadRequest(new { error = "Limit must be between 1 and 100" });
+
+            var result = await _mediator.Send(
+                new GetMessagesBeforeDateQuery(channelId, date, userId, limit),
+                cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return Ok(result.Value);
+        }
+
+        /// <summary>
+        /// Gets messages after a specific date (for bi-directional loading)
+        /// </summary>
+        [HttpGet("after")]
+        [RequirePermission("Messages.Read")]
+        [ProducesResponseType(typeof(List<ChannelMessageDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<IActionResult> GetMessagesAfter(
+            [FromRoute] Guid channelId,
+            [FromQuery] DateTime date,
+            [FromQuery] int limit = 100,
+            CancellationToken cancellationToken = default)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == Guid.Empty)
+                return Unauthorized();
+
+            if (limit < 1 || limit > 100)
+                return BadRequest(new { error = "Limit must be between 1 and 100" });
+
+            var result = await _mediator.Send(
+                new GetMessagesAfterDateQuery(channelId, date, userId, limit),
                 cancellationToken);
 
             if (result.IsFailure)

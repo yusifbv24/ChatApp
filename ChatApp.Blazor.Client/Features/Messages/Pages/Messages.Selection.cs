@@ -152,7 +152,9 @@ public partial class Messages
             directMessages.Clear();
             channelMessages.Clear();
             hasMoreMessages = true;
+            hasMoreNewerMessages = false;
             oldestMessageDate = null;
+            newestMessageDate = null;
             isViewingAroundMessage = false;
             typingUsers.Clear();
             pendingReadReceipts.Clear();
@@ -278,7 +280,9 @@ public partial class Messages
         pendingReadReceipts.Clear();
         pendingMessageAdds.Clear();
         hasMoreMessages = false;
+        hasMoreNewerMessages = false;
         oldestMessageDate = null;
+        newestMessageDate = null;
         pageSize = 50;
 
         // Draft yüklə (pending user üçün)
@@ -396,7 +400,9 @@ public partial class Messages
             directMessages.Clear();
             channelMessages.Clear();
             hasMoreMessages = true;
+            hasMoreNewerMessages = false;
             oldestMessageDate = null;
+            newestMessageDate = null;
             isViewingAroundMessage = false;
             typingUsers.Clear();
             pendingReadReceipts.Clear();
@@ -474,6 +480,7 @@ public partial class Messages
 
     /// <summary>
     /// DM mesajlarını yükləyir.
+    /// Around mode-da GetMessagesBeforeAsync, normal mode-da GetMessagesAsync.
     /// </summary>
     private async Task LoadDirectMessages()
     {
@@ -482,10 +489,15 @@ public partial class Messages
 
         try
         {
-            var result = await ConversationService.GetMessagesAsync(
-                selectedConversationId!.Value,
-                pageSize,
-                oldestMessageDate);
+            var result = isViewingAroundMessage && oldestMessageDate.HasValue
+                ? await ConversationService.GetMessagesBeforeAsync(
+                    selectedConversationId!.Value,
+                    oldestMessageDate.Value,
+                    100) // Around mode: 100 mesaj
+                : await ConversationService.GetMessagesAsync(
+                    selectedConversationId!.Value,
+                    pageSize,
+                    oldestMessageDate);
 
             if (result.IsSuccess && result.Value != null)
             {
@@ -504,7 +516,7 @@ public partial class Messages
                     oldestMessageDate = DateTime.SpecifyKind(messages.Min(m => m.CreatedAtUtc), DateTimeKind.Utc);
 
                     // Daha çox mesaj var? (pageSize qədər gəlibsə - var)
-                    hasMoreMessages = messages.Count >= pageSize;
+                    hasMoreMessages = messages.Count >= pageSize || messages.Count >= 100;
                 }
                 else
                 {
@@ -551,6 +563,7 @@ public partial class Messages
 
     /// <summary>
     /// Channel mesajlarını yükləyir.
+    /// Around mode-da GetMessagesBeforeAsync, normal mode-da GetMessagesAsync.
     /// </summary>
     private async Task LoadChannelMessages()
     {
@@ -559,10 +572,15 @@ public partial class Messages
 
         try
         {
-            var result = await ChannelService.GetMessagesAsync(
-                selectedChannelId!.Value,
-                pageSize,
-                oldestMessageDate);
+            var result = isViewingAroundMessage && oldestMessageDate.HasValue
+                ? await ChannelService.GetMessagesBeforeAsync(
+                    selectedChannelId!.Value,
+                    oldestMessageDate.Value,
+                    100) // Around mode: 100 mesaj
+                : await ChannelService.GetMessagesAsync(
+                    selectedChannelId!.Value,
+                    pageSize,
+                    oldestMessageDate);
 
             if (result.IsSuccess && result.Value != null)
             {
@@ -579,7 +597,7 @@ public partial class Messages
                     oldestMessageDate = DateTime.SpecifyKind(messages.Min(m => m.CreatedAtUtc), DateTimeKind.Utc);
 
                     // Daha çox mesaj var? (pageSize qədər gəlibsə - var)
-                    hasMoreMessages = messages.Count >= pageSize;
+                    hasMoreMessages = messages.Count >= pageSize || messages.Count >= 100;
                 }
                 else
                 {
@@ -608,7 +626,7 @@ public partial class Messages
     }
 
     /// <summary>
-    /// "Load More" düyməsi basıldıqda çağrılır.
+    /// "Load More" düyməsi basıldıqda çağrılır (yuxarı scroll - köhnə mesajlar).
     /// pageSize-i 100-ə artırır (ilk yükləmə 50, sonrakılar 100).
     /// </summary>
     private async Task LoadMoreMessages()
@@ -636,6 +654,122 @@ public partial class Messages
         {
             isLoadingMoreMessages = false;
             StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Around mode-da aşağı scroll edildikdə yeni mesajlar yükləyir (APPEND).
+    /// </summary>
+    private async Task LoadNewerMessages()
+    {
+        if (isLoadingMoreMessages || !hasMoreNewerMessages || !isViewingAroundMessage) return;
+
+        isLoadingMoreMessages = true;
+        StateHasChanged();
+
+        try
+        {
+            if (isDirectMessage && selectedConversationId.HasValue)
+            {
+                await LoadNewerDirectMessages();
+            }
+            else if (!isDirectMessage && selectedChannelId.HasValue)
+            {
+                await LoadNewerChannelMessages();
+            }
+        }
+        finally
+        {
+            isLoadingMoreMessages = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Yeni DM mesajlarını yükləyir (APPEND - aşağıya doğru).
+    /// </summary>
+    private async Task LoadNewerDirectMessages()
+    {
+        if (!newestMessageDate.HasValue) return;
+
+        try
+        {
+            var result = await ConversationService.GetMessagesAfterAsync(
+                selectedConversationId!.Value,
+                newestMessageDate.Value,
+                100);
+
+            if (result.IsSuccess && result.Value != null)
+            {
+                var messages = result.Value;
+                if (messages.Count != 0)
+                {
+                    // DUBLİKAT YOXLAMASI
+                    var existingIds = directMessages.Select(m => m.Id).ToHashSet();
+                    var newMessages = messages.Where(m => !existingIds.Contains(m.Id)).OrderBy(m => m.CreatedAtUtc);
+
+                    // YENİ MESAJLARI SONA ƏLAVƏ ET (APPEND)
+                    directMessages.AddRange(newMessages);
+
+                    // ən yeni mesajın tarixini yenilə
+                    newestMessageDate = DateTime.SpecifyKind(messages.Max(m => m.CreatedAtUtc), DateTimeKind.Utc);
+
+                    // Daha yeni mesajlar var?
+                    hasMoreNewerMessages = messages.Count >= 100;
+                }
+                else
+                {
+                    hasMoreNewerMessages = false;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowError("Failed to load newer messages: " + ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Yeni channel mesajlarını yükləyir (APPEND - aşağıya doğru).
+    /// </summary>
+    private async Task LoadNewerChannelMessages()
+    {
+        if (!newestMessageDate.HasValue) return;
+
+        try
+        {
+            var result = await ChannelService.GetMessagesAfterAsync(
+                selectedChannelId!.Value,
+                newestMessageDate.Value,
+                100);
+
+            if (result.IsSuccess && result.Value != null)
+            {
+                var messages = result.Value;
+                if (messages.Count != 0)
+                {
+                    // DUBLİKAT YOXLAMASI
+                    var existingIds = channelMessages.Select(m => m.Id).ToHashSet();
+                    var newMessages = messages.Where(m => !existingIds.Contains(m.Id)).OrderBy(m => m.CreatedAtUtc);
+
+                    // YENİ MESAJLARI SONA ƏLAVƏ ET (APPEND)
+                    channelMessages.AddRange(newMessages);
+
+                    // ən yeni mesajın tarixini yenilə
+                    newestMessageDate = DateTime.SpecifyKind(messages.Max(m => m.CreatedAtUtc), DateTimeKind.Utc);
+
+                    // Daha yeni mesajlar var?
+                    hasMoreNewerMessages = messages.Count >= 100;
+                }
+                else
+                {
+                    hasMoreNewerMessages = false;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowError("Failed to load newer messages: " + ex.Message);
         }
     }
 
@@ -674,9 +808,11 @@ public partial class Messages
                     directMessages.Clear();
                     directMessages.AddRange(result.Value.OrderBy(m => m.CreatedAtUtc));
 
-                    // Pagination state-i yenilə
+                    // Pagination state-i yenilə (bi-directional)
                     oldestMessageDate = DateTime.SpecifyKind(directMessages.First().CreatedAtUtc, DateTimeKind.Utc);
+                    newestMessageDate = DateTime.SpecifyKind(directMessages.Last().CreatedAtUtc, DateTimeKind.Utc);
                     hasMoreMessages = true;
+                    hasMoreNewerMessages = true; // Around mode: hər iki istiqamətdə load mümkündür
                     isViewingAroundMessage = true;
 
                     StateHasChanged();
@@ -721,9 +857,11 @@ public partial class Messages
                     channelMessages.Clear();
                     channelMessages.AddRange(result.Value.OrderBy(m => m.CreatedAtUtc));
 
-                    // Pagination state-i yenilə
+                    // Pagination state-i yenilə (bi-directional)
                     oldestMessageDate = DateTime.SpecifyKind(channelMessages.First().CreatedAtUtc, DateTimeKind.Utc);
+                    newestMessageDate = DateTime.SpecifyKind(channelMessages.Last().CreatedAtUtc, DateTimeKind.Utc);
                     hasMoreMessages = true;
+                    hasMoreNewerMessages = true; // Around mode: hər iki istiqamətdə load mümkündür
                     isViewingAroundMessage = true;
 
                     StateHasChanged();
@@ -753,6 +891,8 @@ public partial class Messages
 
         // Reset pagination state
         oldestMessageDate = null;
+        newestMessageDate = null;
+        hasMoreNewerMessages = false;
         isViewingAroundMessage = false;
         pageSize = 50;
 
