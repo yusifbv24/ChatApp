@@ -1,30 +1,14 @@
+using ChatApp.Blazor.Client.Models.Messages;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
-using ChatApp.Blazor.Client.Models.Messages;
+using System.Globalization;
+using System.Net;
 using System.Text.RegularExpressions;
 
 namespace ChatApp.Blazor.Client.Features.Messages.Components;
 
-/// <summary>
-/// MessageBubble - Tək mesajı göstərən komponent.
-///
-/// Bu komponent aşağıdakı funksionallıqları təmin edir:
-/// - Mesaj məzmununun göstərilməsi (text, link parsing)
-/// - Reaction-lar və reaction picker
-/// - Edit, Delete, Reply, Forward, Pin əməliyyatları
-/// - Read status (DM və Channel üçün)
-/// - Selection mode (multi-select)
-/// - Deleted message view
-/// - Reply preview
-/// - Forwarded message indicator
-///
-/// Komponent partial class pattern istifadə edir:
-/// - MessageBubble.razor: HTML template
-/// - MessageBubble.razor.cs: C# code-behind (bu fayl)
-/// </summary>
 public partial class MessageBubble : IAsyncDisposable
 {
-    private bool _disposed = false;
     #region Injected Services
 
     [Inject] private IJSRuntime JS { get; set; } = default!;
@@ -41,12 +25,12 @@ public partial class MessageBubble : IAsyncDisposable
     /// <summary>
     /// Mesajın məzmunu.
     /// </summary>
-    [Parameter] public string Content { get; set; } = "";
+    [Parameter] public string Content { get; set; } = string.Empty;
 
     /// <summary>
     /// Göndərənin adı.
     /// </summary>
-    [Parameter] public string SenderName { get; set; } = "";
+    [Parameter] public string SenderName { get; set; } = string.Empty;
 
     /// <summary>
     /// Göndərənin avatar URL-i.
@@ -257,12 +241,6 @@ public partial class MessageBubble : IAsyncDisposable
     #region Private Fields - Element References
 
     /// <summary>
-    /// Mesaj wrapper-ın DOM reference-i.
-    /// Menu position hesablaması üçün.
-    /// </summary>
-    private ElementReference messageWrapperRef;
-
-    /// <summary>
     /// Chevron wrapper-ın DOM reference-i.
     /// Menu position hesablaması üçün (menu chevron-a nisbətən açılır).
     /// </summary>
@@ -271,6 +249,8 @@ public partial class MessageBubble : IAsyncDisposable
     #endregion
 
     #region Private Fields - UI State
+
+    private bool _disposed = false;
 
     /// <summary>
     /// Reaction picker görünürmü?
@@ -327,10 +307,10 @@ public partial class MessageBubble : IAsyncDisposable
 
     /// <summary>
     /// URL regex pattern - link parsing üçün.
+    /// Source-generated for better performance.
     /// </summary>
-    private static readonly Regex UrlRegex = new(
-        @"(https?://[^\s<>""']+)",
-        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    [GeneratedRegex(@"(https?://[^\s<>""']+)", RegexOptions.IgnoreCase)]
+    private static partial Regex UrlRegex();
 
     #endregion
 
@@ -349,34 +329,26 @@ public partial class MessageBubble : IAsyncDisposable
     /// <summary>
     /// Tarixi saat:dəqiqə formatına çevirir.
     /// </summary>
-    private string FormatTime(DateTime dateTime)
+    private static string FormatTime(DateTime dateTime)
     {
-        return dateTime.ToLocalTime().ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture);
+        return dateTime.ToLocalTime().ToString("HH:mm", CultureInfo.InvariantCulture);
     }
 
-    /// <summary>
-    /// Mətni qısaldır (ellipsis ilə).
-    /// </summary>
-    private string TruncateText(string? text, int maxLength)
-    {
-        if (string.IsNullOrEmpty(text)) return "";
-        if (text.Length <= maxLength) return text;
-        return text.Substring(0, maxLength) + "...";
-    }
 
     /// <summary>
     /// Mətn içindəki URL-ləri klikləbilən linklərə çevirir.
-    /// XSS hücumlarından qorunmaq üçün əvvəlcə HTML encode edilir.
+    /// XSS hücumlarından qorunmaq üçün əvvəlcə HTML encode edilir və daha sonra özümüz html code yaradaraq digər səhifədə açılmasını təmin edirik.
+    /// Noopener yazmazsaq açılan səhifə bizim səhifəyə geri müdaxilə edə bilər.
     /// </summary>
-    private string ParseLinks(string? text)
+    private static string ParseLinks(string? text)
     {
         if (string.IsNullOrEmpty(text)) return "";
 
         // XSS qorunması: əvvəlcə HTML encode
-        var encoded = System.Net.WebUtility.HtmlEncode(text);
+        var encoded = WebUtility.HtmlEncode(text);
 
         // URL-ləri anchor tag-larla əvəz et
-        return UrlRegex.Replace(encoded, match =>
+        return UrlRegex().Replace(encoded, match =>
         {
             var url = match.Value;
             return $"<a href=\"{url}\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"message-link\">{url}</a>";
@@ -402,17 +374,6 @@ public partial class MessageBubble : IAsyncDisposable
             return channelReactions.Cast<dynamic>().ToList();
 
         return null;
-    }
-
-    /// <summary>
-    /// Reaction tooltip text-ini qaytarır.
-    /// </summary>
-    private string GetReactionTooltip(dynamic reaction)
-    {
-        string emoji = reaction.Emoji;
-        int count = reaction.Count;
-
-        return count == 1 ? $"{emoji} 1 person" : $"{emoji} {count} people";
     }
 
     /// <summary>
@@ -602,7 +563,7 @@ public partial class MessageBubble : IAsyncDisposable
                 return;
             }
 
-            const int menuHeight = 420; // 9 items × 42px + padding
+            const int menuHeight = 296; // 7 items × 42px (max: Reply, Copy, Edit, Forward, More, Delete, Select)
 
             // Open above if more space above, otherwise below
             menuPositionAbove = position.ActualSpaceBelow < menuHeight
@@ -787,6 +748,8 @@ public partial class MessageBubble : IAsyncDisposable
         showReactionPickerCts?.Cancel();
         showReactionPickerCts?.Dispose();
         showReactionPickerCts = null;
+
+        GC.SuppressFinalize(this);
 
         return ValueTask.CompletedTask;
     }

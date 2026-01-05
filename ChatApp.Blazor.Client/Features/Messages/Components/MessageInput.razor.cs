@@ -495,15 +495,6 @@ public partial class MessageInput : IDisposable
 
     #region Helper Methods
 
-    /// <summary>
-    /// Mətni qısaldır.
-    /// </summary>
-    private static string TruncateText(string? text, int maxLength)
-    {
-        if (string.IsNullOrEmpty(text)) return "";
-        if (text.Length <= maxLength) return text;
-        return string.Concat(text.AsSpan(0, maxLength), "...");
-    }
 
     /// <summary>
     /// Textarea height-ını reset edir.

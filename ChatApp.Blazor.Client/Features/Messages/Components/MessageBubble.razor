@@ -1,4 +1,4 @@
-﻿<div id="message-@MessageId" class="message-wrapper @(IsOwn ? "own" : "other") @(IsDeleted ? "deleted" : "") @(!IsDirectMessage && !IsOwn ? "group-message" : "") @(IsSelectMode ? "select-mode" : "")" @ref="messageWrapperRef">
+﻿<div id="message-@MessageId" class="message-wrapper @(IsOwn ? "own" : "other") @(IsDeleted ? "deleted" : "") @(!IsDirectMessage && !IsOwn ? "group-message" : "") @(IsSelectMode ? "select-mode" : "")">
 
     @* Selection checkbox - visible only in select mode and not for deleted messages *@
     @if (IsSelectMode && !IsDeleted)
@@ -70,7 +70,7 @@
                             <div class="reply-bar"></div>
                             <div class="reply-content">
                                 <div class="reply-sender">@ReplyToSenderName</div>
-                                <div class="reply-text">@TruncateText(ReplyToContent, 50)</div>
+                                <div class="reply-text">@StringHelper.TruncateText(ReplyToContent, 50)</div>
                             </div>
                         </div>
                     }

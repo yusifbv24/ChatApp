@@ -1147,15 +1147,6 @@ public partial class ChatArea : IAsyncDisposable
     }
 
     /// <summary>
-    /// Mətni qısaldır (ellipsis ilə).
-    /// </summary>
-    private static string TruncateText(string? text, int maxLength)
-    {
-        if (string.IsNullOrEmpty(text)) return string.Empty;
-        return text.Length > maxLength ? string.Concat(text.AsSpan(0, maxLength), "...") : text;
-    }
-
-    /// <summary>
     /// Pinned header click handler.
     /// Dropdown bağlı olduqda mesaja naviqasiya edir və növbəti pin-ə keçir.
     /// </summary>

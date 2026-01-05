@@ -16,7 +16,7 @@
             <MudIcon Icon="@Icons.Material.Filled.Reply" Size="Size.Small" />
             <div class="reply-info">
                 <span class="reply-to-name">Replying to @ReplyToSenderName</span>
-                <span class="reply-to-preview">@TruncateText(ReplyToContent, 60)</span>
+                <span class="reply-to-preview">@StringHelper.TruncateText(ReplyToContent, 60)</span>
             </div>
             <button class="cancel-reply-btn" @onclick="CancelReply">
                 <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" />

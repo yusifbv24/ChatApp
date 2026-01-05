@@ -114,7 +114,7 @@
                                         <span class="pinned-preview">
                                             <span class="pinned-sender-name">@senderName</span>
                                             <span class="pinned-separator">:</span>
-                                            <span class="pinned-message-text">@TruncateText(messageContent, 50)</span>
+                                            <span class="pinned-message-text">@StringHelper.TruncateText(messageContent, 50)</span>
                                         </span>
                                     }
                                 }
@@ -159,7 +159,7 @@
                                         </div>
                                         <div class="pinned-item-content">
                                             <span class="pinned-item-sender">@message.SenderDisplayName</span>
-                                            <span class="pinned-item-text">@TruncateText(message.Content, 60)</span>
+                                            <span class="pinned-item-text">@StringHelper.TruncateText(message.Content, 60)</span>
                                         </div>
                                         <button class="unpin-btn" @onclick="() => HandleUnpinMessage(message.Id)" @onclick:stopPropagation="true" title="Unpin">
                                             <MudIcon Icon="@Icons.Material.Outlined.PushPin" Size="Size.Small" />
@@ -184,7 +184,7 @@
                                         </div>
                                         <div class="pinned-item-content">
                                             <span class="pinned-item-sender">@message.SenderDisplayName</span>
-                                            <span class="pinned-item-text">@TruncateText(message.Content, 60)</span>
+                                            <span class="pinned-item-text">@StringHelper.TruncateText(message.Content, 60)</span>
                                         </div>
                                         <button class="unpin-btn" @onclick="() => HandleUnpinChannelMessage(message.Id)" @onclick:stopPropagation="true" title="Unpin">
                                             <MudIcon Icon="@Icons.Material.Outlined.PushPin" Size="Size.Small" />
