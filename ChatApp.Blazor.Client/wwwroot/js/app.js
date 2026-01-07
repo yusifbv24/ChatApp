@@ -129,6 +129,7 @@ window.chatAppUtils = {
     // Save scroll position before loading more messages
     saveScrollPosition: (element) => {
         if (!element) return null;
+
         return {
             scrollHeight: element.scrollHeight,
             scrollTop: element.scrollTop
@@ -139,9 +140,15 @@ window.chatAppUtils = {
     restoreScrollPosition: (element, previousState) => {
         if (!element || !previousState) return;
 
-        const heightDifference = element.scrollHeight - previousState.scrollHeight;
-        const newScrollTop = previousState.scrollTop + heightDifference;
-        element.scrollTop = newScrollTop;
+        // requestAnimationFrame chain: DOM tam render olsun (2 frame)
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                if (previousState.scrollHeight && previousState.scrollTop !== undefined) {
+                    const heightDifference = element.scrollHeight - previousState.scrollHeight;
+                    element.scrollTop = previousState.scrollTop + heightDifference;
+                }
+            });
+        });
     },
 
     // Scroll to a message wrapper and highlight it
@@ -206,6 +213,18 @@ window.chatAppUtils = {
         return element.scrollTop;
     },
 
+    // Get scroll height
+    getScrollHeight: (element) => {
+        if (!element) return 0;
+        return element.scrollHeight;
+    },
+
+    // Get client height (viewport height)
+    getClientHeight: (element) => {
+        if (!element) return 0;
+        return element.clientHeight;
+    },
+
     // Check if element is near bottom (within threshold pixels)
     isNearBottom: (element, threshold = 100) => {
         if (!element) return true;
@@ -213,5 +232,16 @@ window.chatAppUtils = {
         const scrollHeight = element.scrollHeight;
         const clientHeight = element.clientHeight;
         return (scrollHeight - scrollTop - clientHeight) <= threshold;
+    },
+
+    // Get scroll percentage (0% = top, 100% = bottom)
+    getScrollPercentage: (element) => {
+        if (!element) return 100;
+        const scrollTop = element.scrollTop;
+        const scrollHeight = element.scrollHeight;
+        const clientHeight = element.clientHeight;
+        const scrollableHeight = scrollHeight - clientHeight;
+        if (scrollableHeight === 0) return 100;
+        return (scrollTop / scrollableHeight) * 100;
     }
 };

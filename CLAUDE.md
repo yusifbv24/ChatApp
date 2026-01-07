@@ -403,3 +403,40 @@ Identity | Channels | DirectMessages | Files | Notifications | Search | Settings
   - ✅ Other messages (solda): Menu sağa açılır (conversation list-dən uzaqlaşır)
   - ✅ Menu heç vaxt conversation list altında qalmır
   - ✅ Kod təmizləndi və optimize edildi
+
+### Session 14 (2026-01-06): Bi-Directional Message Loading (Infinite Scroll Up)
+**WhatsApp/Telegram Style Infinite Scroll:**
+- **Tələb:** İstifadəçi yuxarı scroll etdikdə avtomatik olaraq köhnə mesajlar yüklənsin, scroll position dəqiq restore edilsin
+- **Problem:** Scroll position restore və continuous loading bir-birini conflict edirdi
+- **Solution:**
+  - **Backend (Already Implemented):**
+    - `GetMessagesBeforeAsync` - köhnə mesajlar üçün pagination
+    - `GetMessagesAfterAsync` - yeni mesajlar üçün pagination
+    - `GetMessagesAround` - spesifik mesajın ətrafındakı mesajlar
+  - **Frontend - C# (ChatArea.razor.cs):**
+    - `TriggerLoadMoreIfNeeded(int scrollTop)` - threshold: 1 viewport (~683px), scrollTop < threshold → load
+    - `RestoreScrollPositionAfterLoadMore()` - 500ms cooldown (infinite loop qarşısını alır)
+    - `_isRestoringScrollPosition` flag - restore zamanı loading disable
+  - **Frontend - C# (Messages.Selection.cs):**
+    - `LoadMoreMessages()` - Direct messages üçün pagination
+    - `LoadMoreChannelMessages()` - Channel messages üçün pagination
+    - Duplicate filter: `existingIds.Contains(m.Id)` check
+    - `InsertRange(0, newMessages)` - köhnə mesajları ən başa əlavə et
+  - **Frontend - JavaScript (app.js):**
+    - `saveScrollPosition()` - scrollHeight və scrollTop saxlayır
+    - `restoreScrollPosition()` - height-difference metodu: `newScrollTop = scrollTop + (newHeight - oldHeight)`
+    - requestAnimationFrame × 2 - DOM render gözləyir
+- **Result:**
+  - ✅ Continuous loading - ən başa qədər mesajları yükləyir
+  - ✅ Precise restore - height-difference metodu (WhatsApp/Telegram eyni metodu işlədir)
+  - ✅ No duplicate - backend filter + frontend check
+  - ✅ 500ms cooldown - infinite loop yoxdur
+  - ✅ Clean code - bütün debug log-lar silindi
+  - ⚠️ Kiçik scroll jump - mesaj height-lərinin dinamik olması (images load, etc.), acceptable level
+- **Files Modified:**
+  - `ChatArea.razor.cs:997-1017` - TriggerLoadMoreIfNeeded (threshold: 1 viewport)
+  - `ChatArea.razor.cs:857-871` - RestoreScrollPositionAfterLoadMore (500ms cooldown)
+  - `Messages.Selection.cs:505-524` - LoadMoreMessages (DM pagination + duplicate filter)
+  - `Messages.Selection.cs:590-605` - LoadMoreChannelMessages (Channel pagination + duplicate filter)
+  - `app.js:129-152` - saveScrollPosition & restoreScrollPosition (height-difference method)
+  - Deleted: `nul` file, bütün Console.WriteLine debug log-lar

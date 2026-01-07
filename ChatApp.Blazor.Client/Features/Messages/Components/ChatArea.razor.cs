@@ -428,6 +428,11 @@ public partial class ChatArea : IAsyncDisposable
     /// </summary>
     [Parameter] public bool IsViewingAroundMessage { get; set; }
 
+    /// <summary>
+    /// Scroll to bottom callback - parent clear+reload edir.
+    /// </summary>
+    [Parameter] public EventCallback OnScrollToBottom { get; set; }
+
     #endregion
 
     #region Private Fields - Element References
@@ -506,16 +511,6 @@ public partial class ChatArea : IAsyncDisposable
     /// Load more əvvəl scroll position-un saxlanması.
     /// </summary>
     private object? _savedScrollPosition = null;
-
-    /// <summary>
-    /// Son scroll yoxlama vaxtı - throttling üçün.
-    /// </summary>
-    private DateTime _lastScrollCheck = DateTime.MinValue;
-
-    /// <summary>
-    /// Son scroll position - dəyişiklik yoxlaması üçün.
-    /// </summary>
-    private int _scrollTopOnLastCheck = 0;
 
     /// <summary>
     /// Unread separator-a scroll edilib-edilmədiyini izləyir.
@@ -857,13 +852,22 @@ public partial class ChatArea : IAsyncDisposable
 
     /// <summary>
     /// Load more sonrası scroll position-u restore edir.
+    /// Fast scroll üçün daha uzun delay (DOM render vaxtı).
     /// </summary>
     private async Task RestoreScrollPositionAfterLoadMore()
     {
-        await Task.Delay(100); // DOM update gözlə
+        // DOM tam render olsun - requestAnimationFrame JS-də 2 frame gözləyir
+        await Task.Delay(200); // Blazor render + DOM update
         await JS.InvokeVoidAsync("chatAppUtils.restoreScrollPosition", messagesContainerRef, _savedScrollPosition);
-        _isRestoringScrollPosition = false;
+
         _savedScrollPosition = null;
+
+        // CRITICAL: Restore-dan sonra loading-i 500ms disable et
+        // İstifadəçi manual scroll edənə qədər auto-loading olmasın
+        await Task.Delay(500);
+
+        // İndi loading-i yenidən aktiv et
+        _isRestoringScrollPosition = false;
     }
 
     #endregion
@@ -888,6 +892,7 @@ public partial class ChatArea : IAsyncDisposable
     /// <summary>
     /// Aşağı scroll edir və input-a focus edir.
     /// Float button-a click olunduqda çağırılır.
+    /// Parent-də clear+reload edir (conversation switch kimi).
     /// </summary>
     private async Task ScrollToBottomAndFocusAsync()
     {
@@ -896,7 +901,8 @@ public partial class ChatArea : IAsyncDisposable
         newMessagesCount = 0;
         StateHasChanged();
 
-        await ScrollToBottomAsync();
+        // Parent-də clear+reload et (ən son 50 mesaj yüklənir)
+        await OnScrollToBottom.InvokeAsync();
 
         // Focus input
         if (messageInputRef != null)
@@ -942,7 +948,7 @@ public partial class ChatArea : IAsyncDisposable
     /// </summary>
     private async Task HandleScroll()
     {
-        // Loading zamanı scroll handle etmə
+        // Restore və loading zamanı scroll handle etmə
         if (_isRestoringScrollPosition || IsLoadingMoreMessages) return;
 
         try
@@ -991,26 +997,28 @@ public partial class ChatArea : IAsyncDisposable
 
     /// <summary>
     /// Lazım olduqda load more trigger edir (pagination).
-    /// Throttling tətbiq edilir.
+    /// Strategiya: Yuxarıda 1 viewport qalandan yüklə.
     /// </summary>
     private async Task TriggerLoadMoreIfNeeded(int scrollTop)
     {
-        if (!HasMoreMessages) return;
+        if (!HasMoreMessages || IsLoadingMoreMessages) return;
 
-        // Throttle: 300ms və 50px minimum dəyişiklik
-        var now = DateTime.UtcNow;
-        var timeSinceLastCheck = (now - _lastScrollCheck).TotalMilliseconds;
-        var scrollDifference = Math.Abs(scrollTop - _scrollTopOnLastCheck);
-
-        if (timeSinceLastCheck < 300 || scrollDifference < 50) return;
-
-        _lastScrollCheck = now;
-        _scrollTopOnLastCheck = scrollTop;
-
-        // Yuxarıya 500px yaxınlaşdıqda load more (preemptive loading - smooth UX)
-        if (scrollTop < 500)
+        try
         {
-            await LoadMoreMessages();
+            // Fixed threshold - 1 viewport from top
+            var element = messagesContainerRef;
+            var clientHeight = await JS.InvokeAsync<double>("chatAppUtils.getClientHeight", element);
+            var threshold = clientHeight * 1; // 1 viewport - simple and reliable
+
+            // Load when user scrolls close to top
+            if (scrollTop < threshold)
+            {
+                await LoadMoreMessages();
+            }
+        }
+        catch
+        {
+            // Error - ignore
         }
     }
 
@@ -1020,32 +1028,45 @@ public partial class ChatArea : IAsyncDisposable
     /// </summary>
     private async Task LoadMoreMessages()
     {
+        // Position save et
         _savedScrollPosition = await JS.InvokeAsync<object>("chatAppUtils.saveScrollPosition", messagesContainerRef);
-        _isRestoringScrollPosition = true;
+
+        // Backend request (IsLoadingMoreMessages flag parent-də idarə olunur)
         await OnLoadMore.InvokeAsync();
+
+        // Mesajlar yükləndi, indi restore et
+        _isRestoringScrollPosition = true;
     }
 
     /// <summary>
     /// Around mode-da aşağıya scroll edildikdə yeni mesajlar yükləyir (APPEND).
-    /// Throttling tətbiq edilir.
+    /// Strategiya: Aşağıda 1 viewport qalandan yüklə.
     /// </summary>
     private async Task TriggerLoadNewerIfNeeded()
     {
         if (!HasMoreNewerMessages) return;
 
-        // Is near bottom check
-        var isNearBottom = await JS.InvokeAsync<bool>("chatAppUtils.isNearBottom", messagesContainerRef, 500);
-        if (!isNearBottom) return;
+        try
+        {
+            // Viewport height və scroll metrics
+            var element = messagesContainerRef;
+            var clientHeight = await JS.InvokeAsync<double>("chatAppUtils.getClientHeight", element);
+            var scrollHeight = await JS.InvokeAsync<double>("chatAppUtils.getScrollHeight", element);
+            var scrollTop = await JS.InvokeAsync<double>("chatAppUtils.getScrollTop", element);
 
-        // Throttle: eyni throttling pattern-i load more ilə
-        var now = DateTime.UtcNow;
-        var timeSinceLastCheck = (now - _lastScrollCheck).TotalMilliseconds;
-        if (timeSinceLastCheck < 300) return;
+            var threshold = clientHeight * 1; // 1 viewport məsafə
+            var distanceFromBottom = scrollHeight - scrollTop - clientHeight;
 
-        _lastScrollCheck = now;
-
-        // Load newer messages (APPEND - aşağıya doğru)
-        await OnLoadNewer.InvokeAsync();
+            // Əgər scroll bottom-dan 1 viewport məsafədə qalıbsa → yüklə
+            if (distanceFromBottom < threshold)
+            {
+                await OnLoadNewer.InvokeAsync();
+            }
+        }
+        catch
+        {
+            // Error - ignore
+        }
     }
 
     #endregion

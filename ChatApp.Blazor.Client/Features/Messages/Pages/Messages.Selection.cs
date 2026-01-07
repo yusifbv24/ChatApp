@@ -493,7 +493,7 @@ public partial class Messages
                 ? await ConversationService.GetMessagesBeforeAsync(
                     selectedConversationId!.Value,
                     oldestMessageDate.Value,
-                    100) // Around mode: 100 mesaj
+                    50) // Around mode: 50 mesaj (Bitrix pattern)
                 : await ConversationService.GetMessagesAsync(
                     selectedConversationId!.Value,
                     pageSize,
@@ -506,7 +506,7 @@ public partial class Messages
                 {
                     // DUBLİKAT YOXLAMASI - artıq olan mesajları əlavə etmə
                     var existingIds = directMessages.Select(m => m.Id).ToHashSet();
-                    var newMessages = messages.Where(m => !existingIds.Contains(m.Id)).OrderBy(m => m.CreatedAtUtc);
+                    var newMessages = messages.Where(m => !existingIds.Contains(m.Id)).OrderBy(m => m.CreatedAtUtc).ToList();
 
                     // YENİ MESAJLARI ƏVVƏLƏ ƏLAVƏ ET (köhnə mesajlar üstdədir)
                     directMessages.InsertRange(0, newMessages);
@@ -515,8 +515,8 @@ public partial class Messages
                     // SpecifyKind: PostgreSQL UTC timestamp-ı C#-da düzgün işləməsi üçün
                     oldestMessageDate = DateTime.SpecifyKind(messages.Min(m => m.CreatedAtUtc), DateTimeKind.Utc);
 
-                    // Daha çox mesaj var? (pageSize qədər gəlibsə - var)
-                    hasMoreMessages = messages.Count >= pageSize || messages.Count >= 100;
+                    // Daha çox mesaj var? (Backend 50 gəlibsə - var, az gəlibsə - yoxdur)
+                    hasMoreMessages = messages.Count >= 50;
                 }
                 else
                 {
@@ -576,7 +576,7 @@ public partial class Messages
                 ? await ChannelService.GetMessagesBeforeAsync(
                     selectedChannelId!.Value,
                     oldestMessageDate.Value,
-                    100) // Around mode: 100 mesaj
+                    50) // Around mode: 50 mesaj (Bitrix pattern)
                 : await ChannelService.GetMessagesAsync(
                     selectedChannelId!.Value,
                     pageSize,
@@ -589,15 +589,15 @@ public partial class Messages
                 {
                     // DUBLİKAT YOXLAMASI - artıq olan mesajları əlavə etmə
                     var existingIds = channelMessages.Select(m => m.Id).ToHashSet();
-                    var newMessages = messages.Where(m => !existingIds.Contains(m.Id)).OrderBy(m => m.CreatedAtUtc);
+                    var newMessages = messages.Where(m => !existingIds.Contains(m.Id)).OrderBy(m => m.CreatedAtUtc).ToList();
 
                     channelMessages.InsertRange(0, newMessages);
 
                     // ən köhnə mesajın tarixini saxla (növbəti pagination üçün)
                     oldestMessageDate = DateTime.SpecifyKind(messages.Min(m => m.CreatedAtUtc), DateTimeKind.Utc);
 
-                    // Daha çox mesaj var? (pageSize qədər gəlibsə - var)
-                    hasMoreMessages = messages.Count >= pageSize || messages.Count >= 100;
+                    // Daha çox mesaj var? (Backend 50 gəlibsə - var, az gəlibsə - yoxdur)
+                    hasMoreMessages = messages.Count >= 50;
                 }
                 else
                 {
@@ -627,7 +627,7 @@ public partial class Messages
 
     /// <summary>
     /// "Load More" düyməsi basıldıqda çağrılır (yuxarı scroll - köhnə mesajlar).
-    /// pageSize-i 100-ə artırır (ilk yükləmə 50, sonrakılar 100).
+    /// Bitrix pattern: Həmişə 50 mesaj yüklənir.
     /// </summary>
     private async Task LoadMoreMessages()
     {
@@ -638,8 +638,8 @@ public partial class Messages
 
         try
         {
-            // İlk load more-dan sonra pageSize-i 100-ə çevir
-            pageSize = 100;
+            // pageSize həmişə 50-dir (Bitrix pattern)
+            pageSize = 50;
 
             if (isDirectMessage && selectedConversationId.HasValue)
             {
@@ -697,7 +697,7 @@ public partial class Messages
             var result = await ConversationService.GetMessagesAfterAsync(
                 selectedConversationId!.Value,
                 newestMessageDate.Value,
-                100);
+                50); // Bitrix pattern: 50 mesaj
 
             if (result.IsSuccess && result.Value != null)
             {
@@ -715,7 +715,7 @@ public partial class Messages
                     newestMessageDate = DateTime.SpecifyKind(messages.Max(m => m.CreatedAtUtc), DateTimeKind.Utc);
 
                     // Daha yeni mesajlar var?
-                    hasMoreNewerMessages = messages.Count >= 100;
+                    hasMoreNewerMessages = messages.Count >= 50;
                 }
                 else
                 {
@@ -741,7 +741,7 @@ public partial class Messages
             var result = await ChannelService.GetMessagesAfterAsync(
                 selectedChannelId!.Value,
                 newestMessageDate.Value,
-                100);
+                50); // Bitrix pattern: 50 mesaj
 
             if (result.IsSuccess && result.Value != null)
             {
@@ -759,7 +759,7 @@ public partial class Messages
                     newestMessageDate = DateTime.SpecifyKind(messages.Max(m => m.CreatedAtUtc), DateTimeKind.Utc);
 
                     // Daha yeni mesajlar var?
-                    hasMoreNewerMessages = messages.Count >= 100;
+                    hasMoreNewerMessages = messages.Count >= 50;
                 }
                 else
                 {
@@ -883,11 +883,32 @@ public partial class Messages
 
     /// <summary>
     /// Ən aşağıya scroll edir (Scroll to Bottom).
-    /// Around mode-da olsa belə, sadəcə scroll edir (clear etmir).
-    /// İstifadəçi aşağı scroll etdikcə newer messages avtomatik yüklənir.
+    /// HƏMIŞƏ clear + reload (conversation switch kimi davranır).
+    /// Harada olursan ol, ən son 50 mesaj yüklənir.
     /// </summary>
     private async Task ScrollToBottomAsync()
     {
+        // Reset pagination state
+        oldestMessageDate = null;
+        newestMessageDate = null;
+        hasMoreNewerMessages = false;
+        isViewingAroundMessage = false;
+        pageSize = 50;
+
+        if (isDirectMessage && selectedConversationId.HasValue)
+        {
+            directMessages.Clear();
+            await LoadDirectMessages();
+        }
+        else if (!isDirectMessage && selectedChannelId.HasValue)
+        {
+            channelMessages.Clear();
+            await LoadChannelMessages();
+        }
+
+        // Scroll to bottom
+        StateHasChanged();
+        await Task.Delay(50);
         await JS.InvokeVoidAsync("chatAppUtils.scrollToBottomById", "chat-messages");
     }
     #endregion

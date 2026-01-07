@@ -4,7 +4,8 @@
       "Bash(dotnet build:*)",
       "Bash(dotnet restore:*)",
       "Bash(dotnet --list-sdks:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(if exist nul del nul)"
     ],
     "deny": [],
     "ask": []

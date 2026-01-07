@@ -253,7 +253,7 @@ public partial class Messages : IAsyncDisposable
     private bool isViewingAroundMessage = false;
 
     /// <summary>
-    /// Səhifə ölçüsü (ilk yükləmə 50, sonrakılar 100).
+    /// Səhifə ölçüsü (həmişə 50 mesaj - Bitrix pattern).
     /// </summary>
     private int pageSize = 50;
 
