@@ -73,6 +73,9 @@ public partial class Messages
                         recipientUserId,
                         content,
                         null,                                           // FileId
+                        null,                                           // FileName
+                        null,                                           // FileContentType
+                        null,                                           // FileSizeInBytes
                         false,                                          // IsEdited
                         false,                                          // IsDeleted
                         hasReadReceipt,                                 // IsRead
@@ -148,7 +151,10 @@ public partial class Messages
                             UserState.CurrentUser?.DisplayName ?? "",
                             UserState.CurrentUser?.AvatarUrl,
                             content,
-                            null,
+                            null,                                       // FileId
+                            null,                                       // FileName
+                            null,                                       // FileContentType
+                            null,                                       // FileSizeInBytes
                             false,
                             false,
                             false,

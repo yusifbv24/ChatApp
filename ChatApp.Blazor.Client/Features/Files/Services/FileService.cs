@@ -129,7 +129,7 @@ public class FileService : IFileService
         }
     }
 
-    public async Task<Result<FileUploadResult>> UploadFileAsync(IBrowserFile file, CancellationToken cancellationToken = default)
+    public async Task<Result<FileUploadResult>> UploadFileAsync(IBrowserFile file, Guid? conversationId = null, Guid? channelId = null, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -147,6 +147,16 @@ public class FileService : IFileService
 
             streamContent.Headers.ContentType = new MediaTypeHeaderValue(file.ContentType);
             content.Add(streamContent, "File", file.Name);
+
+            // Add conversation/channel context
+            if (conversationId.HasValue)
+            {
+                content.Add(new StringContent(conversationId.Value.ToString()), "ConversationId");
+            }
+            if (channelId.HasValue)
+            {
+                content.Add(new StringContent(channelId.Value.ToString()), "ChannelId");
+            }
 
             // Send request
             var response = await _httpClient.PostAsync("/api/files/upload", content, cancellationToken);

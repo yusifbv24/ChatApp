@@ -80,9 +80,11 @@ namespace ChatApp.Modules.Files.Application.Commands.UploadFile
             try
             {
                 _logger?.LogInformation(
-                    "Uploading file {FileName} by user {UserId}",
+                    "Uploading file {FileName} by user {UserId}, ConversationId: {ConversationId}, ChannelId: {ChannelId}",
                     request.File.FileName,
-                    request.UploadedBy);
+                    request.UploadedBy,
+                    request.ConversationId,
+                    request.ChannelId);
 
                 var originalFileName = request.File.FileName;
                 var contentType=request.File.ContentType;
@@ -101,6 +103,11 @@ namespace ChatApp.Modules.Files.Application.Commands.UploadFile
                     request.IsProfilePicture,
                     fileType,
                     cancellationToken);
+
+                _logger?.LogInformation(
+                    "Determined storage directory: {Directory} for file {FileName}",
+                    directory,
+                    originalFileName);
 
                 // Save file temporarily
                 tempStoragePath = await _fileStorageService.SaveFileAsync(
@@ -263,7 +270,7 @@ namespace ChatApp.Modules.Files.Application.Commands.UploadFile
         }
 
 
-        private async Task<string> DetermineStorageDirectoryAsync(
+        private Task<string> DetermineStorageDirectoryAsync(
             Guid? channelId,
             Guid? conversationId,
             Guid uploadedBy,
@@ -274,28 +281,10 @@ namespace ChatApp.Modules.Files.Application.Commands.UploadFile
             // Profile pictures go to dedicated folder
             if (IsProfilePicture)
             {
-                return $"avatar/user_{uploadedBy}";
+                return Task.FromResult($"avatars/{uploadedBy}");
             }
 
-            // Channel uploads
-            if (channelId.HasValue)
-            {
-                // Get channel name for folder
-                var channelName = await GetChannelNameAsync(channelId.Value, cancellationToken);
-                var safeName = SanitizeFolderName(channelName);
-                return $"channels/channel_{safeName}_{channelId}";
-            }
-
-            // Conversation uploads
-            if (conversationId.HasValue)
-            {
-                // Use uploader's name for folder
-                var userName = await GetUserNameAsync(uploadedBy, cancellationToken);
-                var safeName = SanitizeFolderName(userName);
-                return $"conversations/user_{safeName}_{uploadedBy}";
-            }
-
-            // Generic uploads (no context)
+            // File type subfolder
             var fileTypeFolder = fileType switch
             {
                 FileType.Image => "images",
@@ -306,33 +295,22 @@ namespace ChatApp.Modules.Files.Application.Commands.UploadFile
                 _ => "other"
             };
 
-            return $"generic/{fileTypeFolder}/user_{uploadedBy}";
+            // Channel uploads: generic/channel_{channelId}/{fileType}/
+            if (channelId.HasValue)
+            {
+                return Task.FromResult($"generic/channel_{channelId}/{fileTypeFolder}");
+            }
+
+            // Conversation uploads: generic/conversation_{conversationId}/{fileType}/
+            if (conversationId.HasValue)
+            {
+                return Task.FromResult($"generic/conversation_{conversationId}/{fileTypeFolder}");
+            }
+
+            // Generic uploads (no context): generic/{fileType}/
+            return Task.FromResult($"generic/{fileTypeFolder}");
         }
 
 
-        private string SanitizeFolderName(string name)
-        {
-            // Remove invalid filesystem characters
-            var invalidChars = Path.GetInvalidFileNameChars();
-            var sanitized = string.Join("_", name.Split(invalidChars));
-            return sanitized.Length > 50 ? sanitized.Substring(0, 50) : sanitized;
-        }
-
-
-        private async Task<string> GetChannelNameAsync(Guid channelId,CancellationToken cancellationToken = default)
-        {
-            // Query from channels table
-            var query = "SELECT name FROM channels WHERE id=@channelId";
-            // Implementation depends on your setup - you might need to inject channels context
-            return "channel";
-        }
-
-        private async Task<string> GetUserNameAsync(Guid userId, CancellationToken cancellationToken)
-        {
-            // Query from users table
-            var query = "SELECT username FROM users WHERE id = @userId";
-            // Implementation depends on your setup
-            return "user"; // Placeholder - implement actual query
-        }
     }
 }

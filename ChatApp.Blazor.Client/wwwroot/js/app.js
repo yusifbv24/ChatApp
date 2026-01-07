@@ -243,5 +243,12 @@ window.chatAppUtils = {
         const scrollableHeight = scrollHeight - clientHeight;
         if (scrollableHeight === 0) return 100;
         return (scrollTop / scrollableHeight) * 100;
+    },
+
+    // Trigger file input click (for file selection)
+    clickFileInput: (element) => {
+        if (element) {
+            element.click();
+        }
     }
 };

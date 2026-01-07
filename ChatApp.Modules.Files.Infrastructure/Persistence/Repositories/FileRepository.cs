@@ -75,7 +75,7 @@ namespace ChatApp.Modules.Files.Infrastructure.Persistence.Repositories
         {
             var results=await (from file in _context.FileMetadata
                                join user in _context.Set<UserReadModel>() on file.UploadedBy equals user.Id
-                               where file.UploadedBy==user.Id && !file.IsDeleted
+                               where file.UploadedBy == userId && !file.IsDeleted
                                orderby file.CreatedAtUtc descending
                                select new FileDto(
                                    file.Id,
@@ -101,33 +101,41 @@ namespace ChatApp.Modules.Files.Infrastructure.Persistence.Repositories
 
 
         public async Task<bool> IsFileUsedInUserChannelsAsync(
-            Guid fileId, 
-            Guid userId, 
+            Guid fileId,
+            Guid userId,
             CancellationToken cancellationToken = default)
         {
             // Check if file is referenced in any channel message where user is a member
             var query = @"
                 SELECT COUNT(*)
                 FROM channel_messages cm
-                INNER JOIN channel_members cmem ON cm.channel_id==cmem.channel_id
+                INNER JOIN channel_members cmem ON cm.channel_id=cmem.channel_id
                 WHERE cm.file_id=@fileId
                   AND cmem.user_id=@userId
                   AND cmem.left_at_utc IS NULL
                   AND cm.is_deleted=false";
 
-            var count = await _context.Database
-                .SqlQueryRaw<int>(query,
-                    new Npgsql.NpgsqlParameter("@fileId", fileId.ToString()),
-                    new Npgsql.NpgsqlParameter("@userId", userId))
-                .FirstOrDefaultAsync(cancellationToken);
+            var connection = _context.Database.GetDbConnection();
+            if (connection.State != System.Data.ConnectionState.Open)
+            {
+                await connection.OpenAsync(cancellationToken);
+            }
+
+            await using var command = connection.CreateCommand();
+            command.CommandText = query;
+            command.Parameters.Add(new Npgsql.NpgsqlParameter("@fileId", fileId.ToString()));
+            command.Parameters.Add(new Npgsql.NpgsqlParameter("@userId", userId));
+
+            var result = await command.ExecuteScalarAsync(cancellationToken);
+            var count = Convert.ToInt32(result);
 
             return count > 0;
         }
 
 
         public async Task<bool> IsFileUsedInUserConversationsAsync(
-            Guid fileId, 
-            Guid userId, 
+            Guid fileId,
+            Guid userId,
             CancellationToken cancellationToken = default)
         {
             // Check if file is referenced in any direct message where user is participant
@@ -139,11 +147,19 @@ namespace ChatApp.Modules.Files.Infrastructure.Persistence.Repositories
                   AND (dc.user1_id = @userId OR dc.user2_id = @userId)
                   AND dm.is_deleted = false";
 
-            var count = await _context.Database
-                .SqlQueryRaw<int>(query,
-                    new Npgsql.NpgsqlParameter("@fileId", fileId.ToString()),
-                    new Npgsql.NpgsqlParameter("@userId", userId))
-                .FirstOrDefaultAsync(cancellationToken);
+            var connection = _context.Database.GetDbConnection();
+            if (connection.State != System.Data.ConnectionState.Open)
+            {
+                await connection.OpenAsync(cancellationToken);
+            }
+
+            await using var command = connection.CreateCommand();
+            command.CommandText = query;
+            command.Parameters.Add(new Npgsql.NpgsqlParameter("@fileId", fileId.ToString()));
+            command.Parameters.Add(new Npgsql.NpgsqlParameter("@userId", userId));
+
+            var result = await command.ExecuteScalarAsync(cancellationToken);
+            var count = Convert.ToInt32(result);
 
             return count > 0;
         }

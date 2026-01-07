@@ -85,6 +85,9 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectMessages
                     ReceiverId: receiverId,
                     Content: message.Content, // Content preserved in backend but shown as "deleted" in frontend
                     FileId: message.FileId,
+                    FileName: null, // File metadata not needed for deleted messages
+                    FileContentType: null, // File metadata not needed for deleted messages
+                    FileSizeInBytes: null, // File metadata not needed for deleted messages
                     IsEdited: message.IsEdited,
                     IsDeleted: true, // Mark as deleted
                     IsRead: message.IsRead,

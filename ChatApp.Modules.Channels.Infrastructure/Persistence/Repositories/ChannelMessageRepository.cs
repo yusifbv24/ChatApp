@@ -36,6 +36,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                         from repliedMessage in replyJoin.DefaultIfEmpty()
                         join repliedSender in _context.Set<UserReadModel>() on repliedMessage.SenderId equals repliedSender.Id into repliedSenderJoin
                         from repliedSender in repliedSenderJoin.DefaultIfEmpty()
+                        join file in _context.Set<ChatApp.Modules.Files.Domain.Entities.FileMetadata>() on message.FileId equals file.Id.ToString() into fileJoin
+                        from file in fileJoin.DefaultIfEmpty()
                         where message.Id == id
                         select new
                         {
@@ -47,6 +49,9 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                             user.AvatarUrl,
                             message.Content,
                             message.FileId,
+                            FileName = file != null ? file.OriginalFileName : null,
+                            FileContentType = file != null ? file.ContentType : null,
+                            FileSizeInBytes = file != null ? (long?)file.FileSizeInBytes : null,
                             message.IsEdited,
                             message.IsDeleted,
                             message.IsPinned,
@@ -73,6 +78,9 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 result.AvatarUrl,
                 result.IsDeleted ? "This message was deleted" : result.Content, // SECURITY: Sanitize deleted content
                 result.FileId,
+                result.FileName,
+                result.FileContentType,
+                result.FileSizeInBytes,
                 result.IsEdited,
                 result.IsDeleted,
                 result.IsPinned,
@@ -100,6 +108,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                         from repliedMessage in replyJoin.DefaultIfEmpty()
                         join repliedSender in _context.Set<UserReadModel>() on repliedMessage.SenderId equals repliedSender.Id into repliedSenderJoin
                         from repliedSender in repliedSenderJoin.DefaultIfEmpty()
+                        join file in _context.Set<ChatApp.Modules.Files.Domain.Entities.FileMetadata>() on message.FileId equals file.Id.ToString() into fileJoin
+                        from file in fileJoin.DefaultIfEmpty()
                         where message.ChannelId == channelId // Removed IsDeleted filter - show deleted messages as "This message was deleted"
                         select new
                         {
@@ -111,6 +121,9 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                             user.AvatarUrl,
                             message.Content,
                             message.FileId,
+                            FileName = file != null ? file.OriginalFileName : null,
+                            FileContentType = file != null ? file.ContentType : null,
+                            FileSizeInBytes = file != null ? (long?)file.FileSizeInBytes : null,
                             message.IsEdited,
                             message.IsDeleted,
                             message.IsPinned,
@@ -170,6 +183,9 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 r.AvatarUrl,
                 r.IsDeleted ? "This message was deleted" : r.Content, // SECURITY: Sanitize deleted content
                 r.FileId,
+                r.FileName,
+                r.FileContentType,
+                r.FileSizeInBytes,
                 r.IsEdited,
                 r.IsDeleted,
                 r.IsPinned,
@@ -213,6 +229,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                            from repliedMessage in replyJoin.DefaultIfEmpty()
                            join repliedSender in _context.Set<UserReadModel>() on repliedMessage.SenderId equals repliedSender.Id into repliedSenderJoin
                            from repliedSender in repliedSenderJoin.DefaultIfEmpty()
+                           join file in _context.Set<ChatApp.Modules.Files.Domain.Entities.FileMetadata>() on message.FileId equals file.Id.ToString() into fileJoin
+                           from file in fileJoin.DefaultIfEmpty()
                            where message.ChannelId == channelId
                            select new
                            {
@@ -224,6 +242,9 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                                user.AvatarUrl,
                                message.Content,
                                message.FileId,
+                               FileName = file != null ? file.OriginalFileName : null,
+                               FileContentType = file != null ? file.ContentType : null,
+                               FileSizeInBytes = file != null ? (long?)file.FileSizeInBytes : null,
                                message.IsEdited,
                                message.IsDeleted,
                                message.IsPinned,
@@ -288,6 +309,9 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 r.AvatarUrl,
                 r.IsDeleted ? "This message was deleted" : r.Content,
                 r.FileId,
+                r.FileName,
+                r.FileContentType,
+                r.FileSizeInBytes,
                 r.IsEdited,
                 r.IsDeleted,
                 r.IsPinned,
@@ -319,6 +343,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                         from repliedMessage in replyJoin.DefaultIfEmpty()
                         join repliedSender in _context.Set<UserReadModel>() on repliedMessage.SenderId equals repliedSender.Id into repliedSenderJoin
                         from repliedSender in repliedSenderJoin.DefaultIfEmpty()
+                        join file in _context.Set<ChatApp.Modules.Files.Domain.Entities.FileMetadata>() on message.FileId equals file.Id.ToString() into fileJoin
+                        from file in fileJoin.DefaultIfEmpty()
                         where message.ChannelId == channelId
                            && message.CreatedAtUtc < beforeUtc
                         select new
@@ -331,6 +357,9 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                             user.AvatarUrl,
                             message.Content,
                             message.FileId,
+                            FileName = file != null ? file.OriginalFileName : null,
+                            FileContentType = file != null ? file.ContentType : null,
+                            FileSizeInBytes = file != null ? (long?)file.FileSizeInBytes : null,
                             message.IsEdited,
                             message.IsDeleted,
                             message.IsPinned,
@@ -382,6 +411,9 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 r.AvatarUrl,
                 r.IsDeleted ? "This message was deleted" : r.Content,
                 r.FileId,
+                r.FileName,
+                r.FileContentType,
+                r.FileSizeInBytes,
                 r.IsEdited,
                 r.IsDeleted,
                 r.IsPinned,
@@ -413,6 +445,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                         from repliedMessage in replyJoin.DefaultIfEmpty()
                         join repliedSender in _context.Set<UserReadModel>() on repliedMessage.SenderId equals repliedSender.Id into repliedSenderJoin
                         from repliedSender in repliedSenderJoin.DefaultIfEmpty()
+                        join file in _context.Set<ChatApp.Modules.Files.Domain.Entities.FileMetadata>() on message.FileId equals file.Id.ToString() into fileJoin
+                        from file in fileJoin.DefaultIfEmpty()
                         where message.ChannelId == channelId
                            && message.CreatedAtUtc > afterUtc
                         select new
@@ -425,6 +459,9 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                             user.AvatarUrl,
                             message.Content,
                             message.FileId,
+                            FileName = file != null ? file.OriginalFileName : null,
+                            FileContentType = file != null ? file.ContentType : null,
+                            FileSizeInBytes = file != null ? (long?)file.FileSizeInBytes : null,
                             message.IsEdited,
                             message.IsDeleted,
                             message.IsPinned,
@@ -476,6 +513,9 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 r.AvatarUrl,
                 r.IsDeleted ? "This message was deleted" : r.Content,
                 r.FileId,
+                r.FileName,
+                r.FileContentType,
+                r.FileSizeInBytes,
                 r.IsEdited,
                 r.IsDeleted,
                 r.IsPinned,
@@ -503,6 +543,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                           from repliedMessage in replyJoin.DefaultIfEmpty()
                           join repliedSender in _context.Set<UserReadModel>() on repliedMessage.SenderId equals repliedSender.Id into repliedSenderJoin
                           from repliedSender in repliedSenderJoin.DefaultIfEmpty()
+                          join file in _context.Set<ChatApp.Modules.Files.Domain.Entities.FileMetadata>() on message.FileId equals file.Id.ToString() into fileJoin
+                          from file in fileJoin.DefaultIfEmpty()
                           where message.ChannelId == channelId
                              && message.IsPinned
                              && !message.IsDeleted
@@ -516,6 +558,9 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                               user.AvatarUrl,
                               message.Content, // Pinned messages are not deleted, no sanitization needed
                               message.FileId,
+                              file != null ? file.OriginalFileName : null,
+                              file != null ? file.ContentType : null,
+                              file != null ? (long?)file.FileSizeInBytes : null,
                               message.IsEdited,
                               message.IsDeleted,
                               message.IsPinned,

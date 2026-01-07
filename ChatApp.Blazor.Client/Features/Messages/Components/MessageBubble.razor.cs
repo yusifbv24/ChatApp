@@ -1,6 +1,8 @@
 using ChatApp.Blazor.Client.Models.Messages;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Configuration;
 using Microsoft.JSInterop;
+using MudBlazor;
 using System.Globalization;
 using System.Net;
 using System.Text.RegularExpressions;
@@ -12,6 +14,7 @@ public partial class MessageBubble : IAsyncDisposable
     #region Injected Services
 
     [Inject] private IJSRuntime JS { get; set; } = default!;
+    [Inject] private IConfiguration Configuration { get; set; } = default!;
 
     #endregion
 
@@ -26,6 +29,26 @@ public partial class MessageBubble : IAsyncDisposable
     /// Mesajın məzmunu.
     /// </summary>
     [Parameter] public string Content { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Mesaja əlavə edilmiş fayl ID-si (varsa).
+    /// </summary>
+    [Parameter] public string? FileId { get; set; }
+
+    /// <summary>
+    /// Fayl adı.
+    /// </summary>
+    [Parameter] public string? FileName { get; set; }
+
+    /// <summary>
+    /// Fayl content type (MIME type).
+    /// </summary>
+    [Parameter] public string? FileContentType { get; set; }
+
+    /// <summary>
+    /// Fayl ölçüsü (bytes).
+    /// </summary>
+    [Parameter] public long? FileSizeInBytes { get; set; }
 
     /// <summary>
     /// Göndərənin adı.
@@ -314,6 +337,15 @@ public partial class MessageBubble : IAsyncDisposable
 
     #endregion
 
+    #region Private Fields - File State
+
+    /// <summary>
+    /// Fayl şəkildir? (ContentType-dan müəyyən olunur)
+    /// </summary>
+    private bool IsFileImage => !string.IsNullOrEmpty(FileContentType) && FileContentType.StartsWith("image/");
+
+    #endregion
+
     #region Computed Properties
 
     /// <summary>
@@ -321,6 +353,21 @@ public partial class MessageBubble : IAsyncDisposable
     /// </summary>
     private bool IsMarkedAsLater =>
         LastReadLaterMessageId.HasValue && LastReadLaterMessageId.Value == MessageId;
+
+    /// <summary>
+    /// Fayl download URL-i (API base address ilə)
+    /// </summary>
+    private string FileDownloadUrl
+    {
+        get
+        {
+            if (string.IsNullOrEmpty(FileId))
+                return string.Empty;
+
+            var apiBaseAddress = Configuration["ApiBaseAddress"] ?? "http://localhost:7000";
+            return $"{apiBaseAddress}/api/files/{FileId}/download";
+        }
+    }
 
     #endregion
 
@@ -334,6 +381,51 @@ public partial class MessageBubble : IAsyncDisposable
         return dateTime.ToLocalTime().ToString("HH:mm", CultureInfo.InvariantCulture);
     }
 
+
+    /// <summary>
+    /// Fayl icon-unu extension-a görə qaytarır.
+    /// </summary>
+    private string GetFileIcon()
+    {
+        if (string.IsNullOrEmpty(FileName))
+            return Icons.Material.Filled.InsertDriveFile;
+
+        var extension = Path.GetExtension(FileName).ToLowerInvariant();
+        return extension switch
+        {
+            ".pdf" => Icons.Material.Filled.PictureAsPdf,
+            ".doc" or ".docx" => Icons.Material.Filled.Description,
+            ".xls" or ".xlsx" => Icons.Material.Filled.TableChart,
+            ".ppt" or ".pptx" => Icons.Material.Filled.Slideshow,
+            ".zip" or ".rar" or ".7z" => Icons.Material.Filled.FolderZip,
+            ".mp4" or ".avi" or ".mov" or ".mkv" => Icons.Material.Filled.VideoFile,
+            ".mp3" or ".wav" or ".flac" => Icons.Material.Filled.AudioFile,
+            ".txt" => Icons.Material.Filled.TextSnippet,
+            ".jpg" or ".jpeg" or ".png" or ".gif" or ".webp" or ".bmp" => Icons.Material.Filled.Image,
+            _ => Icons.Material.Filled.InsertDriveFile
+        };
+    }
+
+    /// <summary>
+    /// Fayl ölçüsünü formatlaşdırır (B, KB, MB, GB).
+    /// </summary>
+    private string FormatFileSize()
+    {
+        if (!FileSizeInBytes.HasValue)
+            return "Unknown size";
+
+        string[] sizes = { "B", "KB", "MB", "GB", "TB" };
+        double len = FileSizeInBytes.Value;
+        int order = 0;
+
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len = len / 1024;
+        }
+
+        return $"{len:0.##} {sizes[order]}";
+    }
 
     /// <summary>
     /// Mətn içindəki URL-ləri klikləbilən linklərə çevirir.

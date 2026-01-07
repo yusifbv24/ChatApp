@@ -91,6 +91,9 @@ public partial class Messages
                         conversation?.OtherUserId ?? Guid.Empty,
                         content,
                         null,                   // FileId
+                        null,                   // FileName
+                        null,                   // FileContentType
+                        null,                   // FileSizeInBytes
                         false,                  // IsEdited
                         false,                  // IsDeleted
                         false,                  // IsRead
@@ -172,7 +175,10 @@ public partial class Messages
                         UserState.CurrentUser?.DisplayName ?? "",
                         UserState.CurrentUser?.AvatarUrl,
                         content,
-                        null,
+                        null,                                       // FileId
+                        null,                                       // FileName
+                        null,                                       // FileContentType
+                        null,                                       // FileSizeInBytes
                         false,
                         false,
                         false,

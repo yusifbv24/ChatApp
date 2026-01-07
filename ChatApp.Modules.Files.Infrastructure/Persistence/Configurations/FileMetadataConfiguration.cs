@@ -30,6 +30,10 @@ namespace ChatApp.Modules.Files.Infrastructure.Persistence.Configurations
                 .IsRequired()
                 .HasMaxLength(200);
 
+            builder.Property(f => f.FileSizeInBytes)
+                .HasColumnName("file_size_in_bytes")
+                .IsRequired();
+
             builder.Property(f => f.FileType)
                 .HasColumnName("file_type")
                 .HasConversion<string>()

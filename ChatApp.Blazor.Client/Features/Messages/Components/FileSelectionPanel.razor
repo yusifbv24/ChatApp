@@ -1,0 +1,117 @@
+@using ChatApp.Blazor.Client.Models.Files
+
+<div class="file-selection-overlay" @onclick="OnCloseClick">
+    <div class="file-selection-panel" @onclick:stopPropagation="true">
+        <!-- Header -->
+        <div class="file-panel-header">
+            <span class="file-panel-title">Selected: @SelectedFiles.Count</span>
+            <button class="file-panel-close" @onclick="OnCloseClick" type="button">
+                <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" />
+            </button>
+        </div>
+
+        <!-- Files Preview Area (Horizontal Scroll) -->
+        <div class="file-panel-preview-area">
+            @foreach (var file in SelectedFiles)
+            {
+                <div class="file-preview-item" @onmouseenter="() => hoveredFileId = file.TempId" @onmouseleave="() => hoveredFileId = null">
+                    @if (file.IsImage && !string.IsNullOrEmpty(file.PreviewDataUrl))
+                    {
+                        <!-- Image Preview (small) -->
+                        <div class="file-preview-image-wrapper">
+                            <img src="@file.PreviewDataUrl" alt="@file.FileName" class="file-preview-image" />
+
+                            @if (file.State == UploadState.Uploading)
+                            {
+                                <div class="file-upload-loading">
+                                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Color="Color.Primary" />
+                                </div>
+                            }
+                            else if (file.State == UploadState.Failed)
+                            {
+                                <div class="file-upload-error">
+                                    <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error" Size="Size.Small" />
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <!-- File Icon -->
+                        <div class="file-preview-icon">
+                            <MudIcon Icon="@GetFileIcon(file.Extension)" Size="Size.Large" Class="file-icon" />
+                        </div>
+                    }
+
+                    <!-- File Info -->
+                    <div class="file-preview-info">
+                        <div class="file-preview-name">@file.FileName</div>
+                        <div class="file-preview-size">@FormatFileSize(file.SizeInBytes)</div>
+
+                        @if (file.State == UploadState.Failed && !string.IsNullOrEmpty(file.ErrorMessage))
+                        {
+                            <div class="file-preview-error-text">@file.ErrorMessage</div>
+                        }
+                    </div>
+
+                    <!-- Delete/Retry/Cancel Buttons -->
+                    @if (hoveredFileId == file.TempId || file.State == UploadState.Failed)
+                    {
+                        <div class="file-preview-actions">
+                            @if (file.State == UploadState.Failed)
+                            {
+                                <button class="file-action-btn retry-btn" @onclick="() => OnRetryClick(file)" type="button" title="Retry">
+                                    <MudIcon Icon="@Icons.Material.Filled.Refresh" Size="Size.Small" />
+                                </button>
+                            }
+
+                            @if (file.State == UploadState.Uploading)
+                            {
+                                <button class="file-action-btn cancel-btn" @onclick="() => OnCancelClick(file)" type="button" title="Cancel">
+                                    <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" />
+                                </button>
+                            }
+                            else
+                            {
+                                <button class="file-action-btn delete-btn" @onclick="() => OnDeleteClick(file)" type="button" title="Delete">
+                                    <MudIcon Icon="@Icons.Material.Filled.Delete" Size="Size.Small" />
+                                </button>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        <!-- Message Text Area -->
+        <div class="file-panel-message-area">
+            <textarea
+                class="file-panel-textarea"
+                placeholder="Add a message (optional, max 4000 characters)..."
+                maxlength="4000"
+                @bind="MessageText"
+                @bind:event="oninput"></textarea>
+            <div class="file-panel-char-count">@MessageText.Length / 4000</div>
+        </div>
+
+        <!-- Send Button -->
+        <div class="file-panel-footer">
+            <button
+                class="file-panel-send-btn"
+                @onclick="OnSendClick"
+                disabled="@IsSending"
+                type="button">
+                @if (IsSending)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Color="Color.Primary" />
+                    <span>Sending...</span>
+                }
+                else
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.Send" Size="Size.Small" />
+                    <span>Send</span>
+                }
+            </button>
+        </div>
+    </div>
+</div>

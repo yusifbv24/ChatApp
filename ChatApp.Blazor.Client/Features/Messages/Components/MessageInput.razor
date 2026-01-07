@@ -40,6 +40,9 @@
                 <MudIcon Icon="@Icons.Material.Filled.AttachFile" Size="Size.Small" />
             </button>
 
+            <!-- Hidden file input -->
+            <InputFile @ref="fileInputRef" OnChange="HandleFileSelection" multiple style="display: none;" />
+
             <textarea @ref="textAreaRef"
                       class="message-textarea"
                       placeholder="@Placeholder"
@@ -95,4 +98,13 @@
             </div>
         </div>
     </div>
+}
+
+<!-- File Selection Panel -->
+@if (showFileSelectionPanel && selectedFiles.Count > 0)
+{
+    <FileSelectionPanel SelectedFiles="selectedFiles"
+                       OnClose="HandleCloseFilePanel"
+                       OnSend="HandleSendWithFiles"
+                       OnRetry="HandleRetryFile" />
 }

@@ -54,6 +54,8 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
         {
             var result = await (from message in _context.DirectMessages
                         join sender in _context.Set<UserReadModel>() on message.SenderId equals sender.Id
+                        join file in _context.Set<ChatApp.Modules.Files.Domain.Entities.FileMetadata>() on message.FileId equals file.Id.ToString() into fileJoin
+                        from file in fileJoin.DefaultIfEmpty()
                         join repliedMessage in _context.DirectMessages on message.ReplyToMessageId equals repliedMessage.Id into replyJoin
                         from repliedMessage in replyJoin.DefaultIfEmpty()
                         join repliedSender in _context.Set<UserReadModel>() on repliedMessage.SenderId equals repliedSender.Id into repliedSenderJoin
@@ -70,6 +72,9 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                             message.ReceiverId,
                             message.Content,
                             message.FileId,
+                            FileName = file != null ? file.OriginalFileName : null,
+                            FileContentType = file != null ? file.ContentType : null,
+                            FileSizeInBytes = file != null ? (long?)file.FileSizeInBytes : null,
                             message.IsEdited,
                             message.IsDeleted,
                             message.IsRead,
@@ -109,6 +114,9 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 result.ReceiverId,
                 result.IsDeleted ? "This message was deleted" : result.Content, // SECURITY: Sanitize deleted content
                 result.FileId,
+                result.FileName,
+                result.FileContentType,
+                result.FileSizeInBytes,
                 result.IsEdited,
                 result.IsDeleted,
                 result.IsRead,
@@ -127,14 +135,16 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
 
 
         public async Task<List<DirectMessageDto>> GetConversationMessagesAsync(
-            Guid conversationId, 
-            int pageSize = 50, 
-            DateTime? beforeUtc = null, 
+            Guid conversationId,
+            int pageSize = 50,
+            DateTime? beforeUtc = null,
             CancellationToken cancellationToken = default)
         {
             // Real database join with users table
             var query = from message in _context.DirectMessages
                         join sender in _context.Set<UserReadModel>() on message.SenderId equals sender.Id
+                        join file in _context.Set<ChatApp.Modules.Files.Domain.Entities.FileMetadata>() on message.FileId equals file.Id.ToString() into fileJoin
+                        from file in fileJoin.DefaultIfEmpty()
                         join repliedMessage in _context.DirectMessages on message.ReplyToMessageId equals repliedMessage.Id into replyJoin
                         from repliedMessage in replyJoin.DefaultIfEmpty()
                         join repliedSender in _context.Set<UserReadModel>() on repliedMessage.SenderId equals repliedSender.Id into repliedSenderJoin
@@ -151,6 +161,9 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                             message.ReceiverId,
                             message.Content,
                             message.FileId,
+                            FileName = file != null ? file.OriginalFileName : null,
+                            FileContentType = file != null ? file.ContentType : null,
+                            FileSizeInBytes = file != null ? (long?)file.FileSizeInBytes : null,
                             message.IsEdited,
                             message.IsDeleted,
                             message.IsRead,
@@ -205,6 +218,9 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 r.ReceiverId,
                 r.IsDeleted ? "This message was deleted" : r.Content, // SECURITY: Sanitize deleted content
                 r.FileId,
+                r.FileName,
+                r.FileContentType,
+                r.FileSizeInBytes,
                 r.IsEdited,
                 r.IsDeleted,
                 r.IsRead,
@@ -243,6 +259,8 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
             // 2. Base query (projection)
             var baseQuery = from message in _context.DirectMessages
                            join sender in _context.Set<UserReadModel>() on message.SenderId equals sender.Id
+                           join file in _context.Set<ChatApp.Modules.Files.Domain.Entities.FileMetadata>() on message.FileId equals file.Id.ToString() into fileJoin
+                           from file in fileJoin.DefaultIfEmpty()
                            join repliedMessage in _context.DirectMessages on message.ReplyToMessageId equals repliedMessage.Id into replyJoin
                            from repliedMessage in replyJoin.DefaultIfEmpty()
                            join repliedSender in _context.Set<UserReadModel>() on repliedMessage.SenderId equals repliedSender.Id into repliedSenderJoin
@@ -259,6 +277,9 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                                message.ReceiverId,
                                message.Content,
                                message.FileId,
+                               FileName = file != null ? file.OriginalFileName : null,
+                               FileContentType = file != null ? file.ContentType : null,
+                               FileSizeInBytes = file != null ? (long?)file.FileSizeInBytes : null,
                                message.IsEdited,
                                message.IsDeleted,
                                message.IsRead,
@@ -322,6 +343,9 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 r.ReceiverId,
                 r.IsDeleted ? "This message was deleted" : r.Content,
                 r.FileId,
+                r.FileName,
+                r.FileContentType,
+                r.FileSizeInBytes,
                 r.IsEdited,
                 r.IsDeleted,
                 r.IsRead,
@@ -348,6 +372,8 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
             // Base query with all joins
             var query = from message in _context.DirectMessages
                         join sender in _context.Set<UserReadModel>() on message.SenderId equals sender.Id
+                        join file in _context.Set<ChatApp.Modules.Files.Domain.Entities.FileMetadata>() on message.FileId equals file.Id.ToString() into fileJoin
+                        from file in fileJoin.DefaultIfEmpty()
                         join repliedMessage in _context.DirectMessages on message.ReplyToMessageId equals repliedMessage.Id into replyJoin
                         from repliedMessage in replyJoin.DefaultIfEmpty()
                         join repliedSender in _context.Set<UserReadModel>() on repliedMessage.SenderId equals repliedSender.Id into repliedSenderJoin
@@ -365,6 +391,9 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                             message.ReceiverId,
                             message.Content,
                             message.FileId,
+                            FileName = file != null ? file.OriginalFileName : null,
+                            FileContentType = file != null ? file.ContentType : null,
+                            FileSizeInBytes = file != null ? (long?)file.FileSizeInBytes : null,
                             message.IsEdited,
                             message.IsDeleted,
                             message.IsRead,
@@ -414,6 +443,9 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 r.ReceiverId,
                 r.IsDeleted ? "This message was deleted" : r.Content,
                 r.FileId,
+                r.FileName,
+                r.FileContentType,
+                r.FileSizeInBytes,
                 r.IsEdited,
                 r.IsDeleted,
                 r.IsRead,
@@ -440,6 +472,8 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
             // Base query with all joins
             var query = from message in _context.DirectMessages
                         join sender in _context.Set<UserReadModel>() on message.SenderId equals sender.Id
+                        join file in _context.Set<ChatApp.Modules.Files.Domain.Entities.FileMetadata>() on message.FileId equals file.Id.ToString() into fileJoin
+                        from file in fileJoin.DefaultIfEmpty()
                         join repliedMessage in _context.DirectMessages on message.ReplyToMessageId equals repliedMessage.Id into replyJoin
                         from repliedMessage in replyJoin.DefaultIfEmpty()
                         join repliedSender in _context.Set<UserReadModel>() on repliedMessage.SenderId equals repliedSender.Id into repliedSenderJoin
@@ -457,6 +491,9 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                             message.ReceiverId,
                             message.Content,
                             message.FileId,
+                            FileName = file != null ? file.OriginalFileName : null,
+                            FileContentType = file != null ? file.ContentType : null,
+                            FileSizeInBytes = file != null ? (long?)file.FileSizeInBytes : null,
                             message.IsEdited,
                             message.IsDeleted,
                             message.IsRead,
@@ -506,6 +543,9 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 r.ReceiverId,
                 r.IsDeleted ? "This message was deleted" : r.Content,
                 r.FileId,
+                r.FileName,
+                r.FileContentType,
+                r.FileSizeInBytes,
                 r.IsEdited,
                 r.IsDeleted,
                 r.IsRead,
@@ -559,6 +599,8 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
             // Database join to get pinned messages with user details
             var results = await (from message in _context.DirectMessages
                           join sender in _context.Set<UserReadModel>() on message.SenderId equals sender.Id
+                          join file in _context.Set<ChatApp.Modules.Files.Domain.Entities.FileMetadata>() on message.FileId equals file.Id.ToString() into fileJoin
+                          from file in fileJoin.DefaultIfEmpty()
                           join repliedMessage in _context.DirectMessages on message.ReplyToMessageId equals repliedMessage.Id into replyJoin
                           from repliedMessage in replyJoin.DefaultIfEmpty()
                           join repliedSender in _context.Set<UserReadModel>() on repliedMessage.SenderId equals repliedSender.Id into repliedSenderJoin
@@ -578,6 +620,9 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                               message.ReceiverId,
                               message.Content,
                               message.FileId,
+                              FileName = file != null ? file.OriginalFileName : null,
+                              FileContentType = file != null ? file.ContentType : null,
+                              FileSizeInBytes = file != null ? (long?)file.FileSizeInBytes : null,
                               message.IsEdited,
                               message.IsDeleted,
                               message.IsRead,
@@ -622,6 +667,9 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 r.ReceiverId,
                 r.Content, // Pinned messages are not deleted, no sanitization needed
                 r.FileId,
+                r.FileName,
+                r.FileContentType,
+                r.FileSizeInBytes,
                 r.IsEdited,
                 r.IsDeleted,
                 r.IsRead,

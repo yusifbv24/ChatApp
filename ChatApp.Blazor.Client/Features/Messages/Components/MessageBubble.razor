@@ -75,8 +75,49 @@
                         </div>
                     }
 
-                    <!-- Message text -->
-                    <div class="message-text">@((MarkupString)ParseLinks(Content))</div>
+                    @* Show file attachment if exists *@
+                    @if (!string.IsNullOrEmpty(FileId))
+                    {
+                        <div class="message-file-attachment">
+                            @if (IsFileImage)
+                            {
+                                <!-- Image preview with filename and size -->
+                                <a href="@FileDownloadUrl" target="_blank" class="file-image-container">
+                                    <img src="@FileDownloadUrl"
+                                         alt="@FileName"
+                                         class="file-image-preview" />
+                                    <div class="file-image-info">
+                                        <div class="file-name">@FileName</div>
+                                        <div class="file-size">@FormatFileSize()</div>
+                                    </div>
+                                </a>
+                            }
+                            else
+                            {
+                                <!-- File icon + name + size -->
+                                <a href="@FileDownloadUrl" target="_blank" class="file-download-link">
+                                    <div class="file-icon">
+                                        <MudIcon Icon="@GetFileIcon()" Size="Size.Large" />
+                                    </div>
+                                    <div class="file-info">
+                                        <div class="file-name">@FileName</div>
+                                        <div class="file-size">@FormatFileSize()</div>
+                                    </div>
+                                </a>
+                            }
+                        </div>
+                    }
+
+                    <!-- Message text (only show if not empty and has file) -->
+                    @if (!string.IsNullOrEmpty(FileId) && !string.IsNullOrWhiteSpace(Content))
+                    {
+                        <div class="message-text">@((MarkupString)ParseLinks(Content))</div>
+                    }
+                    else if (string.IsNullOrEmpty(FileId))
+                    {
+                        <!-- No file, show content normally -->
+                        <div class="message-text">@((MarkupString)ParseLinks(Content))</div>
+                    }
 
                     <!-- Footer Row: Reactions (left) and Time/Status (right) -->
                     <div class="message-footer-row">

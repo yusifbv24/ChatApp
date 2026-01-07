@@ -24,5 +24,5 @@ public interface IFileService
     /// <summary>
     /// Upload a file
     /// </summary>
-    Task<Result<FileUploadResult>> UploadFileAsync(IBrowserFile file, CancellationToken cancellationToken = default);
+    Task<Result<FileUploadResult>> UploadFileAsync(IBrowserFile file, Guid? conversationId = null, Guid? channelId = null, CancellationToken cancellationToken = default);
 }

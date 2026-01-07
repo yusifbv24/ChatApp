@@ -39,6 +39,20 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence
                 // Mark as query-only (no tracking, no inserts/updates)
                 entity.ToTable(tb => tb.ExcludeFromMigrations());
             });
+
+            // Map Files module's file_metadata table (read-only for queries)
+            modelBuilder.Entity<ChatApp.Modules.Files.Domain.Entities.FileMetadata>(entity =>
+            {
+                entity.ToTable("file_metadata");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("id");
+                entity.Property(e => e.OriginalFileName).HasColumnName("original_file_name");
+                entity.Property(e => e.ContentType).HasColumnName("content_type");
+                entity.Property(e => e.FileSizeInBytes).HasColumnName("file_size_in_bytes");
+
+                // Mark as query-only (no tracking, no inserts/updates)
+                entity.ToTable(tb => tb.ExcludeFromMigrations());
+            });
         }
     }
 }

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using ChatApp.Blazor.Client.Models.Messages;
 using ChatApp.Blazor.Client.Models.Auth;
+using ChatApp.Blazor.Client.Models.Files;
 using System.Globalization;
 
 namespace ChatApp.Blazor.Client.Features.Messages.Components;
@@ -181,6 +182,11 @@ public partial class ChatArea : IAsyncDisposable
     /// Yeni mesaj göndərmə callback-i.
     /// </summary>
     [Parameter] public EventCallback<string> OnSendMessage { get; set; }
+
+    /// <summary>
+    /// Fayllarla mesaj göndərmə callback-i - (Files, Message) tuple.
+    /// </summary>
+    [Parameter] public EventCallback<(List<SelectedFile> Files, string Message)> OnSendWithFiles { get; set; }
 
     /// <summary>
     /// Mesaj redaktə callback-i - (messageId, newContent) tuple.

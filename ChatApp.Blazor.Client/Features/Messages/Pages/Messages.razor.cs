@@ -1,4 +1,5 @@
 using ChatApp.Blazor.Client.Features.Auth.Services;
+using ChatApp.Blazor.Client.Features.Files.Services;
 using ChatApp.Blazor.Client.Features.Messages.Services;
 using ChatApp.Blazor.Client.Infrastructure.SignalR;
 using ChatApp.Blazor.Client.Models.Auth;
@@ -28,6 +29,8 @@ public partial class Messages : IAsyncDisposable
     [Inject] private AppState AppState { get; set; } = default!;
 
     [Inject] private IJSRuntime JS { get; set; } = default!;
+
+    [Inject] private IFileService FileService { get; set; } = default!;
 
     #endregion
 

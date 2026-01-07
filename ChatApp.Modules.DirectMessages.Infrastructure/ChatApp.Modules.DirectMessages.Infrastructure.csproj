@@ -14,6 +14,7 @@
   <ItemGroup>
     <ProjectReference Include="..\ChatApp.Modules.DirectMessages.Application\ChatApp.Modules.DirectMessages.Application.csproj" />
     <ProjectReference Include="..\ChatApp.Modules.DirectMessages.Domain\ChatApp.Modules.DirectMessages.Domain.csproj" />
+    <ProjectReference Include="..\ChatApp.Modules.Files.Domain\ChatApp.Modules.Files.Domain.csproj" />
   </ItemGroup>
 
 </Project>

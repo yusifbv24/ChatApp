@@ -98,6 +98,9 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMessages
                     SenderAvatarUrl: null, // Will be populated by frontend from user cache
                     Content: message.Content, // Content preserved in backend but shown as "deleted" in frontend
                     FileId: message.FileId,
+                    FileName: null,
+                    FileContentType: null,
+                    FileSizeInBytes: null,
                     IsEdited: message.IsEdited,
                     IsDeleted: true, // Mark as deleted
                     IsPinned: message.IsPinned,

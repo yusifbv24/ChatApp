@@ -14,6 +14,7 @@
   <ItemGroup>
     <ProjectReference Include="..\ChatApp.Modules.Channels.Application\ChatApp.Modules.Channels.Application.csproj" />
     <ProjectReference Include="..\ChatApp.Modules.Channels.Domain\ChatApp.Modules.Channels.Domain.csproj" />
+    <ProjectReference Include="..\ChatApp.Modules.Files.Domain\ChatApp.Modules.Files.Domain.csproj" />
   </ItemGroup>
 
 </Project>

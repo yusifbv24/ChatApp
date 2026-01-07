@@ -4274,3 +4274,414 @@
 .favorites-context-menu .context-menu-item:hover {
     background: var(--gray-100);
 }
+
+/* =================================================================
+   FILE SELECTION PANEL
+   ================================================================= */
+
+/* Overlay */
+.file-selection-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    backdrop-filter: blur(4px);
+}
+
+/* Panel Container */
+.file-selection-panel {
+    width: 500px;
+    max-height: 80vh;
+    background: white;
+    border-radius: var(--radius-lg);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Header */
+.file-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--gray-200);
+    background: var(--gray-50);
+}
+
+.file-panel-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.file-panel-close {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-full);
+    border: none;
+    background: transparent;
+    color: var(--gray-600);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-base);
+}
+
+.file-panel-close:hover {
+    background: var(--gray-200);
+    color: var(--gray-900);
+}
+
+/* Preview Area (Horizontal Scroll) */
+.file-panel-preview-area {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px 20px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+/* File Preview Item */
+.file-preview-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    background: var(--gray-50);
+    transition: all var(--transition-base);
+    position: relative;
+}
+
+.file-preview-item:hover {
+    background: white;
+    border-color: var(--primary-color);
+}
+
+/* Image Preview */
+.file-preview-image-wrapper {
+    width: 60px;
+    height: 60px;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    flex-shrink: 0;
+    position: relative;
+    background: var(--gray-100);
+}
+
+.file-preview-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* File Icon */
+.file-preview-icon {
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--gray-100);
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
+}
+
+.file-preview-icon .file-icon {
+    color: var(--primary-color);
+}
+
+/* File Info */
+.file-preview-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.file-preview-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--gray-900);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.file-preview-size {
+    font-size: 12px;
+    color: var(--gray-500);
+}
+
+.file-preview-error-text {
+    font-size: 11px;
+    color: var(--error-color);
+    margin-top: 2px;
+}
+
+/* Upload Loading/Error Overlay */
+.file-upload-loading,
+.file-upload-error {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* File Actions */
+.file-preview-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.file-action-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm);
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-base);
+}
+
+.file-action-btn.delete-btn {
+    color: var(--error-color);
+}
+
+.file-action-btn.delete-btn:hover {
+    background: var(--error-light);
+}
+
+.file-action-btn.retry-btn {
+    color: var(--primary-color);
+}
+
+.file-action-btn.retry-btn:hover {
+    background: var(--primary-light);
+}
+
+.file-action-btn.cancel-btn {
+    color: var(--gray-600);
+}
+
+.file-action-btn.cancel-btn:hover {
+    background: var(--gray-200);
+}
+
+/* Message Text Area */
+.file-panel-message-area {
+    padding: 0 20px 16px 20px;
+    border-top: 1px solid var(--gray-200);
+    padding-top: 16px;
+}
+
+.file-panel-textarea {
+    width: 100%;
+    min-height: 80px;
+    padding: 12px;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    font-family: inherit;
+    resize: vertical;
+    outline: none;
+    transition: all var(--transition-base);
+}
+
+.file-panel-textarea:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.file-panel-char-count {
+    font-size: 12px;
+    color: var(--gray-500);
+    text-align: right;
+    margin-top: 6px;
+}
+
+/* Footer (Send Button) */
+.file-panel-footer {
+    padding: 16px 20px;
+    border-top: 1px solid var(--gray-200);
+    background: var(--gray-50);
+}
+
+.file-panel-send-btn {
+    width: 100%;
+    height: 44px;
+    border: none;
+    border-radius: var(--radius-md);
+    background: var(--primary-color);
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all var(--transition-base);
+}
+
+.file-panel-send-btn:hover:not(:disabled) {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.file-panel-send-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* ===========================
+   Message File Attachment
+   =========================== */
+
+.message-file-attachment {
+    margin-bottom: 8px;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+/* Image preview container */
+.file-image-container {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+}
+
+.file-image-preview {
+    max-width: 100%;
+    max-height: 300px;
+    width: auto;
+    height: auto;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    display: block;
+    margin-bottom: 6px;
+}
+
+.file-image-preview:hover {
+    opacity: 0.9;
+}
+
+.file-image-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 8px;
+    background: rgba(0, 0, 0, 0.03);
+    border-radius: 6px;
+}
+
+.file-image-info .file-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    margin-right: 8px;
+}
+
+.file-image-info .file-size {
+    font-size: 12px;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+}
+
+/* Own message dark theme */
+.own-bubble .file-image-info {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.own-bubble .file-image-info .file-name {
+    color: white;
+}
+
+.own-bubble .file-image-info .file-size {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+/* File download link (non-image files) */
+.file-download-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.03);
+    border-radius: 8px;
+    text-decoration: none;
+    color: inherit;
+    transition: background 0.2s;
+}
+
+.file-download-link:hover {
+    background: rgba(0, 0, 0, 0.06);
+}
+
+.message-file-attachment .file-icon {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--primary-color);
+    border-radius: 8px;
+    color: white;
+    flex-shrink: 0;
+}
+
+.message-file-attachment .file-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.message-file-attachment .file-name {
+    font-weight: 500;
+    font-size: 14px;
+    color: var(--text-primary);
+    margin-bottom: 3px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.message-file-attachment .file-size {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+/* Dark theme for own messages */
+.own-bubble .file-download-link {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.own-bubble .file-download-link:hover {
+    background: rgba(255, 255, 255, 0.15);
+}

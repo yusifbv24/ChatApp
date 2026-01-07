@@ -61,7 +61,11 @@ namespace ChatApp.Modules.Files.Api.Controllers
                 return Unauthorized();
 
             var result = await _mediator.Send(
-                new UploadFileCommand(request.File, userId),
+                new UploadFileCommand(
+                    request.File,
+                    userId,
+                    request.ChannelId,
+                    request.ConversationId),
                 cancellationToken);
 
             if (result.IsFailure)
@@ -192,14 +196,7 @@ namespace ChatApp.Modules.Files.Api.Controllers
             if (fileMetadata == null)
                 return NotFound(new { error = $"File with ID {fileId} not found" });
 
-            // Permission check: Only uploader can download
-            // In production, you'd check if file is shared in a channel/conversation
-            if (fileMetadata.UploadedBy != userId)
-            {
-                return Forbid();
-            }
-
-            // Check if user has permission to download file
+            // Check if user has permission to download file (uploader, conversation participant, or channel member)
             var hasPermission = await CheckFileAccessPermissionAsync(fileId, userId, cancellationToken);
 
             if (!hasPermission)
@@ -257,9 +254,15 @@ namespace ChatApp.Modules.Files.Api.Controllers
             if (string.IsNullOrEmpty(fileMetadata.ThumbnailPath))
                 return NotFound(new { error = "Thumbnail not available for this file" });
 
-            // Permission check
-            if (fileMetadata.UploadedBy != userId)
+            // Check if user has permission to view thumbnail (uploader, conversation participant, or channel member)
+            var hasPermission = await CheckFileAccessPermissionAsync(fileId, userId, cancellationToken);
+
+            if (!hasPermission)
             {
+                _logger?.LogWarning(
+                    "User {UserId} attempted to access thumbnail for file {FileId} without permission",
+                    userId,
+                    fileId);
                 return Forbid();
             }
 

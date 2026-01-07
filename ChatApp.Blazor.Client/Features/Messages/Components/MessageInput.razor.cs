@@ -1,7 +1,10 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.JSInterop;
 using ChatApp.Blazor.Client.State;
+using ChatApp.Blazor.Client.Models.Files;
+using MudBlazor;
 
 namespace ChatApp.Blazor.Client.Features.Messages.Components;
 
@@ -11,6 +14,7 @@ public partial class MessageInput : IDisposable
 
     [Inject] private IJSRuntime JS { get; set; } = default!;
     [Inject] private UserState UserState { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
 
     #endregion
 
@@ -103,9 +107,14 @@ public partial class MessageInput : IDisposable
     [Parameter] public EventCallback<bool> OnTyping { get; set; }
 
     /// <summary>
-    /// File attach callback-i.
+    /// File attach callback-i (legacy - deprecated).
     /// </summary>
     [Parameter] public EventCallback OnAttach { get; set; }
+
+    /// <summary>
+    /// Fayllarla mesaj göndərmə callback-i.
+    /// </summary>
+    [Parameter] public EventCallback<(List<SelectedFile> Files, string Message)> OnSendWithFiles { get; set; }
 
     /// <summary>
     /// Draft dəyişikliyi callback-i.
@@ -144,6 +153,11 @@ public partial class MessageInput : IDisposable
     /// </summary>
     private ElementReference textAreaRef;
 
+    /// <summary>
+    /// File input reference.
+    /// </summary>
+    private InputFile fileInputRef = default!;
+
     #endregion
 
     #region Private Fields - UI State
@@ -167,6 +181,16 @@ public partial class MessageInput : IDisposable
     /// Textarea-ya focus lazımdır?
     /// </summary>
     private bool shouldFocus = false;
+
+    /// <summary>
+    /// File selection panel görünürmü?
+    /// </summary>
+    private bool showFileSelectionPanel = false;
+
+    /// <summary>
+    /// Seçilmiş fayllar.
+    /// </summary>
+    private List<SelectedFile> selectedFiles = new();
 
     #endregion
 
@@ -484,11 +508,171 @@ public partial class MessageInput : IDisposable
     #region Attachment
 
     /// <summary>
-    /// Attach click handler.
+    /// Attach click handler - triggers file input.
     /// </summary>
     private async Task OnAttachClick()
     {
-        await OnAttach.InvokeAsync();
+        try
+        {
+            // Trigger hidden file input
+            await JS.InvokeVoidAsync("chatAppUtils.clickFileInput", fileInputRef.Element);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error opening file picker: {ex.Message}", Severity.Error);
+        }
+    }
+
+    /// <summary>
+    /// File selection handler with validation and preview generation.
+    /// </summary>
+    private async Task HandleFileSelection(InputFileChangeEventArgs e)
+    {
+        const long maxFileSize = 100 * 1024 * 1024; // 100MB
+        var imageExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp" };
+
+        selectedFiles.Clear();
+
+        try
+        {
+            foreach (var browserFile in e.GetMultipleFiles(20)) // Max 20 files
+            {
+                // Validate file size
+                if (browserFile.Size > maxFileSize)
+                {
+                    Snackbar.Add($"{browserFile.Name} exceeds 100MB limit", Severity.Warning);
+                    continue;
+                }
+
+                // Create SelectedFile model
+                var extension = Path.GetExtension(browserFile.Name).ToLowerInvariant();
+                var isImage = imageExtensions.Contains(extension);
+
+                var selectedFile = new SelectedFile
+                {
+                    BrowserFile = browserFile,
+                    FileName = browserFile.Name,
+                    Extension = extension,
+                    SizeInBytes = browserFile.Size,
+                    ContentType = browserFile.ContentType,
+                    IsImage = isImage,
+                    State = UploadState.Pending
+                };
+
+                // Generate preview for images
+                if (isImage)
+                {
+                    try
+                    {
+                        // Resize image for preview (max 400x400)
+                        var resizedImage = await browserFile.RequestImageFileAsync(browserFile.ContentType, 400, 400);
+
+                        // Read as data URL
+                        using var stream = resizedImage.OpenReadStream(maxFileSize);
+                        using var memoryStream = new MemoryStream();
+                        await stream.CopyToAsync(memoryStream);
+                        var bytes = memoryStream.ToArray();
+                        var base64 = Convert.ToBase64String(bytes);
+                        selectedFile.PreviewDataUrl = $"data:{browserFile.ContentType};base64,{base64}";
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error generating preview for {browserFile.Name}: {ex.Message}");
+                    }
+                }
+
+                selectedFiles.Add(selectedFile);
+            }
+
+            // Show file selection panel if files were selected
+            if (selectedFiles.Count > 0)
+            {
+                showFileSelectionPanel = true;
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error selecting files: {ex.Message}", Severity.Error);
+        }
+    }
+
+    /// <summary>
+    /// Close file selection panel.
+    /// </summary>
+    private void HandleCloseFilePanel()
+    {
+        showFileSelectionPanel = false;
+        selectedFiles.Clear();
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Send message with files.
+    /// </summary>
+    private async Task HandleSendWithFiles((List<SelectedFile> Files, string Message) data)
+    {
+        try
+        {
+            // Invoke parent callback with files and message
+            await OnSendWithFiles.InvokeAsync(data);
+
+            // Close panel and clear files
+            showFileSelectionPanel = false;
+            selectedFiles.Clear();
+            MessageText = string.Empty;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error sending files: {ex.Message}", Severity.Error);
+        }
+    }
+
+    /// <summary>
+    /// Retry failed file upload.
+    /// </summary>
+    private async Task HandleRetryFile(SelectedFile file)
+    {
+        const long maxFileSize = 100 * 1024 * 1024; // 100MB
+
+        try
+        {
+            file.State = UploadState.Uploading;
+            file.UploadProgress = 0;
+            file.ErrorMessage = null;
+            StateHasChanged();
+
+            // Regenerate preview for images if needed
+            if (file.IsImage && string.IsNullOrEmpty(file.PreviewDataUrl))
+            {
+                try
+                {
+                    var resizedImage = await file.BrowserFile.RequestImageFileAsync(file.ContentType, 400, 400);
+                    using var stream = resizedImage.OpenReadStream(maxFileSize);
+                    using var memoryStream = new MemoryStream();
+                    await stream.CopyToAsync(memoryStream);
+                    var bytes = memoryStream.ToArray();
+                    var base64 = Convert.ToBase64String(bytes);
+                    file.PreviewDataUrl = $"data:{file.ContentType};base64,{base64}";
+                }
+                catch
+                {
+                    // Preview generation is optional
+                }
+            }
+
+            file.State = UploadState.Pending;
+            StateHasChanged();
+            Snackbar.Add($"Retry ready: {file.FileName}", Severity.Info);
+        }
+        catch (Exception ex)
+        {
+            file.State = UploadState.Failed;
+            file.ErrorMessage = ex.Message;
+            StateHasChanged();
+            Snackbar.Add($"Error preparing retry: {ex.Message}", Severity.Error);
+        }
     }
 
     #endregion
