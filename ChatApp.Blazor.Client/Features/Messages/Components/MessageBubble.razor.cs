@@ -18,6 +18,15 @@ public partial class MessageBubble : IAsyncDisposable
 
     #endregion
 
+    #region Image Lightbox State
+
+    /// <summary>
+    /// Şəkil lightbox açıqdır?
+    /// </summary>
+    private bool showImageLightbox = false;
+
+    #endregion
+
     #region Parameters - Message Identity
 
     /// <summary>
@@ -428,6 +437,31 @@ public partial class MessageBubble : IAsyncDisposable
     }
 
     /// <summary>
+    /// Fayl adını qısaldır (40 simvoldan uzun olarsa).
+    /// Məsələn: "very-long-file-name-that-takes-space.pdf" → "very-long-file-name-that-...pdf"
+    /// </summary>
+    private string TruncateFileName(string? fileName)
+    {
+        if (string.IsNullOrEmpty(fileName))
+            return "Unknown file";
+
+        const int maxLength = 40;
+        if (fileName.Length <= maxLength)
+            return fileName;
+
+        var extension = Path.GetExtension(fileName);
+        var nameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
+
+        // Extension-u çıxarıb qalan yer hesablayırıq
+        var availableLength = maxLength - extension.Length - 3; // 3 = "..." uzunluğu
+
+        if (availableLength < 10)
+            availableLength = 10; // Minimum 10 simvol göstər
+
+        return $"{nameWithoutExtension.Substring(0, availableLength)}...{extension}";
+    }
+
+    /// <summary>
     /// Mətn içindəki URL-ləri klikləbilən linklərə çevirir.
     /// XSS hücumlarından qorunmaq üçün əvvəlcə HTML encode edilir və daha sonra özümüz html code yaradaraq digər səhifədə açılmasını təmin edirik.
     /// Noopener yazmazsaq açılan səhifə bizim səhifəyə geri müdaxilə edə bilər.
@@ -655,7 +689,19 @@ public partial class MessageBubble : IAsyncDisposable
                 return;
             }
 
-            const int menuHeight = 296; // 7 items × 42px (max: Reply, Copy, Edit, Forward, More, Delete, Select)
+            // Calculate menu height dynamically based on visible items
+            int itemCount = 0;
+            itemCount++; // Reply - always visible
+            itemCount++; // Copy - always visible
+            if (IsOwn && !IsForwarded) itemCount++; // Edit - conditional
+            itemCount++; // Forward - always visible
+            if (!string.IsNullOrEmpty(FileId)) itemCount++; // Download - conditional (only with files)
+            itemCount++; // More submenu - always visible
+            if (IsOwn) itemCount++; // Delete - conditional
+            itemCount++; // Select - always visible
+
+            const int itemHeight = 42;
+            int menuHeight = itemCount * itemHeight;
 
             // Open above if more space above, otherwise below
             menuPositionAbove = position.ActualSpaceBelow < menuHeight
@@ -809,6 +855,22 @@ public partial class MessageBubble : IAsyncDisposable
         {
             await OnSelectToggle.InvokeAsync(MessageId);
         }
+    }
+
+    /// <summary>
+    /// Şəkil üzərinə klik edəndə lightbox aç.
+    /// </summary>
+    private void OpenImageLightbox()
+    {
+        showImageLightbox = true;
+    }
+
+    /// <summary>
+    /// Lightbox-u bağla.
+    /// </summary>
+    private void CloseImageLightbox()
+    {
+        showImageLightbox = false;
     }
 
     #endregion

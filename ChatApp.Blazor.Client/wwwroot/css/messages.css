@@ -1840,6 +1840,11 @@
         white-space: nowrap;
     }
 
+/* Menu item as link (for download button) */
+.menu-item-link {
+    text-decoration: none;
+}
+
     .menu-item.delete-item {
         color: #EF4444;
     }
@@ -4589,44 +4594,7 @@
     opacity: 0.9;
 }
 
-.file-image-info {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 4px 8px;
-    background: rgba(0, 0, 0, 0.03);
-    border-radius: 6px;
-}
-
-.file-image-info .file-name {
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text-primary);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    flex: 1;
-    margin-right: 8px;
-}
-
-.file-image-info .file-size {
-    font-size: 12px;
-    color: var(--text-secondary);
-    flex-shrink: 0;
-}
-
-/* Own message dark theme */
-.own-bubble .file-image-info {
-    background: rgba(255, 255, 255, 0.1);
-}
-
-.own-bubble .file-image-info .file-name {
-    color: white;
-}
-
-.own-bubble .file-image-info .file-size {
-    color: rgba(255, 255, 255, 0.7);
-}
+/* Image info section removed - images show without filename/size overlay */
 
 /* File download link (non-image files) */
 .file-download-link {
@@ -4685,3 +4653,131 @@
 .own-bubble .file-download-link:hover {
     background: rgba(255, 255, 255, 0.15);
 }
+
+
+/* ===================================
+   IMAGE LIGHTBOX MODAL
+   =================================== */
+
+/* Overlay - full screen dark background */
+.image-lightbox-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    cursor: zoom-out;
+    animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* Container for image and controls */
+.image-lightbox-container {
+    position: relative;
+    max-width: 90vw;
+    max-height: 90vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: default;
+}
+
+/* Main image */
+.lightbox-image {
+    max-width: 100%;
+    max-height: 90vh;
+    object-fit: contain;
+    border-radius: 8px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+/* Close button - top right */
+.lightbox-close-btn {
+    position: absolute;
+    top: -50px;
+    right: 0;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: white;
+    transition: background 0.2s;
+    z-index: 10001;
+}
+
+.lightbox-close-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Download button - top right, next to close */
+.lightbox-download-btn {
+    position: absolute;
+    top: -50px;
+    right: 50px;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: white;
+    transition: background 0.2s;
+    text-decoration: none;
+    z-index: 10001;
+}
+
+.lightbox-download-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Filename overlay at bottom */
+.lightbox-filename {
+    position: absolute;
+    bottom: -40px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    color: white;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 8px 16px;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 90vw;
+    margin: 0 auto;
+}
+
+/* Add cursor pointer to image container */
+.file-image-container {
+    cursor: pointer;
+    display: block;
+}
+
+.file-image-container:hover .file-image-preview {
+    opacity: 0.95;
+}
+

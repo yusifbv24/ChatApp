@@ -81,16 +81,13 @@
                         <div class="message-file-attachment">
                             @if (IsFileImage)
                             {
-                                <!-- Image preview with filename and size -->
-                                <a href="@FileDownloadUrl" target="_blank" class="file-image-container">
+                                <!-- Image preview only (no filename/size) -->
+                                <div class="file-image-container" @onclick="OpenImageLightbox" @onclick:stopPropagation="true">
                                     <img src="@FileDownloadUrl"
                                          alt="@FileName"
-                                         class="file-image-preview" />
-                                    <div class="file-image-info">
-                                        <div class="file-name">@FileName</div>
-                                        <div class="file-size">@FormatFileSize()</div>
-                                    </div>
-                                </a>
+                                         class="file-image-preview"
+                                         title="@FileName" />
+                                </div>
                             }
                             else
                             {
@@ -100,7 +97,7 @@
                                         <MudIcon Icon="@GetFileIcon()" Size="Size.Large" />
                                     </div>
                                     <div class="file-info">
-                                        <div class="file-name">@FileName</div>
+                                        <div class="file-name" title="@FileName">@TruncateFileName(FileName)</div>
                                         <div class="file-size">@FormatFileSize()</div>
                                     </div>
                                 </a>
@@ -281,6 +278,14 @@
                             <span>Forward</span>
                             <MudIcon Icon="@Icons.Material.Outlined.Redo" Size="Size.Small" />
                         </button>
+                        @* Download button - only for messages with files *@
+                        @if (!string.IsNullOrEmpty(FileId))
+                        {
+                            <a href="@FileDownloadUrl" download="@FileName" class="menu-item menu-item-link" @onclick="CloseMoreMenu">
+                                <span>Download</span>
+                                <MudIcon Icon="@Icons.Material.Outlined.Download" Size="Size.Small" />
+                            </a>
+                        }
                         @* More submenu with Pin, Favorites, Mark Later *@
                         <div class="menu-item-with-submenu"
                              @onmouseenter="ShowMoreSubmenu"
@@ -358,3 +363,30 @@
         <div class="popup-overlay" @onclick="CloseMoreMenu"></div>
     }
 </div>
+
+<!-- Image Lightbox Modal -->
+@if (showImageLightbox && IsFileImage && !string.IsNullOrEmpty(FileId))
+{
+    <div class="image-lightbox-overlay" @onclick="CloseImageLightbox">
+        <div class="image-lightbox-container" @onclick:stopPropagation="true">
+            <!-- Close button -->
+            <button class="lightbox-close-btn" @onclick="CloseImageLightbox" title="Close">
+                <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Medium" />
+            </button>
+
+            <!-- Image -->
+            <img src="@FileDownloadUrl" alt="@FileName" class="lightbox-image" />
+
+            <!-- Download button -->
+            <a href="@FileDownloadUrl" download="@FileName" class="lightbox-download-btn" title="Download">
+                <MudIcon Icon="@Icons.Material.Filled.Download" Size="Size.Medium" />
+            </a>
+
+            <!-- Filename overlay at bottom -->
+            @if (!string.IsNullOrEmpty(FileName))
+            {
+                <div class="lightbox-filename">@FileName</div>
+            }
+        </div>
+    </div>
+}

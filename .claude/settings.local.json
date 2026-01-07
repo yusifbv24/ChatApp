@@ -9,7 +9,9 @@
       "Bash(psql:*)",
       "Bash(dotnet ef migrations add:*)",
       "Bash(dotnet ef database update:*)",
-      "Bash(dir \"C:\\Users\\ybaghiyev\\Desktop\\ChatApp\\ChatApp.Modules.Files.Infrastructure\\Migrations\" /B)"
+      "Bash(dir \"C:\\Users\\ybaghiyev\\Desktop\\ChatApp\\ChatApp.Modules.Files.Infrastructure\\Migrations\" /B)",
+      "Bash(echo:*)",
+      "Bash(\"C:\\Users\\ybaghiyev\\Desktop\\ChatApp\\ChatApp.Blazor.Client\\wwwroot\\css\\messages.css\")"
     ],
     "deny": [],
     "ask": []
