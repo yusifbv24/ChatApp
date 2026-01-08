@@ -64,13 +64,23 @@
                     }
 
                     @* Show replied message preview if this is a reply *@
-                    @if (!string.IsNullOrEmpty(ReplyToContent))
+                    @if (!string.IsNullOrEmpty(ReplyToContent) || !string.IsNullOrEmpty(ReplyToFileId))
                     {
                         <div class="reply-preview clickable" @onclick="HandleReplyClick">
                             <div class="reply-bar"></div>
                             <div class="reply-content">
                                 <div class="reply-sender">@ReplyToSenderName</div>
-                                <div class="reply-text">@StringHelper.TruncateText(ReplyToContent, 50)</div>
+                                @if (!string.IsNullOrEmpty(ReplyToFileId))
+                                {
+                                    <div class="reply-file-info">
+                                        <MudIcon Icon="@GetFileIcon(ReplyToFileName)" Size="Size.Small" Class="reply-file-icon-small" />
+                                        <span class="reply-file-name-small">@ReplyToFileName</span>
+                                    </div>
+                                }
+                                @if (!string.IsNullOrEmpty(ReplyToContent))
+                                {
+                                    <div class="reply-text">@StringHelper.TruncateText(ReplyToContent, 50)</div>
+                                }
                             </div>
                         </div>
                     }
@@ -91,9 +101,9 @@
                             }
                             else
                             {
-                                <!-- File icon + name + size -->
+                                <!-- File icon + name + size with type-specific colors -->
                                 <a href="@FileDownloadUrl" target="_blank" class="file-download-link">
-                                    <div class="file-icon">
+                                    <div class="file-icon @GetFileIconClass()">
                                         <MudIcon Icon="@GetFileIcon()" Size="Size.Large" />
                                     </div>
                                     <div class="file-info">
@@ -267,7 +277,7 @@
                             <span>Copy</span>
                             <MudIcon Icon="@Icons.Material.Outlined.ContentCopy" Size="Size.Small" />
                         </button>
-                        @if (IsOwn && !IsForwarded)
+                        @if (IsOwn && !IsForwarded && !(HasFileOnly()))
                         {
                             <button class="menu-item" @onclick="OnEditClick">
                                 <span>Edit</span>

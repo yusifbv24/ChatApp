@@ -107,7 +107,7 @@
                                     var currentPinned = IsDirectMessage ? GetCurrentPinnedDirectMessage() : null;
                                     var currentChannelPinned = !IsDirectMessage ? GetCurrentPinnedChannelMessage() : null;
                                     var senderName = currentPinned?.SenderDisplayName ?? currentChannelPinned?.SenderDisplayName;
-                                    var messageContent = currentPinned?.Content ?? currentChannelPinned?.Content;
+                                    var messageContent = currentPinned != null ? GetFilePreview(currentPinned) : (currentChannelPinned != null ? GetFilePreview(currentChannelPinned) : "");
 
                                     if (!string.IsNullOrEmpty(senderName))
                                     {
@@ -159,7 +159,7 @@
                                         </div>
                                         <div class="pinned-item-content">
                                             <span class="pinned-item-sender">@message.SenderDisplayName</span>
-                                            <span class="pinned-item-text">@StringHelper.TruncateText(message.Content, 60)</span>
+                                            <span class="pinned-item-text">@StringHelper.TruncateText(GetFilePreview(message), 60)</span>
                                         </div>
                                         <button class="unpin-btn" @onclick="() => HandleUnpinMessage(message.Id)" @onclick:stopPropagation="true" title="Unpin">
                                             <MudIcon Icon="@Icons.Material.Outlined.PushPin" Size="Size.Small" />
@@ -184,7 +184,7 @@
                                         </div>
                                         <div class="pinned-item-content">
                                             <span class="pinned-item-sender">@message.SenderDisplayName</span>
-                                            <span class="pinned-item-text">@StringHelper.TruncateText(message.Content, 60)</span>
+                                            <span class="pinned-item-text">@StringHelper.TruncateText(GetFilePreview(message), 60)</span>
                                         </div>
                                         <button class="unpin-btn" @onclick="() => HandleUnpinChannelMessage(message.Id)" @onclick:stopPropagation="true" title="Unpin">
                                             <MudIcon Icon="@Icons.Material.Outlined.PushPin" Size="Size.Small" />
@@ -259,6 +259,9 @@
                                        ReplyToMessageId="@message.ReplyToMessageId"
                                        ReplyToContent="@message.ReplyToContent"
                                        ReplyToSenderName="@message.ReplyToSenderName"
+                                       ReplyToFileId="@message.ReplyToFileId"
+                                       ReplyToFileName="@message.ReplyToFileName"
+                                       ReplyToFileContentType="@message.ReplyToFileContentType"
                                        IsForwarded="@message.IsForwarded"
                                        LastReadLaterMessageId="@LastReadLaterMessageId"
                                        IsSelectMode="@IsSelectMode"
@@ -333,6 +336,9 @@
                                        ReplyToMessageId="@message.ReplyToMessageId"
                                        ReplyToContent="@message.ReplyToContent"
                                        ReplyToSenderName="@message.ReplyToSenderName"
+                                       ReplyToFileId="@message.ReplyToFileId"
+                                       ReplyToFileName="@message.ReplyToFileName"
+                                       ReplyToFileContentType="@message.ReplyToFileContentType"
                                        IsForwarded="@message.IsForwarded"
                                        LastReadLaterMessageId="@LastReadLaterMessageId"
                                        IsSelectMode="@IsSelectMode"
@@ -405,6 +411,9 @@
                           IsReplying="@IsReplying"
                           ReplyToSenderName="@ReplyToSenderName"
                           ReplyToContent="@ReplyToContent"
+                          ReplyToFileId="@ReplyToFileId"
+                          ReplyToFileName="@ReplyToFileName"
+                          ReplyToFileContentType="@ReplyToFileContentType"
                           InitialDraft="@InitialDraft"
                           OnSend="SendMessage"
                           OnSendWithFiles="OnSendWithFiles"

@@ -460,6 +460,34 @@ public partial class Sidebar
         return date.ToString("MMMM d, yyyy", CultureInfo.InvariantCulture);
     }
 
+    /// <summary>
+    /// Fayl attachment-i olan mesajlar üçün preview text qaytarır.
+    /// [File] prefix-i əlavə edir.
+    /// </summary>
+    private static string GetFilePreview(FavoriteDirectMessageDto message)
+    {
+        if (!string.IsNullOrEmpty(message.FileId))
+        {
+            // Has file attachment
+            return string.IsNullOrWhiteSpace(message.Content) ? "[File]" : $"[File] {message.Content}";
+        }
+        return message.Content;
+    }
+
+    /// <summary>
+    /// Fayl attachment-i olan mesajlar üçün preview text qaytarır.
+    /// [File] prefix-i əlavə edir.
+    /// </summary>
+    private static string GetFilePreview(FavoriteChannelMessageDto message)
+    {
+        if (!string.IsNullOrEmpty(message.FileId))
+        {
+            // Has file attachment
+            return string.IsNullOrWhiteSpace(message.Content) ? "[File]" : $"[File] {message.Content}";
+        }
+        return message.Content;
+    }
+
     #endregion
 
     #region Action Handlers

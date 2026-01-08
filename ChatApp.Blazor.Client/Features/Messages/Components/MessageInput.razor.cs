@@ -68,6 +68,21 @@ public partial class MessageInput : IDisposable
     /// </summary>
     [Parameter] public string? ReplyToContent { get; set; }
 
+    /// <summary>
+    /// Reply edilən mesajın fayl ID-si.
+    /// </summary>
+    [Parameter] public string? ReplyToFileId { get; set; }
+
+    /// <summary>
+    /// Reply edilən mesajın fayl adı.
+    /// </summary>
+    [Parameter] public string? ReplyToFileName { get; set; }
+
+    /// <summary>
+    /// Reply edilən mesajın fayl content type-ı.
+    /// </summary>
+    [Parameter] public string? ReplyToFileContentType { get; set; }
+
     #endregion
 
     #region Parameters - Draft Support
@@ -713,6 +728,57 @@ public partial class MessageInput : IDisposable
         {
             // Element hazır olmaya bilər
         }
+    }
+
+    #endregion
+
+    #region Helper Methods
+
+    /// <summary>
+    /// Fayl tipi üçün Material icon qaytarır.
+    /// </summary>
+    private string GetFileIcon(string? fileName)
+    {
+        if (string.IsNullOrEmpty(fileName))
+            return Icons.Material.Filled.InsertDriveFile;
+
+        var extension = Path.GetExtension(fileName).ToLowerInvariant();
+        return extension switch
+        {
+            ".pdf" => Icons.Material.Filled.PictureAsPdf,
+            ".doc" or ".docx" => Icons.Material.Filled.Description,
+            ".xls" or ".xlsx" => Icons.Material.Filled.TableChart,
+            ".ppt" or ".pptx" => Icons.Material.Filled.Slideshow,
+            ".zip" or ".rar" or ".7z" => Icons.Material.Filled.FolderZip,
+            ".mp4" or ".avi" or ".mov" or ".mkv" => Icons.Material.Filled.VideoFile,
+            ".mp3" or ".wav" or ".flac" => Icons.Material.Filled.AudioFile,
+            ".txt" => Icons.Material.Filled.TextSnippet,
+            ".jpg" or ".jpeg" or ".png" or ".gif" or ".webp" or ".bmp" => Icons.Material.Filled.Image,
+            _ => Icons.Material.Filled.InsertDriveFile
+        };
+    }
+
+    /// <summary>
+    /// Fayl type-ına görə CSS class qaytarır (icon rəngi üçün).
+    /// </summary>
+    private string GetFileIconClass(string? fileName)
+    {
+        if (string.IsNullOrEmpty(fileName))
+            return string.Empty;
+
+        var extension = Path.GetExtension(fileName).ToLowerInvariant();
+        return extension switch
+        {
+            ".pdf" => "pdf",
+            ".doc" or ".docx" => "word",
+            ".xls" or ".xlsx" => "excel",
+            ".ppt" or ".pptx" => "powerpoint",
+            ".zip" or ".rar" or ".7z" => "archive",
+            ".mp4" or ".avi" or ".mov" or ".mkv" => "video",
+            ".mp3" or ".wav" or ".flac" => "audio",
+            ".txt" => "text",
+            _ => string.Empty
+        };
     }
 
     #endregion

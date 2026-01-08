@@ -60,6 +60,8 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                         from repliedMessage in replyJoin.DefaultIfEmpty()
                         join repliedSender in _context.Set<UserReadModel>() on repliedMessage.SenderId equals repliedSender.Id into repliedSenderJoin
                         from repliedSender in repliedSenderJoin.DefaultIfEmpty()
+                        join repliedFile in _context.Set<ChatApp.Modules.Files.Domain.Entities.FileMetadata>() on repliedMessage.FileId equals repliedFile.Id.ToString() into repliedFileJoin
+                        from repliedFile in repliedFileJoin.DefaultIfEmpty()
                         where message.Id == id
                         select new
                         {
@@ -87,6 +89,9 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                             ReplyToContent = repliedMessage != null && !repliedMessage.IsDeleted ? repliedMessage.Content : null,
                             ReplyToIsDeleted = repliedMessage != null && repliedMessage.IsDeleted,
                             ReplyToSenderName = repliedSender != null ? repliedSender.DisplayName : null,
+                            ReplyToFileId = repliedMessage != null ? repliedMessage.FileId : null,
+                            ReplyToFileName = repliedFile != null ? repliedFile.OriginalFileName : null,
+                            ReplyToFileContentType = repliedFile != null ? repliedFile.ContentType : null,
                             message.IsForwarded
                         }).FirstOrDefaultAsync(cancellationToken);
 
@@ -128,6 +133,9 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 result.ReplyToMessageId,
                 result.ReplyToIsDeleted ? "This message was deleted" : result.ReplyToContent, // SECURITY: Sanitize deleted reply content
                 result.ReplyToSenderName,
+                result.ReplyToFileId,
+                result.ReplyToFileName,
+                result.ReplyToFileContentType,
                 result.IsForwarded,
                 reactions.Count > 0 ? reactions : null
             );
@@ -149,6 +157,8 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                         from repliedMessage in replyJoin.DefaultIfEmpty()
                         join repliedSender in _context.Set<UserReadModel>() on repliedMessage.SenderId equals repliedSender.Id into repliedSenderJoin
                         from repliedSender in repliedSenderJoin.DefaultIfEmpty()
+                        join repliedFile in _context.Set<ChatApp.Modules.Files.Domain.Entities.FileMetadata>() on repliedMessage.FileId equals repliedFile.Id.ToString() into repliedFileJoin
+                        from repliedFile in repliedFileJoin.DefaultIfEmpty()
                         where message.ConversationId == conversationId // Removed IsDeleted filter - show deleted messages as "This message was deleted"
                         select new
                         {
@@ -176,6 +186,9 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                             ReplyToContent = repliedMessage != null && !repliedMessage.IsDeleted ? repliedMessage.Content : null,
                             ReplyToIsDeleted = repliedMessage != null && repliedMessage.IsDeleted,
                             ReplyToSenderName = repliedSender != null ? repliedSender.DisplayName : null,
+                            ReplyToFileId = repliedMessage != null ? repliedMessage.FileId : null,
+                            ReplyToFileName = repliedFile != null ? repliedFile.OriginalFileName : null,
+                            ReplyToFileContentType = repliedFile != null ? repliedFile.ContentType : null,
                             message.IsForwarded
                         };
 
@@ -232,6 +245,9 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 r.ReplyToMessageId,
                 r.ReplyToIsDeleted ? "This message was deleted" : r.ReplyToContent, // SECURITY: Sanitize deleted reply content
                 r.ReplyToSenderName,
+                r.ReplyToFileId,
+                r.ReplyToFileName,
+                r.ReplyToFileContentType,
                 r.IsForwarded,
                 reactions.ContainsKey(r.Id) ? reactions[r.Id] : null
             )).ToList();
@@ -265,6 +281,8 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                            from repliedMessage in replyJoin.DefaultIfEmpty()
                            join repliedSender in _context.Set<UserReadModel>() on repliedMessage.SenderId equals repliedSender.Id into repliedSenderJoin
                            from repliedSender in repliedSenderJoin.DefaultIfEmpty()
+                           join repliedFile in _context.Set<ChatApp.Modules.Files.Domain.Entities.FileMetadata>() on repliedMessage.FileId equals repliedFile.Id.ToString() into repliedFileJoin
+                           from repliedFile in repliedFileJoin.DefaultIfEmpty()
                            where message.ConversationId == conversationId
                            select new
                            {
@@ -292,6 +310,9 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                                ReplyToContent = repliedMessage != null && !repliedMessage.IsDeleted ? repliedMessage.Content : null,
                                ReplyToIsDeleted = repliedMessage != null && repliedMessage.IsDeleted,
                                ReplyToSenderName = repliedSender != null ? repliedSender.DisplayName : null,
+                               ReplyToFileId = repliedMessage != null ? repliedMessage.FileId : null,
+                               ReplyToFileName = repliedFile != null ? repliedFile.OriginalFileName : null,
+                               ReplyToFileContentType = repliedFile != null ? repliedFile.ContentType : null,
                                message.IsForwarded
                            };
 
@@ -357,6 +378,9 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 r.ReplyToMessageId,
                 r.ReplyToIsDeleted ? "This message was deleted" : r.ReplyToContent,
                 r.ReplyToSenderName,
+                r.ReplyToFileId,
+                r.ReplyToFileName,
+                r.ReplyToFileContentType,
                 r.IsForwarded,
                 reactions.ContainsKey(r.Id) ? reactions[r.Id] : null
             )).ToList();
@@ -378,6 +402,8 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                         from repliedMessage in replyJoin.DefaultIfEmpty()
                         join repliedSender in _context.Set<UserReadModel>() on repliedMessage.SenderId equals repliedSender.Id into repliedSenderJoin
                         from repliedSender in repliedSenderJoin.DefaultIfEmpty()
+                        join repliedFile in _context.Set<ChatApp.Modules.Files.Domain.Entities.FileMetadata>() on repliedMessage.FileId equals repliedFile.Id.ToString() into repliedFileJoin
+                        from repliedFile in repliedFileJoin.DefaultIfEmpty()
                         where message.ConversationId == conversationId
                            && message.CreatedAtUtc < beforeUtc
                         select new
@@ -406,6 +432,9 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                             ReplyToContent = repliedMessage != null && !repliedMessage.IsDeleted ? repliedMessage.Content : null,
                             ReplyToIsDeleted = repliedMessage != null && repliedMessage.IsDeleted,
                             ReplyToSenderName = repliedSender != null ? repliedSender.DisplayName : null,
+                            ReplyToFileId = repliedMessage != null ? repliedMessage.FileId : null,
+                            ReplyToFileName = repliedFile != null ? repliedFile.OriginalFileName : null,
+                            ReplyToFileContentType = repliedFile != null ? repliedFile.ContentType : null,
                             message.IsForwarded
                         };
 
@@ -457,6 +486,9 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 r.ReplyToMessageId,
                 r.ReplyToIsDeleted ? "This message was deleted" : r.ReplyToContent,
                 r.ReplyToSenderName,
+                r.ReplyToFileId,
+                r.ReplyToFileName,
+                r.ReplyToFileContentType,
                 r.IsForwarded,
                 reactions.ContainsKey(r.Id) ? reactions[r.Id] : null
             )).ToList();
@@ -478,6 +510,8 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                         from repliedMessage in replyJoin.DefaultIfEmpty()
                         join repliedSender in _context.Set<UserReadModel>() on repliedMessage.SenderId equals repliedSender.Id into repliedSenderJoin
                         from repliedSender in repliedSenderJoin.DefaultIfEmpty()
+                        join repliedFile in _context.Set<ChatApp.Modules.Files.Domain.Entities.FileMetadata>() on repliedMessage.FileId equals repliedFile.Id.ToString() into repliedFileJoin
+                        from repliedFile in repliedFileJoin.DefaultIfEmpty()
                         where message.ConversationId == conversationId
                            && message.CreatedAtUtc > afterUtc
                         select new
@@ -506,6 +540,9 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                             ReplyToContent = repliedMessage != null && !repliedMessage.IsDeleted ? repliedMessage.Content : null,
                             ReplyToIsDeleted = repliedMessage != null && repliedMessage.IsDeleted,
                             ReplyToSenderName = repliedSender != null ? repliedSender.DisplayName : null,
+                            ReplyToFileId = repliedMessage != null ? repliedMessage.FileId : null,
+                            ReplyToFileName = repliedFile != null ? repliedFile.OriginalFileName : null,
+                            ReplyToFileContentType = repliedFile != null ? repliedFile.ContentType : null,
                             message.IsForwarded
                         };
 
@@ -557,6 +594,9 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 r.ReplyToMessageId,
                 r.ReplyToIsDeleted ? "This message was deleted" : r.ReplyToContent,
                 r.ReplyToSenderName,
+                r.ReplyToFileId,
+                r.ReplyToFileName,
+                r.ReplyToFileContentType,
                 r.IsForwarded,
                 reactions.ContainsKey(r.Id) ? reactions[r.Id] : null
             )).ToList();
@@ -605,6 +645,8 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                           from repliedMessage in replyJoin.DefaultIfEmpty()
                           join repliedSender in _context.Set<UserReadModel>() on repliedMessage.SenderId equals repliedSender.Id into repliedSenderJoin
                           from repliedSender in repliedSenderJoin.DefaultIfEmpty()
+                          join repliedFile in _context.Set<ChatApp.Modules.Files.Domain.Entities.FileMetadata>() on repliedMessage.FileId equals repliedFile.Id.ToString() into repliedFileJoin
+                          from repliedFile in repliedFileJoin.DefaultIfEmpty()
                           where message.ConversationId == conversationId
                              && message.IsPinned
                              && !message.IsDeleted
@@ -635,6 +677,9 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                               ReplyToContent = repliedMessage != null && !repliedMessage.IsDeleted ? repliedMessage.Content : null,
                               ReplyToIsDeleted = repliedMessage != null && repliedMessage.IsDeleted,
                               ReplyToSenderName = repliedSender != null ? repliedSender.DisplayName : null,
+                              ReplyToFileId = repliedMessage != null ? repliedMessage.FileId : null,
+                              ReplyToFileName = repliedFile != null ? repliedFile.OriginalFileName : null,
+                              ReplyToFileContentType = repliedFile != null ? repliedFile.ContentType : null,
                               message.IsForwarded
                           }).ToListAsync(cancellationToken);
 
@@ -681,6 +726,9 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 r.ReplyToMessageId,
                 r.ReplyToIsDeleted ? "This message was deleted" : r.ReplyToContent, // SECURITY: Sanitize deleted reply content
                 r.ReplyToSenderName,
+                r.ReplyToFileId,
+                r.ReplyToFileName,
+                r.ReplyToFileContentType,
                 r.IsForwarded,
                 reactions.ContainsKey(r.Id) ? reactions[r.Id] : null
             )).ToList();

@@ -49,7 +49,8 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                     message.IsDeleted ? "This message was deleted" : message.Content,
                     message.IsDeleted,
                     DateTime.SpecifyKind(message.CreatedAtUtc, DateTimeKind.Utc),
-                    DateTime.SpecifyKind(favorite.FavoritedAtUtc, DateTimeKind.Utc)
+                    DateTime.SpecifyKind(favorite.FavoritedAtUtc, DateTimeKind.Utc),
+                    message.FileId
                 )
             ).ToListAsync(cancellationToken);
         }

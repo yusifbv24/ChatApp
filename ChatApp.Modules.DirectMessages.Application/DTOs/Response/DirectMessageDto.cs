@@ -24,6 +24,9 @@
         Guid? ReplyToMessageId,
         string? ReplyToContent,
         string? ReplyToSenderName,
+        string? ReplyToFileId,
+        string? ReplyToFileName,
+        string? ReplyToFileContentType,
         bool IsForwarded,
         List<DirectMessageReactionDto>? Reactions = null);
 

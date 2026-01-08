@@ -442,6 +442,21 @@ public partial class Messages : IAsyncDisposable
     /// </summary>
     private string? replyToContent;
 
+    /// <summary>
+    /// Reply edilən mesajın file ID-si (file varsa).
+    /// </summary>
+    private string? replyToFileId;
+
+    /// <summary>
+    /// Reply edilən mesajın file adı (file varsa).
+    /// </summary>
+    private string? replyToFileName;
+
+    /// <summary>
+    /// Reply edilən mesajın file content type (file varsa).
+    /// </summary>
+    private string? replyToFileContentType;
+
     #endregion
 
     #region Forward State - Forward state-i

@@ -320,6 +320,21 @@ public partial class ChatArea : IAsyncDisposable
     /// </summary>
     [Parameter] public string? ReplyToContent { get; set; }
 
+    /// <summary>
+    /// Reply edilən mesajın fayl ID-si.
+    /// </summary>
+    [Parameter] public string? ReplyToFileId { get; set; }
+
+    /// <summary>
+    /// Reply edilən mesajın fayl adı.
+    /// </summary>
+    [Parameter] public string? ReplyToFileName { get; set; }
+
+    /// <summary>
+    /// Reply edilən mesajın fayl content type-ı.
+    /// </summary>
+    [Parameter] public string? ReplyToFileContentType { get; set; }
+
     #endregion
 
     #region Parameters - Unread & Read Later
@@ -1180,25 +1195,29 @@ public partial class ChatArea : IAsyncDisposable
 
     /// <summary>
     /// Hazırki pinlənmiş DM mesajını qaytarır (cycling üçün).
+    /// Ən sonuncu pinlənmiş mesaj ilk göstərilir (reverse order).
     /// </summary>
     private DirectMessageDto? GetCurrentPinnedDirectMessage()
     {
         if (PinnedDirectMessages == null || PinnedDirectMessages.Count == 0)
             return null;
 
-        var safeIndex = currentPinnedIndex % PinnedDirectMessages.Count;
+        // Reverse order: most recently pinned shows first
+        var safeIndex = PinnedDirectMessages.Count - 1 - (currentPinnedIndex % PinnedDirectMessages.Count);
         return PinnedDirectMessages[safeIndex];
     }
 
     /// <summary>
     /// Hazırki pinlənmiş channel mesajını qaytarır (cycling üçün).
+    /// Ən sonuncu pinlənmiş mesaj ilk göstərilir (reverse order).
     /// </summary>
     private ChannelMessageDto? GetCurrentPinnedChannelMessage()
     {
         if (PinnedChannelMessages == null || PinnedChannelMessages.Count == 0)
             return null;
 
-        var safeIndex = currentPinnedIndex % PinnedChannelMessages.Count;
+        // Reverse order: most recently pinned shows first
+        var safeIndex = PinnedChannelMessages.Count - 1 - (currentPinnedIndex % PinnedChannelMessages.Count);
         return PinnedChannelMessages[safeIndex];
     }
 
@@ -1565,6 +1584,44 @@ public partial class ChatArea : IAsyncDisposable
                 });
             }
         }
+    }
+
+    #endregion
+
+    #region Helper Methods
+
+    /// <summary>
+    /// DirectMessage-dən file preview string-ini çıxarır (pinned messages üçün).
+    /// </summary>
+    private string GetFilePreview(DirectMessageDto message)
+    {
+        if (message.FileId != null)
+        {
+            if (message.FileContentType != null && message.FileContentType.StartsWith("image/"))
+            {
+                return string.IsNullOrWhiteSpace(message.Content) ? "[Image]" : $"[Image] {message.Content}";
+            }
+
+            return string.IsNullOrWhiteSpace(message.Content) ? "[File]" : $"[File] {message.Content}";
+        }
+        return message.Content;
+    }
+
+    /// <summary>
+    /// ChannelMessage-dən file preview string-ini çıxarır (pinned messages üçün).
+    /// </summary>
+    private string GetFilePreview(ChannelMessageDto message)
+    {
+        if (message.FileId != null)
+        {
+            if (message.FileContentType != null && message.FileContentType.StartsWith("image/"))
+            {
+                return string.IsNullOrWhiteSpace(message.Content) ? "[Image]" : $"[Image] {message.Content}";
+            }
+
+            return string.IsNullOrWhiteSpace(message.Content) ? "[File]" : $"[File] {message.Content}";
+        }
+        return message.Content;
     }
 
     #endregion

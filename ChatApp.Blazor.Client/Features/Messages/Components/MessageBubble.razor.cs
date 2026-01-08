@@ -177,6 +177,21 @@ public partial class MessageBubble : IAsyncDisposable
     [Parameter] public string? ReplyToSenderName { get; set; }
 
     /// <summary>
+    /// Reply edilən mesajın fayl ID-si.
+    /// </summary>
+    [Parameter] public string? ReplyToFileId { get; set; }
+
+    /// <summary>
+    /// Reply edilən mesajın fayl adı.
+    /// </summary>
+    [Parameter] public string? ReplyToFileName { get; set; }
+
+    /// <summary>
+    /// Reply edilən mesajın fayl content type-ı.
+    /// </summary>
+    [Parameter] public string? ReplyToFileContentType { get; set; }
+
+    /// <summary>
     /// Mesaj forward edilib?
     /// </summary>
     [Parameter] public bool IsForwarded { get; set; }
@@ -353,6 +368,12 @@ public partial class MessageBubble : IAsyncDisposable
     /// </summary>
     private bool IsFileImage => !string.IsNullOrEmpty(FileContentType) && FileContentType.StartsWith("image/");
 
+    /// <summary>
+    /// Mesaj sadəcə fayldan ibarətdir? (content yoxdur)
+    /// File-only mesajlar edit edilə bilməz.
+    /// </summary>
+    private bool HasFileOnly() => !string.IsNullOrEmpty(FileId) && string.IsNullOrWhiteSpace(Content);
+
     #endregion
 
     #region Computed Properties
@@ -396,10 +417,18 @@ public partial class MessageBubble : IAsyncDisposable
     /// </summary>
     private string GetFileIcon()
     {
-        if (string.IsNullOrEmpty(FileName))
+        return GetFileIcon(FileName);
+    }
+
+    /// <summary>
+    /// Fayl tipi üçün Material icon qaytarır (parametrli overload).
+    /// </summary>
+    private string GetFileIcon(string? fileName)
+    {
+        if (string.IsNullOrEmpty(fileName))
             return Icons.Material.Filled.InsertDriveFile;
 
-        var extension = Path.GetExtension(FileName).ToLowerInvariant();
+        var extension = Path.GetExtension(fileName).ToLowerInvariant();
         return extension switch
         {
             ".pdf" => Icons.Material.Filled.PictureAsPdf,
@@ -412,6 +441,29 @@ public partial class MessageBubble : IAsyncDisposable
             ".txt" => Icons.Material.Filled.TextSnippet,
             ".jpg" or ".jpeg" or ".png" or ".gif" or ".webp" or ".bmp" => Icons.Material.Filled.Image,
             _ => Icons.Material.Filled.InsertDriveFile
+        };
+    }
+
+    /// <summary>
+    /// Fayl type-ına görə CSS class qaytarır (icon rəngi üçün).
+    /// </summary>
+    private string GetFileIconClass()
+    {
+        if (string.IsNullOrEmpty(FileName))
+            return string.Empty;
+
+        var extension = Path.GetExtension(FileName).ToLowerInvariant();
+        return extension switch
+        {
+            ".pdf" => "pdf",
+            ".doc" or ".docx" => "word",
+            ".xls" or ".xlsx" => "excel",
+            ".ppt" or ".pptx" => "powerpoint",
+            ".zip" or ".rar" or ".7z" => "archive",
+            ".mp4" or ".avi" or ".mov" or ".mkv" => "video",
+            ".mp3" or ".wav" or ".flac" => "audio",
+            ".txt" => "text",
+            _ => string.Empty
         };
     }
 

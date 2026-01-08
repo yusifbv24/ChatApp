@@ -10,5 +10,6 @@ namespace ChatApp.Modules.Channels.Application.DTOs.Responses
         string Content,
         bool IsDeleted,
         DateTime CreatedAtUtc,
-        DateTime FavoritedAtUtc);
+        DateTime FavoritedAtUtc,
+        string? FileId);
 }

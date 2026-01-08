@@ -87,7 +87,11 @@ public partial class Messages
                         replyToMessageId,
                         replyToContent,
                         replyToSenderName,
-                        false);                                         // IsForwarded
+                        null,                                           // ReplyToFileId
+                        null,                                           // ReplyToFileName
+                        null,                                           // ReplyToFileContentType
+                        false,                                          // IsForwarded
+                        null);                                          // Reactions
 
                     // Dublikat yoxla (SignalR-dan gəlmiş ola bilər)
                     if (!directMessages.Any(m => m.Id == messageId))
@@ -165,11 +169,14 @@ public partial class Messages
                             replyToMessageId,
                             replyToContent,
                             replyToSenderName,
-                            false,
-                            ReadByCount: 0,
-                            TotalMemberCount: totalMembers,
-                            ReadBy: [],
-                            Reactions: []);
+                            null,                                       // ReplyToFileId
+                            null,                                       // ReplyToFileName
+                            null,                                       // ReplyToFileContentType
+                            false,                                      // IsForwarded
+                            0,                                          // ReadByCount
+                            totalMembers,                               // TotalMemberCount
+                            [],                                         // ReadBy
+                            []);                                        // Reactions
 
                         channelMessages.Add(newMessage);
 

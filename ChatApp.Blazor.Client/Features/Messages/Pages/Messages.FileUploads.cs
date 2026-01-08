@@ -1,4 +1,3 @@
-using ChatApp.Blazor.Client.Features.Files.Services;
 using ChatApp.Blazor.Client.Models.Files;
 using ChatApp.Blazor.Client.Models.Messages;
 
@@ -181,7 +180,11 @@ public partial class Messages
                     null,                                           // ReplyToMessageId
                     null,                                           // ReplyToContent
                     null,                                           // ReplyToSenderName
-                    false);                                         // IsForwarded
+                    null,                                           // ReplyToFileId
+                    null,                                           // ReplyToFileName
+                    null,                                           // ReplyToFileContentType
+                    false,                                          // IsForwarded
+                    null);                                          // Reactions
 
                 // Dublikat yoxla
                 if (!directMessages.Any(m => m.Id == messageId))
@@ -198,7 +201,8 @@ public partial class Messages
                 // Conversation list-i yenilə (yalnız sonuncu mesaj üçün)
                 if (i == uploadResults.Count - 1)
                 {
-                    UpdateConversationLocally(selectedConversationId.Value, content, messageTime);
+                    var preview = GetFilePreview(newMessage);
+                    UpdateConversationLocally(selectedConversationId.Value, preview, messageTime);
                 }
             }
             else
@@ -280,11 +284,14 @@ public partial class Messages
                         null,                                       // ReplyToMessageId
                         null,                                       // ReplyToContent
                         null,                                       // ReplyToSenderName
+                        null,                                       // ReplyToFileId
+                        null,                                       // ReplyToFileName
+                        null,                                       // ReplyToFileContentType
                         false,                                      // IsForwarded
-                        ReadByCount: 0,
-                        TotalMemberCount: totalMembers,
-                        ReadBy: [],
-                        Reactions: []);
+                        0,                                          // ReadByCount
+                        totalMembers,                               // TotalMemberCount
+                        [],                                         // ReadBy
+                        []);                                        // Reactions
 
                     channelMessages.Add(newMessage);
 
@@ -295,7 +302,24 @@ public partial class Messages
                 // Channel list-i yenilə (yalnız sonuncu mesaj üçün)
                 if (i == uploadResults.Count - 1)
                 {
-                    UpdateChannelLocally(selectedChannelId.Value, content, messageTime, UserState.CurrentUser?.DisplayName);
+                    // File preview hesabla (conversation list üçün sadə format)
+                    string preview;
+                    if (fileId != null)
+                    {
+                        if (file.ContentType != null && file.ContentType.StartsWith("image/"))
+                        {
+                            preview = string.IsNullOrWhiteSpace(content) ? "[Image]" : $"[Image] {content}";
+                        }
+                        else
+                        {
+                            preview = string.IsNullOrWhiteSpace(content) ? "[File]" : $"[File] {content}";
+                        }
+                    }
+                    else
+                    {
+                        preview = content;
+                    }
+                    UpdateChannelLocally(selectedChannelId.Value, preview, messageTime, UserState.CurrentUser?.DisplayName);
                 }
             }
             else

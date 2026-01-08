@@ -10,7 +10,8 @@ namespace ChatApp.Blazor.Client.Models.Messages
         string Content,
         bool IsDeleted,
         DateTime CreatedAtUtc,
-        DateTime FavoritedAtUtc);
+        DateTime FavoritedAtUtc,
+        string? FileId);
 
     public record FavoriteChannelMessageDto(
         Guid Id,
@@ -22,5 +23,6 @@ namespace ChatApp.Blazor.Client.Models.Messages
         string Content,
         bool IsDeleted,
         DateTime CreatedAtUtc,
-        DateTime FavoritedAtUtc);
+        DateTime FavoritedAtUtc,
+        string? FileId);
 }

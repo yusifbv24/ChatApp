@@ -10,5 +10,6 @@ namespace ChatApp.Modules.DirectMessages.Application.DTOs.Response
         string Content,
         bool IsDeleted,
         DateTime CreatedAtUtc,
-        DateTime FavoritedAtUtc);
+        DateTime FavoritedAtUtc,
+        string? FileId);
 }

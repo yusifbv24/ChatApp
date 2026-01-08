@@ -1435,6 +1435,34 @@
     color: rgba(255, 255, 255, 0.75);
 }
 
+.reply-file-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 2px;
+}
+
+.reply-file-icon-small {
+    color: var(--primary-color, #007bff);
+    flex-shrink: 0;
+}
+
+.own-bubble .reply-file-icon-small {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.reply-file-name-small {
+    font-size: 12px;
+    color: var(--gray-700);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.own-bubble .reply-file-name-small {
+    color: rgba(255, 255, 255, 0.85);
+}
+
 /* Message highlight animation (WhatsApp style) */
 @keyframes messageHighlight {
     0% {
@@ -2007,6 +2035,77 @@
 .reply-to-preview {
     color: var(--gray-600);
     font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.reply-file-preview {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    background: var(--gray-50);
+    border-radius: 6px;
+    margin-top: 4px;
+}
+
+.reply-file-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: var(--gray-200);
+    color: var(--gray-700);
+    flex-shrink: 0;
+}
+
+.reply-file-icon.pdf {
+    background: #fee;
+    color: #dc2626;
+}
+
+.reply-file-icon.word {
+    background: #eff6ff;
+    color: #2563eb;
+}
+
+.reply-file-icon.excel {
+    background: #f0fdf4;
+    color: #16a34a;
+}
+
+.reply-file-icon.powerpoint {
+    background: #fff7ed;
+    color: #ea580c;
+}
+
+.reply-file-icon.archive {
+    background: #faf5ff;
+    color: #9333ea;
+}
+
+.reply-file-icon.video {
+    background: #fef3c7;
+    color: #d97706;
+}
+
+.reply-file-icon.audio {
+    background: #fce7f3;
+    color: #ec4899;
+}
+
+.reply-file-icon.text {
+    background: var(--gray-100);
+    color: var(--gray-600);
+}
+
+.reply-file-name {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--gray-700);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -4623,6 +4722,39 @@
     border-radius: 8px;
     color: white;
     flex-shrink: 0;
+}
+
+/* File type specific icon colors */
+.message-file-attachment .file-icon.pdf {
+    background: #dc2626; /* Red for PDF */
+}
+
+.message-file-attachment .file-icon.excel {
+    background: #16a34a; /* Green for Excel */
+}
+
+.message-file-attachment .file-icon.word {
+    background: #2563eb; /* Blue for Word */
+}
+
+.message-file-attachment .file-icon.powerpoint {
+    background: #ea580c; /* Orange for PowerPoint */
+}
+
+.message-file-attachment .file-icon.video {
+    background: #7c3aed; /* Purple for Video */
+}
+
+.message-file-attachment .file-icon.audio {
+    background: #db2777; /* Pink for Audio */
+}
+
+.message-file-attachment .file-icon.archive {
+    background: #f59e0b; /* Amber for Archive */
+}
+
+.message-file-attachment .file-icon.text {
+    background: #64748b; /* Slate for Text */
 }
 
 .message-file-attachment .file-info {

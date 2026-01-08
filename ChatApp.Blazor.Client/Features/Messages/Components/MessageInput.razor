@@ -16,7 +16,19 @@
             <MudIcon Icon="@Icons.Material.Filled.Reply" Size="Size.Small" />
             <div class="reply-info">
                 <span class="reply-to-name">Replying to @ReplyToSenderName</span>
-                <span class="reply-to-preview">@StringHelper.TruncateText(ReplyToContent, 60)</span>
+                @if (!string.IsNullOrEmpty(ReplyToFileId))
+                {
+                    <div class="reply-file-preview">
+                        <div class="reply-file-icon @GetFileIconClass(ReplyToFileName)">
+                            <MudIcon Icon="@GetFileIcon(ReplyToFileName)" Size="Size.Small" />
+                        </div>
+                        <span class="reply-file-name">@ReplyToFileName</span>
+                    </div>
+                }
+                @if (!string.IsNullOrEmpty(ReplyToContent))
+                {
+                    <span class="reply-to-preview">@StringHelper.TruncateText(ReplyToContent, 60)</span>
+                }
             </div>
             <button class="cancel-reply-btn" @onclick="CancelReply">
                 <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" />

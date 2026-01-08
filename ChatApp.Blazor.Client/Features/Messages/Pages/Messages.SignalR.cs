@@ -142,9 +142,10 @@ public partial class Messages
                 var isMyMessage = message.SenderId == currentUserId;
 
                 // with expression - record-un kopyasını yaradır, bəzi field-ləri dəyişir
+                var preview = GetFilePreview(message);
                 var updatedConversation = conversation with
                 {
-                    LastMessageContent = message.Content,
+                    LastMessageContent = preview,
                     LastMessageAtUtc = message.CreatedAtUtc,
                     LastMessageSenderId = message.SenderId,
                     LastMessageStatus = isMyMessage ? (message.IsRead ? "Read" : "Sent") : null,
@@ -247,9 +248,10 @@ public partial class Messages
                         status = "Sent";
                 }
 
+                var preview = GetFilePreview(message);
                 var updatedChannel = channel with
                 {
-                    LastMessageContent = message.Content,
+                    LastMessageContent = preview,
                     LastMessageAtUtc = message.CreatedAtUtc,
                     LastMessageId = message.Id,
                     LastMessageSenderId = message.SenderId,
@@ -309,7 +311,8 @@ public partial class Messages
                         // Son mesaj idisə conversation list-i də yenilə
                         if (IsLastMessageInConversation(editedMessage.ConversationId, editedMessage.Id))
                         {
-                            UpdateConversationLastMessage(editedMessage.ConversationId, editedMessage.Content);
+                            var preview = GetFilePreview(editedMessage);
+                            UpdateConversationLastMessage(editedMessage.ConversationId, preview);
                         }
                     }
 
@@ -330,7 +333,8 @@ public partial class Messages
                 var conversation = directConversations.FirstOrDefault(c => c.Id == editedMessage.ConversationId);
                 if (conversation != null && IsLastMessageInConversation(editedMessage.ConversationId, editedMessage.Id))
                 {
-                    UpdateConversationLastMessage(editedMessage.ConversationId, editedMessage.Content);
+                    var preview = GetFilePreview(editedMessage);
+                    UpdateConversationLastMessage(editedMessage.ConversationId, preview);
                     needsStateUpdate = true;
                 }
 
@@ -442,7 +446,8 @@ public partial class Messages
 
                         if (IsLastMessageInChannel(editedMessage.ChannelId, updatedMessage.Id))
                         {
-                            UpdateChannelLastMessage(editedMessage.ChannelId, updatedMessage.Content, message.SenderDisplayName);
+                            var preview = GetFilePreview(updatedMessage);
+                            UpdateChannelLastMessage(editedMessage.ChannelId, preview, message.SenderDisplayName);
                         }
                     }
 
@@ -461,7 +466,8 @@ public partial class Messages
                 var channel = channelConversations.FirstOrDefault(c => c.Id == editedMessage.ChannelId);
                 if (channel != null && IsLastMessageInChannel(editedMessage.ChannelId, editedMessage.Id))
                 {
-                    UpdateChannelLastMessage(editedMessage.ChannelId, editedMessage.Content, editedMessage.SenderDisplayName);
+                    var preview = GetFilePreview(editedMessage);
+                    UpdateChannelLastMessage(editedMessage.ChannelId, preview, editedMessage.SenderDisplayName);
                     needsStateUpdate = true;
                 }
 

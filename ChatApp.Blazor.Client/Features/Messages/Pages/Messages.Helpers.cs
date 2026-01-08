@@ -399,6 +399,95 @@ public partial class Messages
     }
 
     /// <summary>
+    /// Mesajdan file preview string-ini çıxarır (conversation list üçün).
+    /// Sadə format: [Image], [File]
+    /// </summary>
+    private string GetFilePreview(DirectMessageDto message)
+    {
+        if (message.FileId != null)
+        {
+            if (message.FileContentType != null && message.FileContentType.StartsWith("image/"))
+            {
+                return string.IsNullOrWhiteSpace(message.Content) ? "[Image]" : $"[Image] {message.Content}";
+            }
+
+            return string.IsNullOrWhiteSpace(message.Content) ? "[File]" : $"[File] {message.Content}";
+        }
+        return message.Content;
+    }
+
+    /// <summary>
+    /// Mesajdan file preview string-ini çıxarır (conversation list üçün).
+    /// Sadə format: [Image], [File]
+    /// </summary>
+    private string GetFilePreview(ChannelMessageDto message)
+    {
+        if (message.FileId != null)
+        {
+            if (message.FileContentType != null && message.FileContentType.StartsWith("image/"))
+            {
+                return string.IsNullOrWhiteSpace(message.Content) ? "[Image]" : $"[Image] {message.Content}";
+            }
+
+            return string.IsNullOrWhiteSpace(message.Content) ? "[File]" : $"[File] {message.Content}";
+        }
+        return message.Content;
+    }
+
+    /// <summary>
+    /// File type-a görə emoji və label qaytarır.
+    /// </summary>
+    private string GetFileTypePrefix(string? contentType, string? fileName)
+    {
+        // Content type-a görə
+        if (!string.IsNullOrEmpty(contentType))
+        {
+            if (contentType == "application/pdf")
+                return "📄 PDF";
+
+            if (contentType == "application/vnd.ms-excel" ||
+                contentType == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                return "📊 Excel";
+
+            if (contentType == "application/msword" ||
+                contentType == "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+                return "📝 Word";
+
+            if (contentType == "application/vnd.ms-powerpoint" ||
+                contentType == "application/vnd.openxmlformats-officedocument.presentationml.presentation")
+                return "📽️ PowerPoint";
+
+            if (contentType.StartsWith("video/"))
+                return "🎥 Video";
+
+            if (contentType.StartsWith("audio/"))
+                return "🎵 Audio";
+
+            if (contentType == "application/zip" || contentType == "application/x-rar-compressed")
+                return "🗜️ Archive";
+        }
+
+        // Extension-a görə fallback
+        if (!string.IsNullOrEmpty(fileName))
+        {
+            var ext = System.IO.Path.GetExtension(fileName).ToLowerInvariant();
+            return ext switch
+            {
+                ".pdf" => "📄 PDF",
+                ".xls" or ".xlsx" => "📊 Excel",
+                ".doc" or ".docx" => "📝 Word",
+                ".ppt" or ".pptx" => "📽️ PowerPoint",
+                ".zip" or ".rar" or ".7z" => "🗜️ Archive",
+                ".mp4" or ".avi" or ".mov" => "🎥 Video",
+                ".mp3" or ".wav" or ".flac" => "🎵 Audio",
+                _ => "📎 File"
+            };
+        }
+
+        return "📎 File";
+    }
+
+    /// <summary>
     /// Global unread count-u yenilə.
     /// </summary>
     private void UpdateGlobalUnreadCount()

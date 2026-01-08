@@ -81,7 +81,7 @@ public partial class Messages
                 if (conversationId == selectedConversationId)
                 {
                     var conversation = directConversations.FirstOrDefault(c => c.Id == conversationId);
-                    var newMessage = new Models.Messages.DirectMessageDto(
+                    var newMessage = new DirectMessageDto(
                         messageId,
                         conversationId,
                         currentUserId,
@@ -105,7 +105,11 @@ public partial class Messages
                         null,                   // ReplyToMessageId
                         null,                   // ReplyToContent
                         null,                   // ReplyToSenderName
-                        true);                  // IsForwarded
+                        null,                   // ReplyToFileId
+                        null,                   // ReplyToFileName
+                        null,                   // ReplyToFileContentType
+                        true,                   // IsForwarded
+                        null);                  // Reactions
 
                     // Dublikat yoxla
                     if (!directMessages.Any(m => m.Id == messageId))
@@ -118,6 +122,7 @@ public partial class Messages
                 }
 
                 // Conversation list-i yenilə
+                // Forward olunanda file attachment-lər transfer olunmur, ona görə preview sadəcə content-dir
                 UpdateConversationLocally(conversationId, content, messageTime);
 
                 // Seçim rejimindən çıx
@@ -186,14 +191,17 @@ public partial class Messages
                         messageTime,
                         null,
                         null,
-                        null,
-                        null,
-                        null,
-                        true,
-                        ReadByCount: 0,
-                        TotalMemberCount: totalMembers,
-                        ReadBy: new List<Guid>(),
-                        Reactions: new List<Models.Messages.ChannelMessageReactionDto>());
+                        null,                                       // ReplyToMessageId
+                        null,                                       // ReplyToContent
+                        null,                                       // ReplyToSenderName
+                        null,                                       // ReplyToFileId
+                        null,                                       // ReplyToFileName
+                        null,                                       // ReplyToFileContentType
+                        true,                                       // IsForwarded
+                        0,                                          // ReadByCount
+                        totalMembers,                               // TotalMemberCount
+                        new List<Guid>(),                           // ReadBy
+                        new List<ChannelMessageReactionDto>());
 
                     if (!channelMessages.Any(m => m.Id == messageId))
                     {
@@ -203,6 +211,7 @@ public partial class Messages
                     processedMessageIds.Add(messageId);
                 }
 
+                // Forward olunanda file attachment-lər transfer olunmur, ona görə preview sadəcə content-dir
                 UpdateChannelLocally(channelId, content, messageTime, UserState.CurrentUser?.DisplayName);
 
                 if (isSelectingMessageBuble)
@@ -312,6 +321,9 @@ public partial class Messages
                 replyToMessageId = messageId;
                 replyToSenderName = message.SenderDisplayName;
                 replyToContent = message.Content;
+                replyToFileId = message.FileId;
+                replyToFileName = message.FileName;
+                replyToFileContentType = message.FileContentType;
                 StateHasChanged();
             }
         }
@@ -324,6 +336,9 @@ public partial class Messages
                 replyToMessageId = messageId;
                 replyToSenderName = message.SenderDisplayName;
                 replyToContent = message.Content;
+                replyToFileId = message.FileId;
+                replyToFileName = message.FileName;
+                replyToFileContentType = message.FileContentType;
                 StateHasChanged();
             }
         }
@@ -339,6 +354,9 @@ public partial class Messages
         replyToMessageId = null;
         replyToSenderName = null;
         replyToContent = null;
+        replyToFileId = null;
+        replyToFileName = null;
+        replyToFileContentType = null;
         StateHasChanged();
     }
 

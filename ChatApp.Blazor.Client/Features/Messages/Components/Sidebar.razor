@@ -62,7 +62,7 @@
                                     <div class="favorites-message-content" @onclick="() => NavigateToMessage(message.Id)">
                                         <div class="favorites-sender-name">@message.SenderDisplayName</div>
                                         <div class="favorites-message-text @(message.IsDeleted ? "deleted" : "")">
-                                            @message.Content
+                                            @GetFilePreview(message)
                                         </div>
                                     </div>
                                     <div class="favorites-message-actions">
@@ -113,7 +113,7 @@
                                     <div class="favorites-message-content" @onclick="() => NavigateToMessage(message.Id)">
                                         <div class="favorites-sender-name">@message.SenderDisplayName</div>
                                         <div class="favorites-message-text @(message.IsDeleted ? "deleted" : "")">
-                                            @message.Content
+                                            @GetFilePreview(message)
                                         </div>
                                     </div>
                                     <div class="favorites-message-actions">

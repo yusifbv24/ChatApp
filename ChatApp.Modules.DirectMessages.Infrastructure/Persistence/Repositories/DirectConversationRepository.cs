@@ -74,10 +74,13 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                                              && (conv.InitiatedByUserId == userId || conv.HasMessages)
                                        let otherUserId = conv.User1Id == userId ? conv.User2Id : conv.User1Id
                                        join user in _context.Set<UserReadModel>() on otherUserId equals user.Id
-                                       let lastMessageInfo = _context.DirectMessages
-                                          .Where(m => m.ConversationId == conv.Id)
-                                          .OrderByDescending(m => m.CreatedAtUtc)
-                                          .Select(m => new { m.Id, m.Content, m.IsDeleted, m.SenderId, m.IsRead })
+                                       let lastMessageInfo = (from m in _context.DirectMessages
+                                          where m.ConversationId == conv.Id
+                                          orderby m.CreatedAtUtc descending
+                                          join file in _context.Set<ChatApp.Modules.Files.Domain.Entities.FileMetadata>()
+                                              on m.FileId equals file.Id.ToString() into fileGroup
+                                          from file in fileGroup.DefaultIfEmpty()
+                                          select new { m.Id, m.Content, m.IsDeleted, m.SenderId, m.IsRead, m.FileId, FileContentType = file != null ? file.ContentType : null })
                                           .FirstOrDefault()
                                        let unreadCount = _context.DirectMessages
                                           .Count(m => m.ConversationId == conv.Id &&
@@ -95,9 +98,13 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                                            user.Username,
                                            user.DisplayName,
                                            user.AvatarUrl,
-                                           LastMessage = lastMessageInfo != null
-                                               ? (lastMessageInfo.IsDeleted ? "This message was deleted" : lastMessageInfo.Content)
-                                               : null,
+                                           LastMessage = lastMessageInfo == null ? null :
+                                               lastMessageInfo.IsDeleted ? "This message was deleted" :
+                                               lastMessageInfo.FileId != null ?
+                                                   (lastMessageInfo.FileContentType != null && lastMessageInfo.FileContentType.StartsWith("image/") ?
+                                                       (string.IsNullOrWhiteSpace(lastMessageInfo.Content) ? "[Image]" : "[Image] " + lastMessageInfo.Content) :
+                                                       (string.IsNullOrWhiteSpace(lastMessageInfo.Content) ? "[File]" : "[File] " + lastMessageInfo.Content)) :
+                                               lastMessageInfo.Content,
                                            conv.LastMessageAtUtc,
                                            UnreadCount=unreadCount,
                                            LastReadLaterMessageId=lastReadLaterMessageId,

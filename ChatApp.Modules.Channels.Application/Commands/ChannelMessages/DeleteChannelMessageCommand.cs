@@ -111,6 +111,9 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMessages
                     ReplyToMessageId: message.ReplyToMessageId,
                     ReplyToContent: null,
                     ReplyToSenderName: null,
+                    ReplyToFileId: null,
+                    ReplyToFileName: null,
+                    ReplyToFileContentType: null,
                     IsForwarded: message.IsForwarded
                 );
 

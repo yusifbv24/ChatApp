@@ -110,6 +110,9 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 let lastMessage = (from msg in _context.ChannelMessages
                                    join sender in _context.Set<UserReadModel>() on msg.SenderId equals sender.Id
                                    where msg.ChannelId == channel.Id
+                                   join file in _context.Set<ChatApp.Modules.Files.Domain.Entities.FileMetadata>()
+                                       on msg.FileId equals file.Id.ToString() into fileGroup
+                                   from file in fileGroup.DefaultIfEmpty()
                                    orderby msg.CreatedAtUtc descending
                                    select new
                                    {
@@ -118,7 +121,9 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                                        msg.IsDeleted,
                                        msg.SenderId,
                                        sender.AvatarUrl,
-                                       msg.CreatedAtUtc
+                                       msg.CreatedAtUtc,
+                                       msg.FileId,
+                                       FileContentType = file != null ? file.ContentType : null
                                    }).FirstOrDefault()
                 // Get member count
                 let memberCount = _context.ChannelMembers.Count(m => m.ChannelId == channel.Id && m.IsActive)
@@ -144,9 +149,13 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                     channel.IsArchived,
                     channel.CreatedAtUtc,
                     channel.ArchivedAtUtc,
-                    LastMessageContent = lastMessage != null
-                        ? (lastMessage.IsDeleted ? "This message was deleted" : lastMessage.Content)
-                        : null,
+                    LastMessageContent = lastMessage == null ? null :
+                        lastMessage.IsDeleted ? "This message was deleted" :
+                        lastMessage.FileId != null ?
+                            (lastMessage.FileContentType != null && lastMessage.FileContentType.StartsWith("image/") ?
+                                (string.IsNullOrWhiteSpace(lastMessage.Content) ? "[Image]" : "[Image] " + lastMessage.Content) :
+                                (string.IsNullOrWhiteSpace(lastMessage.Content) ? "[File]" : "[File] " + lastMessage.Content)) :
+                        lastMessage.Content,
                     LastMessageAtUtc = lastMessage != null ? lastMessage.CreatedAtUtc : (DateTime?)null,
                     LastMessageId = lastMessage != null ? (Guid?)lastMessage.Id : null,
                     LastMessageSenderId = lastMessage != null ? (Guid?)lastMessage.SenderId : null,

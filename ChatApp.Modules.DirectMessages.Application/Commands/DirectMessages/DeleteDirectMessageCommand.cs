@@ -99,6 +99,9 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectMessages
                     ReplyToMessageId: message.ReplyToMessageId,
                     ReplyToContent: null,
                     ReplyToSenderName: null,
+                    ReplyToFileId: null,
+                    ReplyToFileName: null,
+                    ReplyToFileContentType: null,
                     IsForwarded: message.IsForwarded,
                     Reactions: new List<DirectMessageReactionDto>()
                 );

@@ -24,6 +24,9 @@
         Guid? ReplyToMessageId = null,
         string? ReplyToContent = null,
         string? ReplyToSenderName = null,
+        string? ReplyToFileId = null,
+        string? ReplyToFileName = null,
+        string? ReplyToFileContentType = null,
         bool IsForwarded = false,
         List<MessageReactionDto>? Reactions = null);
 
