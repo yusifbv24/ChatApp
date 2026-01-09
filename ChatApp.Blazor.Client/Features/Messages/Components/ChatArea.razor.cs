@@ -750,31 +750,37 @@ public partial class ChatArea : IAsyncDisposable
         {
             await RestoreScrollPositionAfterLoadMore();
         }
-        // Yeni mesaj üçün scroll to bottom
+        // Unread separator-a scroll (PRIORITY 1 - həmişə əvvəl yoxla!)
+        else if (UnreadSeparatorAfterMessageId.HasValue && !_hasScrolledToSeparator && HasAnyMessages())
+        {
+            _hasScrolledToSeparator = true;
+            await Task.Delay(150); // Image load üçün daha uzun delay
+            await ScrollToUnreadSeparatorAsync();
+        }
+        // Read Later separator-a scroll (PRIORITY 2)
+        else if (LastReadLaterMessageId.HasValue && !_hasScrolledToReadLaterSeparator && HasAnyMessages())
+        {
+            _hasScrolledToReadLaterSeparator = true;
+            await Task.Delay(150); // Image load üçün daha uzun delay
+            await ScrollToReadLaterSeparatorAsync();
+        }
+        // Yeni mesaj üçün scroll to bottom (PRIORITY 3)
         else if (_shouldScrollToBottom)
         {
             _shouldScrollToBottom = false;
             await Task.Delay(50); // Pinned header render-dən sonra
             await ScrollToBottomAsync();
         }
-        // Unread separator-a scroll (prioritet 1)
-        else if (UnreadSeparatorAfterMessageId.HasValue && !_hasScrolledToSeparator && HasAnyMessages())
-        {
-            _hasScrolledToSeparator = true;
-            await Task.Delay(100);
-            await ScrollToUnreadSeparatorAsync();
-        }
-        // Read Later separator-a scroll (prioritet 2)
-        else if (LastReadLaterMessageId.HasValue && !_hasScrolledToReadLaterSeparator && HasAnyMessages())
-        {
-            _hasScrolledToReadLaterSeparator = true;
-            await Task.Delay(100);
-            await ScrollToReadLaterSeparatorAsync();
-        }
-        // İlk render-də scroll to bottom
+        // İlk render-də scroll to bottom (PRIORITY 4)
+        // Separator yoxdursa həmişə aşağı scroll
         else if (firstRender && HasAnyMessages())
         {
-            await ScrollToBottomAsync();
+            // Separator yoxdursa və firstRender-dirsə auto scroll to bottom
+            if (!UnreadSeparatorAfterMessageId.HasValue && !LastReadLaterMessageId.HasValue)
+            {
+                await Task.Delay(50); // Image load üçün kiçik delay
+                await ScrollToBottomAsync();
+            }
         }
     }
 
@@ -826,14 +832,19 @@ public partial class ChatArea : IAsyncDisposable
         // İlk dəfə mesaj yükləndikdə
         if (_previousMessageCount == 0 && currentCount > 0)
         {
-            _shouldScrollToBottom = true;
+            // Separator varsa scroll etmə (OnAfterRenderAsync-də separator-a scroll olacaq)
+            if (!UnreadSeparatorAfterMessageId.HasValue && !LastReadLaterMessageId.HasValue)
+            {
+                _shouldScrollToBottom = true;
+            }
         }
         else
         {
             var messageIncrease = currentCount - _previousMessageCount;
             var isNewIncomingMessage = messageIncrease > 0 && messageIncrease <= 5;
 
-            if (isNewIncomingMessage && !_isRestoringScrollPosition && !isEditing)
+            // CRITICAL: Load more və restore zamanı badge counter artırma!
+            if (isNewIncomingMessage && !_isRestoringScrollPosition && !IsLoadingMoreMessages && !isEditing)
             {
                 if (showScrollToBottom)
                 {
@@ -873,21 +884,22 @@ public partial class ChatArea : IAsyncDisposable
 
     /// <summary>
     /// Load more sonrası scroll position-u restore edir.
-    /// Fast scroll üçün daha uzun delay (DOM render vaxtı).
+    /// INSTANT: Height-difference method + double rAF pattern.
     /// </summary>
     private async Task RestoreScrollPositionAfterLoadMore()
     {
-        // DOM tam render olsun - requestAnimationFrame JS-də 2 frame gözləyir
-        await Task.Delay(200); // Blazor render + DOM update
+        // Kiçik delay - Blazor component render cycle tamamlansın
+        await Task.Delay(16); // 1 frame (16ms at 60fps)
+
+        // Double rAF pattern JS-də işləyir (32ms daha)
         await JS.InvokeVoidAsync("chatAppUtils.restoreScrollPosition", messagesContainerRef, _savedScrollPosition);
 
         _savedScrollPosition = null;
 
-        // CRITICAL: Restore-dan sonra loading-i 500ms disable et
-        // İstifadəçi manual scroll edənə qədər auto-loading olmasın
-        await Task.Delay(500);
+        // Minimal cooldown - infinite loop qarşısını alır
+        await Task.Delay(100);
 
-        // İndi loading-i yenidən aktiv et
+        // Re-enable loading
         _isRestoringScrollPosition = false;
     }
 
@@ -948,13 +960,16 @@ public partial class ChatArea : IAsyncDisposable
     }
 
     /// <summary>
-    /// Read Later separator-a scroll edir.
+    /// Read Later mesajına scroll edir və highlight edir.
     /// </summary>
     private async Task ScrollToReadLaterSeparatorAsync()
     {
+        if (!LastReadLaterMessageId.HasValue) return;
+
         try
         {
-            await JS.InvokeVoidAsync("chatAppUtils.scrollToElement", "read-later-separator");
+            // Mesajın özünə scroll et və highlight et (separator-a deyil!)
+            await JS.InvokeVoidAsync("chatAppUtils.scrollToMessageAndHighlight", LastReadLaterMessageId.Value.ToString());
         }
         catch
         {

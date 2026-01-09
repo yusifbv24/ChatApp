@@ -10,13 +10,13 @@ namespace ChatApp.Modules.DirectMessages.Application.Interfaces
         Task<DirectMessageDto?> GetByIdAsDtoAsync(Guid id, CancellationToken cancellationToken = default);
         Task<List<DirectMessageDto>> GetConversationMessagesAsync(
             Guid conversationId,
-            int pageSize = 50,
+            int pageSize = 30,
             DateTime? beforeUtc = null,
             CancellationToken cancellationToken = default);
         Task<List<DirectMessageDto>> GetMessagesAroundAsync(
             Guid conversationId,
             Guid messageId,
-            int count = 50,
+            int count = 30,
             CancellationToken cancellationToken = default);
         Task<List<DirectMessageDto>> GetMessagesBeforeDateAsync(
             Guid conversationId,

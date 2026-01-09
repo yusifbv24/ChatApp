@@ -256,9 +256,10 @@ public partial class Messages : IAsyncDisposable
     private bool isViewingAroundMessage = false;
 
     /// <summary>
-    /// Səhifə ölçüsü (həmişə 50 mesaj - Bitrix pattern).
+    /// Səhifə ölçüsü (viewport-based, dynamic).
+    /// Bitrix pattern: yalnız görünən mesajlar + buffer.
     /// </summary>
-    private int pageSize = 50;
+    private int pageSize = 30; // Initial default, will be calculated dynamically
 
     #endregion
 
@@ -606,6 +607,21 @@ public partial class Messages : IAsyncDisposable
     {
         if (firstRender)
         {
+            // Calculate viewport-based page size (Bitrix pattern)
+            try
+            {
+                var optimalPageSize = await JS.InvokeAsync<int>("chatAppUtils.getViewportBasedPageSize");
+                if (optimalPageSize > 0)
+                {
+                    pageSize = optimalPageSize;
+                }
+            }
+            catch
+            {
+                // Fallback to default (30)
+                pageSize = 30;
+            }
+
             // Page visibility listener
             dotNetReference = DotNetObjectReference.Create(this);
             visibilitySubscription = await JS.InvokeAsync<IJSObjectReference>(

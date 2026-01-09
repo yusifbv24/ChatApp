@@ -161,7 +161,7 @@ public partial class Messages
             pendingMessageAdds.Clear();
             favoriteMessageIds.Clear();
             showSearchPanel = false;
-            pageSize = 50; // İlk yükləmə 50 mesaj
+            pageSize = 30; // İlk yükləmə 30 mesaj (optimizasiya)
 
             // Auto-unmark read later (channel)
             if (selectedChannelId.HasValue && lastReadLaterMessageId.HasValue && lastReadLaterMessageIdOnEntry.HasValue)
@@ -283,7 +283,7 @@ public partial class Messages
         hasMoreNewerMessages = false;
         oldestMessageDate = null;
         newestMessageDate = null;
-        pageSize = 50;
+        pageSize = 30;
 
         // Draft yüklə (pending user üçün)
         currentDraft = LoadDraft(null, null, user.Id);
@@ -409,7 +409,7 @@ public partial class Messages
             pendingMessageAdds.Clear();
             favoriteMessageIds.Clear();
             showSearchPanel = false;
-            pageSize = 50;
+            pageSize = 30;
 
             // Unread separator
             unreadSeparatorAfterMessageId = null;
@@ -493,7 +493,7 @@ public partial class Messages
                 ? await ConversationService.GetMessagesBeforeAsync(
                     selectedConversationId!.Value,
                     oldestMessageDate.Value,
-                    50) // Around mode: 50 mesaj (Bitrix pattern)
+                    30) // Around mode: 30 mesaj (optimizasiya)
                 : await ConversationService.GetMessagesAsync(
                     selectedConversationId!.Value,
                     pageSize,
@@ -515,8 +515,8 @@ public partial class Messages
                     // SpecifyKind: PostgreSQL UTC timestamp-ı C#-da düzgün işləməsi üçün
                     oldestMessageDate = DateTime.SpecifyKind(messages.Min(m => m.CreatedAtUtc), DateTimeKind.Utc);
 
-                    // Daha çox mesaj var? (Backend 50 gəlibsə - var, az gəlibsə - yoxdur)
-                    hasMoreMessages = messages.Count >= 50;
+                    // Daha çox mesaj var? (Backend 30 gəlibsə - var, az gəlibsə - yoxdur)
+                    hasMoreMessages = messages.Count >= 30;
                 }
                 else
                 {
@@ -576,7 +576,7 @@ public partial class Messages
                 ? await ChannelService.GetMessagesBeforeAsync(
                     selectedChannelId!.Value,
                     oldestMessageDate.Value,
-                    50) // Around mode: 50 mesaj (Bitrix pattern)
+                    30) // Around mode: 30 mesaj (optimizasiya)
                 : await ChannelService.GetMessagesAsync(
                     selectedChannelId!.Value,
                     pageSize,
@@ -596,8 +596,8 @@ public partial class Messages
                     // ən köhnə mesajın tarixini saxla (növbəti pagination üçün)
                     oldestMessageDate = DateTime.SpecifyKind(messages.Min(m => m.CreatedAtUtc), DateTimeKind.Utc);
 
-                    // Daha çox mesaj var? (Backend 50 gəlibsə - var, az gəlibsə - yoxdur)
-                    hasMoreMessages = messages.Count >= 50;
+                    // Daha çox mesaj var? (Backend 30 gəlibsə - var, az gəlibsə - yoxdur)
+                    hasMoreMessages = messages.Count >= 30;
                 }
                 else
                 {
@@ -638,8 +638,8 @@ public partial class Messages
 
         try
         {
-            // pageSize həmişə 50-dir (Bitrix pattern)
-            pageSize = 50;
+            // pageSize həmişə 30-dur (optimizasiya)
+            pageSize = 30;
 
             if (isDirectMessage && selectedConversationId.HasValue)
             {
@@ -697,7 +697,7 @@ public partial class Messages
             var result = await ConversationService.GetMessagesAfterAsync(
                 selectedConversationId!.Value,
                 newestMessageDate.Value,
-                50); // Bitrix pattern: 50 mesaj
+                30); // Optimizasiya: 30 mesaj
 
             if (result.IsSuccess && result.Value != null)
             {
@@ -715,7 +715,7 @@ public partial class Messages
                     newestMessageDate = DateTime.SpecifyKind(messages.Max(m => m.CreatedAtUtc), DateTimeKind.Utc);
 
                     // Daha yeni mesajlar var?
-                    hasMoreNewerMessages = messages.Count >= 50;
+                    hasMoreNewerMessages = messages.Count >= 30;
                 }
                 else
                 {
@@ -741,7 +741,7 @@ public partial class Messages
             var result = await ChannelService.GetMessagesAfterAsync(
                 selectedChannelId!.Value,
                 newestMessageDate.Value,
-                50); // Bitrix pattern: 50 mesaj
+                30); // Optimizasiya: 30 mesaj
 
             if (result.IsSuccess && result.Value != null)
             {
@@ -759,7 +759,7 @@ public partial class Messages
                     newestMessageDate = DateTime.SpecifyKind(messages.Max(m => m.CreatedAtUtc), DateTimeKind.Utc);
 
                     // Daha yeni mesajlar var?
-                    hasMoreNewerMessages = messages.Count >= 50;
+                    hasMoreNewerMessages = messages.Count >= 30;
                 }
                 else
                 {
@@ -800,7 +800,7 @@ public partial class Messages
                 var result = await ConversationService.GetMessagesAroundAsync(
                     selectedConversationId.Value,
                     messageId,
-                    50);
+                    30);
 
                 if (result.IsSuccess && result.Value != null && result.Value.Count > 0)
                 {
@@ -849,7 +849,7 @@ public partial class Messages
                 var result = await ChannelService.GetMessagesAroundAsync(
                     selectedChannelId.Value,
                     messageId,
-                    50);
+                    30);
 
                 if (result.IsSuccess && result.Value != null && result.Value.Count > 0)
                 {
@@ -893,7 +893,7 @@ public partial class Messages
         newestMessageDate = null;
         hasMoreNewerMessages = false;
         isViewingAroundMessage = false;
-        pageSize = 50;
+        pageSize = 30;
 
         if (isDirectMessage && selectedConversationId.HasValue)
         {

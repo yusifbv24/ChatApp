@@ -59,7 +59,8 @@ window.chatAppUtils = {
     scrollToElement: (elementId) => {
         const element = document.getElementById(elementId);
         if (element) {
-            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // 'start' - separator ən yuxarıda göstərilir, sonrakı mesajlar görünür
+            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
     },
 
@@ -136,16 +137,32 @@ window.chatAppUtils = {
         };
     },
 
-    // Restore scroll position after loading more messages
+    // Restore scroll position after loading more messages (INSTANT)
     restoreScrollPosition: (element, previousState) => {
         if (!element || !previousState) return;
 
-        // requestAnimationFrame chain: DOM tam render olsun (2 frame)
+        // Double rAF pattern - Blazor + browser render cycle tamamlanır
+        // Frame 1: Blazor component render
         requestAnimationFrame(() => {
+            // Frame 2: DOM fully painted, layout stable
             requestAnimationFrame(() => {
-                if (previousState.scrollHeight && previousState.scrollTop !== undefined) {
-                    const heightDifference = element.scrollHeight - previousState.scrollHeight;
+                // Height difference metodu - WhatsApp/Telegram eyni metodu işlədir
+                const currentHeight = element.scrollHeight;
+                const previousHeight = previousState.scrollHeight;
+
+                if (previousHeight && previousState.scrollTop !== undefined) {
+                    const heightDifference = currentHeight - previousHeight;
+
+                    // INSTANT scroll - browser animation disable
+                    const oldBehavior = element.style.scrollBehavior;
+                    element.style.scrollBehavior = 'auto';
+
                     element.scrollTop = previousState.scrollTop + heightDifference;
+
+                    // Restore smooth scroll (növbəti frame-də)
+                    requestAnimationFrame(() => {
+                        element.style.scrollBehavior = oldBehavior;
+                    });
                 }
             });
         });
@@ -250,5 +267,28 @@ window.chatAppUtils = {
         if (element) {
             element.click();
         }
+    },
+
+    // Calculate optimal page size based on viewport height
+    // Bitrix-style: yalnız görünən mesajlar yüklənsin
+    calculateOptimalPageSize: (containerElement) => {
+        if (!containerElement) return 30; // Default
+
+        const containerHeight = containerElement.clientHeight;
+        const estimatedMessageHeight = 80; // Average message height (px)
+        const bufferMultiplier = 1.5; // 50% buffer for smooth scrolling
+
+        // Viewport-a sığan mesaj sayı + buffer
+        const visibleMessages = Math.ceil(containerHeight / estimatedMessageHeight);
+        const optimalSize = Math.ceil(visibleMessages * bufferMultiplier);
+
+        // Min 15, max 50
+        return Math.min(Math.max(optimalSize, 15), 50);
+    },
+
+    // Get viewport-based page size
+    getViewportBasedPageSize: () => {
+        const container = document.getElementById('chat-messages');
+        return window.chatAppUtils.calculateOptimalPageSize(container);
     }
 };

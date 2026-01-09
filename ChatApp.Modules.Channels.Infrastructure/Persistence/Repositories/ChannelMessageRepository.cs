@@ -105,7 +105,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
 
         public async Task<List<ChannelMessageDto>> GetChannelMessagesAsync(
             Guid channelId,
-            int pageSize = 50,
+            int pageSize = 30,
             DateTime? beforeUtc = null,
             CancellationToken cancellationToken = default)
         {

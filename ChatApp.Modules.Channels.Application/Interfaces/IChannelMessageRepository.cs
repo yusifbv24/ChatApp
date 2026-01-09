@@ -10,13 +10,13 @@ namespace ChatApp.Modules.Channels.Application.Interfaces
         Task<ChannelMessageDto?> GetByIdAsDtoAsync(Guid id, CancellationToken cancellationToken = default);
         Task<List<ChannelMessageDto>> GetChannelMessagesAsync(
             Guid channelId,
-            int pageSize = 50,
+            int pageSize = 30,
             DateTime? beforeUtc = null,
             CancellationToken cancellationToken = default);
         Task<List<ChannelMessageDto>> GetMessagesAroundAsync(
             Guid channelId,
             Guid messageId,
-            int count = 50,
+            int count = 30,
             CancellationToken cancellationToken = default);
         Task<List<ChannelMessageDto>> GetMessagesBeforeDateAsync(
             Guid channelId,

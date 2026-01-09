@@ -57,8 +57,8 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
 
 
         public async Task<Result<List<ChannelMessageDto>>> GetMessagesAsync(
-            Guid channelId, 
-            int pageSize = 50, 
+            Guid channelId,
+            int pageSize = 30,
             DateTime? before = null)
         {
             var url = $"/api/channels/{channelId}/messages?pageSize={pageSize}";

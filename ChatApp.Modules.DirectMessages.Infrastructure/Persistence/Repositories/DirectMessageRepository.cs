@@ -144,7 +144,7 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
 
         public async Task<List<DirectMessageDto>> GetConversationMessagesAsync(
             Guid conversationId,
-            int pageSize = 50,
+            int pageSize = 30,
             DateTime? beforeUtc = null,
             CancellationToken cancellationToken = default)
         {

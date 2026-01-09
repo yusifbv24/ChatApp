@@ -1065,14 +1065,30 @@
     gap: 4px;
 }
 
-/* Load More */
-.load-more-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 8px;
-    padding: 16px;
-    animation: fadeIn 0.3s ease-in;
+/* Load More Indicator - Bitrix24 Pattern (outside messages container) */
+.load-more-indicator {
+    height: 3px;
+    background: transparent;
+    margin: 0;
+    overflow: hidden;
+    z-index: 100;
+    pointer-events: none;
+}
+
+.load-more-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #22c55e 0%, #10b981 50%, #22c55e 100%);
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
+    animation: loading-slide 1.2s ease-in-out infinite;
+}
+
+@keyframes loading-slide {
+    0% {
+        transform: translateX(-100%);
+    }
+    100% {
+        transform: translateX(100%);
+    }
 }
 
 @keyframes fadeIn {
@@ -4911,5 +4927,19 @@
 
 .file-image-container:hover .file-image-preview {
     opacity: 0.95;
+}
+
+/* Image loading spinner */
+.image-loading-spinner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 24px;
+    height: 24px;
+    border: 3px solid var(--gray-300);
+    border-top-color: var(--primary-500);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
 }
 

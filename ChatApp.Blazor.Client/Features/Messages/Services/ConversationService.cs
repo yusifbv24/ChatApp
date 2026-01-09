@@ -33,8 +33,8 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
 
 
         public async Task<Result<List<DirectMessageDto>>> GetMessagesAsync(
-            Guid conversationId, 
-            int pageSize = 50, 
+            Guid conversationId,
+            int pageSize = 30,
             DateTime? before = null)
         {
             var url = $"/api/conversations/{conversationId}/messages?pageSize={pageSize}";

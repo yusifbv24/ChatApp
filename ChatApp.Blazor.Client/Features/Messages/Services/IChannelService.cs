@@ -26,10 +26,10 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
         Task<Result> DeleteChannelAsync(Guid channelId);
 
 
-        Task<Result<List<ChannelMessageDto>>> GetMessagesAsync(Guid channelId, int pageSize = 50, DateTime? before = null);
+        Task<Result<List<ChannelMessageDto>>> GetMessagesAsync(Guid channelId, int pageSize = 30, DateTime? before = null);
 
 
-        Task<Result<List<ChannelMessageDto>>> GetMessagesAroundAsync(Guid channelId, Guid messageId, int count = 50);
+        Task<Result<List<ChannelMessageDto>>> GetMessagesAroundAsync(Guid channelId, Guid messageId, int count = 30);
 
 
         Task<Result<List<ChannelMessageDto>>> GetMessagesBeforeAsync(Guid channelId, DateTime beforeUtc, int limit = 100);

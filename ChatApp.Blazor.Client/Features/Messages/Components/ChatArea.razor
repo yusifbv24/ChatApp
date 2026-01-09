@@ -198,22 +198,26 @@
             </div>
         }
 
+        @* Load more spinner - messages container XARICINDƏ (Bitrix24 pattern) *@
+        @if (IsLoadingMoreMessages)
+        {
+            <div class="load-more-indicator">
+                <div class="load-more-bar"></div>
+            </div>
+        }
+
         <!-- Messages Area -->
         <div id="chat-messages" class="messages-container" @ref="messagesContainerRef" @onscroll="HandleScroll">
-            @if (IsLoading)
+            @* İlk yükləmə - sadə spinner (skeleton yox) *@
+            @if (IsLoading && !DirectMessages.Any() && !ChannelMessages.Any())
             {
                 <div class="messages-loading">
                     <div class="loading-spinner"></div>
                     <span>Loading messages...</span>
                 </div>
             }
-            else if (IsLoadingMoreMessages)
-            {
-                <div class="load-more-container">
-                    <div class="loading-spinner small"></div>
-                    <span>Loading...</span>
-                </div>
-            }
+
+            @* Mesajlar - həmişə render (IsLoading-dən asılı olmayaraq) *@
             @if (DirectMessages.Any())
             {
                 @foreach(var group in GroupedDirectMessages)

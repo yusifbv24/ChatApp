@@ -51,7 +51,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> GetMessages(
             [FromRoute] Guid channelId,
-            [FromQuery] int pageSize = 50,
+            [FromQuery] int pageSize = 30,
             [FromQuery] DateTime? before = null,
             CancellationToken cancellationToken = default)
         {

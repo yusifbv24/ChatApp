@@ -25,6 +25,11 @@ public partial class MessageBubble : IAsyncDisposable
     /// </summary>
     private bool showImageLightbox = false;
 
+    /// <summary>
+    /// Şəkil yüklənib? (Progressive image loading üçün).
+    /// </summary>
+    private bool _imageLoaded = false;
+
     #endregion
 
     #region Parameters - Message Identity
@@ -958,6 +963,37 @@ public partial class MessageBubble : IAsyncDisposable
         GC.SuppressFinalize(this);
 
         return ValueTask.CompletedTask;
+    }
+
+    #endregion
+
+    #region Image Loading
+
+    /// <summary>
+    /// Image yüklənəndə çağrılır (progressive loading).
+    /// "loaded" class əlavə edir və smooth fade-in effekti yaradır.
+    /// </summary>
+    private void HandleImageLoad()
+    {
+        _imageLoaded = true;
+        StateHasChanged();
+    }
+
+    #endregion
+
+    #region Render Optimization
+
+    /// <summary>
+    /// Render optimization - yalnız dəyişiklik olanda render et.
+    /// Reactions və ReadBy list dəyişiklikləri istisna (her zaman render).
+    /// </summary>
+    protected override bool ShouldRender()
+    {
+        // Disposed olubsa render etmə
+        if (_disposed) return false;
+
+        // Default: render et (Blazor öz məntiqini işlətsin)
+        return true;
     }
 
     #endregion

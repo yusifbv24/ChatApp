@@ -11,10 +11,10 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
         Task<Result<Guid>> StartConversationAsync(Guid otherUserId);
 
 
-        Task<Result<List<DirectMessageDto>>> GetMessagesAsync(Guid conversationId, int pageSize = 50, DateTime? before = null);
+        Task<Result<List<DirectMessageDto>>> GetMessagesAsync(Guid conversationId, int pageSize = 30, DateTime? before = null);
 
 
-        Task<Result<List<DirectMessageDto>>> GetMessagesAroundAsync(Guid conversationId, Guid messageId, int count = 50);
+        Task<Result<List<DirectMessageDto>>> GetMessagesAroundAsync(Guid conversationId, Guid messageId, int count = 30);
 
 
         Task<Result<List<DirectMessageDto>>> GetMessagesBeforeAsync(Guid conversationId, DateTime beforeUtc, int limit = 100);

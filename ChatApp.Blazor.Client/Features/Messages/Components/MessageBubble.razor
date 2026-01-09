@@ -91,12 +91,21 @@
                         <div class="message-file-attachment">
                             @if (IsFileImage)
                             {
-                                <!-- Image preview only (no filename/size) -->
-                                <div class="file-image-container" @onclick="OpenImageLightbox" @onclick:stopPropagation="true">
+                                <!-- Image preview with lazy loading and skeleton -->
+                                <div class="file-image-container"
+                                     @onclick="OpenImageLightbox"
+                                     @onclick:stopPropagation="true"
+                                     style="min-height: 200px;">
+                                    @if (!_imageLoaded)
+                                    {
+                                        <div class="image-loading-spinner"></div>
+                                    }
                                     <img src="@FileDownloadUrl"
                                          alt="@FileName"
-                                         class="file-image-preview"
-                                         title="@FileName" />
+                                         class="file-image-preview @(_imageLoaded ? "loaded" : "")"
+                                         title="@FileName"
+                                         loading="lazy"
+                                         @onload="HandleImageLoad" />
                                 </div>
                             }
                             else
