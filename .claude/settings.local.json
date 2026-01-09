@@ -11,7 +11,11 @@
       "Bash(dotnet ef database update:*)",
       "Bash(dir \"C:\\Users\\ybaghiyev\\Desktop\\ChatApp\\ChatApp.Modules.Files.Infrastructure\\Migrations\" /B)",
       "Bash(echo:*)",
-      "Bash(\"C:\\Users\\ybaghiyev\\Desktop\\ChatApp\\ChatApp.Blazor.Client\\wwwroot\\css\\messages.css\")"
+      "Bash(\"C:\\Users\\ybaghiyev\\Desktop\\ChatApp\\ChatApp.Blazor.Client\\wwwroot\\css\\messages.css\")",
+      "Bash(tasklist:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill:*)",
+      "Bash(powershell -Command \"Stop-Process -Id 16284 -Force\")"
     ],
     "deny": [],
     "ask": []

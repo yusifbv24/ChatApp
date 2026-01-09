@@ -221,12 +221,39 @@ public partial class Messages
             // SignalR group-a join
             await SignalRService.JoinConversationAsync(conversation.Id);
 
-            // Mesajları, pinned və favorites paralel yüklə (layout shift qarşısını al)
-            await Task.WhenAll(
-                LoadDirectMessages(),
-                LoadPinnedDirectMessageCount(),
-                LoadFavoriteDirectMessages()
-            );
+            // PRIORITY 1: First unread message varsa, GetAroundMessage ilə yüklə
+            if (conversation.FirstUnreadMessageId.HasValue)
+            {
+                // Pinned və favorites paralel yüklə, mesajları isə first unread message-ın ətrafından yüklə
+                await Task.WhenAll(
+                    LoadPinnedDirectMessageCount(),
+                    LoadFavoriteDirectMessages()
+                );
+
+                // First unread mesajının ətrafındakı mesajları yüklə və scroll et
+                await NavigateToMessageAsync(conversation.FirstUnreadMessageId.Value);
+            }
+            // PRIORITY 2: Read later message varsa, GetAroundMessage ilə yüklə
+            else if (conversation.LastReadLaterMessageId.HasValue)
+            {
+                // Pinned və favorites paralel yüklə, mesajları isə read later message-ın ətrafından yüklə
+                await Task.WhenAll(
+                    LoadPinnedDirectMessageCount(),
+                    LoadFavoriteDirectMessages()
+                );
+
+                // Read later mesajının ətrafındakı mesajları yüklə və scroll et
+                await NavigateToMessageAsync(conversation.LastReadLaterMessageId.Value);
+            }
+            else
+            {
+                // Normal yükləmə (separator yoxdur)
+                await Task.WhenAll(
+                    LoadDirectMessages(),
+                    LoadPinnedDirectMessageCount(),
+                    LoadFavoriteDirectMessages()
+                );
+            }
 
             StateHasChanged();
         }
@@ -455,12 +482,39 @@ public partial class Messages
             // SignalR group-a join
             await SignalRService.JoinChannelAsync(channel.Id);
 
-            // Mesajları, pinned və favorites paralel yüklə (layout shift qarşısını al)
-            await Task.WhenAll(
-                LoadChannelMessages(),
-                LoadPinnedMessageCount(),
-                LoadFavoriteChannelMessages()
-            );
+            // PRIORITY 1: First unread message varsa, GetAroundMessage ilə yüklə
+            if (channel.FirstUnreadMessageId.HasValue)
+            {
+                // Pinned və favorites paralel yüklə, mesajları isə first unread message-ın ətrafından yüklə
+                await Task.WhenAll(
+                    LoadPinnedMessageCount(),
+                    LoadFavoriteChannelMessages()
+                );
+
+                // First unread mesajının ətrafındakı mesajları yüklə və scroll et
+                await NavigateToMessageAsync(channel.FirstUnreadMessageId.Value);
+            }
+            // PRIORITY 2: Read later message varsa, GetAroundMessage ilə yüklə
+            else if (channel.LastReadLaterMessageId.HasValue)
+            {
+                // Pinned və favorites paralel yüklə, mesajları isə read later message-ın ətrafından yüklə
+                await Task.WhenAll(
+                    LoadPinnedMessageCount(),
+                    LoadFavoriteChannelMessages()
+                );
+
+                // Read later mesajının ətrafındakı mesajları yüklə və scroll et
+                await NavigateToMessageAsync(channel.LastReadLaterMessageId.Value);
+            }
+            else
+            {
+                // Normal yükləmə (separator yoxdur)
+                await Task.WhenAll(
+                    LoadChannelMessages(),
+                    LoadPinnedMessageCount(),
+                    LoadFavoriteChannelMessages()
+                );
+            }
 
             StateHasChanged();
         }
@@ -816,8 +870,21 @@ public partial class Messages
                     isViewingAroundMessage = true;
 
                     StateHasChanged();
-                    await Task.Delay(50); // DOM render
-                    await ScrollToAndHighlightMessage(messageId);
+                    await Task.Delay(200); // DOM render üçün daha uzun gözlə
+
+                    // DEBUG: Log before scroll
+                    Console.WriteLine($"[DEBUG] NavigateToMessageAsync (DM): Loaded {directMessages.Count} messages, scrolling to {messageId}");
+
+                    // Directly scroll to message without additional checks (mesaj artıq yüklənib)
+                    try
+                    {
+                        await JS.InvokeVoidAsync("chatAppUtils.scrollToMessageAndHighlight", $"message-{messageId}");
+                        Console.WriteLine($"[DEBUG] NavigateToMessageAsync (DM): Scroll completed");
+                    }
+                    catch (Exception scrollEx)
+                    {
+                        Console.WriteLine($"[DEBUG] NavigateToMessageAsync (DM): Scroll failed: {scrollEx.Message}");
+                    }
                 }
             }
             catch (Exception ex)
@@ -865,8 +932,21 @@ public partial class Messages
                     isViewingAroundMessage = true;
 
                     StateHasChanged();
-                    await Task.Delay(50); // DOM render
-                    await ScrollToAndHighlightMessage(messageId);
+                    await Task.Delay(200); // DOM render üçün daha uzun gözlə
+
+                    // DEBUG: Log before scroll
+                    Console.WriteLine($"[DEBUG] NavigateToMessageAsync (Channel): Loaded {channelMessages.Count} messages, scrolling to {messageId}");
+
+                    // Directly scroll to message without additional checks (mesaj artıq yüklənib)
+                    try
+                    {
+                        await JS.InvokeVoidAsync("chatAppUtils.scrollToMessageAndHighlight", $"message-{messageId}");
+                        Console.WriteLine($"[DEBUG] NavigateToMessageAsync (Channel): Scroll completed");
+                    }
+                    catch (Exception scrollEx)
+                    {
+                        Console.WriteLine($"[DEBUG] NavigateToMessageAsync (Channel): Scroll failed: {scrollEx.Message}");
+                    }
                 }
             }
             catch (Exception ex)

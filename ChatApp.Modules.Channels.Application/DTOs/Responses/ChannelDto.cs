@@ -19,6 +19,7 @@ namespace ChatApp.Modules.Channels.Application.DTOs.Responses
         Guid? LastMessageId = null,
         Guid? LastMessageSenderId = null,
         string? LastMessageStatus = null, // Sent, Delivered, Read
-        string? LastMessageSenderAvatarUrl = null
+        string? LastMessageSenderAvatarUrl = null,
+        Guid? FirstUnreadMessageId = null
     );
 }

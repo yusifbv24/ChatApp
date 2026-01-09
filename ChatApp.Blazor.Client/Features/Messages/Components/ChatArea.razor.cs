@@ -799,6 +799,10 @@ public partial class ChatArea : IAsyncDisposable
             showPinnedDropdown = false;
             _previousConversationId = ConversationId;
             _previousChannelId = ChannelId;
+
+            // Conversation dəyişdikdə message count-u sıfırla
+            // Beləliklə HandleNewMessageDetection() işləyir və separator yoxdursa scroll to bottom edir
+            _previousMessageCount = 0;
         }
     }
 

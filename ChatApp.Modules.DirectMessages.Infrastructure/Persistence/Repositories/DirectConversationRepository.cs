@@ -87,6 +87,14 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                                                     m.ReceiverId == userId &&
                                                     !m.IsRead &&
                                                     !m.IsDeleted)
+                                       let firstUnreadMessageId = _context.DirectMessages
+                                          .Where(m => m.ConversationId == conv.Id &&
+                                                    m.ReceiverId == userId &&
+                                                    !m.IsRead &&
+                                                    !m.IsDeleted)
+                                          .OrderBy(m => m.CreatedAtUtc)
+                                          .Select(m => (Guid?)m.Id)
+                                          .FirstOrDefault()
                                        let lastReadLaterMessageId = conv.User1Id == userId
                                            ? conv.User1LastReadLaterMessageId
                                            : conv.User2LastReadLaterMessageId
@@ -107,6 +115,7 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                                                lastMessageInfo.Content,
                                            conv.LastMessageAtUtc,
                                            UnreadCount=unreadCount,
+                                           FirstUnreadMessageId=firstUnreadMessageId,
                                            LastReadLaterMessageId=lastReadLaterMessageId,
                                            LastMessageSenderId = lastMessageInfo != null ? (Guid?)lastMessageInfo.SenderId : null,
                                            LastMessageIsRead = lastMessageInfo != null && lastMessageInfo.IsRead,
@@ -136,7 +145,8 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                     c.LastReadLaterMessageId,
                     c.LastMessageSenderId,
                     status,
-                    c.LastMessageId
+                    c.LastMessageId,
+                    c.FirstUnreadMessageId
                 );
             }).ToList();
 

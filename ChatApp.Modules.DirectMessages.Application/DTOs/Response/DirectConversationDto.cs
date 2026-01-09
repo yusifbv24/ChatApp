@@ -12,5 +12,6 @@
         Guid? LastReadLaterMessageId = null,
         Guid? LastMessageSenderId = null,
         string? LastMessageStatus = null, // Sent, Read
-        Guid? LastMessageId = null);
+        Guid? LastMessageId = null,
+        Guid? FirstUnreadMessageId = null);
 }

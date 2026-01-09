@@ -17,7 +17,8 @@
         Guid? LastMessageId = null,
         Guid? LastMessageSenderId = null,
         string? LastMessageStatus = null,
-        string? LastMessageSenderAvatarUrl = null);
+        string? LastMessageSenderAvatarUrl = null,
+        Guid? FirstUnreadMessageId = null);
 
 
 
