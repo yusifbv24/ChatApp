@@ -43,7 +43,7 @@ namespace ChatApp.Modules.DirectMessages.Api.Controllers
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> GetMessages(
             [FromRoute] Guid conversationId,
-            [FromQuery] int pageSize=50,
+            [FromQuery] int pageSize=30,
             [FromQuery] DateTime? before=null,
             CancellationToken cancellationToken =default)
         {
@@ -52,8 +52,8 @@ namespace ChatApp.Modules.DirectMessages.Api.Controllers
                 return Unauthorized();
 
             // Validate pagination
-            if (pageSize < 1 || pageSize > 100)
-                return BadRequest(new { error = "Page size must be between 1 and 100" });
+            if (pageSize < 1 || pageSize > 30)
+                return BadRequest(new { error = "Page size must be between 1 and 30" });
 
             var result = await _mediator.Send(
                 new GetConversationMessagesQuery(conversationId, userId, pageSize, before),

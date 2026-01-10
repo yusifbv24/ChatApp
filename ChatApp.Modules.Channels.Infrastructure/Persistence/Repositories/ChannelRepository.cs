@@ -139,14 +139,13 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                     m.SenderId != userId &&
                     (lastReadTime == null || m.CreatedAtUtc > lastReadTime.Value))
                 // Get first unread message ID
-                let firstUnreadMessageId = _context.ChannelMessages
+                let firstUnreadMessage = _context.ChannelMessages
                     .Where(m =>
                         m.ChannelId == channel.Id &&
                         !m.IsDeleted &&
                         m.SenderId != userId &&
                         (lastReadTime == null || m.CreatedAtUtc > lastReadTime.Value))
                     .OrderBy(m => m.CreatedAtUtc)
-                    .Select(m => (Guid?)m.Id)
                     .FirstOrDefault()
                 select new
                 {
@@ -171,7 +170,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                     LastMessageSenderId = lastMessage != null ? (Guid?)lastMessage.SenderId : null,
                     LastMessageSenderAvatarUrl = lastMessage != null ? lastMessage.AvatarUrl : null,
                     UnreadCount = unreadCount,
-                    FirstUnreadMessageId = firstUnreadMessageId,
+                    FirstUnreadMessageId = firstUnreadMessage != null ? (Guid?)firstUnreadMessage.Id : null,
                     member.LastReadLaterMessageId
                 }
             ).ToListAsync(cancellationToken);

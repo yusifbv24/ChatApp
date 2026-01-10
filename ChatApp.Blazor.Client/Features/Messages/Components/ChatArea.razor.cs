@@ -150,6 +150,12 @@ public partial class ChatArea : IAsyncDisposable
     [Parameter] public bool IsLoading { get; set; }
 
     /// <summary>
+    /// GetAroundMessage ilə mesajlar yükləndiyini göstərir.
+    /// Bu halda bi-directional loading (scroll-to-top) disable olunur.
+    /// </summary>
+    [Parameter] public bool IsViewingAroundMessage { get; set; }
+
+    /// <summary>
     /// Daha çox mesaj yükləmə statusu (backend HTTP request).
     /// </summary>
     [Parameter] public bool IsLoadingMoreMessages { get; set; }
@@ -442,12 +448,6 @@ public partial class ChatArea : IAsyncDisposable
     #endregion
 
     #region Parameters - Around Mode State
-
-    /// <summary>
-    /// Around mode aktiv? (pinned/favorite mesaja jump edəndə).
-    /// Scroll to bottom button visibility üçün istifadə olunur.
-    /// </summary>
-    [Parameter] public bool IsViewingAroundMessage { get; set; }
 
     /// <summary>
     /// Scroll to bottom callback - parent clear+reload edir.
@@ -1041,6 +1041,9 @@ public partial class ChatArea : IAsyncDisposable
     /// </summary>
     private async Task TriggerLoadMoreIfNeeded(int scrollTop)
     {
+        // GetAroundMessage ilə yüklənmiş mesajlar üçün bi-directional loading-i disable et
+        if (IsViewingAroundMessage) return;
+
         if (!HasMoreMessages || IsLoadingMoreMessages) return;
 
         try

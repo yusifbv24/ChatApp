@@ -220,6 +220,14 @@
             @* Mesajlar - həmişə render (IsLoading-dən asılı olmayaraq) *@
             @if (DirectMessages.Any())
             {
+                @* CRITICAL FIX: Separator ən yuxarıda (30+ unread mesaj senariusu) *@
+                @if (UnreadSeparatorAfterMessageId.HasValue && UnreadSeparatorAfterMessageId.Value == Guid.Empty)
+                {
+                    <div class="unread-separator unread-separator-top" id="unread-separator">
+                        <span>New messages</span>
+                    </div>
+                }
+
                 @foreach(var group in GroupedDirectMessages)
                 {
                     <div class="message-group">
@@ -283,7 +291,8 @@
                                        OnActionCompleted="RefocusInput"
                                        ScrollToBottom="ScrollToBottomAsync" />
 
-                                @if (UnreadSeparatorAfterMessageId.HasValue && message.Id == UnreadSeparatorAfterMessageId.Value)
+                                @* Skip if already shown at top (Guid.Empty case) *@
+                                @if (UnreadSeparatorAfterMessageId.HasValue && UnreadSeparatorAfterMessageId.Value != Guid.Empty && message.Id == UnreadSeparatorAfterMessageId.Value)
                                 {
                                     <div class="unread-separator" id="unread-separator">
                                         <span>New messages</span>
@@ -296,6 +305,14 @@
             }
             else if (ChannelMessages.Any())
             {
+                @* CRITICAL FIX: Separator ən yuxarıda (30+ unread mesaj senariusu) *@
+                @if (UnreadSeparatorAfterMessageId.HasValue && UnreadSeparatorAfterMessageId.Value == Guid.Empty)
+                {
+                    <div class="unread-separator unread-separator-top" id="unread-separator">
+                        <span>New messages</span>
+                    </div>
+                }
+
                 @foreach(var group in GroupedChannelMessages)
                 {
                     <div class="message-group">
@@ -361,7 +378,8 @@
                                        ScrollToBottom="ScrollToBottomAsync" />
 
                                 @* Unread separator appears AFTER the last read message (existing behavior) *@
-                                @if (UnreadSeparatorAfterMessageId.HasValue && message.Id == UnreadSeparatorAfterMessageId.Value)
+                                @* Skip if already shown at top (Guid.Empty case) *@
+                                @if (UnreadSeparatorAfterMessageId.HasValue && UnreadSeparatorAfterMessageId.Value != Guid.Empty && message.Id == UnreadSeparatorAfterMessageId.Value)
                                 {
                                     <div class="unread-separator" id="unread-separator">
                                         <span>New messages</span>

@@ -230,8 +230,12 @@ public partial class Messages
                     LoadFavoriteDirectMessages()
                 );
 
+                // Dinamik count hesabla: UnreadCount əsasında (minimum 50, maksimum 200)
+                // Əgər 30+ unread mesaj varsa bütün unread mesajları yükləmək üçün count artırılır
+                int messageCount = Math.Max(50, Math.Min(200, conversation.UnreadCount * 2 + 20));
+
                 // First unread mesajının ətrafındakı mesajları yüklə və scroll et
-                await NavigateToMessageAsync(conversation.FirstUnreadMessageId.Value);
+                await NavigateToMessageAsync(conversation.FirstUnreadMessageId.Value, messageCount);
             }
             // PRIORITY 2: Read later message varsa, GetAroundMessage ilə yüklə
             else if (conversation.LastReadLaterMessageId.HasValue)
@@ -491,8 +495,12 @@ public partial class Messages
                     LoadFavoriteChannelMessages()
                 );
 
+                // Dinamik count hesabla: UnreadCount əsasında (minimum 50, maksimum 200)
+                // Əgər 30+ unread mesaj varsa bütün unread mesajları yükləmək üçün count artırılır
+                int messageCount = Math.Max(50, Math.Min(200, channel.UnreadCount * 2 + 20));
+
                 // First unread mesajının ətrafındakı mesajları yüklə və scroll et
-                await NavigateToMessageAsync(channel.FirstUnreadMessageId.Value);
+                await NavigateToMessageAsync(channel.FirstUnreadMessageId.Value, messageCount);
             }
             // PRIORITY 2: Read later message varsa, GetAroundMessage ilə yüklə
             else if (channel.LastReadLaterMessageId.HasValue)
@@ -832,7 +840,8 @@ public partial class Messages
     /// Mesaj yüklənmiş mesajlar arasındadırsa scroll edir,
     /// yoxdursa GetMessagesAround ilə mesajın ətrafını yükləyir.
     /// </summary>
-    private async Task NavigateToMessageAsync(Guid messageId)
+    /// <param name="count">GetMessagesAround count parametri (default 50, FirstUnreadMessage üçün dinamik hesablanır)</param>
+    private async Task NavigateToMessageAsync(Guid messageId, int count = 50)
     {
         // 1. Mesaj artıq yüklənibsə - sadəcə scroll et
         if (isDirectMessage)
@@ -854,7 +863,7 @@ public partial class Messages
                 var result = await ConversationService.GetMessagesAroundAsync(
                     selectedConversationId.Value,
                     messageId,
-                    30);
+                    count);
 
                 if (result.IsSuccess && result.Value != null && result.Value.Count > 0)
                 {
@@ -869,22 +878,43 @@ public partial class Messages
                     hasMoreNewerMessages = true; // Around mode: hər iki istiqamətdə load mümkündür
                     isViewingAroundMessage = true;
 
+                    // Unread separator hesabla (GetAroundMessage ilə yüklənən mesajlar üçün)
+                    if (shouldCalculateUnreadSeparator)
+                    {
+                        CalculateUnreadSeparatorPosition(
+                            directMessages,
+                            m => !m.IsRead && m.ReceiverId == currentUserId,
+                            m => m.Id,
+                            m => m.CreatedAtUtc);
+
+                        // DEBUG: Log separator calculation result
+                        Console.WriteLine($"[FIX] DM Separator: unreadSeparatorAfterMessageId={unreadSeparatorAfterMessageId}, IsEmpty={unreadSeparatorAfterMessageId == Guid.Empty}");
+                    }
+
                     StateHasChanged();
-                    await Task.Delay(200); // DOM render üçün daha uzun gözlə
+                    await Task.Delay(500); // DOM render + potential image loading
 
-                    // DEBUG: Log before scroll
-                    Console.WriteLine($"[DEBUG] NavigateToMessageAsync (DM): Loaded {directMessages.Count} messages, scrolling to {messageId}");
-
-                    // Directly scroll to message without additional checks (mesaj artıq yüklənib)
+                    // Separator varsa separator-a, yoxdursa mesaja scroll et
                     try
                     {
-                        await JS.InvokeVoidAsync("chatAppUtils.scrollToMessageAndHighlight", $"message-{messageId}");
-                        Console.WriteLine($"[DEBUG] NavigateToMessageAsync (DM): Scroll completed");
+                        if (unreadSeparatorAfterMessageId.HasValue)
+                        {
+                            // Separator varsa separator-a scroll et - instant scroll (no smooth)
+                            await JS.InvokeVoidAsync("chatAppUtils.scrollToElement", "unread-separator");
+                        }
+                        else
+                        {
+                            // Separator yoxdursa mesaja scroll et
+                            await JS.InvokeVoidAsync("chatAppUtils.scrollToMessageAndHighlight", $"message-{messageId}");
+                        }
                     }
-                    catch (Exception scrollEx)
+                    catch
                     {
-                        Console.WriteLine($"[DEBUG] NavigateToMessageAsync (DM): Scroll failed: {scrollEx.Message}");
+                        // Scroll error silently ignore
                     }
+
+                    // Scroll tamamlandı - indi bi-directional loading-ə icazə ver
+                    isViewingAroundMessage = false;
                 }
             }
             catch (Exception ex)
@@ -916,7 +946,7 @@ public partial class Messages
                 var result = await ChannelService.GetMessagesAroundAsync(
                     selectedChannelId.Value,
                     messageId,
-                    30);
+                    count);
 
                 if (result.IsSuccess && result.Value != null && result.Value.Count > 0)
                 {
@@ -931,22 +961,43 @@ public partial class Messages
                     hasMoreNewerMessages = true; // Around mode: hər iki istiqamətdə load mümkündür
                     isViewingAroundMessage = true;
 
+                    // Unread separator hesabla (GetAroundMessage ilə yüklənən mesajlar üçün)
+                    if (shouldCalculateUnreadSeparator)
+                    {
+                        CalculateUnreadSeparatorPosition(
+                            channelMessages,
+                            m => m.SenderId != currentUserId && (m.ReadBy == null || !m.ReadBy.Contains(currentUserId)),
+                            m => m.Id,
+                            m => m.CreatedAtUtc);
+
+                        // DEBUG: Log separator calculation result
+                        Console.WriteLine($"[FIX] Channel Separator: unreadSeparatorAfterMessageId={unreadSeparatorAfterMessageId}, IsEmpty={unreadSeparatorAfterMessageId == Guid.Empty}");
+                    }
+
                     StateHasChanged();
-                    await Task.Delay(200); // DOM render üçün daha uzun gözlə
+                    await Task.Delay(500); // DOM render + potential image loading
 
-                    // DEBUG: Log before scroll
-                    Console.WriteLine($"[DEBUG] NavigateToMessageAsync (Channel): Loaded {channelMessages.Count} messages, scrolling to {messageId}");
-
-                    // Directly scroll to message without additional checks (mesaj artıq yüklənib)
+                    // Separator varsa separator-a, yoxdursa mesaja scroll et
                     try
                     {
-                        await JS.InvokeVoidAsync("chatAppUtils.scrollToMessageAndHighlight", $"message-{messageId}");
-                        Console.WriteLine($"[DEBUG] NavigateToMessageAsync (Channel): Scroll completed");
+                        if (unreadSeparatorAfterMessageId.HasValue)
+                        {
+                            // Separator varsa separator-a scroll et - instant scroll (no smooth)
+                            await JS.InvokeVoidAsync("chatAppUtils.scrollToElement", "unread-separator");
+                        }
+                        else
+                        {
+                            // Separator yoxdursa mesaja scroll et
+                            await JS.InvokeVoidAsync("chatAppUtils.scrollToMessageAndHighlight", $"message-{messageId}");
+                        }
                     }
-                    catch (Exception scrollEx)
+                    catch
                     {
-                        Console.WriteLine($"[DEBUG] NavigateToMessageAsync (Channel): Scroll failed: {scrollEx.Message}");
+                        // Scroll error silently ignore
                     }
+
+                    // Scroll tamamlandı - indi bi-directional loading-ə icazə ver
+                    isViewingAroundMessage = false;
                 }
             }
             catch (Exception ex)

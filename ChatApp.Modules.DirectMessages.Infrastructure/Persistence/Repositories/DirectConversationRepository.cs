@@ -87,14 +87,6 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                                                     m.ReceiverId == userId &&
                                                     !m.IsRead &&
                                                     !m.IsDeleted)
-                                       let firstUnreadMessageId = _context.DirectMessages
-                                          .Where(m => m.ConversationId == conv.Id &&
-                                                    m.ReceiverId == userId &&
-                                                    !m.IsRead &&
-                                                    !m.IsDeleted)
-                                          .OrderBy(m => m.CreatedAtUtc)
-                                          .Select(m => (Guid?)m.Id)
-                                          .FirstOrDefault()
                                        let lastReadLaterMessageId = conv.User1Id == userId
                                            ? conv.User1LastReadLaterMessageId
                                            : conv.User2LastReadLaterMessageId
@@ -115,13 +107,47 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                                                lastMessageInfo.Content,
                                            conv.LastMessageAtUtc,
                                            UnreadCount=unreadCount,
-                                           FirstUnreadMessageId=firstUnreadMessageId,
                                            LastReadLaterMessageId=lastReadLaterMessageId,
                                            LastMessageSenderId = lastMessageInfo != null ? (Guid?)lastMessageInfo.SenderId : null,
                                            LastMessageIsRead = lastMessageInfo != null && lastMessageInfo.IsRead,
                                            LastMessageId = lastMessageInfo != null ? (Guid?)lastMessageInfo.Id : null
                                        })
                                        .ToListAsync(cancellationToken);
+
+            // Batch query: Get ALL unread messages, then find first for each conversation in-memory
+            var conversationIds = conversationsQuery.Select(c => c.Id).ToList();
+            var firstUnreadMessageIds = new Dictionary<Guid, Guid>();
+
+            Console.WriteLine($"[DEBUG REPO] conversationIds count: {conversationIds.Count}");
+            Console.WriteLine($"[DEBUG REPO] userId: {userId}");
+
+            if (conversationIds.Any())
+            {
+                // Simple query - get all unread messages
+                var allUnreadMessages = await _context.DirectMessages
+                    .Where(m => conversationIds.Contains(m.ConversationId) &&
+                                m.ReceiverId == userId &&
+                                !m.IsRead &&
+                                !m.IsDeleted)
+                    .Select(m => new { m.Id, m.ConversationId, m.CreatedAtUtc })
+                    .ToListAsync(cancellationToken);
+
+                Console.WriteLine($"[DEBUG REPO] allUnreadMessages count: {allUnreadMessages.Count}");
+
+                // In-memory GroupBy and OrderBy - EF Core translation issue workaround
+                firstUnreadMessageIds = allUnreadMessages
+                    .GroupBy(m => m.ConversationId)
+                    .ToDictionary(
+                        g => g.Key,
+                        g => g.OrderBy(m => m.CreatedAtUtc).First().Id
+                    );
+
+                Console.WriteLine($"[DEBUG REPO] firstUnreadMessageIds count: {firstUnreadMessageIds.Count}");
+                foreach (var kvp in firstUnreadMessageIds)
+                {
+                    Console.WriteLine($"[DEBUG REPO] Conversation {kvp.Key}: FirstUnread {kvp.Value}");
+                }
+            }
 
             // Map to DTOs with message status
             var conversations = conversationsQuery.Select(c =>
@@ -146,7 +172,7 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                     c.LastMessageSenderId,
                     status,
                     c.LastMessageId,
-                    c.FirstUnreadMessageId
+                    firstUnreadMessageIds.ContainsKey(c.Id) ? (Guid?)firstUnreadMessageIds[c.Id] : null
                 );
             }).ToList();
 

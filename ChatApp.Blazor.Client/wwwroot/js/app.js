@@ -60,7 +60,8 @@ window.chatAppUtils = {
         const element = document.getElementById(elementId);
         if (element) {
             // 'center' - separator mərkəzdə göstərilir
-            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // 'instant' - scroll animation disable (pozulma qarşısını alır)
+            element.scrollIntoView({ behavior: 'instant', block: 'center' });
         }
     },
 
@@ -170,13 +171,8 @@ window.chatAppUtils = {
 
     // Scroll to a message wrapper and highlight it
     scrollToMessageAndHighlight: (messageId) => {
-        console.log('[DEBUG] scrollToMessageAndHighlight called with:', messageId);
         const messageElement = document.getElementById(messageId);
-        if (!messageElement) {
-            console.log('[DEBUG] scrollToMessageAndHighlight: Element not found!');
-            return;
-        }
-        console.log('[DEBUG] scrollToMessageAndHighlight: Element found, scrolling...');
+        if (!messageElement) return;
 
         const container = document.getElementById('chat-messages');
         if (container) {

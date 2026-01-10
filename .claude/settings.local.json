@@ -15,7 +15,14 @@
       "Bash(tasklist:*)",
       "Bash(findstr:*)",
       "Bash(taskkill:*)",
-      "Bash(powershell -Command \"Stop-Process -Id 16284 -Force\")"
+      "Bash(powershell -Command \"Stop-Process -Id 16284 -Force\")",
+      "Bash(powershell -Command \"Stop-Process -Id 1116 -Force\")",
+      "Bash(powershell -Command \"Stop-Process -Id 9324 -Force\")",
+      "Bash(dotnet clean:*)",
+      "Bash(powershell -Command \"Stop-Process -Id 15044 -Force\")",
+      "Bash(powershell -Command \"Stop-Process -Id 8488 -Force\")",
+      "Bash(powershell -Command \"Stop-Process -Id 11292 -Force\")",
+      "Bash(dir C:UsersybaghiyevDesktopChatApp*.sln)"
     ],
     "deny": [],
     "ask": []

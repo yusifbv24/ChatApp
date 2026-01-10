@@ -3606,6 +3606,12 @@
     letter-spacing: 0.5px;
 }
 
+/* CRITICAL FIX: Separator ən yuxarıda (30+ unread mesaj senariusu) */
+.unread-separator-top {
+    margin-top: 0;
+    margin-bottom: 16px;
+}
+
 /* ===== Selection Mode ===== */
 
 /* Selection checkbox - absolute positioned on left */

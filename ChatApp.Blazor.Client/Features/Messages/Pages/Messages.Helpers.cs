@@ -574,6 +574,12 @@ public partial class Messages
                 // Separator əvvəlki mesajdan sonra qoyulur
                 unreadSeparatorAfterMessageId = getIdFunc(orderedMessages[firstUnreadIndex - 1]);
             }
+            else if (firstUnreadIndex == 0)
+            {
+                // CRITICAL FIX: İlk mesaj unread-dirsə (30+ unread mesaj senariusu)
+                // Separator Guid.Empty ilə işarələnir və ən yuxarıda göstərilir
+                unreadSeparatorAfterMessageId = Guid.Empty;
+            }
         }
 
         shouldCalculateUnreadSeparator = false;

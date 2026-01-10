@@ -9,7 +9,7 @@ namespace ChatApp.Modules.DirectMessages.Application.Queries
     public record GetConversationMessagesQuery(
         Guid ConversationId,
         Guid RequestedBy,
-        int PageSize=50,
+        int PageSize=30,
         DateTime? BeforeUtc=null
     ):IRequest<Result<List<DirectMessageDto>>>;
 
