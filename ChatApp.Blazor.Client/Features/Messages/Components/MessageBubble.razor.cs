@@ -547,54 +547,30 @@ public partial class MessageBubble : IAsyncDisposable
         // Mentions field-indən mention edilmiş user adlarını al
         var mentionNames = new Dictionary<string, Guid>(); // UserName -> UserId
 
-        Console.WriteLine($"[DEBUG] ParseLinks - Mentions null?: {Mentions == null}, MessageId: {MessageId}");
-
         // DirectMessage və ChannelMessage fərqli mention type-ları var
         if (Mentions != null)
         {
             // Try parse as DirectMessage mentions
-            try
+            if (Mentions is List<MessageMentionDto> dmMentions && dmMentions.Count > 0)
             {
-                var dmMentions = Mentions as List<MessageMentionDto>;
-                if (dmMentions != null && dmMentions.Count > 0)
+                foreach (var m in dmMentions)
                 {
-                    Console.WriteLine($"[DEBUG] ParseLinks - Found {dmMentions.Count} DM mentions");
-                    foreach (var m in dmMentions)
-                    {
-                        mentionNames[m.UserName] = m.UserId;
-                        Console.WriteLine($"[DEBUG] ParseLinks - DM Mention: {m.UserName} -> {m.UserId}");
-                    }
+                    mentionNames[m.UserName] = m.UserId;
                 }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[DEBUG] ParseLinks - DM cast error: {ex.Message}");
             }
 
             // Try parse as ChannelMessage mentions
-            try
+            if (Mentions is List<ChannelMessageMentionDto> channelMentions && channelMentions.Count > 0)
             {
-                var channelMentions = Mentions as List<ChannelMessageMentionDto>;
-                if (channelMentions != null && channelMentions.Count > 0)
+                foreach (var m in channelMentions)
                 {
-                    Console.WriteLine($"[DEBUG] ParseLinks - Found {channelMentions.Count} Channel mentions");
-                    foreach (var m in channelMentions)
+                    if (m.UserId.HasValue)
                     {
-                        if (m.UserId.HasValue)
-                        {
-                            mentionNames[m.UserName] = m.UserId.Value;
-                            Console.WriteLine($"[DEBUG] ParseLinks - Channel Mention: {m.UserName} -> {m.UserId}");
-                        }
+                        mentionNames[m.UserName] = m.UserId.Value;
                     }
                 }
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[DEBUG] ParseLinks - Channel cast error: {ex.Message}");
-            }
         }
-
-        Console.WriteLine($"[DEBUG] ParseLinks - Total mentions found: {mentionNames.Count}");
 
         // Mention-ları parse et (@ simvolu OLMADAN, yalnız ad rəngli və clickable)
         foreach (var mention in mentionNames)
@@ -1101,7 +1077,6 @@ public partial class MessageBubble : IAsyncDisposable
     {
         if (Guid.TryParse(userIdStr, out var userId))
         {
-            Console.WriteLine($"[DEBUG] Mention clicked: {userId}");
             await OnMentionClick.InvokeAsync(userId);
         }
     }

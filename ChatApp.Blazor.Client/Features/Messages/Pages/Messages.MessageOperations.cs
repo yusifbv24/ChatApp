@@ -17,16 +17,6 @@ public partial class Messages
         var content = data.Message;
         var mentionedUsers = data.MentionedUsers;
 
-        Console.WriteLine($"[DEBUG] SendMessage called with content: '{content}'");
-        Console.WriteLine($"[DEBUG] MentionedUsers count: {mentionedUsers?.Count ?? 0}");
-        if (mentionedUsers != null && mentionedUsers.Count > 0)
-        {
-            foreach (var mention in mentionedUsers)
-            {
-                Console.WriteLine($"[DEBUG] Mention: {mention.Key} -> {mention.Value}");
-            }
-        }
-
         // Boş mesaj göndərilməsin
         if (string.IsNullOrWhiteSpace(content)) return;
 
@@ -77,6 +67,9 @@ public partial class Messages
                     bool hasReadReceipt = pendingReadReceipts.TryGetValue(messageId, out var readReceipt);
 
                     // OPTİMİSTİC UI: Dərhal UI-a əlavə et
+                    // Mentions-ı da include et ki, mention styling dərhal görünsün
+                    var optimisticMentions = mentionedUsers?.Select(m => new MessageMentionDto(m.Value, m.Key)).ToList();
+
                     var newMessage = new DirectMessageDto(
                         messageId,
                         selectedConversationId.Value,
@@ -105,7 +98,8 @@ public partial class Messages
                         null,                                           // ReplyToFileName
                         null,                                           // ReplyToFileContentType
                         false,                                          // IsForwarded
-                        null);                                          // Reactions
+                        null,                                           // Reactions
+                        optimisticMentions);                            // Mentions
 
                     // Dublikat yoxla (SignalR-dan gəlmiş ola bilər)
                     if (!directMessages.Any(m => m.Id == messageId))
@@ -161,7 +155,10 @@ public partial class Messages
                         // TotalMemberCount = üzvlər - sender
                         var totalMembers = Math.Max(0, selectedChannelMemberCount - 1);
 
-                        // OPTİMİSTİK UI
+                        // OPTİMİSTİK UI - Mentions-ı da include et
+                        var optimisticChannelMentions = mentionedUsers?.Select(m =>
+                            new ChannelMessageMentionDto(m.Value, m.Key, false)).ToList();
+
                         var newMessage = new ChannelMessageDto(
                             messageId,
                             selectedChannelId.Value,
@@ -191,7 +188,8 @@ public partial class Messages
                             0,                                          // ReadByCount
                             totalMembers,                               // TotalMemberCount
                             [],                                         // ReadBy
-                            []);                                        // Reactions
+                            [],                                         // Reactions
+                            optimisticChannelMentions);                 // Mentions
 
                         channelMessages.Add(newMessage);
 
