@@ -27,6 +27,16 @@ document.addEventListener('click', (e) => {
             window.dispatchEvent(new CustomEvent('closeUserMenu'));
         }
     }
+
+    // Handle mention clicks (event delegation)
+    const mention = e.target.closest('.message-mention');
+    if (mention) {
+        const username = mention.getAttribute('data-username');
+        if (username) {
+            // Dispatch custom event with username
+            window.dispatchEvent(new CustomEvent('mentionClicked', { detail: { username } }));
+        }
+    }
 });
 
 // Utilities
@@ -291,5 +301,102 @@ window.chatAppUtils = {
     getViewportBasedPageSize: () => {
         const container = document.getElementById('chat-messages');
         return window.chatAppUtils.calculateOptimalPageSize(container);
+    },
+
+    // Subscribe to mention click events
+    subscribeToMentionClick: (dotNetHelper) => {
+        const handler = (e) => {
+            if (e.detail && e.detail.username) {
+                dotNetHelper.invokeMethodAsync('HandleMentionClick', e.detail.username);
+            }
+        };
+        window.addEventListener('mentionClicked', handler);
+        return {
+            dispose: () => window.removeEventListener('mentionClicked', handler)
+        };
+    }
+};
+
+// Mention click handlers - global delegation
+window.initializeMentionClickHandlers = function(dotNetHelper) {
+    console.log('[DEBUG] initializeMentionClickHandlers called');
+
+    // Remove existing listener if any
+    if (window._mentionClickHandler) {
+        document.removeEventListener('click', window._mentionClickHandler);
+    }
+
+    // Event delegation - listen to clicks on the document
+    window._mentionClickHandler = async (e) => {
+        // Check if the clicked element or its parent is a mention span
+        let target = e.target;
+
+        // Traverse up to find .message-mention
+        while (target && target !== document.body) {
+            if (target.classList && target.classList.contains('message-mention')) {
+                const userId = target.getAttribute('data-userid');
+                const username = target.getAttribute('data-username');
+
+                console.log(`[DEBUG] Mention clicked: ${username} (${userId})`);
+
+                if (userId) {
+                    try {
+                        await dotNetHelper.invokeMethodAsync('HandleMentionClickFromJS', userId);
+                    } catch (err) {
+                        console.error('[ERROR] Failed to invoke HandleMentionClickFromJS:', err);
+                    }
+                }
+                break;
+            }
+            target = target.parentElement;
+        }
+    };
+
+    document.addEventListener('click', window._mentionClickHandler);
+    console.log('[DEBUG] Mention click handler attached');
+};
+
+window.disposeMentionClickHandlers = function() {
+    console.log('[DEBUG] disposeMentionClickHandlers called');
+    if (window._mentionClickHandler) {
+        document.removeEventListener('click', window._mentionClickHandler);
+        window._mentionClickHandler = null;
+    }
+};
+
+// Mention panel outside click handler
+window.setupMentionOutsideClickHandler = function(dotNetHelper) {
+    console.log('[DEBUG] setupMentionOutsideClickHandler called');
+
+    // Remove existing listener if any
+    if (window._mentionOutsideClickHandler) {
+        document.removeEventListener('click', window._mentionOutsideClickHandler);
+    }
+
+    window._mentionOutsideClickHandler = (e) => {
+        // Check if mention panel is visible
+        const mentionPanelWrapper = document.querySelector('.mention-panel-wrapper');
+        if (!mentionPanelWrapper) return;
+
+        // Check if click is outside mention panel and outside textarea
+        const messageInput = document.querySelector('.message-input-container');
+        if (!mentionPanelWrapper.contains(e.target) && !messageInput?.contains(e.target)) {
+            try {
+                dotNetHelper.invokeMethodAsync('OnMentionPanelOutsideClick');
+            } catch (err) {
+                console.error('[ERROR] Failed to invoke OnMentionPanelOutsideClick:', err);
+            }
+        }
+    };
+
+    document.addEventListener('click', window._mentionOutsideClickHandler);
+    console.log('[DEBUG] Mention outside click handler attached');
+};
+
+window.disposeMentionOutsideClickHandler = function() {
+    console.log('[DEBUG] disposeMentionOutsideClickHandler called');
+    if (window._mentionOutsideClickHandler) {
+        document.removeEventListener('click', window._mentionOutsideClickHandler);
+        window._mentionOutsideClickHandler = null;
     }
 };

@@ -26,6 +26,7 @@ namespace ChatApp.Modules.DirectMessages.Domain.Entities
         // Navigation properties
         public DirectConversation Conversation { get; private set; } = null!;
         public ICollection<DirectMessageReaction> Reactions { get; private set; } = [];
+        public ICollection<DirectMessageMention> Mentions { get; private set; } = [];
 
         private DirectMessage() { }
 

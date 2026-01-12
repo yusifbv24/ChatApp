@@ -67,6 +67,7 @@
                   OnEditMessage="EditMessage"
                   OnDeleteMessage="DeleteMessage"
                   OnAddReaction="AddReaction"
+                  OnMentionClick="HandleMentionClick"
                   OnReply="HandleReply"
                   OnForward="HandleForward"
                   OnCancelReply="CancelReply"
@@ -93,7 +94,11 @@
                   IsViewingAroundMessage="@isViewingAroundMessage"
                   OnScrollToBottom="ScrollToBottomAsync"
                   InitialDraft="@currentDraft"
-                  OnDraftChanged="HandleDraftChanged" />
+                  OnDraftChanged="HandleDraftChanged"
+                  IsChannel="@(!isDirectMessage)"
+                  ChannelMembers="@currentChannelMembers"
+                  ConversationPartner="@currentConversationPartner"
+                  OnSearchMentionUsers="SearchUsersForMention" />
     </div>
 
     <!-- Right Panel Container (Sidebar and Search Panel share same space) -->

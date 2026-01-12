@@ -17,6 +17,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence
         public DbSet<ChannelMessage> ChannelMessages => Set<ChannelMessage>();
         public DbSet<ChannelMessageReaction> ChannelMessageReactions => Set<ChannelMessageReaction>();
         public DbSet<ChannelMessageRead> ChannelMessageReads => Set<ChannelMessageRead>();
+        public DbSet<ChannelMessageMention> ChannelMessageMentions => Set<ChannelMessageMention>();
         public DbSet<UserFavoriteChannelMessage> UserFavoriteChannelMessages => Set<UserFavoriteChannelMessage>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -29,6 +30,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence
             modelBuilder.ApplyConfiguration(new ChannelMessageConfiguration());
             modelBuilder.ApplyConfiguration(new ChannelMessageReactionConfiguration());
             modelBuilder.ApplyConfiguration(new ChannelMessageReadConfiguration());
+            modelBuilder.ApplyConfiguration(new ChannelMessageMentionConfiguration());
             modelBuilder.ApplyConfiguration(new UserFavoriteChannelMessageConfiguration());
 
             // Map Identity module's users table (read-only for queries)

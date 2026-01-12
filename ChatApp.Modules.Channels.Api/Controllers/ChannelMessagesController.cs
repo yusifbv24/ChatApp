@@ -17,6 +17,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System.Security.Claims;
+using BackendChannelMentionRequest = ChatApp.Modules.Channels.Application.Commands.ChannelMessages.ChannelMentionRequest;
 
 namespace ChatApp.Modules.Channels.Api.Controllers
 {
@@ -321,6 +322,15 @@ namespace ChatApp.Modules.Channels.Api.Controllers
             if (userId == Guid.Empty)
                 return Unauthorized();
 
+            // Convert frontend MentionRequest to backend ChannelMentionRequest
+            List<BackendChannelMentionRequest>? mentions = null;
+            if (request.Mentions != null && request.Mentions.Count > 0)
+            {
+                mentions = request.Mentions
+                    .Select(m => new BackendChannelMentionRequest(m.UserId, m.UserName, m.IsAllMention))
+                    .ToList();
+            }
+
             var result = await _mediator.Send(
                 new SendChannelMessageCommand(
                     channelId,
@@ -328,7 +338,8 @@ namespace ChatApp.Modules.Channels.Api.Controllers
                     request.Content,
                     request.FileId,
                     request.ReplyToMessageId,
-                    request.IsForwarded),
+                    request.IsForwarded,
+                    mentions),
                 cancellationToken);
 
             if (result.IsFailure)

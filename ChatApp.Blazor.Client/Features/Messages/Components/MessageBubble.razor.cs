@@ -164,6 +164,20 @@ public partial class MessageBubble : IAsyncDisposable
 
     #endregion
 
+    #region Parameters - Mentions
+
+    /// <summary>
+    /// Mesajda mention edilən istifadəçilər.
+    /// </summary>
+    [Parameter] public object? Mentions { get; set; } // List<MessageMentionDto> or List<ChannelMessageMentionDto>
+
+    /// <summary>
+    /// Mention-a klik edildikdə trigger edilən callback (userId ötürülür).
+    /// </summary>
+    [Parameter] public EventCallback<Guid> OnMentionClick { get; set; }
+
+    #endregion
+
     #region Parameters - Reply & Forward
 
     /// <summary>
@@ -519,16 +533,80 @@ public partial class MessageBubble : IAsyncDisposable
     }
 
     /// <summary>
-    /// Mətn içindəki URL-ləri klikləbilən linklərə çevirir.
-    /// XSS hücumlarından qorunmaq üçün əvvəlcə HTML encode edilir və daha sonra özümüz html code yaradaraq digər səhifədə açılmasını təmin edirik.
-    /// Noopener yazmazsaq açılan səhifə bizim səhifəyə geri müdaxilə edə bilər.
+    /// Mətn içindəki URL-ləri və mention-ları parse edir.
+    /// XSS qorunması üçün əvvəlcə HTML encode edilir.
+    /// @ simvolu olmadan yalnız ad ilə mention-ları rəngli göstərir.
     /// </summary>
-    private static string ParseLinks(string? text)
+    private string ParseLinks(string? text)
     {
         if (string.IsNullOrEmpty(text)) return "";
 
         // XSS qorunması: əvvəlcə HTML encode
         var encoded = WebUtility.HtmlEncode(text);
+
+        // Mentions field-indən mention edilmiş user adlarını al
+        var mentionNames = new Dictionary<string, Guid>(); // UserName -> UserId
+
+        Console.WriteLine($"[DEBUG] ParseLinks - Mentions null?: {Mentions == null}, MessageId: {MessageId}");
+
+        // DirectMessage və ChannelMessage fərqli mention type-ları var
+        if (Mentions != null)
+        {
+            // Try parse as DirectMessage mentions
+            try
+            {
+                var dmMentions = Mentions as List<MessageMentionDto>;
+                if (dmMentions != null && dmMentions.Count > 0)
+                {
+                    Console.WriteLine($"[DEBUG] ParseLinks - Found {dmMentions.Count} DM mentions");
+                    foreach (var m in dmMentions)
+                    {
+                        mentionNames[m.UserName] = m.UserId;
+                        Console.WriteLine($"[DEBUG] ParseLinks - DM Mention: {m.UserName} -> {m.UserId}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[DEBUG] ParseLinks - DM cast error: {ex.Message}");
+            }
+
+            // Try parse as ChannelMessage mentions
+            try
+            {
+                var channelMentions = Mentions as List<ChannelMessageMentionDto>;
+                if (channelMentions != null && channelMentions.Count > 0)
+                {
+                    Console.WriteLine($"[DEBUG] ParseLinks - Found {channelMentions.Count} Channel mentions");
+                    foreach (var m in channelMentions)
+                    {
+                        if (m.UserId.HasValue)
+                        {
+                            mentionNames[m.UserName] = m.UserId.Value;
+                            Console.WriteLine($"[DEBUG] ParseLinks - Channel Mention: {m.UserName} -> {m.UserId}");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[DEBUG] ParseLinks - Channel cast error: {ex.Message}");
+            }
+        }
+
+        Console.WriteLine($"[DEBUG] ParseLinks - Total mentions found: {mentionNames.Count}");
+
+        // Mention-ları parse et (@ simvolu OLMADAN, yalnız ad rəngli və clickable)
+        foreach (var mention in mentionNames)
+        {
+            // Exact word match - case insensitive
+            var pattern = $@"\b({System.Text.RegularExpressions.Regex.Escape(mention.Key)})\b";
+            encoded = System.Text.RegularExpressions.Regex.Replace(
+                encoded,
+                pattern,
+                match => $"<span class=\"message-mention\" data-userid=\"{mention.Value}\" data-username=\"{mention.Key}\" style=\"cursor: pointer;\">{mention.Key}</span>",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        }
 
         // URL-ləri anchor tag-larla əvəz et
         return UrlRegex().Replace(encoded, match =>
@@ -947,9 +1025,9 @@ public partial class MessageBubble : IAsyncDisposable
 
     #region IAsyncDisposable
 
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
-        if (_disposed) return ValueTask.CompletedTask;
+        if (_disposed) return;
         _disposed = true;
 
         hideReactionPanelCts?.Cancel();
@@ -960,9 +1038,20 @@ public partial class MessageBubble : IAsyncDisposable
         showReactionPickerCts?.Dispose();
         showReactionPickerCts = null;
 
-        GC.SuppressFinalize(this);
+        if (_dotNetHelper != null)
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("window.disposeMentionClickHandlers");
+                _dotNetHelper.Dispose();
+            }
+            catch
+            {
+                // Ignore disposal errors
+            }
+        }
 
-        return ValueTask.CompletedTask;
+        GC.SuppressFinalize(this);
     }
 
     #endregion
@@ -977,6 +1066,44 @@ public partial class MessageBubble : IAsyncDisposable
     {
         _imageLoaded = true;
         StateHasChanged();
+    }
+
+    #endregion
+
+    #region Lifecycle Methods
+
+    private DotNetObjectReference<MessageBubble>? _dotNetHelper;
+
+    /// <summary>
+    /// Component render olduqdan sonra mention-lara click event listener əlavə edir.
+    /// </summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                _dotNetHelper = DotNetObjectReference.Create(this);
+                await JS.InvokeVoidAsync("window.initializeMentionClickHandlers", _dotNetHelper);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ERROR] Failed to initialize mention click handlers: {ex.Message}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// JS-dən çağrılan metod - mention-a klik edildikdə.
+    /// </summary>
+    [JSInvokable]
+    public async Task HandleMentionClickFromJS(string userIdStr)
+    {
+        if (Guid.TryParse(userIdStr, out var userId))
+        {
+            Console.WriteLine($"[DEBUG] Mention clicked: {userId}");
+            await OnMentionClick.InvokeAsync(userId);
+        }
     }
 
     #endregion

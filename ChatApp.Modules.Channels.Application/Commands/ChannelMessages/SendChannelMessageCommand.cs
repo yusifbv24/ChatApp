@@ -17,8 +17,11 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMessages
         string Content,
         string? FileId = null,
         Guid? ReplyToMessageId = null,
-        bool IsForwarded = false
+        bool IsForwarded = false,
+        List<ChannelMentionRequest>? Mentions = null
     ) : IRequest<Result<Guid>>;
+
+    public record ChannelMentionRequest(Guid? UserId, string UserName, bool IsAllMention);
 
 
 
@@ -79,11 +82,8 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMessages
                 // Verify channel exists
                 var channel = await _unitOfWork.Channels.GetByIdAsync(
                     request.ChannelId,
-                    cancellationToken);
-
-                if (channel == null)
-                    throw new NotFoundException($"Channel with ID {request.ChannelId} not found");
-
+                    cancellationToken) 
+                    ?? throw new NotFoundException($"Channel with ID {request.ChannelId} not found");
                 // Verify user is a member
                 var isMember = await _unitOfWork.Channels.IsUserMemberAsync(
                     request.ChannelId,
@@ -105,6 +105,24 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMessages
                     request.IsForwarded);
 
                 await _unitOfWork.ChannelMessages.AddAsync(message, cancellationToken);
+
+                // Add mentions if provided
+                _logger?.LogInformation($"[MENTION DEBUG] Mentions count: {request.Mentions?.Count ?? 0}");
+                if (request.Mentions != null && request.Mentions.Count > 0)
+                {
+                    foreach (var mentionReq in request.Mentions)
+                    {
+                        _logger?.LogInformation($"[MENTION DEBUG] Adding mention: UserName={mentionReq.UserName}, UserId={mentionReq.UserId}, IsAllMention={mentionReq.IsAllMention}");
+                        var mention = new ChannelMessageMention(
+                            message.Id,
+                            mentionReq.UserId,
+                            mentionReq.UserName,
+                            mentionReq.IsAllMention);
+
+                        message.AddMention(mention);
+                    }
+                }
+
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 // Get the message DTO using GetByIdAsDtoAsync instead of GetChannelMessagesAsync

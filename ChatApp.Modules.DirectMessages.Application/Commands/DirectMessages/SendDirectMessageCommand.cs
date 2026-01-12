@@ -17,8 +17,11 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectMessages
         string Content,
         string? FileId = null,
         Guid? ReplyToMessageId = null,
-        bool IsForwarded = false
+        bool IsForwarded = false,
+        List<MentionRequest>? Mentions = null
     ):IRequest<Result<Guid>>;
+
+    public record MentionRequest(Guid UserId, string UserName);
 
 
 
@@ -100,6 +103,22 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectMessages
                     request.IsForwarded);
 
                 await _unitOfWork.Messages.AddAsync(message, cancellationToken);
+
+                // Add mentions if provided
+                _logger?.LogInformation($"[MENTION DEBUG] Mentions count: {request.Mentions?.Count ?? 0}");
+                if (request.Mentions != null && request.Mentions.Count > 0)
+                {
+                    foreach (var mentionReq in request.Mentions)
+                    {
+                        _logger?.LogInformation($"[MENTION DEBUG] Adding mention: UserName={mentionReq.UserName}, UserId={mentionReq.UserId}");
+                        var mention = new DirectMessageMention(
+                            message.Id,
+                            mentionReq.UserId,
+                            mentionReq.UserName);
+
+                        message.Mentions.Add(mention);
+                    }
+                }
 
                 // Update conversation last message time and mark as having messages
                 conversation.UpdateLastMessageTime();

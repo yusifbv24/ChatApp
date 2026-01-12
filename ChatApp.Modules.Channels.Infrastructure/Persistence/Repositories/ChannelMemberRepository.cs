@@ -49,6 +49,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                               member.UserId,
                               user.Username,
                               user.DisplayName,
+                              user.AvatarUrl,
                               member.Role,
                               member.JoinedAtUtc,
                               member.IsActive,

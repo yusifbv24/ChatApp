@@ -4,11 +4,12 @@ using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.JSInterop;
 using ChatApp.Blazor.Client.State;
 using ChatApp.Blazor.Client.Models.Files;
+using ChatApp.Blazor.Client.Models.Messages;
 using MudBlazor;
 
 namespace ChatApp.Blazor.Client.Features.Messages.Components;
 
-public partial class MessageInput : IDisposable
+public partial class MessageInput : IAsyncDisposable
 {
     #region Injected Services
 
@@ -97,9 +98,9 @@ public partial class MessageInput : IDisposable
     #region Parameters - Event Callbacks
 
     /// <summary>
-    /// Mesaj göndərmə callback-i.
+    /// Mesaj göndərmə callback-i (message content + mention edilmiş istifadəçilər).
     /// </summary>
-    [Parameter] public EventCallback<string> OnSend { get; set; }
+    [Parameter] public EventCallback<(string Message, Dictionary<string, Guid> MentionedUsers)> OnSend { get; set; }
 
     /// <summary>
     /// Mesaj redaktə callback-i.
@@ -138,6 +139,30 @@ public partial class MessageInput : IDisposable
 
     #endregion
 
+    #region Parameters - Mention Support
+
+    /// <summary>
+    /// Channel-də olub-olmadığı (mention logic fərqli olur).
+    /// </summary>
+    [Parameter] public bool IsChannel { get; set; }
+
+    /// <summary>
+    /// Channel member-lər (channel mention üçün).
+    /// </summary>
+    [Parameter] public List<MentionUserDto> ChannelMembers { get; set; } = [];
+
+    /// <summary>
+    /// Conversation partner (DM mention üçün).
+    /// </summary>
+    [Parameter] public MentionUserDto? ConversationPartner { get; set; }
+
+    /// <summary>
+    /// Mention user search service callback (istifadəçi axtarışı üçün).
+    /// </summary>
+    [Parameter] public Func<string, Task<List<MentionUserDto>>>? OnSearchUsers { get; set; }
+
+    #endregion
+
     #region Private Fields - Constants
 
     /// <summary>
@@ -173,6 +198,16 @@ public partial class MessageInput : IDisposable
     /// </summary>
     private InputFile fileInputRef = default!;
 
+    /// <summary>
+    /// Mention panel container reference (outside click detection üçün).
+    /// </summary>
+    private ElementReference mentionPanelContainerRef;
+
+    /// <summary>
+    /// DotNet reference for JS interop (outside click handler).
+    /// </summary>
+    private DotNetObjectReference<MessageInput>? dotNetRef;
+
     #endregion
 
     #region Private Fields - UI State
@@ -206,6 +241,36 @@ public partial class MessageInput : IDisposable
     /// Seçilmiş fayllar.
     /// </summary>
     private List<SelectedFile> selectedFiles = new();
+
+    /// <summary>
+    /// Mention panel görünürmü?
+    /// </summary>
+    private bool showMentionPanel = false;
+
+    /// <summary>
+    /// Mention panel-də göstəriləcək istifadəçilər.
+    /// </summary>
+    private List<MentionUserDto> mentionUsers = [];
+
+    /// <summary>
+    /// @ simvolunun mətndəki pozisiyası.
+    /// </summary>
+    private int mentionStartPosition = -1;
+
+    /// <summary>
+    /// @ dan sonra yazılan search query.
+    /// </summary>
+    private string mentionSearchQuery = string.Empty;
+
+    /// <summary>
+    /// Mention edilmiş istifadəçilər (UserName -> UserId mapping).
+    /// </summary>
+    private Dictionary<string, Guid> mentionedUsers = new();
+
+    /// <summary>
+    /// Mention mode disabled olub-olmadığı (Esc və ya outside click ilə disabled edilir).
+    /// </summary>
+    private bool mentionModeDisabled = false;
 
     #endregion
 
@@ -331,6 +396,20 @@ public partial class MessageInput : IDisposable
                 // Element hazır olmaya bilər
             }
         }
+
+        // Setup mention panel outside click handler
+        if (firstRender)
+        {
+            try
+            {
+                dotNetRef = DotNetObjectReference.Create(this);
+                await JS.InvokeVoidAsync("setupMentionOutsideClickHandler", dotNetRef);
+            }
+            catch
+            {
+                // JS interop xətası
+            }
+        }
     }
 
     #endregion
@@ -366,6 +445,9 @@ public partial class MessageInput : IDisposable
 
         // Draft dəyişikliyini parent-ə bildir
         await OnDraftChanged.InvokeAsync(newValue);
+
+        // Check for mention trigger (@)
+        await CheckMentionTrigger();
     }
 
     /// <summary>
@@ -373,6 +455,13 @@ public partial class MessageInput : IDisposable
     /// </summary>
     private async Task HandleKeyDown(KeyboardEventArgs e)
     {
+        // Mention panel açıqdırsa, Enter/Esc keyboard navigation üçündür
+        if (showMentionPanel && (e.Key == "Enter" || e.Key == "Escape" || e.Key == "ArrowUp" || e.Key == "ArrowDown"))
+        {
+            // MentionPanel JS handler idarə edəcək, ignore et
+            return;
+        }
+
         if (e.Key == "Enter" && !e.ShiftKey)
         {
             if (showEmojiPicker) showEmojiPicker = false;
@@ -452,7 +541,12 @@ public partial class MessageInput : IDisposable
         }
         else
         {
-            await OnSend.InvokeAsync(message);
+            // Pass the mentionedUsers dictionary directly
+            await OnSend.InvokeAsync((message, new Dictionary<string, Guid>(mentionedUsers)));
+
+            // Mention data-sını və mode-u təmizlə
+            mentionedUsers.Clear();
+            mentionModeDisabled = false;
         }
 
         shouldFocus = true;
@@ -783,16 +877,270 @@ public partial class MessageInput : IDisposable
 
     #endregion
 
-    #region IDisposable
+    #region Mention Support
+
+    /// <summary>
+    /// @ simvolu detection - mention panel trigger.
+    /// </summary>
+    private async Task CheckMentionTrigger()
+    {
+        try
+        {
+            var jsModule = await JS.InvokeAsync<IJSObjectReference>("import", "./js/mention.js");
+            var result = await jsModule.InvokeAsync<MentionTriggerResult>("getTextBeforeCaret", textAreaRef);
+
+            if (result.MentionStart >= 0)
+            {
+                // Əgər mention mode disabled-dirsə və @ eyni mövqedə deyilsə, re-enable et
+                if (mentionModeDisabled && result.MentionStart != mentionStartPosition)
+                {
+                    mentionModeDisabled = false;
+                }
+
+                // Mention mode disabled-dirsə, trigger-i ignore et
+                if (mentionModeDisabled)
+                {
+                    return;
+                }
+
+                // Valid @ trigger tapıldı
+                mentionStartPosition = result.MentionStart;
+                mentionSearchQuery = result.Text;
+
+                // İstifadəçi siyahısını yüklə
+                await LoadMentionUsers();
+
+                showMentionPanel = true;
+                StateHasChanged();
+            }
+            else
+            {
+                // @ yoxdur və ya invalid - mention mode-u re-enable et
+                showMentionPanel = false;
+                mentionModeDisabled = false;
+                StateHasChanged();
+            }
+        }
+        catch
+        {
+            // JS interop xətası
+            showMentionPanel = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Mention panel üçün istifadəçiləri yüklə.
+    /// </summary>
+    private async Task LoadMentionUsers()
+    {
+        mentionUsers.Clear();
+
+        if (IsChannel)
+        {
+            // Channel: "All" + channel members
+            // Add "All" option if search query is empty or starts with search query
+            if (string.IsNullOrWhiteSpace(mentionSearchQuery) ||
+                "all".StartsWith(mentionSearchQuery.ToLower(), StringComparison.OrdinalIgnoreCase))
+            {
+                mentionUsers.Add(new MentionUserDto
+                {
+                    Id = Guid.Empty,
+                    Name = "All",
+                    IsAll = true,
+                    IsMember = true
+                });
+            }
+
+            // Filter by search query
+            if (!string.IsNullOrWhiteSpace(mentionSearchQuery))
+            {
+                var query = mentionSearchQuery.ToLower();
+                mentionUsers.AddRange(ChannelMembers.Where(m => m.Name.ToLower().Contains(query)));
+
+                // Search global users if callback provided
+                if (OnSearchUsers != null)
+                {
+                    try
+                    {
+                        var globalUsers = await OnSearchUsers(mentionSearchQuery);
+                        mentionUsers.AddRange(globalUsers.Where(u => !ChannelMembers.Any(m => m.Id == u.Id)));
+                    }
+                    catch
+                    {
+                        // Search xətası (ignore)
+                    }
+                }
+            }
+            else
+            {
+                // No search query - show all channel members
+                mentionUsers.AddRange(ChannelMembers);
+            }
+        }
+        else
+        {
+            // Direct Message: conversation partner + global search
+            if (ConversationPartner != null)
+            {
+                if (string.IsNullOrWhiteSpace(mentionSearchQuery) ||
+                    ConversationPartner.Name.ToLower().Contains(mentionSearchQuery.ToLower()))
+                {
+                    mentionUsers.Add(ConversationPartner);
+                }
+            }
+
+            // Global user search
+            if (OnSearchUsers != null && !string.IsNullOrWhiteSpace(mentionSearchQuery))
+            {
+                try
+                {
+                    var globalUsers = await OnSearchUsers(mentionSearchQuery);
+                    mentionUsers.AddRange(globalUsers.Where(u => u.Id != ConversationPartner?.Id));
+                }
+                catch
+                {
+                    // Search xətası (ignore)
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// İstifadəçi seçildikdə mention text-i insert et.
+    /// </summary>
+    private async Task HandleMentionSelected(MentionUserDto user)
+    {
+        try
+        {
+            var jsModule = await JS.InvokeAsync<IJSObjectReference>("import", "./js/mention.js");
+
+            // Mention panel bağla (input event-dən əvvəl)
+            showMentionPanel = false;
+
+            // JS mention insert edir: @Ce -> @Ceka
+            await jsModule.InvokeVoidAsync("insertMention", textAreaRef, mentionStartPosition, mentionSearchQuery.Length, user.Name);
+
+            // Mention edilmiş istifadəçini track et
+            if (!mentionedUsers.ContainsKey(user.Name))
+            {
+                mentionedUsers[user.Name] = user.Id;
+            }
+
+            // MessageText-i sync et (JS-dən gələn dəyişiklik)
+            // JS-də input event dispatch edir, amma əlavə olaraq manual sync edirik
+            var currentValue = await jsModule.InvokeAsync<string>("getTextareaValue", textAreaRef);
+            MessageText = currentValue;
+
+            // Mention mode-u re-enable et (yeni mention üçün)
+            mentionModeDisabled = false;
+            mentionStartPosition = -1;
+
+            await FocusAsync();
+            StateHasChanged();
+        }
+        catch
+        {
+            // JS interop xətası
+            showMentionPanel = false;
+            mentionModeDisabled = false;
+        }
+    }
+
+    /// <summary>
+    /// Mention panel cancel (Esc).
+    /// @ simvolu saxlanır, amma mention mode-dan çıxırıq.
+    /// </summary>
+    private async Task HandleMentionCancel()
+    {
+        showMentionPanel = false;
+        mentionModeDisabled = true; // Mention mode-u disable et
+        mentionSearchQuery = string.Empty;
+        mentionUsers.Clear();
+        await FocusAsync();
+    }
+
+    /// <summary>
+    /// Outside click handler (JS-dən çağrılır).
+    /// </summary>
+    [JSInvokable]
+    public void OnMentionPanelOutsideClick()
+    {
+        if (showMentionPanel)
+        {
+            showMentionPanel = false;
+            mentionModeDisabled = true; // Mention mode-u disable et
+            mentionSearchQuery = string.Empty;
+            mentionUsers.Clear();
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Mesaj content-dən mention edilmiş istifadəçi ID-lərini extract edir.
+    /// @ simvolu olmadan yalnız ad ilə check edir.
+    /// </summary>
+    private List<Guid> ExtractMentionedUserIds(string messageContent)
+    {
+        var mentionedIds = new List<Guid>();
+
+        Console.WriteLine($"[DEBUG] ExtractMentionedUserIds called with message: '{messageContent}'");
+        Console.WriteLine($"[DEBUG] MentionedUsers dictionary count: {mentionedUsers.Count}");
+
+        // MentionedUsers dictionary-dən user adlarını tap
+        foreach (var mentionedUser in mentionedUsers)
+        {
+            Console.WriteLine($"[DEBUG] Checking if '{messageContent}' contains '{mentionedUser.Key}'");
+
+            // Mesaj content-də bu user adı varmı?
+            if (messageContent.Contains(mentionedUser.Key, StringComparison.OrdinalIgnoreCase))
+            {
+                Console.WriteLine($"[DEBUG] Found mention: {mentionedUser.Key} -> {mentionedUser.Value}");
+                if (!mentionedIds.Contains(mentionedUser.Value))
+                {
+                    mentionedIds.Add(mentionedUser.Value);
+                }
+            }
+        }
+
+        Console.WriteLine($"[DEBUG] Total mentioned IDs found: {mentionedIds.Count}");
+        return mentionedIds;
+    }
+
+    #endregion
+
+    #region IAsyncDisposable
 
     /// <summary>
     /// Resurları təmizləyir.
     /// </summary>
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         typingTimer?.Dispose();
+
+        // Dispose mention outside click handler
+        try
+        {
+            if (dotNetRef != null)
+            {
+                await JS.InvokeVoidAsync("disposeMentionOutsideClickHandler");
+                dotNetRef.Dispose();
+            }
+        }
+        catch
+        {
+            // JS interop xətası
+        }
+
         GC.SuppressFinalize(this);
     }
 
     #endregion
+
+    // Helper class for JS interop
+    private class MentionTriggerResult
+    {
+        public string Text { get; set; } = string.Empty;
+        public int MentionStart { get; set; } = -1;
+    }
 }

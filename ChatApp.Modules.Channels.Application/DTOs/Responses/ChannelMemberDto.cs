@@ -8,6 +8,7 @@ namespace ChatApp.Modules.Channels.Application.DTOs.Responses
         Guid UserId,
         string Username,
         string DisplayName,
+        string? AvatarUrl,
         MemberRole Role,
         DateTime JoinedAtUtc,
         bool IsActive,

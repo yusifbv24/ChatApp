@@ -197,6 +197,20 @@ public partial class Messages : IAsyncDisposable
 
     #endregion
 
+    #region Mention State - Mention state-i
+
+    /// <summary>
+    /// Channel üçün mention user list (hazırki channel-ın member-ləri).
+    /// </summary>
+    private List<MentionUserDto> currentChannelMembers = [];
+
+    /// <summary>
+    /// Direct message üçün conversation partner.
+    /// </summary>
+    private MentionUserDto? currentConversationPartner;
+
+    #endregion
+
     #region Loading States - Yükləmə state-ləri
 
     /// <summary>
@@ -628,8 +642,53 @@ public partial class Messages : IAsyncDisposable
                 "chatAppUtils.subscribeToVisibilityChange",
                 dotNetReference);
 
+            // Mention click listener (using dotNetReference)
+            await JS.InvokeVoidAsync("chatAppUtils.subscribeToMentionClick", dotNetReference);
+
             // İlkin visibility state
             isPageVisible = await JS.InvokeAsync<bool>("chatAppUtils.isPageVisible");
+        }
+    }
+
+    /// <summary>
+    /// Mention-a klik edildikdə JS-dən çağrılır.
+    /// Username-ə əsasən conversation açır.
+    /// </summary>
+    [JSInvokable]
+    public async Task HandleMentionClick(string username)
+    {
+        try
+        {
+            // Username ilə user search et
+            var searchResult = await UserService.SearchUsersAsync(username);
+
+            if (searchResult.IsSuccess && searchResult.Value != null && searchResult.Value.Count > 0)
+            {
+                // İlk uyğun user-i tap (exact match)
+                var user = searchResult.Value.FirstOrDefault(u =>
+                    u.DisplayName.Equals(username, StringComparison.OrdinalIgnoreCase) ||
+                    u.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
+
+                if (user != null)
+                {
+                    // Conversation aç - StartConversationWithUser metodunu istifadə et
+                    // Əvvəlcə search results-u set et
+                    userSearchResults = searchResult.Value;
+                    await StartConversationWithUser(user.Id);
+                }
+                else
+                {
+                    ShowError("User not found");
+                }
+            }
+            else
+            {
+                ShowError("User not found");
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Failed to open conversation: {ex.Message}");
         }
     }
 

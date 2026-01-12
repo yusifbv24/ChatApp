@@ -4,5 +4,6 @@
         string Content,
         string? FileId,
         Guid? ReplyToMessageId = null,
-        bool IsForwarded = false);
+        bool IsForwarded = false,
+        List<MentionRequest>? Mentions = null);
 }

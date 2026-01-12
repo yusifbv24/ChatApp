@@ -184,7 +184,7 @@
 
 /* Search */
 .conversation-search {
-    padding: 12px;
+    padding: 9px;
     border-bottom: 1px solid var(--gray-100);
 }
 
@@ -438,6 +438,13 @@
         overflow: hidden;
         text-overflow: ellipsis;
     }
+
+.mention-indicator {
+    color: var(--primary-color);
+    font-size: 14px;
+    font-weight: 700;
+    margin-left: 8px;
+}
 
 .unread-badge {
     background: var(--primary-color);
@@ -1315,6 +1322,27 @@
     color: rgba(255, 255, 255, 0.85);
 }
 
+/* Message mentions (UserName without @) */
+.message-mention {
+    color: var(--primary-600);
+    font-weight: 500;
+    cursor: pointer;
+    transition: color 0.15s ease;
+}
+
+.message-mention:hover {
+    color: var(--primary-700);
+}
+
+.own-bubble .message-mention {
+    color: var(--white);
+    font-weight: 500;
+}
+
+.own-bubble .message-mention:hover {
+    color: rgba(255, 255, 255, 0.9);
+}
+
 /* Message footer row - contains reactions and footer side by side */
 .message-footer-row {
     display: flex;
@@ -1997,6 +2025,7 @@
    =================================== */
 
 .message-input-container {
+    position: relative; /* Mention panel positioning üçün lazımdır */
     padding: 12px 16px;
     background: var(--white);
     border-top: 1px solid var(--gray-200);
@@ -4947,5 +4976,196 @@
     border-top-color: var(--primary-500);
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
+}
+
+/* ================================
+   MENTION PANEL STYLES
+   ================================ */
+
+/* Mention panel wrapper - outside click detection üçün */
+.mention-panel-wrapper {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    margin-bottom: 8px;
+}
+
+.mention-panel {
+    position: relative;
+    width: 400px;
+    height: 190px;
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    display: flex;
+    flex-direction: column;
+    z-index: 10001;
+}
+
+.mention-search {
+    padding: 12px;
+    border-bottom: 1px solid var(--gray-200);
+    flex-shrink: 0;
+}
+
+.mention-search-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    outline: none;
+    transition: border-color var(--transition-base);
+}
+
+.mention-search-input:focus {
+    border-color: var(--primary-color);
+}
+
+.mention-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 4px 0;
+}
+
+.mention-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: background-color var(--transition-base);
+}
+
+.mention-item:hover,
+.mention-item.selected {
+    background-color: var(--gray-100);
+}
+
+.mention-item.selected {
+    background-color: var(--primary-light);
+}
+
+.mention-all-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.mention-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.mention-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.mention-avatar-placeholder {
+    width: 100%;
+    height: 100%;
+    background: var(--primary-color);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.mention-name {
+    flex: 1;
+    font-size: 14px;
+    color: var(--gray-900);
+    font-weight: 500;
+}
+
+.mention-empty {
+    padding: 20px;
+    text-align: center;
+    color: var(--gray-500);
+    font-size: 14px;
+}
+
+.mention-load-more {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 12px;
+    color: var(--primary-color);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: background-color var(--transition-base);
+}
+
+.mention-load-more:hover {
+    background-color: var(--gray-50);
+}
+
+.mention-footer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-top: 1px solid var(--gray-200);
+    background: var(--gray-50);
+    font-size: 11px;
+    color: var(--gray-500);
+    flex-shrink: 0;
+}
+
+.mention-instruction {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.mention-instruction strong {
+    color: var(--gray-700);
+    font-weight: 600;
+}
+
+.mention-instruction-divider {
+    color: var(--gray-300);
+}
+
+.mention-arrow-icon {
+    font-size: 12px;
+}
+
+/* ================================
+   MENTION LINK STYLES (in message bubble)
+   ================================ */
+
+.mention-link {
+    color: var(--primary-color);
+    font-weight: 500;
+    text-decoration: none;
+    border-bottom: 1px solid var(--primary-color);
+    cursor: pointer;
+    transition: all var(--transition-base);
+}
+
+.mention-link:hover {
+    color: var(--primary-dark);
+    border-bottom-color: var(--primary-dark);
+    background-color: var(--primary-light);
+    padding: 2px 4px;
+    margin: -2px -4px;
+    border-radius: 4px;
 }
 

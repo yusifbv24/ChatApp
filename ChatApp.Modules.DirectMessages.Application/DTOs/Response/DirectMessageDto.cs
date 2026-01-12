@@ -28,10 +28,15 @@
         string? ReplyToFileName,
         string? ReplyToFileContentType,
         bool IsForwarded,
-        List<DirectMessageReactionDto>? Reactions = null);
+        List<DirectMessageReactionDto>? Reactions = null,
+        List<MessageMentionDto>? Mentions = null);
 
     public record DirectMessageReactionDto(
         string Emoji,
         int Count,
         List<Guid> UserIds);
+
+    public record MessageMentionDto(
+        Guid UserId,
+        string UserName);
 }

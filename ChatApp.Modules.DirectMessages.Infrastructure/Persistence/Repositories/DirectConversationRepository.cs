@@ -117,6 +117,7 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
             // Batch query: Get ALL unread messages, then find first for each conversation in-memory
             var conversationIds = conversationsQuery.Select(c => c.Id).ToList();
             var firstUnreadMessageIds = new Dictionary<Guid, Guid>();
+            var hasUnreadMentionsDictionary = new Dictionary<Guid, bool>();
 
             Console.WriteLine($"[DEBUG REPO] conversationIds count: {conversationIds.Count}");
             Console.WriteLine($"[DEBUG REPO] userId: {userId}");
@@ -147,6 +148,23 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 {
                     Console.WriteLine($"[DEBUG REPO] Conversation {kvp.Key}: FirstUnread {kvp.Value}");
                 }
+
+                // Batch query: Get conversations with unread mentions
+                var conversationsWithMentions = await _context.DirectMessageMentions
+                    .Where(mention => conversationIds.Contains(mention.Message.ConversationId) &&
+                                      mention.MentionedUserId == userId &&
+                                      !mention.Message.IsRead &&
+                                      !mention.Message.IsDeleted)
+                    .Select(mention => mention.Message.ConversationId)
+                    .Distinct()
+                    .ToListAsync(cancellationToken);
+
+                foreach (var convId in conversationsWithMentions)
+                {
+                    hasUnreadMentionsDictionary[convId] = true;
+                }
+
+                Console.WriteLine($"[DEBUG REPO] hasUnreadMentions count: {hasUnreadMentionsDictionary.Count}");
             }
 
             // Map to DTOs with message status
@@ -168,6 +186,7 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                     c.LastMessage,
                     c.LastMessageAtUtc,
                     c.UnreadCount,
+                    hasUnreadMentionsDictionary.ContainsKey(c.Id) && hasUnreadMentionsDictionary[c.Id],
                     c.LastReadLaterMessageId,
                     c.LastMessageSenderId,
                     status,

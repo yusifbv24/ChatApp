@@ -185,9 +185,9 @@ public partial class ChatArea : IAsyncDisposable
     #region Parameters - Event Callbacks (Message Operations)
 
     /// <summary>
-    /// Yeni mesaj göndərmə callback-i.
+    /// Yeni mesaj göndərmə callback-i (message content + mention edilmiş istifadəçilər).
     /// </summary>
-    [Parameter] public EventCallback<string> OnSendMessage { get; set; }
+    [Parameter] public EventCallback<(string Message, Dictionary<string, Guid> MentionedUsers)> OnSendMessage { get; set; }
 
     /// <summary>
     /// Fayllarla mesaj göndərmə callback-i - (Files, Message) tuple.
@@ -203,6 +203,11 @@ public partial class ChatArea : IAsyncDisposable
     /// Mesaj silmə callback-i.
     /// </summary>
     [Parameter] public EventCallback<Guid> OnDeleteMessage { get; set; }
+
+    /// <summary>
+    /// Mention-a klik callback-i - userId ötürülür.
+    /// </summary>
+    [Parameter] public EventCallback<Guid> OnMentionClick { get; set; }
 
     /// <summary>
     /// Reaction əlavə etmə callback-i - (messageId, emoji) tuple.
@@ -301,6 +306,30 @@ public partial class ChatArea : IAsyncDisposable
     /// İstifadəçi axtarış statusu.
     /// </summary>
     [Parameter] public bool IsSearchingUsers { get; set; }
+
+    #endregion
+
+    #region Parameters - Mention Support
+
+    /// <summary>
+    /// Channel-dadırsa true, DM-dədirsə false.
+    /// </summary>
+    [Parameter] public bool IsChannel { get; set; }
+
+    /// <summary>
+    /// Channel member-ləri (mention panel üçün).
+    /// </summary>
+    [Parameter] public List<MentionUserDto> ChannelMembers { get; set; } = [];
+
+    /// <summary>
+    /// Conversation partner (DM-də mention üçün).
+    /// </summary>
+    [Parameter] public MentionUserDto? ConversationPartner { get; set; }
+
+    /// <summary>
+    /// Mention üçün user axtarışı callback-i.
+    /// </summary>
+    [Parameter] public Func<string, Task<List<MentionUserDto>>>? OnSearchMentionUsers { get; set; }
 
     #endregion
 
@@ -1169,12 +1198,7 @@ public partial class ChatArea : IAsyncDisposable
     /// <summary>
     /// Input placeholder text-i qaytarır.
     /// </summary>
-    private string GetInputPlaceholder()
-    {
-        return IsDirectMessage
-            ? $"Message {RecipientName}..."
-            : $"Message #{ChannelName}...";
-    }
+    private static string GetInputPlaceholder() => "Enter @ to mention a person or chat";
 
     /// <summary>
     /// Channel-da avatar göstərilməli olub-olmadığını müəyyən edir.
@@ -1320,11 +1344,20 @@ public partial class ChatArea : IAsyncDisposable
     #region Message Actions
 
     /// <summary>
-    /// Mesaj göndərmə.
+    /// Mention-a klik - həmin şəxslə conversation aç.
     /// </summary>
-    private async Task SendMessage(string content)
+    private async Task HandleMentionClick(Guid userId)
     {
-        await OnSendMessage.InvokeAsync(content);
+        Console.WriteLine($"[DEBUG] HandleMentionClick - userId: {userId}");
+        await OnMentionClick.InvokeAsync(userId);
+    }
+
+    /// <summary>
+    /// Mesaj göndərmə (content + mention edilmiş istifadəçi ID-ləri).
+    /// </summary>
+    private async Task SendMessage((string Message, Dictionary<string, Guid> MentionedUsers) data)
+    {
+        await OnSendMessage.InvokeAsync(data);
     }
 
     /// <summary>

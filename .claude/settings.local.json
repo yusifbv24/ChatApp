@@ -1,28 +1,14 @@
 {
   "permissions": {
     "allow": [
-      "Bash(dotnet build:*)",
-      "Bash(dotnet restore:*)",
-      "Bash(dotnet --list-sdks:*)",
-      "Bash(cat:*)",
-      "Bash(if exist nul del nul)",
-      "Bash(psql:*)",
-      "Bash(dotnet ef migrations add:*)",
       "Bash(dotnet ef database update:*)",
-      "Bash(dir \"C:\\Users\\ybaghiyev\\Desktop\\ChatApp\\ChatApp.Modules.Files.Infrastructure\\Migrations\" /B)",
-      "Bash(echo:*)",
-      "Bash(\"C:\\Users\\ybaghiyev\\Desktop\\ChatApp\\ChatApp.Blazor.Client\\wwwroot\\css\\messages.css\")",
-      "Bash(tasklist:*)",
-      "Bash(findstr:*)",
+      "Bash(dotnet build:*)",
+      "Bash(dotnet ef migrations add:*)",
+      "Bash(del \"ChatApp.Modules.DirectMessages.Infrastructure\\Migrations\\20260112000000_AddDirectMessageMentions.cs\")",
+      "Bash(del \"ChatApp.Modules.Channels.Infrastructure\\Migrations\\20260112000000_AddChannelMessageMentions.cs\")",
+      "Bash(find:*)",
       "Bash(taskkill:*)",
-      "Bash(powershell -Command \"Stop-Process -Id 16284 -Force\")",
-      "Bash(powershell -Command \"Stop-Process -Id 1116 -Force\")",
-      "Bash(powershell -Command \"Stop-Process -Id 9324 -Force\")",
-      "Bash(dotnet clean:*)",
-      "Bash(powershell -Command \"Stop-Process -Id 15044 -Force\")",
-      "Bash(powershell -Command \"Stop-Process -Id 8488 -Force\")",
-      "Bash(powershell -Command \"Stop-Process -Id 11292 -Force\")",
-      "Bash(dir C:UsersybaghiyevDesktopChatApp*.sln)"
+      "Bash(dotnet ef migrations:*)"
     ],
     "deny": [],
     "ask": []

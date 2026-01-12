@@ -275,10 +275,12 @@
                                        ReplyToFileName="@message.ReplyToFileName"
                                        ReplyToFileContentType="@message.ReplyToFileContentType"
                                        IsForwarded="@message.IsForwarded"
+                                       Mentions="@message.Mentions"
                                        LastReadLaterMessageId="@LastReadLaterMessageId"
                                        IsSelectMode="@IsSelectMode"
                                        IsSelected="@SelectedMessageIds.Contains(message.Id)"
                                        OnSelectToggle="OnSelectToggle"
+                                       OnMentionClick="HandleMentionClick"
                                        OnEdit="()=>StartEditMessage(message.Id,message.Content)"
                                        OnDelete="()=>DeleteMessage(message.Id)"
                                        OnReaction="(emoji)=>AddReaction(message.Id,emoji)"
@@ -361,10 +363,12 @@
                                        ReplyToFileName="@message.ReplyToFileName"
                                        ReplyToFileContentType="@message.ReplyToFileContentType"
                                        IsForwarded="@message.IsForwarded"
+                                       Mentions="@message.Mentions"
                                        LastReadLaterMessageId="@LastReadLaterMessageId"
                                        IsSelectMode="@IsSelectMode"
                                        IsSelected="@SelectedMessageIds.Contains(message.Id)"
                                        OnSelectToggle="OnSelectToggle"
+                                       OnMentionClick="HandleMentionClick"
                                        OnEdit="() => StartEditMessage(message.Id, message.Content)"
                                        OnDelete="() => DeleteMessage(message.Id)"
                                        OnReaction="(emoji) => AddReaction(message.Id, emoji)"
@@ -444,7 +448,11 @@
                           OnCancelReply="OnCancelReply"
                           OnTyping="HandleTyping"
                           OnAttach="HandleAttach"
-                          OnDraftChanged="OnDraftChanged" />
+                          OnDraftChanged="OnDraftChanged"
+                          IsChannel="@IsChannel"
+                          ChannelMembers="@ChannelMembers"
+                          ConversationPartner="@ConversationPartner"
+                          OnSearchUsers="@OnSearchMentionUsers" />
         }
     }
 </div>

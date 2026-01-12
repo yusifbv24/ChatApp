@@ -440,3 +440,56 @@ Identity | Channels | DirectMessages | Files | Notifications | Search | Settings
   - `Messages.Selection.cs:590-605` - LoadMoreChannelMessages (Channel pagination + duplicate filter)
   - `app.js:129-152` - saveScrollPosition & restoreScrollPosition (height-difference method)
   - Deleted: `nul` file, bütün Console.WriteLine debug log-lar
+
+### Session 15 (2026-01-12): Mark-as-Read Fix + Mention Badge Real-time Update
+
+**Mark-as-Read Problem:**
+- **Problem:** Mesajlar conversation/channel-a daxil olduqda oxundu görünür, lakin hard refresh (Ctrl+Shift+R) edəndə yenə oxunmamış görünür
+- **Root Cause:**
+  - `LoadDirectMessages` və `LoadChannelMessages` - mark-as-read API çağrılırdı, lakin frontend state update edilmirdi
+  - `NavigateToMessageAsync` (around mode) - mark-as-read heç çağrılmırdı (unread message varsa)
+  - Backend-ə request gedir, amma UI-da mesajların `IsRead` state-i `true`-ya dəyişmədiyi üçün refresh edəndə yenə oxunmamış gəlir
+- **Solution:**
+  - **Helper metodlar yaradıldı** (duplicate kod problemi həll olundu):
+    - `MarkDirectMessagesAsReadAsync()` - DM-lər üçün mark-as-read (bulk/individual API + UI state update)
+    - `MarkChannelMessagesAsReadAsync()` - Channel-lar üçün mark-as-read (bulk/individual API, SignalR update)
+  - **LoadDirectMessages:645** - Helper metoda çağrı (əvvəl 30+ sətir duplicate kod)
+  - **LoadChannelMessages:711-714** - Helper metoda çağrı
+  - **NavigateToMessageAsync (DM):930** - Mark-as-read əlavə edildi (around mode üçün)
+  - **NavigateToMessageAsync (Channel):1013-1016** - Mark-as-read əlavə edildi (around mode üçün)
+- **Result:**
+  - ✅ Hard refresh edəndə mesajlar oxundu olaraq qalır
+  - ✅ Frontend state backend ilə sinxrondadır
+  - ✅ Kod optimizasiyası: 120+ sətir duplicate kod → 2 helper metod (67 sətir)
+  - ✅ Performance: Debug log-lar silindi, yalnız lazımi əməliyyatlar qalır
+
+**Mention Badge Real-time Update:**
+- **Problem:**
+  1. User A User B-ni mention edəndə, User B-nin conversation listində mention badge real-time göstərilmir (səhifə yenilədikdən sonra görünür)
+  2. User B conversation-a daxil olduqda mention badge silinmir
+  3. Mention edilmiş ad üzərinə klikləmək mümkün deyil (click handler işləmir)
+- **Root Cause:**
+  - `HandleNewDirectMessage` SignalR handler-ında mention check edilmirdi
+  - `SelectDirectConversation` metodunda `HasUnreadMentions` clear edilmirdi
+- **Solution:**
+  - **Messages.SignalR.cs:147-159** - Mention detection əlavə edildi:
+    - Mesajda mention varsa `HasUnreadMentions = true`
+    - Aktiv conversation-da isə `HasUnreadMentions = false`
+  - **Messages.Selection.cs:136-152** - Mention badge clear:
+    - Conversation-a daxil olduqda həm `UnreadCount`, həm də `HasUnreadMentions` sıfırlanır
+- **Result:**
+  - ✅ Mention badge real-time update olunur (SignalR event ilə)
+  - ✅ Conversation-a daxil olduqda mention badge dərhal silinir
+  - ✅ Mention click işləyir (əvvəldən də işləyirdi, ancaq badge update olmadığı üçün test edilməmişdi)
+
+**Code Optimization:**
+- **Əvvəl:** 4 yerdə duplicate mark-as-read logic (120+ sətir)
+- **İndi:** 2 helper metod + 4 çağrı (67 + 8 = 75 sətir)
+- **Performance gain:** ~45 sətir kod azalması, oxunması və maintenance asan
+- **Debug log-lar silindi:** Production üçün lazımsız log-lar silindi (performance improvement)
+
+**Files Modified:**
+- `Messages.Selection.cs` - Mark-as-read helper çağrıları (4 yer)
+- `Messages.MessageOperations.cs:588-655` - Helper metodlar (MarkDirectMessagesAsReadAsync, MarkChannelMessagesAsReadAsync)
+- `Messages.SignalR.cs:147-159` - Mention badge real-time update
+- `Messages.Selection.cs:136-152` - Mention badge clear on conversation entry

@@ -1,0 +1,72 @@
+@inject IJSRuntime JS
+
+<div class="mention-panel" @ref="mentionPanelRef">
+    @* Search input hidden - user types after @ in main textarea *@
+
+    <div class="mention-list" @ref="mentionListRef">
+        @if (filteredUsers.Count == 0)
+        {
+            <div class="mention-empty">No users found</div>
+        }
+        else
+        {
+            @for (int i = 0; i < displayedUsers.Count; i++)
+            {
+                var user = displayedUsers[i];
+                var index = i;
+                var isSelected = index == selectedIndex;
+
+                <div class="mention-item @(isSelected ? "selected" : "")"
+                     @onclick="() => SelectUser(user)"
+                     @onmouseenter="() => selectedIndex = index">
+                    @if (user.IsAll)
+                    {
+                        <div class="mention-all-icon">
+                            <MudIcon Icon="@Icons.Material.Filled.Group" Size="Size.Small" />
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="mention-avatar">
+                            @if (!string.IsNullOrEmpty(user.AvatarUrl))
+                            {
+                                <img src="@user.AvatarUrl" alt="@user.Name" />
+                            }
+                            else
+                            {
+                                <div class="mention-avatar-placeholder">
+                                    @user.Name.Substring(0, 1).ToUpper()
+                                </div>
+                            }
+                        </div>
+                    }
+                    <span class="mention-name">@user.Name</span>
+                </div>
+            }
+
+            @if (hasMoreUsers)
+            {
+                <div class="mention-load-more" @onclick="LoadMoreUsers">
+                    <MudIcon Icon="@Icons.Material.Filled.ExpandMore" Size="Size.Small" />
+                    <span>Load more...</span>
+                </div>
+            }
+        }
+    </div>
+
+    <div class="mention-footer">
+        <span class="mention-instruction">
+            <MudIcon Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" Class="mention-arrow-icon" />
+            <MudIcon Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small" Class="mention-arrow-icon" />
+            to move
+        </span>
+        <span class="mention-instruction-divider">|</span>
+        <span class="mention-instruction">
+            <strong>Enter</strong> to select
+        </span>
+        <span class="mention-instruction-divider">|</span>
+        <span class="mention-instruction">
+            <strong>Esc</strong> to cancel
+        </span>
+    </div>
+</div>

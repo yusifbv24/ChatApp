@@ -29,11 +29,18 @@
         int ReadByCount = 0,
         int TotalMemberCount = 0,
         List<Guid>? ReadBy = null,
-        List<ChannelMessageReactionDto>? Reactions = null)
+        List<ChannelMessageReactionDto>? Reactions = null,
+        List<ChannelMessageMentionDto>? Mentions = null)
     {
         // Mutable properties for real-time updates
         public int ReadByCount { get; set; } = ReadByCount;
         public List<Guid>? ReadBy { get; set; } = ReadBy;
         public List<ChannelMessageReactionDto> Reactions { get; init; } = Reactions ?? [];
+        public List<ChannelMessageMentionDto> Mentions { get; init; } = Mentions ?? [];
     }
+
+    public record ChannelMessageMentionDto(
+        Guid? UserId, // Null for @All
+        string UserName,
+        bool IsAllMention);
 }

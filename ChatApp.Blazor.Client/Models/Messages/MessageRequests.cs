@@ -2,6 +2,13 @@
 
 namespace ChatApp.Blazor.Client.Models.Messages
 {
+    public class MentionRequest
+    {
+        public Guid? UserId { get; set; }
+        public string UserName { get; set; } = string.Empty;
+        public bool IsAllMention { get; set; } = false;
+    }
+
     public class SendMessageRequests
     {
         [Required(ErrorMessage = "Message content is required")]
@@ -13,6 +20,8 @@ namespace ChatApp.Blazor.Client.Models.Messages
         public Guid? ReplyToMessageId { get; set; }
 
         public bool IsForwarded { get; set; }
+
+        public List<MentionRequest> Mentions { get; set; } = new();
     }
 
 

@@ -161,8 +161,22 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
 
 
 
-        public async Task<Result<Guid>> SendMessageAsync(Guid conversationId, string content, string? fileId = null, Guid? replyToMessageId = null, bool isForwarded = false)
+        public async Task<Result<Guid>> SendMessageAsync(
+            Guid conversationId,
+            string content,
+            string? fileId = null,
+            Guid? replyToMessageId = null,
+            bool isForwarded = false,
+            Dictionary<string, Guid>? mentionedUsers = null)
         {
+            // Convert mentionedUsers dictionary to List<MentionRequest>
+            var mentions = mentionedUsers?.Select(m => new MentionRequest
+            {
+                UserId = m.Value,
+                UserName = m.Key,
+                IsAllMention = false
+            }).ToList() ?? new List<MentionRequest>();
+
             var response = await _apiClient.PostAsync<SendMessageResponse>(
                 $"/api/conversations/{conversationId}/messages",
                 new SendMessageRequests
@@ -170,7 +184,8 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
                     Content = content,
                     FileId = fileId,
                     ReplyToMessageId = replyToMessageId,
-                    IsForwarded = isForwarded
+                    IsForwarded = isForwarded,
+                    Mentions = mentions
                 });
 
             if(response.IsSuccess && response.Value != null)

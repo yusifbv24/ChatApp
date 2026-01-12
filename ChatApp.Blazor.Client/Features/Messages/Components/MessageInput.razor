@@ -89,6 +89,17 @@
             </button>
         </div>
     }
+
+    <!-- Mention Panel - CONTAINER DAXILINDƏ olmalıdır -->
+    @if (showMentionPanel)
+    {
+        <div @ref="mentionPanelContainerRef" class="mention-panel-wrapper">
+            <MentionPanel Users="mentionUsers"
+                          SearchQuery="@mentionSearchQuery"
+                          OnUserSelected="HandleMentionSelected"
+                          OnCancel="HandleMentionCancel" />
+        </div>
+    }
 </div>
 
 <!-- Emoji Picker -->

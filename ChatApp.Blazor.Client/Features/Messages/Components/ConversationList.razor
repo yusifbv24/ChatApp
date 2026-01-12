@@ -152,6 +152,10 @@
                                 {
                                     <span class="preview-text">@($"{item.MemberCount} members")</span>
                                 }
+                                @if (item.HasUnreadMentions)
+                                {
+                                    <span class="mention-indicator">@@</span>
+                                }
                                 @if (item.UnreadCount > 0)
                                 {
                                     <span class="unread-badge">@(item.UnreadCount > 99 ? "99+" : item.UnreadCount.ToString())</span>
@@ -225,6 +229,10 @@
                                 else
                                 {
                                     <span class="preview-text">No messages yet</span>
+                                }
+                                @if (item.HasUnreadMentions)
+                                {
+                                    <span class="mention-indicator">@@</span>
                                 }
                                 @if (item.UnreadCount > 0)
                                 {

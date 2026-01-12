@@ -74,6 +74,12 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
             if (result == null)
                 return null;
 
+            // Load mentions for this message
+            var mentions = await _context.ChannelMessageMentions
+                .Where(m => m.MessageId == id)
+                .Select(m => new ChannelMessageMentionDto(m.MentionedUserId, m.MentionedUserName, m.IsAllMention))
+                .ToListAsync(cancellationToken);
+
             return new ChannelMessageDto(
                 result.Id,
                 result.ChannelId,
@@ -99,7 +105,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 result.ReplyToFileId,
                 result.ReplyToFileName,
                 result.ReplyToFileContentType,
-                result.IsForwarded
+                result.IsForwarded,
+                Mentions: mentions.Count > 0 ? mentions : null
             );
         }
 
@@ -187,6 +194,18 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 .Take(pageSize)
                 .ToListAsync(cancellationToken);
 
+            // Load mentions grouped by message
+            var messageIds = results.Select(r => r.Id).ToList();
+            var mentions = await _context.ChannelMessageMentions
+                .Where(m => messageIds.Contains(m.MessageId))
+                .GroupBy(m => m.MessageId)
+                .Select(g => new
+                {
+                    MessageId = g.Key,
+                    Mentions = g.Select(m => new ChannelMessageMentionDto(m.MentionedUserId, m.MentionedUserName, m.IsAllMention)).ToList()
+                })
+                .ToDictionaryAsync(x => x.MessageId, x => x.Mentions, cancellationToken);
+
             return results.Select(r => new ChannelMessageDto(
                 r.Id,
                 r.ChannelId,
@@ -216,7 +235,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 r.ReadByCount,
                 r.TotalMemberCount,
                 r.ReadBy, // Include the ReadBy list for real-time read receipt updates
-                r.Reactions // Include reactions grouped by emoji
+                r.Reactions, // Include reactions grouped by emoji
+                mentions.ContainsKey(r.Id) ? mentions[r.Id] : null // Include mentions from dictionary
             )).ToList();
         }
 
@@ -639,7 +659,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                                    g.Select(x => x.reactionUser.DisplayName).ToList(),
                                    g.Select(x => x.reactionUser.AvatarUrl).ToList()
                                   ))
-                                  .ToList()
+                                  .ToList(),
+                              null // Mentions - pinned messages don't need mention loading in this query
                           ))
                          .ToListAsync(cancellationToken);
         }

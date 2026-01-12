@@ -173,6 +173,8 @@ public partial class ConversationList
 
         public int UnreadCount { get; set; }
 
+        public bool HasUnreadMentions { get; set; }
+
         public bool IsChannel { get; set; }
 
         public bool IsPrivate { get; set; }
@@ -301,6 +303,12 @@ public partial class ConversationList
         MessageDrafts.TryGetValue(draftKey, out var draftText);
         var hasDraft = !isSelected && !string.IsNullOrWhiteSpace(draftText);
 
+        // Debug log
+        if (conv.HasUnreadMentions)
+        {
+            Console.WriteLine($"[DEBUG ConvList] Conversation {conv.Id} has unread mentions: {conv.HasUnreadMentions}, UnreadCount: {conv.UnreadCount}");
+        }
+
         return new UnifiedChatItem
         {
             Id = conv.Id,
@@ -309,6 +317,7 @@ public partial class ConversationList
             LastMessage = conv.LastMessageContent,
             LastActivityTime = conv.LastMessageAtUtc,
             UnreadCount = conv.UnreadCount,
+            HasUnreadMentions = conv.HasUnreadMentions,
             IsChannel = false,
             HasDraft = hasDraft,
             DraftText = hasDraft ? draftText : null,
@@ -330,6 +339,12 @@ public partial class ConversationList
         MessageDrafts.TryGetValue(draftKey, out var draftText);
         var hasDraft = !isSelected && !string.IsNullOrWhiteSpace(draftText);
 
+        // Debug log
+        if (channel.HasUnreadMentions)
+        {
+            Console.WriteLine($"[DEBUG ConvList] Channel {channel.Id} has unread mentions: {channel.HasUnreadMentions}, UnreadCount: {channel.UnreadCount}");
+        }
+
         return new UnifiedChatItem
         {
             Id = channel.Id,
@@ -337,6 +352,7 @@ public partial class ConversationList
             LastMessage = channel.LastMessageContent,
             LastActivityTime = channel.LastMessageAtUtc ?? channel.CreatedAtUtc,
             UnreadCount = channel.UnreadCount,
+            HasUnreadMentions = channel.HasUnreadMentions,
             IsChannel = true,
             IsPrivate = channel.Type == ChannelType.Private,
             MemberCount = channel.MemberCount,

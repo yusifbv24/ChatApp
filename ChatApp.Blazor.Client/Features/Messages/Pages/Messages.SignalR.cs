@@ -143,6 +143,10 @@ public partial class Messages
 
                 // with expression - record-un kopyasını yaradır, bəzi field-ləri dəyişir
                 var preview = GetFilePreview(message);
+
+                // Check if current user is mentioned in this message
+                bool hasMention = message.Mentions != null && message.Mentions.Any(m => m.UserId == currentUserId);
+
                 var updatedConversation = conversation with
                 {
                     LastMessageContent = preview,
@@ -150,7 +154,9 @@ public partial class Messages
                     LastMessageSenderId = message.SenderId,
                     LastMessageStatus = isMyMessage ? (message.IsRead ? "Read" : "Sent") : null,
                     // Unread: Aktiv conversation-da isək 0, öz mesajımız isə dəyişmə, başqasının isə +1
-                    UnreadCount = isCurrentConversation ? 0 : (isMyMessage ? conversation.UnreadCount : conversation.UnreadCount + 1)
+                    UnreadCount = isCurrentConversation ? 0 : (isMyMessage ? conversation.UnreadCount : conversation.UnreadCount + 1),
+                    // HasUnreadMentions: Aktiv conversation-da isək false, mention varsa true
+                    HasUnreadMentions = isCurrentConversation ? false : (isMyMessage ? conversation.HasUnreadMentions : (hasMention || conversation.HasUnreadMentions))
                 };
 
                 // Yeni list yaradırıq ki cache invalidate olsun (ReferenceEquals)

@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System.Security.Claims;
+using BackendMentionRequest = ChatApp.Modules.DirectMessages.Application.Commands.DirectMessages.MentionRequest;
 
 namespace ChatApp.Modules.DirectMessages.Api.Controllers
 {
@@ -260,6 +261,16 @@ namespace ChatApp.Modules.DirectMessages.Api.Controllers
             if (userId == Guid.Empty)
                 return Unauthorized();
 
+            // Convert frontend MentionRequest to backend MentionRequest
+            List<BackendMentionRequest>? mentions = null;
+            if (request.Mentions != null && request.Mentions.Count > 0)
+            {
+                mentions = request.Mentions
+                    .Where(m => m.UserId != Guid.Empty)
+                    .Select(m => new BackendMentionRequest(m.UserId, m.UserName))
+                    .ToList();
+            }
+
             var result = await _mediator.Send(
                 new SendDirectMessageCommand(
                     conversationId,
@@ -267,7 +278,8 @@ namespace ChatApp.Modules.DirectMessages.Api.Controllers
                     request.Content,
                     request.FileId,
                     request.ReplyToMessageId,
-                    request.IsForwarded),
+                    request.IsForwarded,
+                    mentions),
                 cancellationToken);
 
             if (result.IsFailure)

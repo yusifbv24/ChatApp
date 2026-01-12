@@ -622,6 +622,41 @@ public partial class Messages
 
     #endregion
 
+    #region Mention Support - Mention dəstəyi
+
+    /// <summary>
+    /// Mention üçün user axtarışı.
+    /// MessageInput component-dən çağrılır (@ simvolu trigger edir).
+    /// </summary>
+    private async Task<List<MentionUserDto>> SearchUsersForMention(string searchTerm)
+    {
+        try
+        {
+            var result = await UserService.SearchUsersAsync(searchTerm);
+
+            if (result.IsSuccess && result.Value != null)
+            {
+                // UserDto-nu MentionUserDto-ya map et
+                return result.Value.Select(u => new MentionUserDto
+                {
+                    Id = u.Id,
+                    Name = u.DisplayName,
+                    AvatarUrl = u.AvatarUrl,
+                    IsMember = false, // User search-də member yoxdur
+                    IsAll = false
+                }).ToList();
+            }
+
+            return [];
+        }
+        catch
+        {
+            return [];
+        }
+    }
+
+    #endregion
+
     #region Error Handling - Xəta idarəetməsi
 
     /// <summary>

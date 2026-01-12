@@ -13,6 +13,7 @@
         string? LastMessageContent = null,
         DateTime? LastMessageAtUtc = null,
         int UnreadCount = 0,
+        bool HasUnreadMentions = false,
         Guid? LastReadLaterMessageId = null,
         Guid? LastMessageId = null,
         Guid? LastMessageSenderId = null,

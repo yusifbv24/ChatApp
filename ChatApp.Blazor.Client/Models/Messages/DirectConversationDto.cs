@@ -9,6 +9,7 @@
         string? LastMessageContent,
         DateTime LastMessageAtUtc,
         int UnreadCount,
+        bool HasUnreadMentions = false,
         Guid? LastReadLaterMessageId = null,
         Guid? LastMessageSenderId = null,
         string? LastMessageStatus = null,

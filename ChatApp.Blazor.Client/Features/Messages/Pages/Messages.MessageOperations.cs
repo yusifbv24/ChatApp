@@ -12,8 +12,21 @@ public partial class Messages
     /// OPTİMİSTİC UI: Dərhal list-ə əlavə et (server cavabını gözləmədən)
     /// Conversation/Channel list-i yenilə
     /// </summary>
-    private async Task SendMessage(string content)
+    private async Task SendMessage((string Message, Dictionary<string, Guid> MentionedUsers) data)
     {
+        var content = data.Message;
+        var mentionedUsers = data.MentionedUsers;
+
+        Console.WriteLine($"[DEBUG] SendMessage called with content: '{content}'");
+        Console.WriteLine($"[DEBUG] MentionedUsers count: {mentionedUsers?.Count ?? 0}");
+        if (mentionedUsers != null && mentionedUsers.Count > 0)
+        {
+            foreach (var mention in mentionedUsers)
+            {
+                Console.WriteLine($"[DEBUG] Mention: {mention.Key} -> {mention.Value}");
+            }
+        }
+
         // Boş mesaj göndərilməsin
         if (string.IsNullOrWhiteSpace(content)) return;
 
@@ -52,7 +65,8 @@ public partial class Messages
                     content,
                     fileId: null,
                     replyToMessageId: replyToMessageId,
-                    isForwarded: false);
+                    isForwarded: false,
+                    mentionedUsers: mentionedUsers);
 
                 if (result.IsSuccess)
                 {
@@ -122,7 +136,8 @@ public partial class Messages
                     content,
                     fileId: null,
                     replyToMessageId: replyToMessageId,
-                    isForwarded: false);
+                    isForwarded: false,
+                    mentionedUsers: mentionedUsers);
 
                 if (result.IsSuccess)
                 {
@@ -570,6 +585,75 @@ public partial class Messages
         }
     }
 
+    /// <summary>
+    /// Direct Message-ları mark-as-read edir (bulk və ya individual API).
+    /// UI state-i də yenilə.
+    /// </summary>
+    private async Task MarkDirectMessagesAsReadAsync(List<DirectMessageDto> unreadMessages)
+    {
+        if (unreadMessages.Count == 0 || !selectedConversationId.HasValue) return;
+
+        try
+        {
+            // API call (5+ bulk, <5 individual)
+            if (unreadMessages.Count >= 5)
+            {
+                await ConversationService.MarkAllAsReadAsync(selectedConversationId.Value);
+            }
+            else
+            {
+                await Task.WhenAll(unreadMessages.Select(msg =>
+                    ConversationService.MarkAsReadAsync(selectedConversationId.Value, msg.Id)
+                ));
+            }
+
+            // UI state update
+            foreach (var message in unreadMessages)
+            {
+                var index = directMessages.IndexOf(message);
+                if (index >= 0)
+                {
+                    directMessages[index] = message with { IsRead = true };
+                }
+            }
+            InvalidateMessageCache();
+        }
+        catch
+        {
+            // Mark-as-read error-ları kritik deyil
+        }
+    }
+
+    /// <summary>
+    /// Channel mesajlarını mark-as-read edir (bulk və ya individual API).
+    /// SignalR UI-ı update edəcək.
+    /// </summary>
+    private async Task MarkChannelMessagesAsReadAsync(List<ChannelMessageDto> unreadMessages)
+    {
+        if (unreadMessages.Count == 0 || !selectedChannelId.HasValue) return;
+
+        try
+        {
+            // API call (5+ bulk, <5 individual)
+            if (unreadMessages.Count >= 5)
+            {
+                await ChannelService.MarkAsReadAsync(selectedChannelId.Value);
+            }
+            else
+            {
+                foreach (var msg in unreadMessages)
+                {
+                    await ChannelService.MarkSingleMessageAsReadAsync(selectedChannelId.Value, msg.Id);
+                }
+            }
+            // SignalR event-i UI-ı avtomatik yeniləyəcək
+        }
+        catch
+        {
+            // Mark-as-read error-ları kritik deyil
+        }
+    }
+
     #endregion
 
     #region Mark As Later - Sonra oxu işarəsi
@@ -753,6 +837,98 @@ public partial class Messages
 
         var firstMessageId = selectedMessageIds.First();
         HandleForward(firstMessageId);
+    }
+
+    #endregion
+
+    #region Mention Actions - Mention-a klik
+
+    /// <summary>
+    /// Mention-a klik edildikdə həmin şəxslə conversation aç.
+    /// </summary>
+    private async Task HandleMentionClick(Guid userId)
+    {
+        Console.WriteLine($"[DEBUG] HandleMentionClick in Messages - userId: {userId}, currentUserId: {currentUserId}");
+
+        // Özünə mention etsə, conversation açma
+        if (userId == currentUserId)
+        {
+            Console.WriteLine("[DEBUG] Cannot start conversation with yourself");
+            return;
+        }
+
+        try
+        {
+            // Start conversation with this user
+            Console.WriteLine($"[DEBUG] Starting conversation with userId: {userId}");
+
+            // Check if conversation already exists in the list (OtherUserId match)
+            var existingConversation = directConversations.FirstOrDefault(c => c.OtherUserId == userId);
+
+            if (existingConversation != null)
+            {
+                // Conversation exists, just select it
+                Console.WriteLine($"[DEBUG] Conversation exists: {existingConversation.Id}");
+
+                // Switch to Direct Messages tab if currently on Channels
+                if (!isDirectMessage)
+                {
+                    isDirectMessage = true;
+                    StateHasChanged();
+                }
+
+                // Select conversation - this will switch to Direct Message view
+                selectedConversationId = existingConversation.Id;
+                selectedChannelId = null;
+                recipientName = existingConversation.OtherUserDisplayName;
+                recipientAvatarUrl = existingConversation.OtherUserAvatarUrl;
+
+                // Load messages
+                await LoadDirectMessages();
+                StateHasChanged();
+            }
+            else
+            {
+                // Start new conversation
+                Console.WriteLine($"[DEBUG] Starting new conversation with userId: {userId}");
+
+                // Get user info first
+                var userResult = await UserService.GetUserByIdAsync(userId);
+                if (!userResult.IsSuccess || userResult.Value == null)
+                {
+                    Console.WriteLine($"[ERROR] Failed to get user info: {userResult.Error}");
+                    return;
+                }
+
+                var result = await ConversationService.StartConversationAsync(userId);
+
+                if (result.IsSuccess && result.Value != Guid.Empty)
+                {
+                    Console.WriteLine($"[DEBUG] New conversation created: {result.Value}");
+
+                    // Switch to Direct Messages tab
+                    isDirectMessage = true;
+
+                    // Select the new conversation (will be empty until first message)
+                    selectedConversationId = result.Value;
+                    selectedChannelId = null;
+                    recipientName = userResult.Value.DisplayName;
+                    recipientAvatarUrl = userResult.Value.AvatarUrl;
+
+                    directMessages.Clear(); // Empty message list for new conversation
+                    pinnedDirectMessages.Clear(); // Clear pinned messages for new conversation
+                    StateHasChanged();
+                }
+                else
+                {
+                    Console.WriteLine($"[ERROR] Failed to start conversation: {result.Error}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] HandleMentionClick exception: {ex.Message}");
+        }
     }
 
     #endregion

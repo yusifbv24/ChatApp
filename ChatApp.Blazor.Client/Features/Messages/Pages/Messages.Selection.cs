@@ -133,17 +133,20 @@ public partial class Messages
                 await SignalRService.LeaveChannelAsync(selectedChannelId.Value);
             }
 
-            // Unread count-u global badge-dən çıxar
-            if (conversation.UnreadCount > 0)
+            // Unread count və mention badge-i clear et
+            if (conversation.UnreadCount > 0 || conversation.HasUnreadMentions)
             {
-                AppState.DecrementUnreadMessages(conversation.UnreadCount);
+                if (conversation.UnreadCount > 0)
+                {
+                    AppState.DecrementUnreadMessages(conversation.UnreadCount);
+                }
 
                 // Yeni list yaradırıq ki cache invalidate olsun (ReferenceEquals)
                 var index = directConversations.IndexOf(conversation);
                 if (index >= 0)
                 {
                     var newList = new List<DirectConversationDto>(directConversations);
-                    newList[index] = conversation with { UnreadCount = 0 };
+                    newList[index] = conversation with { UnreadCount = 0, HasUnreadMentions = false };
                     directConversations = newList;
                 }
             }
@@ -211,6 +214,17 @@ public partial class Messages
             recipientName = conversation.OtherUserDisplayName;
             recipientAvatarUrl = conversation.OtherUserAvatarUrl;
             recipientUserId = conversation.OtherUserId;
+
+            // Mention data: DM üçün conversation partner
+            currentConversationPartner = new MentionUserDto
+            {
+                Id = conversation.OtherUserId,
+                Name = conversation.OtherUserDisplayName,
+                AvatarUrl = conversation.OtherUserAvatarUrl,
+                IsMember = true,
+                IsAll = false
+            };
+            currentChannelMembers = []; // DM-də channel member yoxdur
 
             // Online status-u real-time yoxla
             isRecipientOnline = await SignalRService.IsUserOnlineAsync(conversation.OtherUserId);
@@ -303,6 +317,17 @@ public partial class Messages
         recipientName = user.DisplayName;
         recipientAvatarUrl = user.AvatarUrl;
         isRecipientOnline = await SignalRService.IsUserOnlineAsync(user.Id);
+
+        // Mention data: Pending conversation üçün conversation partner
+        currentConversationPartner = new MentionUserDto
+        {
+            Id = user.Id,
+            Name = user.DisplayName,
+            AvatarUrl = user.AvatarUrl,
+            IsMember = true,
+            IsAll = false
+        };
+        currentChannelMembers = []; // DM-də channel member yoxdur
 
         // State reset
         directMessages.Clear();
@@ -483,6 +508,29 @@ public partial class Messages
                 }
             }
 
+            // Mention data: Channel üçün member-lər (@All MessageInput-da dinamik əlavə olunur)
+            currentConversationPartner = null; // Channel-da conversation partner yoxdur
+            currentChannelMembers = new List<MentionUserDto>();
+
+            // Channel member-lərini əlavə et (GetChannelAsync-dan gəlir)
+            var channelDetailsForMentions = await ChannelService.GetChannelAsync(channel.Id);
+            if (channelDetailsForMentions.IsSuccess && channelDetailsForMentions.Value != null)
+            {
+                var memberDtos = channelDetailsForMentions.Value.Members
+                    .Where(m => m.UserId != currentUserId) // Özünü çıxar
+                    .Select(m => new MentionUserDto
+                    {
+                        Id = m.UserId,
+                        Name = m.DisplayName,
+                        AvatarUrl = m.AvatarUrl,
+                        IsMember = true,
+                        IsAll = false
+                    })
+                    .ToList();
+
+                currentChannelMembers.AddRange(memberDtos);
+            }
+
             // SignalR group-a join
             await SignalRService.JoinChannelAsync(channel.Id);
 
@@ -593,23 +641,8 @@ public partial class Messages
                     m => m.CreatedAtUtc
                 );
 
-                // 5+ mesaj = bulk API (1 request)
-                // <5 mesaj = individual API (paralel)
-                var unreadMessages = messages.Where(m => !m.IsRead && m.SenderId != currentUserId).ToList();
-                if (unreadMessages.Count > 0)
-                {
-                    if (unreadMessages.Count >= 5)
-                    {
-                        await ConversationService.MarkAllAsReadAsync(selectedConversationId!.Value);
-                    }
-                    else
-                    {
-                        var markTasks = unreadMessages.Select(msg =>
-                            ConversationService.MarkAsReadAsync(selectedConversationId!.Value, msg.Id)
-                        );
-                        await Task.WhenAll(markTasks);
-                    }
-                }
+                // Mark as read (5+ mesaj = bulk API, <5 = individual)
+                await MarkDirectMessagesAsReadAsync(messages.Where(m => !m.IsRead && m.SenderId != currentUserId).ToList());
             }
         }
         catch (Exception ex)
@@ -666,14 +699,19 @@ public partial class Messages
                     hasMoreMessages = false;
                 }
 
-                // UNREAD SEPARATOR
-                // Channel-də ReadBy list var (DM-dən fərqli)
+                // UNREAD SEPARATOR (Channel-də ReadBy list var)
                 CalculateUnreadSeparatorPosition(
                     messages,
                     m => m.SenderId != currentUserId && (m.ReadBy == null || !m.ReadBy.Contains(currentUserId)),
                     m => m.Id,
                     m => m.CreatedAtUtc
                 );
+
+                // Mark as read (SignalR-dan UI update gələcək)
+                await MarkChannelMessagesAsReadAsync(messages.Where(m =>
+                    m.SenderId != currentUserId &&
+                    (m.ReadBy == null || !m.ReadBy.Contains(currentUserId))
+                ).ToList());
             }
         }
         catch (Exception ex)
@@ -878,7 +916,7 @@ public partial class Messages
                     hasMoreNewerMessages = true; // Around mode: hər iki istiqamətdə load mümkündür
                     isViewingAroundMessage = true;
 
-                    // Unread separator hesabla (GetAroundMessage ilə yüklənən mesajlar üçün)
+                    // Unread separator hesabla (GetAroundMessage)
                     if (shouldCalculateUnreadSeparator)
                     {
                         CalculateUnreadSeparatorPosition(
@@ -886,10 +924,10 @@ public partial class Messages
                             m => !m.IsRead && m.ReceiverId == currentUserId,
                             m => m.Id,
                             m => m.CreatedAtUtc);
-
-                        // DEBUG: Log separator calculation result
-                        Console.WriteLine($"[FIX] DM Separator: unreadSeparatorAfterMessageId={unreadSeparatorAfterMessageId}, IsEmpty={unreadSeparatorAfterMessageId == Guid.Empty}");
                     }
+
+                    // Mark as read
+                    await MarkDirectMessagesAsReadAsync(result.Value.Where(m => !m.IsRead && m.SenderId != currentUserId).ToList());
 
                     StateHasChanged();
                     await Task.Delay(500); // DOM render + potential image loading
@@ -961,7 +999,7 @@ public partial class Messages
                     hasMoreNewerMessages = true; // Around mode: hər iki istiqamətdə load mümkündür
                     isViewingAroundMessage = true;
 
-                    // Unread separator hesabla (GetAroundMessage ilə yüklənən mesajlar üçün)
+                    // Unread separator hesabla (GetAroundMessage)
                     if (shouldCalculateUnreadSeparator)
                     {
                         CalculateUnreadSeparatorPosition(
@@ -969,10 +1007,13 @@ public partial class Messages
                             m => m.SenderId != currentUserId && (m.ReadBy == null || !m.ReadBy.Contains(currentUserId)),
                             m => m.Id,
                             m => m.CreatedAtUtc);
-
-                        // DEBUG: Log separator calculation result
-                        Console.WriteLine($"[FIX] Channel Separator: unreadSeparatorAfterMessageId={unreadSeparatorAfterMessageId}, IsEmpty={unreadSeparatorAfterMessageId == Guid.Empty}");
                     }
+
+                    // Mark as read (SignalR-dan UI update gələcək)
+                    await MarkChannelMessagesAsReadAsync(result.Value.Where(m =>
+                        m.SenderId != currentUserId &&
+                        (m.ReadBy == null || !m.ReadBy.Contains(currentUserId))
+                    ).ToList());
 
                     StateHasChanged();
                     await Task.Delay(500); // DOM render + potential image loading

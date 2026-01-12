@@ -27,6 +27,9 @@ namespace ChatApp.Modules.Channels.Domain.Entities
         private readonly List<ChannelMessageRead> _reads = [];
         public IReadOnlyCollection<ChannelMessageRead> Reads => _reads.AsReadOnly();
 
+        private readonly List<ChannelMessageMention> _mentions = [];
+        public IReadOnlyCollection<ChannelMessageMention> Mentions => _mentions.AsReadOnly();
+
         private ChannelMessage() : base() { }
 
         public ChannelMessage(
@@ -124,7 +127,7 @@ namespace ChatApp.Modules.Channels.Domain.Entities
             {
                 // Different emoji or no reaction - remove ALL user's existing reactions first
                 var userExistingReaction = _reactions.Find(r => r.UserId == userId);
-               
+
                 if(userExistingReaction != null)
                 {
                     _reactions.Remove(userExistingReaction);
@@ -135,6 +138,14 @@ namespace ChatApp.Modules.Channels.Domain.Entities
                 _reactions.Add(newReaction);
                 return (true, newReaction, userExistingReaction);
             }
+        }
+
+        /// <summary>
+        /// Adds a mention to the message.
+        /// </summary>
+        public void AddMention(ChannelMessageMention mention)
+        {
+            _mentions.Add(mention);
         }
     }
 }

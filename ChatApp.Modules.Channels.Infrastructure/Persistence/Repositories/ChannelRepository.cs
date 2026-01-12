@@ -62,6 +62,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                                      member.UserId,
                                      user.Username,
                                      user.DisplayName,
+                                     user.AvatarUrl,
                                      member.Role,
                                      member.JoinedAtUtc,
                                      member.IsActive,
@@ -193,6 +194,45 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 ).ToDictionaryAsync(x => x.MessageId, x => x.ReadCount, cancellationToken);
             }
 
+            // Batch query: Get channels with unread mentions
+            var hasUnreadMentionsDictionary = new Dictionary<Guid, bool>();
+            var channelIds = channelsWithLastMessage.Select(c => c.Id).ToList();
+
+            Console.WriteLine($"[DEBUG REPO CHANNEL] channelIds count: {channelIds.Count}");
+            Console.WriteLine($"[DEBUG REPO CHANNEL] userId: {userId}");
+
+            if (channelIds.Any())
+            {
+                var channelsWithMentions = await (
+                    from mention in _context.ChannelMessageMentions
+                    join msg in _context.ChannelMessages on mention.MessageId equals msg.Id
+                    join member in _context.ChannelMembers on msg.ChannelId equals member.ChannelId
+                    where channelIds.Contains(msg.ChannelId) &&
+                          member.UserId == userId &&
+                          member.IsActive &&
+                          !msg.IsDeleted &&
+                          msg.SenderId != userId &&
+                          (mention.MentionedUserId == userId || mention.IsAllMention)
+                    let lastReadTime = (from read in _context.ChannelMessageReads
+                                        join readMsg in _context.ChannelMessages on read.MessageId equals readMsg.Id
+                                        where read.UserId == userId && readMsg.ChannelId == msg.ChannelId
+                                        orderby read.ReadAtUtc descending
+                                        select (DateTime?)read.ReadAtUtc).FirstOrDefault()
+                    where lastReadTime == null || msg.CreatedAtUtc > lastReadTime.Value
+                    select msg.ChannelId
+                ).Distinct().ToListAsync(cancellationToken);
+
+                Console.WriteLine($"[DEBUG REPO CHANNEL] channelsWithMentions count: {channelsWithMentions.Count}");
+
+                foreach (var channelId in channelsWithMentions)
+                {
+                    hasUnreadMentionsDictionary[channelId] = true;
+                    Console.WriteLine($"[DEBUG REPO CHANNEL] Channel {channelId} has unread mentions");
+                }
+
+                Console.WriteLine($"[DEBUG REPO CHANNEL] hasUnreadMentionsDictionary count: {hasUnreadMentionsDictionary.Count}");
+            }
+
             // Map to ChannelDto with calculated status
             var result = channelsWithLastMessage.Select(c =>
             {
@@ -238,6 +278,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                     c.LastMessageContent,
                     c.LastMessageAtUtc,
                     c.UnreadCount,
+                    hasUnreadMentionsDictionary.ContainsKey(c.Id) && hasUnreadMentionsDictionary[c.Id],
                     c.LastReadLaterMessageId,
                     c.LastMessageId,
                     c.LastMessageSenderId,
