@@ -133,8 +133,9 @@ public partial class Messages
                 await SignalRService.LeaveChannelAsync(selectedChannelId.Value);
             }
 
-            // Unread count və mention badge-i clear et
-            if (conversation.UnreadCount > 0 || conversation.HasUnreadMentions)
+            // Unread count, mention badge və FirstUnreadMessageId-ni clear et
+            // CRITICAL: FirstUnreadMessageId clear edilməlidir ki, geri qayıtdıqda köhnə mesaja scroll olunmasın
+            if (conversation.UnreadCount > 0 || conversation.HasUnreadMentions || conversation.FirstUnreadMessageId.HasValue)
             {
                 if (conversation.UnreadCount > 0)
                 {
@@ -146,7 +147,12 @@ public partial class Messages
                 if (index >= 0)
                 {
                     var newList = new List<DirectConversationDto>(directConversations);
-                    newList[index] = conversation with { UnreadCount = 0, HasUnreadMentions = false };
+                    newList[index] = conversation with
+                    {
+                        UnreadCount = 0,
+                        HasUnreadMentions = false,
+                        FirstUnreadMessageId = null // Clear after reading
+                    };
                     directConversations = newList;
                 }
             }
@@ -265,12 +271,23 @@ public partial class Messages
             }
             else
             {
+                // Hide container BEFORE loading (prevents flash)
+                await JS.InvokeVoidAsync("chatAppUtils.hideElement", "chat-messages");
+
                 // Normal yükləmə (separator yoxdur)
                 await Task.WhenAll(
                     LoadDirectMessages(),
                     LoadPinnedDirectMessageCount(),
                     LoadFavoriteDirectMessages()
                 );
+
+                // CRITICAL: Pinned header render olsun ƏVVƏL scroll etmədən
+                // Əks halda pinned header sonra render olur və scroll position yuxarı itələnir
+                StateHasChanged();
+                await Task.Delay(50); // Pinned header DOM-a əlavə olunması üçün
+
+                // Scroll and show (no flash - container was hidden during load)
+                await JS.InvokeVoidAsync("chatAppUtils.scrollToBottomAndShow", "chat-messages");
             }
 
             StateHasChanged();
@@ -438,16 +455,24 @@ public partial class Messages
                 await SignalRService.LeaveConversationAsync(selectedConversationId.Value);
             }
 
-            // Unread count
-            if (channel.UnreadCount > 0)
+            // Unread count və FirstUnreadMessageId-ni clear et
+            // CRITICAL: FirstUnreadMessageId clear edilməlidir ki, geri qayıtdıqda köhnə mesaja scroll olunmasın
+            if (channel.UnreadCount > 0 || channel.FirstUnreadMessageId.HasValue)
             {
-                AppState.DecrementUnreadMessages(channel.UnreadCount);
+                if (channel.UnreadCount > 0)
+                {
+                    AppState.DecrementUnreadMessages(channel.UnreadCount);
+                }
                 // Yeni list yaradırıq ki cache invalidate olsun (ReferenceEquals)
                 var index = channelConversations.IndexOf(channel);
                 if (index >= 0)
                 {
                     var newList = new List<ChannelDto>(channelConversations);
-                    newList[index] = channel with { UnreadCount = 0 };
+                    newList[index] = channel with
+                    {
+                        UnreadCount = 0,
+                        FirstUnreadMessageId = null // Clear after reading
+                    };
                     channelConversations = newList;
                 }
             }
@@ -564,12 +589,23 @@ public partial class Messages
             }
             else
             {
+                // Hide container BEFORE loading (prevents flash)
+                await JS.InvokeVoidAsync("chatAppUtils.hideElement", "chat-messages");
+
                 // Normal yükləmə (separator yoxdur)
                 await Task.WhenAll(
                     LoadChannelMessages(),
                     LoadPinnedMessageCount(),
                     LoadFavoriteChannelMessages()
                 );
+
+                // CRITICAL: Pinned header render olsun ƏVVƏL scroll etmədən
+                // Əks halda pinned header sonra render olur və scroll position yuxarı itələnir
+                StateHasChanged();
+                await Task.Delay(50); // Pinned header DOM-a əlavə olunması üçün
+
+                // Scroll and show (no flash - container was hidden during load)
+                await JS.InvokeVoidAsync("chatAppUtils.scrollToBottomAndShow", "chat-messages");
             }
 
             StateHasChanged();

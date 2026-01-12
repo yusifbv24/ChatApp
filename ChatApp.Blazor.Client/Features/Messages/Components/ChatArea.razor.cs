@@ -794,23 +794,16 @@ public partial class ChatArea : IAsyncDisposable
             await ScrollToReadLaterSeparatorAsync();
         }
         // Yeni mesaj üçün scroll to bottom (PRIORITY 3)
+        // Bu yalnız real-time yeni mesaj gəldikdə işləyir (HandleNewMessageDetection-da set olunur)
         else if (_shouldScrollToBottom)
         {
             _shouldScrollToBottom = false;
             await Task.Delay(50); // Pinned header render-dən sonra
             await ScrollToBottomAsync();
         }
-        // İlk render-də scroll to bottom (PRIORITY 4)
-        // Separator yoxdursa həmişə aşağı scroll
-        else if (firstRender && HasAnyMessages())
-        {
-            // Separator yoxdursa və firstRender-dirsə auto scroll to bottom
-            if (!UnreadSeparatorAfterMessageId.HasValue && !LastReadLaterMessageId.HasValue)
-            {
-                await Task.Delay(50); // Image load üçün kiçik delay
-                await ScrollToBottomAsync();
-            }
-        }
+        // NOT: firstRender halında scroll ETMƏ!
+        // Parent (Messages.Selection.cs) scrollToBottomAndShow ilə scroll edir.
+        // Burada scroll etmək double scroll və flash effekti yaradır.
     }
 
     #endregion
@@ -862,14 +855,13 @@ public partial class ChatArea : IAsyncDisposable
     {
         var currentCount = DirectMessages.Count + ChannelMessages.Count;
 
-        // İlk dəfə mesaj yükləndikdə
+        // İlk dəfə mesaj yükləndikdə - SCROLL ETMƏ!
+        // Parent (Messages.Selection.cs) artıq scroll edir, burada etmək lazım deyil.
+        // Bu _shouldScrollToBottom = true etməsək, OnAfterRenderAsync-də scroll olmayacaq.
         if (_previousMessageCount == 0 && currentCount > 0)
         {
-            // Separator varsa scroll etmə (OnAfterRenderAsync-də separator-a scroll olacaq)
-            if (!UnreadSeparatorAfterMessageId.HasValue && !LastReadLaterMessageId.HasValue)
-            {
-                _shouldScrollToBottom = true;
-            }
+            // Heç nə etmə - parent scroll edəcək
+            // Separator varsa OnAfterRenderAsync-də separator-a scroll olacaq
         }
         else
         {

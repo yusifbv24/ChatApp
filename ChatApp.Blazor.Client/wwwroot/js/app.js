@@ -65,6 +65,55 @@ window.chatAppUtils = {
         }
     },
 
+    // Scroll to bottom instantly without flash effect
+    // Uses double rAF pattern to ensure DOM is fully rendered before scroll
+    scrollToBottomInstant: (elementId) => {
+        const element = document.getElementById(elementId);
+        if (!element) return;
+
+        // Double rAF pattern - ensures Blazor + browser render cycles complete
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                element.scrollTop = element.scrollHeight;
+            });
+        });
+    },
+
+    // Hide element before render (called before StateHasChanged)
+    hideElement: (elementId) => {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.style.visibility = 'hidden';
+        }
+    },
+
+    // Scroll to bottom and show element (called after render)
+    // Uses scroll correction pattern - scrolls multiple times to handle dynamic content
+    // Container remains HIDDEN until final scroll is complete
+    scrollToBottomAndShow: (elementId) => {
+        const element = document.getElementById(elementId);
+        if (!element) return;
+
+        // Double rAF - wait for DOM to be fully rendered
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                // First scroll (container still hidden)
+                element.scrollTop = element.scrollHeight;
+
+                // Scroll correction at 50ms (container still hidden)
+                setTimeout(() => {
+                    element.scrollTop = element.scrollHeight;
+                }, 50);
+
+                // Final correction + SHOW (only after all scrolls complete)
+                setTimeout(() => {
+                    element.scrollTop = element.scrollHeight;
+                    element.style.visibility = 'visible';
+                }, 150);
+            });
+        });
+    },
+
     // Scroll to element by ID (used for unread separator)
     scrollToElement: (elementId) => {
         const element = document.getElementById(elementId);
