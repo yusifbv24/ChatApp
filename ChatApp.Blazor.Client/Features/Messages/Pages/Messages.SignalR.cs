@@ -116,26 +116,35 @@ public partial class Messages
                 {
                     // BAŞQASININ MESAJI - list-ə əlavə et
                     directMessages.Add(message);
-
-                    // Yalnız başqasının mesajı və səhifə görünürsə mark as read et
-                    // isPageVisible - browser tab-ı fokusda olduğunu yoxlayır
-                    if (message.SenderId != currentUserId && isPageVisible)
-                    {
-                        try
-                        {
-                            await ConversationService.MarkAsReadAsync(message.ConversationId, message.Id);
-                        }
-                        catch
-                        {
-                            // Mark as read error-ları kritik deyil, ignore edirik
-                        }
-                    }
                 }
             }
 
             // CONVERSATION LIST-İ YENİLƏ
             // Son mesaj və unread count-u update et
+            // Performans: Conversation-u bir dəfə tap, həm mark-as-read, həm də update üçün istifadə et
             var conversation = directConversations.FirstOrDefault(c => c.Id == message.ConversationId);
+
+            // Mark as read şərtləri (conversation tapıldıqdan sonra):
+            // 1. Başqasının mesajı (senderId != currentUserId) VƏ səhifə görünür
+            // 2. VƏ YA Notes conversation (self-conversation) VƏ səhifə görünür
+            // isPageVisible - browser tab-ı fokusda olduğunu yoxlayır
+            if (conversation != null && isPageVisible)
+            {
+                var isNotes = conversation.IsNotes;
+                var shouldMarkAsRead = message.SenderId != currentUserId || isNotes;
+
+                if (shouldMarkAsRead)
+                {
+                    try
+                    {
+                        await ConversationService.MarkAsReadAsync(message.ConversationId, message.Id);
+                    }
+                    catch
+                    {
+                        // Mark as read error-ları kritik deyil, ignore edirik
+                    }
+                }
+            }
             if (conversation != null)
             {
                 var isCurrentConversation = message.ConversationId == selectedConversationId;
@@ -153,10 +162,10 @@ public partial class Messages
                     LastMessageAtUtc = message.CreatedAtUtc,
                     LastMessageSenderId = message.SenderId,
                     LastMessageStatus = isMyMessage ? (message.IsRead ? "Read" : "Sent") : null,
-                    // Unread: Aktiv conversation-da isək 0, öz mesajımız isə dəyişmə, başqasının isə +1
-                    UnreadCount = isCurrentConversation ? 0 : (isMyMessage ? conversation.UnreadCount : conversation.UnreadCount + 1),
-                    // HasUnreadMentions: Aktiv conversation-da isək false, mention varsa true
-                    HasUnreadMentions = isCurrentConversation ? false : (isMyMessage ? conversation.HasUnreadMentions : (hasMention || conversation.HasUnreadMentions))
+                    // Unread: Notes üçün həmişə 0, aktiv conversation-da 0, öz mesajımız isə dəyişmə, başqasının isə +1
+                    UnreadCount = conversation.IsNotes ? 0 : (isCurrentConversation ? 0 : (isMyMessage ? conversation.UnreadCount : conversation.UnreadCount + 1)),
+                    // HasUnreadMentions: Notes və aktiv conversation-da false, mention varsa true
+                    HasUnreadMentions = (conversation.IsNotes || isCurrentConversation) ? false : (isMyMessage ? conversation.HasUnreadMentions : (hasMention || conversation.HasUnreadMentions))
                 };
 
                 // Yeni list yaradırıq ki cache invalidate olsun (ReferenceEquals)
@@ -165,7 +174,8 @@ public partial class Messages
                 directConversations = newList;
 
                 // Global unread badge-i artır (header-dakı notification icon)
-                if (!isCurrentConversation && !isMyMessage)
+                // Notes conversation üçün global badge artırma (self-conversation)
+                if (!isCurrentConversation && !isMyMessage && !conversation.IsNotes)
                 {
                     AppState.IncrementUnreadMessages();
                 }

@@ -214,9 +214,12 @@
                                 <button class="context-menu-item" @onclick="HandleViewProfile">
                                     <span>View profile</span>
                                 </button>
-                                <button class="context-menu-item" @onclick="HandleFindChat">
-                                    <span>Find chat with this user</span>
-                                </button>
+                                @if (!IsNotesConversation)
+                                {
+                                    <button class="context-menu-item" @onclick="HandleFindChat">
+                                        <span>Find chat with this user</span>
+                                    </button>
+                                }
                             }
                             else
                             {
@@ -254,7 +257,7 @@
                         }
                     </div>
                     <div class="sidebar-user-name">@(string.IsNullOrEmpty(RecipientName) ? "Unknown User" : RecipientName)</div>
-                    <div class="sidebar-user-role">User</div>
+                    <div class="sidebar-user-role">@(IsNotesConversation ? "Visible to you only" : "User")</div>
                 }
                 else
                 {
@@ -269,21 +272,24 @@
             <div class="sidebar-details-panel">
                 <div class="sidebar-details-header">
                     <MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" Class="details-header-icon" />
-                    <span class="details-header-text">@(IsDirectMessage ? "User" : "Group chat")</span>
+                    <span class="details-header-text @(IsNotesConversation ? "notes-details-text" : "")">@(IsNotesConversation ? "A scratchpad to keep important messages, files and links in one place." : (IsDirectMessage ? "User" : "Group chat"))</span>
                 </div>
 
-                <div class="sidebar-section-item" @onclick:stopPropagation="true">
-                    <div class="sidebar-section-left">
-                        <MudIcon Icon="@(IsMuted ? Icons.Material.Outlined.VolumeOff : Icons.Material.Outlined.VolumeUp)" Size="Size.Small" Class="section-icon section-icon-primary" />
-                        <span class="section-text section-text-primary">Sound</span>
+                @if (!IsNotesConversation)
+                {
+                    <div class="sidebar-section-item" @onclick:stopPropagation="true">
+                        <div class="sidebar-section-left">
+                            <MudIcon Icon="@(IsMuted ? Icons.Material.Outlined.VolumeOff : Icons.Material.Outlined.VolumeUp)" Size="Size.Small" Class="section-icon section-icon-primary" />
+                            <span class="section-text section-text-primary">Sound</span>
+                        </div>
+                        <div class="sidebar-section-right">
+                            <label class="toggle-switch">
+                                <input type="checkbox" @(!IsMuted?) checked @onchange="HandleSoundToggle" />
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
                     </div>
-                    <div class="sidebar-section-right">
-                        <label class="toggle-switch">
-                            <input type="checkbox" @(!IsMuted?) checked @onchange="HandleSoundToggle" />
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                </div>
+                }
 
                 <div class="sidebar-section-item" @onclick="OpenFavoritesPanel">
                     <div class="sidebar-section-left">

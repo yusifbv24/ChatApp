@@ -843,22 +843,40 @@ public partial class Messages
 
     /// <summary>
     /// Mention-a klik edildikdə həmin şəxslə conversation aç.
+    /// Özünə mention etsə, Notes conversation-u aç.
     /// </summary>
     private async Task HandleMentionClick(Guid userId)
     {
-        Console.WriteLine($"[DEBUG] HandleMentionClick in Messages - userId: {userId}, currentUserId: {currentUserId}");
-
-        // Özünə mention etsə, conversation açma
+        // Özünə mention etsə, Notes conversation-u aç
         if (userId == currentUserId)
         {
-            Console.WriteLine("[DEBUG] Cannot start conversation with yourself");
+            var notesConversation = directConversations.FirstOrDefault(c => c.IsNotes);
+            if (notesConversation != null)
+            {
+                // Switch to Direct Messages tab if currently on Channels
+                if (!isDirectMessage)
+                {
+                    isDirectMessage = true;
+                    StateHasChanged();
+                }
+
+                // Select Notes conversation
+                selectedConversationId = notesConversation.Id;
+                selectedChannelId = null;
+                recipientName = "Notes";
+                recipientAvatarUrl = null;
+                isNotesConversation = true;
+
+                // Load messages
+                await LoadDirectMessages();
+                StateHasChanged();
+            }
             return;
         }
 
         try
         {
             // Start conversation with this user
-            Console.WriteLine($"[DEBUG] Starting conversation with userId: {userId}");
 
             // Check if conversation already exists in the list (OtherUserId match)
             var existingConversation = directConversations.FirstOrDefault(c => c.OtherUserId == userId);

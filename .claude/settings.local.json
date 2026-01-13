@@ -8,7 +8,9 @@
       "Bash(del \"ChatApp.Modules.Channels.Infrastructure\\Migrations\\20260112000000_AddChannelMessageMentions.cs\")",
       "Bash(find:*)",
       "Bash(taskkill:*)",
-      "Bash(dotnet ef migrations:*)"
+      "Bash(dotnet ef migrations:*)",
+      "Bash(tasklist:*)",
+      "Bash(findstr:*)"
     ],
     "deny": [],
     "ask": []

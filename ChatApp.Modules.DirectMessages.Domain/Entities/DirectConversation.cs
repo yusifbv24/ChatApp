@@ -26,6 +26,11 @@ namespace ChatApp.Modules.DirectMessages.Domain.Entities
         public Guid? User1LastReadLaterMessageId { get; private set; }
         public Guid? User2LastReadLaterMessageId { get; private set; }
 
+        /// <summary>
+        /// Notes conversation (self-conversation) - User1Id = User2Id
+        /// Always visible in conversation list
+        /// </summary>
+        public bool IsNotes { get; private set; }
 
         // Navigation properties
         public ICollection<DirectMessage> Messages { get; private set; } = [];
@@ -34,23 +39,34 @@ namespace ChatApp.Modules.DirectMessages.Domain.Entities
         private DirectConversation() { }
 
 
-        public DirectConversation(Guid user1Id, Guid user2Id, Guid initiatedByUserId)
+        public DirectConversation(Guid user1Id, Guid user2Id, Guid initiatedByUserId, bool isNotes = false)
         {
-            // Always store users in consistent order (smaller GUID first) for easy lookups
-            if (user1Id < user2Id)
+            IsNotes = isNotes;
+
+            // Notes conversation: User1Id = User2Id (self-conversation)
+            if (isNotes)
             {
                 User1Id = user1Id;
-                User2Id = user2Id;
+                User2Id = user1Id;
             }
             else
             {
-                User1Id = user2Id;
-                User2Id = user1Id;
+                // Always store users in consistent order (smaller GUID first) for easy lookups
+                if (user1Id < user2Id)
+                {
+                    User1Id = user1Id;
+                    User2Id = user2Id;
+                }
+                else
+                {
+                    User1Id = user2Id;
+                    User2Id = user1Id;
+                }
             }
 
             InitiatedByUserId = initiatedByUserId;
-            HasMessages = false;
-            LastMessageAtUtc=DateTime.UtcNow;
+            HasMessages = isNotes; // Notes conversation always visible
+            LastMessageAtUtc = DateTime.UtcNow;
             IsUser1Active = true;
             IsUser2Active = true;
         }
@@ -102,6 +118,10 @@ namespace ChatApp.Modules.DirectMessages.Domain.Entities
 
         public Guid GetOtherUserId(Guid currentUserId)
         {
+            // Notes conversation: return self
+            if (IsNotes)
+                return currentUserId;
+
             if (currentUserId == User1Id)
                 return User2Id;
             if (currentUserId == User2Id)

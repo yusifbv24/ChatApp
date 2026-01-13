@@ -19,8 +19,14 @@
             <div class="chat-header-info">
                 @if (IsDirectMessage)
                 {
-                    <div class="header-avatar">
-                        @if (!string.IsNullOrEmpty(RecipientAvatarUrl))
+                    <div class="header-avatar @(IsNotesConversation ? "notes-avatar" : "")">
+                        @if (IsNotesConversation)
+                        {
+                            <div class="notes-icon">
+                                <MudIcon Icon="@Icons.Material.Filled.Bookmark" Size="Size.Medium" />
+                            </div>
+                        }
+                        else if (!string.IsNullOrEmpty(RecipientAvatarUrl))
                         {
                             <img src="@RecipientAvatarUrl" alt="@RecipientName" />
                         }
@@ -28,17 +34,23 @@
                         {
                             <div class="avatar-placeholder">@StringHelper.GetInitials(RecipientName)</div>
                         }
-                        <span class="online-indicator @(IsRecipientOnline ? "online" : "offline")"></span>
+                        @if (!IsNotesConversation)
+                        {
+                            <span class="online-indicator @(IsRecipientOnline ? "online" : "offline")"></span>
+                        }
                     </div>
                     <div class="header-details">
-                        <h3 class="header-name">@RecipientName</h3>
-                        @if (TypingUsers?.Any() ?? false)
+                        <h3 class="header-name @(IsNotesConversation ? "notes-name" : "")">@RecipientName</h3>
+                        @if (!IsNotesConversation)
                         {
-                            <span class="header-status typing">typing...</span>
-                        }
-                        else
-                        {
-                            <span class="header-status">@(IsRecipientOnline ? "Online" : "Offline")</span>
+                            @if (TypingUsers?.Any() ?? false)
+                            {
+                                <span class="header-status typing">typing...</span>
+                            }
+                            else
+                            {
+                                <span class="header-status">@(IsRecipientOnline ? "Online" : "Offline")</span>
+                            }
                         }
                     </div>
                 }

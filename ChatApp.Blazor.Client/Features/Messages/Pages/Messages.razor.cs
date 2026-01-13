@@ -118,6 +118,11 @@ public partial class Messages : IAsyncDisposable
     private Guid recipientUserId;
 
     /// <summary>
+    /// Conversation Notes olduqda true (self-conversation).
+    /// </summary>
+    private bool isNotesConversation = false;
+
+    /// <summary>
     /// Söhbət edilən şəxs online-dır?
     /// </summary>
     private bool isRecipientOnline;
@@ -569,6 +574,11 @@ public partial class Messages : IAsyncDisposable
     private bool showSidebar = false;
 
     /// <summary>
+    /// Profile panel açıq?
+    /// </summary>
+    private bool showProfilePanel = false;
+
+    /// <summary>
     /// Sidebar DM favori mesajları.
     /// </summary>
     private List<FavoriteDirectMessageDto>? sidebarFavoriteDirectMessages;
@@ -671,10 +681,25 @@ public partial class Messages : IAsyncDisposable
 
                 if (user != null)
                 {
-                    // Conversation aç - StartConversationWithUser metodunu istifadə et
-                    // Əvvəlcə search results-u set et
-                    userSearchResults = searchResult.Value;
-                    await StartConversationWithUser(user.Id);
+                    // Self-mention: Open Notes conversation
+                    if (user.Id == currentUserId)
+                    {
+                        var notesConversation = directConversations.FirstOrDefault(c => c.IsNotes);
+                        if (notesConversation != null)
+                        {
+                            await SelectDirectConversation(notesConversation);
+                        }
+                        else
+                        {
+                            ShowError("Notes conversation not found");
+                        }
+                    }
+                    else
+                    {
+                        // Other user mention: Open conversation with them
+                        userSearchResults = searchResult.Value;
+                        await StartConversationWithUser(user.Id);
+                    }
                 }
                 else
                 {

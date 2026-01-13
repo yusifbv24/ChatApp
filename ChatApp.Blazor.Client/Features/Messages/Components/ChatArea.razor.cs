@@ -73,6 +73,12 @@ public partial class ChatArea : IAsyncDisposable
     /// </summary>
     [Parameter] public bool IsRecipientOnline { get; set; }
 
+    /// <summary>
+    /// Notes conversation olduqda true (self-conversation).
+    /// Online status göstərilməməlidir.
+    /// </summary>
+    [Parameter] public bool IsNotesConversation { get; set; }
+
     #endregion
 
     #region Parameters - Channel

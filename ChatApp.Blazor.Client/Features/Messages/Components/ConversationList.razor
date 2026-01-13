@@ -173,10 +173,16 @@
                 else
                 {
                     <!-- Direct Conversation Item -->
-                    <div @key="item.Id" class="conversation-item @(SelectedConversationId == item.Id ? "selected": "")"
+                    <div @key="item.Id" class="conversation-item @(SelectedConversationId == item.Id ? "selected": "") @(item.IsNotes ? "notes-conversation" : "")"
                          @onclick="()=>SelectConversationItem(item)">
-                        <div class="conversation-avatar">
-                            @if (!string.IsNullOrEmpty(item.AvatarUrl))
+                        <div class="conversation-avatar @(item.IsNotes ? "notes-avatar" : "")">
+                            @if (item.IsNotes)
+                            {
+                                <div class="notes-icon">
+                                    <MudIcon Icon="@Icons.Material.Filled.Bookmark" Size="Size.Medium" />
+                                </div>
+                            }
+                            else if (!string.IsNullOrEmpty(item.AvatarUrl))
                             {
                                 <img src="@item.AvatarUrl" alt="@item.Name" />
                             }
@@ -187,7 +193,7 @@
                         </div>
                         <div class="conversation-info">
                             <div class="conversation-header">
-                                <span class="conversation-name">@item.Name</span>
+                                <span class="conversation-name @(item.IsNotes ? "notes-name" : "")">@item.Name</span>
                                 <div class="conversation-meta">
                                     @if (item.IsMyLastMessage && !string.IsNullOrEmpty(item.LastMessageStatus))
                                     {

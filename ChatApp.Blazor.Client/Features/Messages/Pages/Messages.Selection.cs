@@ -217,9 +217,10 @@ public partial class Messages
             selectedChannelId = null;
             isDirectMessage = true;
 
-            recipientName = conversation.OtherUserDisplayName;
+            recipientName = conversation.IsNotes ? "Notes" : conversation.OtherUserDisplayName;
             recipientAvatarUrl = conversation.OtherUserAvatarUrl;
             recipientUserId = conversation.OtherUserId;
+            isNotesConversation = conversation.IsNotes;
 
             // Mention data: DM üçün conversation partner
             currentConversationPartner = new MentionUserDto

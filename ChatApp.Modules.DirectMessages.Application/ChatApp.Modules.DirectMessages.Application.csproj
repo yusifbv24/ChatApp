@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ChatApp.Modules.DirectMessages.Domain\ChatApp.Modules.DirectMessages.Domain.csproj" />
+    <ProjectReference Include="..\ChatApp.Modules.Identity.Domain\ChatApp.Modules.Identity.Domain.csproj" />
     <ProjectReference Include="..\ChatApp.Shared.Infrastructure\ChatApp.Shared.Infrastructure.csproj" />
   </ItemGroup>
 

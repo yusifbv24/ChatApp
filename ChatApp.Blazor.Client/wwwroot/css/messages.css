@@ -182,6 +182,36 @@
     color: var(--primary-color);
 }
 
+/* Notes Avatar */
+.conversation-avatar.notes-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+    border-radius: 12px;
+}
+
+    .conversation-avatar.notes-avatar .notes-icon {
+        color: var(--white);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+.conversation-item.selected .conversation-avatar.notes-avatar {
+    background: var(--white);
+}
+
+    .conversation-item.selected .conversation-avatar.notes-avatar .notes-icon {
+        color: #8b5cf6;
+    }
+
+/* Notes Name */
+.conversation-name.notes-name {
+    color: #8b5cf6;
+    font-weight: 600;
+}
+
 /* Search */
 .conversation-search {
     padding: 9px;
@@ -895,6 +925,22 @@
     border-radius: var(--radius-md);
     color: var(--primary-color);
 }
+
+/* Notes Avatar in Chat Header */
+.header-avatar.notes-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+    border-radius: 12px;
+}
+
+    .header-avatar.notes-avatar .notes-icon {
+        color: var(--white);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
 
 /* Channel Avatar with Initials in Header */
 .header-avatar .channel-avatar {
@@ -4172,6 +4218,15 @@
     color: var(--gray-600);
     text-transform: uppercase;
     letter-spacing: 0.5px;
+}
+
+/* Notes conversation details text - match sidebar-user-role styling */
+.details-header-text.notes-details-text {
+    font-size: 12px;
+    font-weight: normal;
+    color: var(--gray-500);
+    text-transform: none;
+    letter-spacing: normal;
 }
 
 /* Sidebar Section Items */

@@ -1,5 +1,6 @@
 ﻿using ChatApp.Modules.DirectMessages.Application.Behaviors;
 using ChatApp.Modules.DirectMessages.Application.Commands.DirectConversations;
+using ChatApp.Modules.DirectMessages.Application.Events;
 using ChatApp.Modules.DirectMessages.Application.Interfaces;
 using ChatApp.Modules.DirectMessages.Infrastructure.Persistence;
 using ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories;
@@ -50,6 +51,9 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure
 
             // Add validation behavior to MediatR pipeline
             services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+
+            // Register event handlers
+            services.AddScoped<UserCreatedEventHandler>();
 
             return services;
         }

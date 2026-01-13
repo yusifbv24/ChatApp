@@ -1,13 +1,16 @@
+using ChatApp.Api.Seeder;
 using ChatApp.Modules.Channels.Api.Controllers;
 using ChatApp.Modules.Channels.Infrastructure;
 using ChatApp.Modules.Channels.Infrastructure.Persistence;
 using ChatApp.Modules.DirectMessages.Api.Controllers;
+using ChatApp.Modules.DirectMessages.Application.Events;
 using ChatApp.Modules.DirectMessages.Infrastructure;
 using ChatApp.Modules.DirectMessages.Infrastructure.Persistence;
 using ChatApp.Modules.Files.Api.Controllers;
 using ChatApp.Modules.Files.Infrastructure;
 using ChatApp.Modules.Files.Infrastructure.Persistence;
 using ChatApp.Modules.Identity.Api.Controllers;
+using ChatApp.Modules.Identity.Domain.Events;
 using ChatApp.Modules.Identity.Domain.Services;
 using ChatApp.Modules.Identity.Infrastructure;
 using ChatApp.Modules.Identity.Infrastructure.Persistence;
@@ -16,7 +19,6 @@ using ChatApp.Modules.Notifications.Infrastructure;
 using ChatApp.Modules.Notifications.Infrastructure.Persistence;
 using ChatApp.Modules.Search.Api.Controllers;
 using ChatApp.Modules.Search.Infrastructure;
-using ChatApp.Modules.Search.Infrastructure.Persistence;
 using ChatApp.Modules.Settings.Api.Controllers;
 using ChatApp.Modules.Settings.Infrastructure;
 using ChatApp.Modules.Settings.Infrastructure.Persistence;
@@ -215,6 +217,9 @@ builder.Services.AddSwaggerGen(options =>
         Description = "Modular Monolith Chat Application API"
     });
 
+    // Custom schema IDs to avoid conflicts in modular monolith
+    options.CustomSchemaIds(type => type.FullName);
+
     // Add JWT authentication to Swagger
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
@@ -270,7 +275,8 @@ using (var scope = app.Services.CreateScope())
         // DirectMessages Module - ADD THESE LINES
         var directMessagesContext = services.GetRequiredService<DirectMessagesDbContext>();
         await directMessagesContext.Database.MigrateAsync();
-        await DirectMessagesDatabaseSeeder.SeedAsync(directMessagesContext,logger);
+        // Create direct conversation for existing default users
+        await DefaultSeeder.CreateConversationForDefaultUsers(identityContext, directMessagesContext, logger);
 
 
         // Add Files module seeding in database initialization
@@ -278,9 +284,6 @@ using (var scope = app.Services.CreateScope())
         await filesContext.Database.MigrateAsync();
         await FileDatabaseSeeder.SeedAsync(filesContext,logger);
 
-        // Search Module (no migrations - read-only)
-        var searchContext = services.GetRequiredService<SearchDbContext>();
-        // Search module doesn't need migrations as it only reads from other modules
 
         // Notifications Module
         var notificationsContext = services.GetRequiredService<NotificationsDbContext>();
@@ -293,6 +296,19 @@ using (var scope = app.Services.CreateScope())
         await UserSettingsDatabaseSeeder.SeedAsync(settingsContext,logger);
 
         logger.LogInformation("Database initialization completed successfully");
+
+        // Subscribe to domain events
+        var eventBus = services.GetRequiredService<IEventBus>();
+
+        // Subscribe UserCreatedEvent to create Notes conversation
+        eventBus.Subscribe<UserCreatedEvent>(async (@event) =>
+        {
+            using var handlerScope = app.Services.CreateScope();
+            var handler = handlerScope.ServiceProvider.GetRequiredService<UserCreatedEventHandler>();
+            await handler.HandleAsync(@event); 
+        });
+
+        logger.LogInformation("Event subscriptions registered successfully");
     }
     catch (Exception ex)
     {

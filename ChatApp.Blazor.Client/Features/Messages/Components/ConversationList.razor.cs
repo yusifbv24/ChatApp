@@ -191,6 +191,8 @@ public partial class ConversationList
 
         public string? LastMessageStatus { get; set; }
 
+        public bool IsNotes { get; set; }
+
         public string? LastMessageSenderAvatarUrl { get; set; }
 
         public DirectConversationDto? DirectConversation { get; set; }
@@ -312,7 +314,7 @@ public partial class ConversationList
         return new UnifiedChatItem
         {
             Id = conv.Id,
-            Name = conv.OtherUserDisplayName,
+            Name = conv.IsNotes ? "Notes" : conv.OtherUserDisplayName,
             AvatarUrl = conv.OtherUserAvatarUrl,
             LastMessage = conv.LastMessageContent,
             LastActivityTime = conv.LastMessageAtUtc,
@@ -324,6 +326,7 @@ public partial class ConversationList
             LastReadLaterMessageId = conv.LastReadLaterMessageId,
             IsMyLastMessage = conv.LastMessageSenderId == UserState.UserId,
             LastMessageStatus = conv.LastMessageStatus,
+            IsNotes = conv.IsNotes,
             DirectConversation = conv
         };
     }

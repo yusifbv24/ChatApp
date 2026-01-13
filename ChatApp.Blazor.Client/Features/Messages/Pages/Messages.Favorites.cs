@@ -153,6 +153,28 @@ public partial class Messages
     }
 
     /// <summary>
+    /// Profile panel-ı aç.
+    /// Sidebar "View profile" button-dan çağrılır.
+    /// Sidebar açıq qalır.
+    /// </summary>
+    private void OpenProfilePanel()
+    {
+        // Search panel bağla (profile panel ilə sidebar eyni anda açıq ola bilər)
+        showSearchPanel = false;
+
+        // Profile panel aç
+        showProfilePanel = true;
+    }
+
+    /// <summary>
+    /// Profile panel-ı bağla.
+    /// </summary>
+    private void CloseProfilePanel()
+    {
+        showProfilePanel = false;
+    }
+
+    /// <summary>
     /// Sidebar üçün favori mesajları yüklə.
     /// Sidebar açıldıqda çağrılır.
     /// </summary>

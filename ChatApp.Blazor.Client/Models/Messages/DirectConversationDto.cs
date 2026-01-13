@@ -14,5 +14,6 @@
         Guid? LastMessageSenderId = null,
         string? LastMessageStatus = null,
         Guid? LastMessageId = null,
-        Guid? FirstUnreadMessageId = null);
+        Guid? FirstUnreadMessageId = null,
+        bool IsNotes = false); // Notes conversation (self-conversation)
 }

@@ -31,6 +31,7 @@
                   RecipientName="@recipientName"
                   RecipientAvatarUrl="@recipientAvatarUrl"
                   IsRecipientOnline="@isRecipientOnline"
+                  IsNotesConversation="@isNotesConversation"
                   ChannelMessages="@channelMessages"
                   ChannelName="@selectedChannelName"
                   ChannelDescription="@selectedChannelDescription"
@@ -112,6 +113,7 @@
                     <Sidebar IsDirectMessage="@isDirectMessage"
                              RecipientName="@recipientName"
                              RecipientAvatarUrl="@recipientAvatarUrl"
+                             IsNotesConversation="@isNotesConversation"
                              ChannelName="@selectedChannelName"
                              MemberCount="@selectedChannelMemberCount"
                              ConversationId="@selectedConversationId"
@@ -124,6 +126,7 @@
                              OnLoadFavorites="LoadSidebarFavorites"
                              OnNavigateToMessage="NavigateToFavoriteMessage"
                              OnRemoveFromFavorites="HandleRemoveFromFavoritesInSidebar"
+                             OnViewProfile="OpenProfilePanel"
                              OnClose="CloseSidebar" />
                 </div>
             }
@@ -140,10 +143,14 @@
                                  OnNavigateToMessage="NavigateToSearchResult" />
                 </div>
             }
-        
+
+
         </div>
     }
 </div>
+
+<!-- Profile Panel (Global Overlay) -->
+<ProfilePanel @bind-IsOpen="showProfilePanel" />
 
     <!-- New Conversation Dialog-->
 @if (showNewConversationDialog)

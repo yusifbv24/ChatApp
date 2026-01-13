@@ -102,6 +102,12 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectMessages
                     request.ReplyToMessageId,
                     request.IsForwarded);
 
+                // Notes conversation: Mark message as read immediately (self-conversation)
+                if (conversation.IsNotes)
+                {
+                    message.MarkAsRead();
+                }
+
                 await _unitOfWork.Messages.AddAsync(message, cancellationToken);
 
                 // Add mentions if provided

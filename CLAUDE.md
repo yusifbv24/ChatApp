@@ -493,3 +493,259 @@ Identity | Channels | DirectMessages | Files | Notifications | Search | Settings
 - `Messages.MessageOperations.cs:588-655` - Helper metodlar (MarkDirectMessagesAsReadAsync, MarkChannelMessagesAsReadAsync)
 - `Messages.SignalR.cs:147-159` - Mention badge real-time update
 - `Messages.Selection.cs:136-152` - Mention badge clear on conversation entry
+
+### Session 16 (2026-01-13): Notes Conversation Implementation
+
+**Feature Request:**
+Hər istifadəçi üçün "Notes" adlı self-conversation yaradılmalıdır:
+1. User yaranarkən avtomatik Notes conversation yaradılmalıdır
+2. Notes həmişə conversation listdə görünməlidir
+3. İstifadəçi özünü mention edəndə Notes açılmalıdır
+4. Notes-un xüsusi stil və iconla fərqləndirilməsi
+
+**Backend Implementation:**
+
+**1. Domain Layer - DirectConversation Entity:**
+- **DirectConversation.cs:33** - `IsNotes` property əlavə edildi (bool)
+- **DirectConversation.cs:42** - Constructor update: `isNotes` parametr qəbul edir
+- **DirectConversation.cs:46-51** - Notes logic:
+  - `IsNotes=true` → `User1Id = User2Id = userId` (self-conversation)
+  - `HasMessages = true` (həmişə visible)
+- **DirectConversation.cs:121-123** - `GetOtherUserId()` update:
+  - Notes üçün həmişə self userId qaytarır
+
+**2. Database Migration:**
+- Migration yaradıldı: `AddNotesConversationSupport`
+- `dotnet ef database update` - uğurla tətbiq edildi
+
+**3. Event-Driven Architecture - Notes Auto-Creation:**
+- **UserCreatedEventHandler.cs** (YENİ) - User yarananda Notes conversation yaradır:
+  - `INotificationHandler` (MediatR) YANLIŞDIR ❌
+  - Layihədə `IEventBus` + `DomainEvent` pattern istifadə olunur ✅
+  - **Problem:** `UserCreatedEvent` `DomainEvent`-dən extend olur, `INotification`-dan yox
+  - **Solution:** Handler-ı `IEventBus.Subscribe` ilə register etdik
+- **DependencyInjection.cs:55** - Handler service olaraq register edildi
+- **Program.cs:301-306** - Event subscription:
+  ```csharp
+  eventBus.Subscribe<UserCreatedEvent>(async (@event) => {
+      using var handlerScope = app.Services.CreateScope();
+      var handler = handlerScope.ServiceProvider.GetRequiredService<UserCreatedEventHandler>();
+      await handler.HandleAsync(@event);
+  });
+  ```
+
+**4. DTOs Update:**
+- **Backend DirectConversationDto:18** - `IsNotes = false` parameter əlavə edildi
+- **Frontend DirectConversationDto:18** - `IsNotes = false` parameter əlavə edildi
+
+**5. Repository Layer:**
+- **DirectConversationRepository.cs:75** - Query filter update:
+  - `|| conv.IsNotes` - Notes həmişə göstərilir (message olmasından asılı olmayaraq)
+- **DirectConversationRepository.cs:98** - `IsNotes` projection-a əlavə edildi
+- **DirectConversationRepository.cs:197** - `IsNotes` DTO mapping-ə əlavə edildi
+
+**Frontend Implementation:**
+
+**1. Self-Mention Handler (Artıq Mövcud idi):**
+- **Messages.razor.cs:674-686** - `HandleMentionClick` update:
+  - User özünü mention edirsə → Notes conversation tap və aç
+  - Digər user → Normal conversation aç
+
+**2. Conversation List Display:**
+- **ConversationList.razor.cs:194** - `UnifiedChatItem.IsNotes` property əlavə edildi
+- **ConversationList.razor.cs:317** - `CreateConversationItem`:
+  - `Name = conv.IsNotes ? "Notes" : conv.OtherUserDisplayName`
+  - `IsNotes = conv.IsNotes`
+
+**3. UI Styling:**
+- **ConversationList.razor:176** - HTML update:
+  - Notes conversation üçün `notes-conversation` CSS class
+  - Notes avatar üçün xüsusi icon: `@Icons.Material.Filled.Description` (document/note icon)
+  - Notes name üçün `notes-name` class
+- **messages.css:185-213** - Notes styling:
+  - `.conversation-avatar.notes-avatar` - Bənövşəyi gradient background (#8b5cf6 → #7c3aed)
+  - `.notes-icon` - Ağ icon rəng
+  - Selected state: Ağ background, bənövşəyi icon
+  - `.conversation-name.notes-name` - Bənövşəyi text, bold font
+
+**Pattern: IEventBus vs MediatR:**
+- **Existing Infrastructure:**
+  - `IEventBus` - Inter-module communication (modular monolith)
+  - `Subscribe<TEvent>(Func<TEvent, Task>)` - Event handler registration
+  - `PublishAsync<TEvent>` - Event publishing
+- **MediatR:**
+  - Intra-module CQRS (commands/queries within a module)
+  - `INotificationHandler<T>` - MediatR notification pattern
+- **Mistake:** UserCreatedEventHandler ilk növbədə `INotificationHandler<UserCreatedEvent>` implement edirdi
+- **Fix:** Handler-ı plain class yaratdıq və `IEventBus.Subscribe` ilə register etdik
+
+**Result:**
+- ✅ User registration zamanı Notes conversation avtomatik yaranır
+- ✅ Notes həmişə conversation listdə görünür
+- ✅ Notes bənövşəyi rəng və document icon ilə fərqlənir
+- ✅ Self-mention click edəndə Notes açılır
+- ✅ IEventBus pattern düzgün istifadə olunur
+- ✅ Build uğurla keçir, heç bir error yoxdur
+
+**Files Modified:**
+- **Backend:**
+  - `DirectConversation.cs` - IsNotes property, constructor, GetOtherUserId
+  - `UserCreatedEventHandler.cs` (NEW) - Notes auto-creation
+  - `DependencyInjection.cs:55` - Handler registration
+  - `Program.cs:301-306` - Event subscription
+  - `DirectConversationDto.cs` (Backend + Frontend) - IsNotes parameter
+  - `DirectConversationRepository.cs:75,98,197` - Query, projection, mapping
+  - Migration: `AddNotesConversationSupport`
+- **Frontend:**
+  - `Messages.razor.cs:674-686` - Self-mention → Notes (already existed)
+  - `ConversationList.razor.cs:194,317` - IsNotes property, name logic
+  - `ConversationList.razor:176-196` - Notes HTML template
+  - `messages.css:185-213` - Notes styling
+
+**Swagger SchemaId Conflict Fix:**
+- **Problem:** `MentionRequest` class həm DirectMessages, həm də Channels module-unda var
+- **Error:** `Can't use schemaId "$MentionRequest" for type... already used for type...`
+- **Root Cause:** Modular monolith arxitekturasında fərqli module-larda eyni class adları ola bilər
+- **Solution:** `Program.cs:221` - `options.CustomSchemaIds(type => type.FullName)` əlavə edildi
+  - Swagger schema ID-lərində tam namespace istifadə olunur
+  - `MentionRequest` → `ChatApp.Modules.DirectMessages.Application.DTOs.Request.MentionRequest`
+  - `MentionRequest` → `ChatApp.Modules.Channels.Application.DTOs.Requests.MentionRequest`
+- **Result:** ✅ Swagger uğurla generate olunur, conflict yoxdur
+
+**DefaultSeeder Yanaşması:**
+- ✅ `DefaultSeeder.CreateConversationForDefaultUsers()` yaratmaq düzgün yanaşmadır
+- Database-də artıq mövcud user-lər üçün Notes conversation yaratmaq lazımdır
+- `UserCreatedEvent` yalnız yeni user-lər üçün işləyir
+- Seed zamanı köhnə user-lər üçün manual Notes yaradılmalıdır
+
+**Notes Messages Auto-Read Fix (Critical Bug):**
+- **Problem:** Notes conversation-da göndərilən mesajlar oxundu göstərilmir, hard refresh-dən sonra unread görünür
+- **Root Cause:** SendDirectMessageCommand Notes-i xüsusi handle etmir, sender=receiver olduğu halda mesaj auto-read olmalıdır
+- **Solution:** `SendDirectMessageCommand.cs:106-109` - Notes conversation check:
+  ```csharp
+  if (conversation.IsNotes)
+  {
+      message.MarkAsRead();
+  }
+  ```
+- **Result:** ✅ Notes mesajları yaradıldıqda dərhal oxundu olaraq marklənir
+
+**Notes UI/UX Fixes:**
+1. **Chat Header - Online Status Hidden:**
+   - `ChatArea.razor.cs:80` - `IsNotesConversation` parameter əlavə edildi
+   - `Messages.razor.cs:123` - `isNotesConversation` state field
+   - `Messages.Selection.cs:223` - `isNotesConversation = conversation.IsNotes`
+   - `Messages.razor:34` - Parameter pass: `IsNotesConversation="@isNotesConversation"`
+   - `ChatArea.razor:37-40` - Online indicator Notes üçün gizlədildi: `@if (!IsNotesConversation)`
+   - `ChatArea.razor:44-54` - Online status text Notes üçün gizlədildi
+   - **Result:** ✅ Notes conversation-da online status göstərilmir
+
+2. **Notes Avatar Icon - Changed to Bookmark:**
+   - **ConversationList:** `ConversationList.razor:182` - `@Icons.Material.Filled.Bookmark`
+   - **ChatArea Header:** `ChatArea.razor:26` - `@Icons.Material.Filled.Bookmark`
+   - **CSS:** `messages.css:930-943` - Header-avatar.notes-avatar styling
+   - **Result:** ✅ Notes avatar indi saved/bookmark icon-u ilə göstərilir (Description əvəzinə)
+
+**🚨 CRITICAL FIX: Notes Messages SignalR Read Status (2026-01-13):**
+- **Problem:** Notes conversation-da mesaj yazarkən mesajlar oxundu olaraq qeyd olunmurdu, hard refresh-dən sonra unread count artırdı
+- **Root Cause:** `Messages.SignalR.cs:122` - SignalR handler yalnız `senderId != currentUserId` olduqda mesajları oxundu olaraq qeyd edirdi
+  - Notes conversation-da sender = receiver = currentUserId olduğu üçün heç vaxt mark-as-read edilmirdi
+  - Backend auto-read (`SendDirectMessageCommand`) işləyirdi, lakin SignalR event-ləri frontend-də mesajları unread saxlayırdı
+- **Solution:** `Messages.SignalR.cs` - 3 əsas düzəliş:
+  1. **Line 124-125:** Notes conversation check əlavə edildi - `(message.SenderId != currentUserId || isNotes)`:
+     ```csharp
+     var isNotes = directConversations.FirstOrDefault(c => c.Id == message.ConversationId)?.IsNotes ?? false;
+     if ((message.SenderId != currentUserId || isNotes) && isPageVisible)
+     ```
+  2. **Line 160:** UnreadCount üçün Notes safeguard - Notes həmişə 0:
+     ```csharp
+     UnreadCount = conversation.IsNotes ? 0 : (isCurrentConversation ? 0 : (isMyMessage ? conversation.UnreadCount : conversation.UnreadCount + 1))
+     ```
+  3. **Line 162:** HasUnreadMentions üçün Notes safeguard - Notes həmişə false:
+     ```csharp
+     HasUnreadMentions = (conversation.IsNotes || isCurrentConversation) ? false : (isMyMessage ? conversation.HasUnreadMentions : (hasMention || conversation.HasUnreadMentions))
+     ```
+  4. **Line 172:** Global unread badge increment - Notes üçün artırma:
+     ```csharp
+     if (!isCurrentConversation && !isMyMessage && !conversation.IsNotes)
+     ```
+- **Result:**
+  - ✅ Notes mesajları SignalR vasitəsilə dərhal oxundu olaraq qeyd olunur
+  - ✅ Notes conversation heç vaxt unread count göstərmir (həmişə 0)
+  - ✅ Notes conversation mention badge göstərmir
+  - ✅ Notes global unread badge-ə təsir etmir
+  - ✅ Hard refresh-dən sonra Notes clean qalır (unread yoxdur)
+
+**Notes Sidebar Customization (2026-01-13):**
+- **Problem:** Sidebar Notes conversation üçün xüsusi UI tələb edirdi (generic user sidebar deyildi)
+- **Changes:**
+  1. **Sidebar.razor.cs:49** - `IsNotesConversation` parametr əlavə edildi
+  2. **Sidebar.razor:257** - Role "Visible to you only" göstərilir (Notes üçün)
+  3. **Sidebar.razor:272** - Details header text: "A scratchpad to keep important messages, files and links in one place."
+     - Conditional class əlavə edildi: `notes-details-text`
+  4. **Sidebar.razor:275-289** - Sound section Notes üçün gizlədildi (`@if (!IsNotesConversation)`)
+  5. **Sidebar.razor:212** - "Find chat with this user" button Notes üçün gizlədildi: `@if (IsDirectMessage && !IsNotesConversation)`
+  6. **Messages.razor:116** - `IsNotesConversation` parametr ötürüldü
+  7. **messages.css:4224-4230** - `.notes-details-text` class əlavə edildi:
+     - font-size: 12px (13px → 12px)
+     - font-weight: normal (600 → normal)
+     - color: var(--gray-500) (--gray-600 → --gray-500)
+     - text-transform: none (uppercase → none)
+     - letter-spacing: normal (0.5px → normal)
+     - **Result:** Scratchpad description "Visible to you only" ilə eyni styling-ə malik
+- **Result:**
+  - ✅ Notes sidebar "Visible to you only" role göstərir
+  - ✅ Sound toggle Notes üçün gizlidir
+  - ✅ Details header scratchpad description göstərir və "Visible to you only" ilə eyni font/styling-ə malikdir
+  - ✅ "Find chat with this user" və "View profile" buttons Notes üçün görünməz
+
+**Self-Mention Click → Notes (2026-01-13):**
+- **Problem:** Öz adına mention edildikdə üzərinə basmaq heç nə etmirdi
+- **Root Cause:** `Messages.MessageOperations.cs:852-856` - Self-mention check return edirdi
+- **Solution:** `HandleMentionClick:852-878` - Self-mention detection + Notes conversation açılışı:
+  ```csharp
+  if (userId == currentUserId)
+  {
+      var notesConversation = directConversations.FirstOrDefault(c => c.IsNotes);
+      if (notesConversation != null)
+      {
+          selectedConversationId = notesConversation.Id;
+          recipientName = "Notes";
+          isNotesConversation = true;
+          await LoadDirectMessages();
+      }
+      return;
+  }
+  ```
+- **Result:** ✅ Öz mention-ına klik etdikdə Notes conversation açılır
+
+**Sidebar Menu Restructure + Profile Panel Integration (2026-01-13):**
+- **Problem:** Notes sidebar menusunda "Add members" button var idi və "View profile" button gizli idi
+- **Requirements:**
+  1. "Add members" button-u Notes üçün gizlət
+  2. "View profile" button-u Notes üçün aktiv et
+  3. "View profile" buttonuna basanda profile panel açılsın
+- **Changes:**
+  1. **Sidebar.razor:212-223** - Menu structure yenidən quruldu:
+     - `@if (IsDirectMessage)` → View profile həmişə göstərilir (Notes daxil)
+     - `@if (!IsNotesConversation)` → Find chat yalnız normal DM-lər üçün
+     - `else` → Add members yalnız channel-lər üçün
+  2. **Sidebar.razor.cs:153** - `OnViewProfile` EventCallback əlavə edildi
+  3. **Sidebar.razor.cs:526-530** - `HandleViewProfile()` implement edildi (placeholder-dən)
+  4. **Messages.razor.cs:579** - `showProfilePanel` state əlavə edildi
+  5. **Messages.Favorites.cs:160-167** - Profile panel metodları:
+     - `OpenProfilePanel()` - Yalnız search bağlayır, sidebar açıq qalır, profile açır
+     - `CloseProfilePanel()` - Profile panel bağlayır
+  6. **Messages.razor:129** - Sidebar-a `OnViewProfile="OpenProfilePanel"` callback əlavə edildi
+  7. **Messages.razor:153** - ProfilePanel komponenti render edilir: `<ProfilePanel @bind-IsOpen="showProfilePanel" />`
+- **Result:**
+  - ✅ Notes sidebar menusunda "Add members" button görünməz
+  - ✅ "View profile" button Notes üçün aktiv (həmişə göstərilir)
+  - ✅ "Find chat with this user" yalnız normal DM-lər üçün görünür (Notes üçün gizli)
+  - ✅ "View profile" buttonuna basanda global overlay profile panel açılır
+  - ✅ Sidebar açıq qalır (bağlanmır), profile panel ilə eyni anda görünə bilər
+  - ✅ Profile panel @bind-IsOpen ilə automatic bağlanır
+
+**Pending:**
+- Notes conversation end-to-end test (create user, verify Notes, mention self, styling)
+- User deletion feature (preserve messages, remove from channels)

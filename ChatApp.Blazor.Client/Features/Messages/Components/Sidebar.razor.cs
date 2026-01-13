@@ -43,6 +43,11 @@ public partial class Sidebar
     /// </summary>
     [Parameter] public string? RecipientAvatarUrl { get; set; }
 
+    /// <summary>
+    /// Notes conversation-du? (self-conversation)
+    /// </summary>
+    [Parameter] public bool IsNotesConversation { get; set; }
+
     #endregion
 
     #region Parameters - Channel Info
@@ -141,6 +146,11 @@ public partial class Sidebar
     /// Sidebar bağlama callback-i.
     /// </summary>
     [Parameter] public EventCallback OnClose { get; set; }
+
+    /// <summary>
+    /// View profile callback-i (user profile panel açmaq üçün).
+    /// </summary>
+    [Parameter] public EventCallback OnViewProfile { get; set; }
 
     #endregion
 
@@ -511,12 +521,12 @@ public partial class Sidebar
     }
 
     /// <summary>
-    /// View profile handler (placeholder).
+    /// View profile handler - profile panel açır.
     /// </summary>
-    private void HandleViewProfile()
+    private async Task HandleViewProfile()
     {
         showContextMenu = false;
-        // TODO: Implement view profile functionality
+        await OnViewProfile.InvokeAsync();
     }
 
     /// <summary>
