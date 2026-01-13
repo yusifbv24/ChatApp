@@ -244,6 +244,44 @@ namespace ChatApp.Modules.DirectMessages.Api.Controllers
         }
 
         /// <summary>
+        /// PERFORMANCE: Sends multiple messages in a single batch (for multi-file uploads).
+        /// Reduces N API calls to 1 and wraps all messages in single transaction.
+        /// </summary>
+        [HttpPost("batch")]
+        [RequirePermission("Messages.Send")]
+        [ProducesResponseType(typeof(List<Guid>), StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<IActionResult> SendBatchMessages(
+            [FromRoute] Guid conversationId,
+            [FromBody] BatchSendMessagesRequest request,
+            CancellationToken cancellationToken)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == Guid.Empty)
+                return Unauthorized();
+
+            // Map DTO mentions to domain mentions
+            var mentions = request.Mentions?.Select(m => new BackendMentionRequest(m.UserId, m.UserName)).ToList();
+
+            var command = new SendBatchDirectMessagesCommand(
+                conversationId,
+                userId,
+                request.Messages,
+                request.ReplyToMessageId,
+                request.IsForwarded,
+                mentions);
+
+            var result = await _mediator.Send(command, cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return CreatedAtAction(nameof(GetMessages), new { conversationId }, result.Value);
+        }
+
+        /// <summary>
         /// Sends a message in the conversation
         /// </summary>
         [HttpPost]

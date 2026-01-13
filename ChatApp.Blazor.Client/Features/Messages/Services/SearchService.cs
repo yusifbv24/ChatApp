@@ -10,7 +10,7 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
             Guid conversationId,
             string searchTerm,
             int page = 1,
-            int pageSize = 50)
+            int pageSize = 30)
         {
             var url = $"/api/search?q={Uri.EscapeDataString(searchTerm)}&scope=4&conversationId={conversationId}&page={page}&pageSize={pageSize}";
             return await apiClient.GetAsync<SearchResultsDto>(url);
@@ -20,7 +20,7 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
             Guid channelId,
             string searchTerm,
             int page = 1,
-            int pageSize = 50)
+            int pageSize = 30)
         {
             var url = $"/api/search?q={Uri.EscapeDataString(searchTerm)}&scope=3&channelId={channelId}&page={page}&pageSize={pageSize}";
             return await apiClient.GetAsync<SearchResultsDto>(url);

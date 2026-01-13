@@ -719,22 +719,15 @@ public partial class Messages : IAsyncDisposable
 
     /// <summary>
     /// Page visibility dəyişdikdə JS-dən çağrılır.
-    /// Tab görünür olduqda mark as read işlət.
+    /// Tab görünür olduqda state-i yenilə (mark-as-read yalnız scroll event-də olacaq).
     /// </summary>
     [JSInvokable]
     public void OnVisibilityChanged(bool isVisible)
     {
-        var wasHidden = !isPageVisible;
         isPageVisible = isVisible;
 
-        // Tab görünür olduqda mark as read et
-        if (wasHidden && isVisible)
-        {
-            InvokeAsync(async () =>
-            {
-                await MarkUnreadMessagesAsRead();
-            });
-        }
+        // State dəyişikliyini bildir (UI yenilənməsi üçün)
+        InvokeAsync(StateHasChanged);
     }
 
     /// <summary>

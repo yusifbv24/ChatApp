@@ -144,7 +144,7 @@ public partial class SearchPanel : IAsyncDisposable
             if (SearchFunc != null)
             {
                 var targetId = IsDirectMessage ? ConversationId!.Value : ChannelId!.Value;
-                searchResults = await SearchFunc(targetId, searchQuery, 1, 50);
+                searchResults = await SearchFunc(targetId, searchQuery, 1, 30);
                 _cachedGroupedResults = null; // Cache invalidate
             }
         }

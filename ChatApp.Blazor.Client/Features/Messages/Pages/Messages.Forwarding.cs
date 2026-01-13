@@ -243,14 +243,20 @@ public partial class Messages
     /// Forward dialog üçün filter olunmuş item-ları qaytarır.
     /// Axtarış sorğusuna görə filter edir.
     /// Son mesaj tarixinə görə sıralayır.
+    /// PERFORMANCE: Optimized - Notes conversation filtered out (self-forward prevented)
     /// </summary>
     private List<ForwardItem> GetFilteredForwardItems()
     {
         var items = new List<ForwardItem>();
 
-        // Direct Conversation-ları əlavə et
+        // Direct Conversation-ları əlavə et (Notes-u çıxar)
+        // PERFORMANCE: Single pass with condition check
         foreach (var conv in directConversations)
         {
+            // SECURITY: Prevent self-forward to Notes conversation
+            if (conv.IsNotes)
+                continue;
+
             items.Add(new ForwardItem(
                 conv.Id,
                 conv.OtherUserDisplayName,

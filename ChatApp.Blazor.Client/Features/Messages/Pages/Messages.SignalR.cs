@@ -124,11 +124,13 @@ public partial class Messages
             // Performans: Conversation-u bir dəfə tap, həm mark-as-read, həm də update üçün istifadə et
             var conversation = directConversations.FirstOrDefault(c => c.Id == message.ConversationId);
 
-            // Mark as read şərtləri (conversation tapıldıqdan sonra):
-            // 1. Başqasının mesajı (senderId != currentUserId) VƏ səhifə görünür
-            // 2. VƏ YA Notes conversation (self-conversation) VƏ səhifə görünür
+            // Mark as read şərtləri:
+            // 1. Page visible (tab açıq) VƏ
+            // 2. İstifadəçi həmin conversationda (message.ConversationId == selectedConversationId) VƏ
+            // 3. (Başqasının mesajıdır VƏ YA Notes conversation-dır)
             // isPageVisible - browser tab-ı fokusda olduğunu yoxlayır
-            if (conversation != null && isPageVisible)
+            var isInConversation = message.ConversationId == selectedConversationId;
+            if (conversation != null && isPageVisible && isInConversation)
             {
                 var isNotes = conversation.IsNotes;
                 var shouldMarkAsRead = message.SenderId != currentUserId || isNotes;
@@ -168,10 +170,8 @@ public partial class Messages
                     HasUnreadMentions = (conversation.IsNotes || isCurrentConversation) ? false : (isMyMessage ? conversation.HasUnreadMentions : (hasMention || conversation.HasUnreadMentions))
                 };
 
-                // Yeni list yaradırıq ki cache invalidate olsun (ReferenceEquals)
-                var newList = new List<DirectConversationDto>(directConversations.Count) { updatedConversation };
-                newList.AddRange(directConversations.Where(c => c.Id != conversation.Id));
-                directConversations = newList;
+                // PERFORMANCE: Using helper method (move to top pattern)
+                MoveItemToTop(ref directConversations, updatedConversation, c => c.Id == conversation.Id);
 
                 // Global unread badge-i artır (header-dakı notification icon)
                 // Notes conversation üçün global badge artırma (self-conversation)
@@ -276,10 +276,8 @@ public partial class Messages
                     UnreadCount = isCurrentChannel ? 0 : (isMyMessage ? channel.UnreadCount : channel.UnreadCount + 1)
                 };
 
-                // Yeni list yaradırıq ki cache invalidate olsun (ReferenceEquals)
-                var newList = new List<ChannelDto>(channelConversations.Count) { updatedChannel };
-                newList.AddRange(channelConversations.Where(c => c.Id != channel.Id));
-                channelConversations = newList;
+                // PERFORMANCE: Using helper method (move to top pattern)
+                MoveItemToTop(ref channelConversations, updatedChannel, c => c.Id == channel.Id);
 
                 if (!isCurrentChannel && !isMyMessage)
                 {
@@ -321,7 +319,6 @@ public partial class Messages
                     {
                         var index = directMessages.IndexOf(message);
                         directMessages[index] = editedMessage;
-                        InvalidateMessageCache();
                         needsStateUpdate = true;
 
                         // Son mesaj idisə conversation list-i də yenilə
@@ -334,14 +331,21 @@ public partial class Messages
 
                     // Reply preview-ları yenilə
                     // Bu mesaja reply edilib idisə, o reply-ın preview-unu da dəyiş
+                    bool replyPreviewsUpdated = false;
                     for (int i = 0; i < directMessages.Count; i++)
                     {
                         var msg = directMessages[i];
                         if (msg.ReplyToMessageId == editedMessage.Id && msg.ReplyToContent != editedMessage.Content)
                         {
                             directMessages[i] = msg with { ReplyToContent = editedMessage.Content };
-                            InvalidateMessageCache();
+                            replyPreviewsUpdated = true;
                         }
+                    }
+
+                    // PERFORMANCE: Invalidate cache once after all updates (was called in loop)
+                    if (message != null || replyPreviewsUpdated)
+                    {
+                        InvalidateMessageCache();
                     }
                 }
 
@@ -391,7 +395,6 @@ public partial class Messages
                     {
                         var index = directMessages.IndexOf(message);
                         directMessages[index] = deletedMessage;
-                        InvalidateMessageCache();
                         needsStateUpdate = true;
 
                         // Reply preview-ları yenilə
@@ -401,9 +404,11 @@ public partial class Messages
                             if (msg.ReplyToMessageId == deletedMessage.Id)
                             {
                                 directMessages[i] = msg with { ReplyToContent = "This message was deleted" };
-                                InvalidateMessageCache();
                             }
                         }
+
+                        // PERFORMANCE: Invalidate cache once after all updates (was called in loop)
+                        InvalidateMessageCache();
                     }
                 }
 
@@ -457,7 +462,6 @@ public partial class Messages
                         };
 
                         channelMessages[index] = updatedMessage;
-                        InvalidateMessageCache();
                         needsStateUpdate = true;
 
                         if (IsLastMessageInChannel(editedMessage.ChannelId, updatedMessage.Id))
@@ -468,14 +472,21 @@ public partial class Messages
                     }
 
                     // Reply preview-ları yenilə
+                    bool replyPreviewsUpdated = false;
                     for (int i = 0; i < channelMessages.Count; i++)
                     {
                         var msg = channelMessages[i];
                         if (msg.ReplyToMessageId == editedMessage.Id && msg.ReplyToContent != editedMessage.Content)
                         {
                             channelMessages[i] = msg with { ReplyToContent = editedMessage.Content };
-                            InvalidateMessageCache();
+                            replyPreviewsUpdated = true;
                         }
+                    }
+
+                    // PERFORMANCE: Invalidate cache once after all updates (was called in loop)
+                    if (message != null || replyPreviewsUpdated)
+                    {
+                        InvalidateMessageCache();
                     }
                 }
 
@@ -521,18 +532,20 @@ public partial class Messages
                     {
                         var index = channelMessages.IndexOf(message);
                         channelMessages[index] = deletedMessage;
-                        InvalidateMessageCache();
                         needsStateUpdate = true;
 
+                        // Reply preview-ları yenilə
                         for (int i = 0; i < channelMessages.Count; i++)
                         {
                             var msg = channelMessages[i];
                             if (msg.ReplyToMessageId == deletedMessage.Id)
                             {
                                 channelMessages[i] = msg with { ReplyToContent = "This message was deleted" };
-                                InvalidateMessageCache();
                             }
                         }
+
+                        // PERFORMANCE: Invalidate cache once after all updates (was called in loop)
+                        InvalidateMessageCache();
                     }
                 }
 
@@ -588,23 +601,12 @@ public partial class Messages
             }
 
             // Conversation list status-u yenilə
-            var conversation = directConversations.FirstOrDefault(c => c.Id == conversationId);
-            if (conversation != null && conversation.LastMessageSenderId == currentUserId)
-            {
-                var updatedConversation = conversation with
-                {
-                    LastMessageStatus = "Read"
-                };
-
-                // Yeni list yaradırıq ki cache invalidate olsun (ReferenceEquals)
-                var index = directConversations.IndexOf(conversation);
-                if (index >= 0)
-                {
-                    var newList = new List<DirectConversationDto>(directConversations);
-                    newList[index] = updatedConversation;
-                    directConversations = newList;
-                }
-            }
+            // PERFORMANCE: Using helper method (eliminated duplicate pattern)
+            UpdateListItemWhere(
+                ref directConversations,
+                c => c.Id == conversationId && c.LastMessageSenderId == currentUserId,
+                c => c with { LastMessageStatus = "Read" }
+            );
 
             StateHasChanged();
         });
@@ -622,12 +624,14 @@ public partial class Messages
 
             if (selectedChannelId.HasValue && selectedChannelId.Value == channelId)
             {
+                // PERFORMANCE: Convert to HashSet for O(1) lookup (was O(n) in loop)
+                var messageIdSet = new HashSet<Guid>(messageIds);
                 var updatedList = new List<ChannelMessageDto>(channelMessages);
 
                 for (int i = 0; i < updatedList.Count; i++)
                 {
                     var message = updatedList[i];
-                    if (messageIds.Contains(message.Id))
+                    if (messageIdSet.Contains(message.Id))
                     {
                         // Sender özünü ReadBy-a əlavə etməməli
                         if (message.SenderId == userId)
@@ -662,7 +666,7 @@ public partial class Messages
             if (channel != null &&
                 channel.LastMessageSenderId == currentUserId &&
                 channel.LastMessageId.HasValue &&
-                messageIds.Contains(channel.LastMessageId.Value))
+                messageIds.Contains(channel.LastMessageId.Value)) // Note: Original list used here is fine (single lookup)
             {
                 var lastMessageInView = channelMessages.FirstOrDefault(m => m.Id == channel.LastMessageId.Value);
 
@@ -684,16 +688,13 @@ public partial class Messages
                     newStatus = "Delivered";
                 }
 
-                var updatedChannel = channel with { LastMessageStatus = newStatus };
-                // Yeni list yaradırıq ki cache invalidate olsun (ReferenceEquals)
-                var index = channelConversations.IndexOf(channel);
-                if (index >= 0)
-                {
-                    var newList = new List<ChannelDto>(channelConversations);
-                    newList[index] = updatedChannel;
-                    channelConversations = newList;
-                    updated = true;
-                }
+                // PERFORMANCE: Using helper method (eliminated duplicate pattern)
+                UpdateListItemWhere(
+                    ref channelConversations,
+                    ch => ch.Id == channelId,
+                    ch => ch with { LastMessageStatus = newStatus }
+                );
+                updated = true;
             }
 
             if (updated)

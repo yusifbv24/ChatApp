@@ -63,8 +63,9 @@ public partial class Messages
     {
         userSearchQuery = e.Value?.ToString() ?? string.Empty;
 
-        // Əvvəlki axtarışı ləğv et
+        // PERFORMANCE: Dispose old CancellationTokenSource to prevent memory leak
         _searchCts?.Cancel();
+        _searchCts?.Dispose();
         _searchCts = new CancellationTokenSource();
         var token = _searchCts.Token;
 
@@ -186,49 +187,29 @@ public partial class Messages
     }
 
     /// <summary>
-    /// Mesaja scroll et və highlight et.
+    /// PERFORMANCE: Mesaja scroll et və highlight et.
+    /// OPTIMIZED: Artıq LoadMore loop yoxdur - NavigateToMessageAsync əvvəlcə GetMessagesAround ilə yükləyir.
+    /// Bu metod yalnız scroll və highlight edir.
     ///
-    /// LOGIC:
-    /// 1. Mesaj yüklənib? Yoxsa - LoadMore çağır
-    /// 2. Maksimum 20 cəhd (20*50=1000 mesaj)
-    /// 3. Mesaj tapıldıqda - JS ilə scroll və highlight
+    /// DEPRECATED OLD LOGIC (Removed):
+    /// - LoadMore loop (inefficient: 20*50=1000 mesaj yüklə və axtar)
+    ///
+    /// NEW LOGIC:
+    /// - Sadəcə scroll və highlight (NavigateToMessageAsync artıq mesajı yüklədiyindən)
     /// </summary>
     private async Task ScrollToAndHighlightMessage(Guid messageId)
     {
         try
         {
-            // Mesaj artıq yüklənib?
-            bool messageExists = isDirectMessage
-                ? directMessages.Any(m => m.Id == messageId)
-                : channelMessages.Any(m => m.Id == messageId);
+            // DOM tam render olana qədər gözlə
+            await Task.Delay(100);
 
-            // Tapılana qədər daha çox mesaj yüklə
-            int maxAttempts = 20;
-            int attempts = 0;
-
-            while (!messageExists && hasMoreMessages && attempts < maxAttempts)
-            {
-                await LoadMoreMessages();
-                attempts++;
-
-                messageExists = isDirectMessage
-                    ? directMessages.Any(m => m.Id == messageId)
-                    : channelMessages.Any(m => m.Id == messageId);
-
-                StateHasChanged();
-                await Task.Delay(50); // DOM update üçün gözlə
-            }
-
-            if (messageExists)
-            {
-                // DOM tam render olana qədər gözlə
-                await Task.Delay(100);
-                // JS ilə scroll və highlight
-                await JS.InvokeVoidAsync("chatAppUtils.scrollToMessageAndHighlight", $"message-{messageId}");
-            }
+            // JS ilə scroll və highlight
+            await JS.InvokeVoidAsync("chatAppUtils.scrollToMessageAndHighlight", $"message-{messageId}");
         }
         catch
         {
+            // Scroll error silently ignore (element not found, etc.)
         }
     }
 
@@ -319,6 +300,7 @@ public partial class Messages
     /// <summary>
     /// Conversation-u local olaraq yenilə.
     /// Son mesaj göndərildikdə çağrılır.
+    /// PERFORMANCE: Using helper method (eliminated duplicate pattern)
     /// </summary>
     private void UpdateConversationLocally(Guid conversationId, string lastMessage, DateTime messageTime)
     {
@@ -332,17 +314,14 @@ public partial class Messages
                 LastMessageSenderId = currentUserId
             };
 
-            // Yeni list yaradırıq ki cache invalidate olsun (ReferenceEquals)
-            var newList = new List<DirectConversationDto>(directConversations.Count) { updatedConversation };
-            newList.AddRange(directConversations.Where(c => c.Id != conversationId));
-            directConversations = newList;
-
+            MoveItemToTop(ref directConversations, updatedConversation, c => c.Id == conversationId);
             StateHasChanged();
         }
     }
 
     /// <summary>
     /// Channel-ı local olaraq yenilə.
+    /// PERFORMANCE: Using helper method (eliminated duplicate pattern)
     /// </summary>
     private void UpdateChannelLocally(Guid channelId, string lastMessage, DateTime messageTime, string? senderName = null)
     {
@@ -356,11 +335,7 @@ public partial class Messages
                 LastMessageSenderId = currentUserId
             };
 
-            // Yeni list yaradırıq ki cache invalidate olsun (ReferenceEquals)
-            var newList = new List<ChannelDto>(channelConversations.Count) { updatedChannel };
-            newList.AddRange(channelConversations.Where(c => c.Id != channelId));
-            channelConversations = newList;
-
+            MoveItemToTop(ref channelConversations, updatedChannel, c => c.Id == channelId);
             StateHasChanged();
         }
     }
@@ -368,123 +343,65 @@ public partial class Messages
     /// <summary>
     /// Conversation-un son mesaj content-ini yenilə.
     /// Edit/delete zamanı çağrılır.
+    /// PERFORMANCE: Using helper method (eliminated duplicate pattern)
     /// </summary>
     private void UpdateConversationLastMessage(Guid conversationId, string newContent)
     {
-        var convIndex = directConversations.FindIndex(c => c.Id == conversationId);
-        if (convIndex >= 0)
-        {
-            var conv = directConversations[convIndex];
-            // Yeni list yaradırıq ki cache invalidate olsun (ReferenceEquals)
-            var newList = new List<DirectConversationDto>(directConversations);
-            newList[convIndex] = conv with { LastMessageContent = newContent };
-            directConversations = newList;
-        }
+        UpdateListItemWhere(
+            ref directConversations,
+            c => c.Id == conversationId,
+            c => c with { LastMessageContent = newContent }
+        );
     }
 
     /// <summary>
     /// Channel-ın son mesaj content-ini yenilə.
+    /// PERFORMANCE: Using helper method (eliminated duplicate pattern)
     /// </summary>
     private void UpdateChannelLastMessage(Guid channelId, string newContent, string? senderName = null)
     {
-        var channelIndex = channelConversations.FindIndex(c => c.Id == channelId);
-        if (channelIndex >= 0)
-        {
-            var channel = channelConversations[channelIndex];
-            // Yeni list yaradırıq ki cache invalidate olsun (ReferenceEquals)
-            var newList = new List<ChannelDto>(channelConversations);
-            newList[channelIndex] = channel with { LastMessageContent = newContent };
-            channelConversations = newList;
-        }
+        UpdateListItemWhere(
+            ref channelConversations,
+            c => c.Id == channelId,
+            c => c with { LastMessageContent = newContent }
+        );
     }
 
     /// <summary>
     /// Mesajdan file preview string-ini çıxarır (conversation list üçün).
     /// Sadə format: [Image], [File]
+    /// PERFORMANCE: Merged duplicate methods (DirectMessageDto overload)
     /// </summary>
-    private string GetFilePreview(DirectMessageDto message)
+    private static string GetFilePreview(DirectMessageDto message)
     {
-        if (message.FileId != null)
-        {
-            if (message.FileContentType != null && message.FileContentType.StartsWith("image/"))
-            {
-                return string.IsNullOrWhiteSpace(message.Content) ? "[Image]" : $"[Image] {message.Content}";
-            }
-
-            return string.IsNullOrWhiteSpace(message.Content) ? "[File]" : $"[File] {message.Content}";
-        }
-        return message.Content;
+        return GetFilePreviewInternal(message.FileId, message.FileContentType, message.Content);
     }
 
     /// <summary>
     /// Mesajdan file preview string-ini çıxarır (conversation list üçün).
     /// Sadə format: [Image], [File]
+    /// PERFORMANCE: Merged duplicate methods (ChannelMessageDto overload)
     /// </summary>
     private string GetFilePreview(ChannelMessageDto message)
     {
-        if (message.FileId != null)
-        {
-            if (message.FileContentType != null && message.FileContentType.StartsWith("image/"))
-            {
-                return string.IsNullOrWhiteSpace(message.Content) ? "[Image]" : $"[Image] {message.Content}";
-            }
-
-            return string.IsNullOrWhiteSpace(message.Content) ? "[File]" : $"[File] {message.Content}";
-        }
-        return message.Content;
+        return GetFilePreviewInternal(message.FileId, message.FileContentType, message.Content);
     }
 
     /// <summary>
-    /// File type-a görə emoji və label qaytarır.
+    /// PERFORMANCE: Internal shared implementation for GetFilePreview (eliminates code duplication)
     /// </summary>
-    private string GetFileTypePrefix(string? contentType, string? fileName)
+    private static string GetFilePreviewInternal(string? fileId, string? fileContentType, string content)
     {
-        // Content type-a görə
-        if (!string.IsNullOrEmpty(contentType))
+        if (fileId != null)
         {
-            if (contentType == "application/pdf")
-                return "📄 PDF";
-
-            if (contentType == "application/vnd.ms-excel" ||
-                contentType == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-                return "📊 Excel";
-
-            if (contentType == "application/msword" ||
-                contentType == "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
-                return "📝 Word";
-
-            if (contentType == "application/vnd.ms-powerpoint" ||
-                contentType == "application/vnd.openxmlformats-officedocument.presentationml.presentation")
-                return "📽️ PowerPoint";
-
-            if (contentType.StartsWith("video/"))
-                return "🎥 Video";
-
-            if (contentType.StartsWith("audio/"))
-                return "🎵 Audio";
-
-            if (contentType == "application/zip" || contentType == "application/x-rar-compressed")
-                return "🗜️ Archive";
-        }
-
-        // Extension-a görə fallback
-        if (!string.IsNullOrEmpty(fileName))
-        {
-            var ext = System.IO.Path.GetExtension(fileName).ToLowerInvariant();
-            return ext switch
+            if (fileContentType != null && fileContentType.StartsWith("image/"))
             {
-                ".pdf" => "📄 PDF",
-                ".xls" or ".xlsx" => "📊 Excel",
-                ".doc" or ".docx" => "📝 Word",
-                ".ppt" or ".pptx" => "📽️ PowerPoint",
-                ".zip" or ".rar" or ".7z" => "🗜️ Archive",
-                ".mp4" or ".avi" or ".mov" => "🎥 Video",
-                ".mp3" or ".wav" or ".flac" => "🎵 Audio",
-                _ => "📎 File"
-            };
-        }
+                return string.IsNullOrWhiteSpace(content) ? "[Image]" : $"[Image] {content}";
+            }
 
-        return "📎 File";
+            return string.IsNullOrWhiteSpace(content) ? "[File]" : $"[File] {content}";
+        }
+        return content;
     }
 
     /// <summary>
@@ -652,6 +569,42 @@ public partial class Messages
         catch
         {
             return [];
+        }
+    }
+
+    #endregion
+
+    #region List Update Helpers - List yeniləmə helper-ləri
+
+    /// <summary>
+    /// PERFORMANCE: Generic list update helper - move item to top.
+    /// Creates new list with updated item at position 0.
+    /// Used for conversation/channel list sorting (most recent first).
+    ///
+    /// NOTE: Message list-lər IN-PLACE mutation istifadə edir (directMessages[i] = ...) + InvalidateMessageCache()
+    /// Bu helper yalnız conversation/channel list-lər üçündür (ReferenceEquals pattern)
+    /// </summary>
+    private static void MoveItemToTop<T>(ref List<T> list, T updatedItem, Func<T, bool> predicate)
+    {
+        var newList = new List<T>(list.Count) { updatedItem };
+        newList.AddRange(list.Where(item => !predicate(item)));
+        list = newList;
+    }
+
+    /// <summary>
+    /// PERFORMANCE: Generic list update helper - update by predicate.
+    /// Finds item by predicate, updates it, and invalidates cache.
+    /// </summary>
+    private static void UpdateListItemWhere<T>(ref List<T> list, Func<T, bool> predicate, Func<T, T> updateFunc)
+    {
+        var index = list.FindIndex(item => predicate(item));
+        if (index >= 0)
+        {
+            var newList = new List<T>(list)
+            {
+                [index] = updateFunc(list[index])
+            };
+            list = newList;
         }
     }
 

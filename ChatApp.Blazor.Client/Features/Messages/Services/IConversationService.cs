@@ -28,6 +28,11 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
 
         Task<Result<Guid>> SendMessageAsync(Guid conversationId, string content, string? fileId = null, Guid? replyToMessageId = null, bool isForwarded = false, Dictionary<string, Guid>? mentionedUsers = null);
 
+        /// <summary>
+        /// Sends multiple messages in a single batch (for multi-file uploads).
+        /// </summary>
+        Task<Result<List<Guid>>> SendBatchMessagesAsync(Guid conversationId, BatchSendMessagesRequest request);
+
 
         Task<Result> EditMessageAsync(Guid conversationId, Guid messageId, string newContent);
 

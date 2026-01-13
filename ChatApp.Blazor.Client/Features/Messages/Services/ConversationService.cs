@@ -53,7 +53,7 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
         public async Task<Result<List<DirectMessageDto>>> GetMessagesAroundAsync(
             Guid conversationId,
             Guid messageId,
-            int count = 50)
+            int count = 30)
         {
             return await _apiClient.GetAsync<List<DirectMessageDto>>(
                 $"/api/conversations/{conversationId}/messages/around/{messageId}?count={count}");
@@ -160,6 +160,23 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
         }
 
 
+
+        /// <summary>
+        /// Sends multiple messages in a single batch (for multi-file uploads).
+        /// </summary>
+        public async Task<Result<List<Guid>>> SendBatchMessagesAsync(Guid conversationId, BatchSendMessagesRequest request)
+        {
+            var response = await _apiClient.PostAsync<List<Guid>>(
+                $"/api/conversations/{conversationId}/messages/batch",
+                request);
+
+            if (response.IsSuccess)
+            {
+                return Result.Success(response.Value!);
+            }
+
+            return Result.Failure<List<Guid>>(response.Error ?? "Failed to send batch messages");
+        }
 
         public async Task<Result<Guid>> SendMessageAsync(
             Guid conversationId,

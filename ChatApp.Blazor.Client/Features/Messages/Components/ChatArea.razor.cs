@@ -965,7 +965,7 @@ public partial class ChatArea : IAsyncDisposable
         newMessagesCount = 0;
         StateHasChanged();
 
-        // Parent-də clear+reload et (ən son 50 mesaj yüklənir)
+        // Parent-də clear+reload et (ən son 30 mesaj yüklənir)
         await OnScrollToBottom.InvokeAsync();
 
         // Focus input

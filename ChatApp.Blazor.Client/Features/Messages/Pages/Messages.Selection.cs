@@ -142,19 +142,17 @@ public partial class Messages
                     AppState.DecrementUnreadMessages(conversation.UnreadCount);
                 }
 
-                // Yeni list yaradırıq ki cache invalidate olsun (ReferenceEquals)
-                var index = directConversations.IndexOf(conversation);
-                if (index >= 0)
-                {
-                    var newList = new List<DirectConversationDto>(directConversations);
-                    newList[index] = conversation with
+                // PERFORMANCE: Using helper method (eliminated duplicate pattern)
+                UpdateListItemWhere(
+                    ref directConversations,
+                    c => c.Id == conversation.Id,
+                    c => c with
                     {
                         UnreadCount = 0,
                         HasUnreadMentions = false,
                         FirstUnreadMessageId = null // Clear after reading
-                    };
-                    directConversations = newList;
-                }
+                    }
+                );
             }
 
             // STATE RESET
@@ -251,9 +249,9 @@ public partial class Messages
                     LoadFavoriteDirectMessages()
                 );
 
-                // Dinamik count hesabla: UnreadCount əsasında (minimum 50, maksimum 200)
+                // Dinamik count hesabla: UnreadCount əsasında (minimum 30, maksimum 100)
                 // Əgər 30+ unread mesaj varsa bütün unread mesajları yükləmək üçün count artırılır
-                int messageCount = Math.Max(50, Math.Min(200, conversation.UnreadCount * 2 + 20));
+                int messageCount = Math.Max(30, Math.Min(100, conversation.UnreadCount * 2 + 20));
 
                 // First unread mesajının ətrafındakı mesajları yüklə və scroll et
                 await NavigateToMessageAsync(conversation.FirstUnreadMessageId.Value, messageCount);
@@ -464,18 +462,16 @@ public partial class Messages
                 {
                     AppState.DecrementUnreadMessages(channel.UnreadCount);
                 }
-                // Yeni list yaradırıq ki cache invalidate olsun (ReferenceEquals)
-                var index = channelConversations.IndexOf(channel);
-                if (index >= 0)
-                {
-                    var newList = new List<ChannelDto>(channelConversations);
-                    newList[index] = channel with
+                // PERFORMANCE: Using helper method (eliminated duplicate pattern)
+                UpdateListItemWhere(
+                    ref channelConversations,
+                    ch => ch.Id == channel.Id,
+                    ch => ch with
                     {
                         UnreadCount = 0,
                         FirstUnreadMessageId = null // Clear after reading
-                    };
-                    channelConversations = newList;
-                }
+                    }
+                );
             }
 
             // STATE RESET
@@ -513,16 +509,21 @@ public partial class Messages
             // Draft yüklə
             currentDraft = LoadDraft(null, channel.Id);
 
-            // ADMIN YOXLAMASI
+            // ADMIN YOXLAMASI və MENTION DATA
             // Channel yaradıcısı avtomatik admin-dir
             isChannelAdmin = channel.CreatedBy == currentUserId;
             currentUserChannelRole = isChannelAdmin ? ChannelMemberRole.Owner : ChannelMemberRole.Member;
 
-            // Yaradıcı deyilsə, role-u yoxla
-            if (!isChannelAdmin)
+            // Mention data: Channel üçün member-lər (@All MessageInput-da dinamik əlavə olunur)
+            currentConversationPartner = null; // Channel-da conversation partner yoxdur
+            currentChannelMembers = new List<MentionUserDto>();
+
+            // PERFORMANCE: Fetch channel details once (was called twice: admin check + mentions)
+            var channelDetails = await ChannelService.GetChannelAsync(channel.Id);
+            if (channelDetails.IsSuccess && channelDetails.Value != null)
             {
-                var channelDetails = await ChannelService.GetChannelAsync(channel.Id);
-                if (channelDetails.IsSuccess && channelDetails.Value != null)
+                // Yaradıcı deyilsə, role-u yoxla (admin check)
+                if (!isChannelAdmin)
                 {
                     var currentMember = channelDetails.Value.Members.FirstOrDefault(m => m.UserId == currentUserId);
                     if (currentMember != null)
@@ -532,17 +533,9 @@ public partial class Messages
                                         currentMember.Role == ChannelMemberRole.Owner;
                     }
                 }
-            }
 
-            // Mention data: Channel üçün member-lər (@All MessageInput-da dinamik əlavə olunur)
-            currentConversationPartner = null; // Channel-da conversation partner yoxdur
-            currentChannelMembers = new List<MentionUserDto>();
-
-            // Channel member-lərini əlavə et (GetChannelAsync-dan gəlir)
-            var channelDetailsForMentions = await ChannelService.GetChannelAsync(channel.Id);
-            if (channelDetailsForMentions.IsSuccess && channelDetailsForMentions.Value != null)
-            {
-                var memberDtos = channelDetailsForMentions.Value.Members
+                // Channel member-lərini mention üçün əlavə et
+                var memberDtos = channelDetails.Value.Members
                     .Where(m => m.UserId != currentUserId) // Özünü çıxar
                     .Select(m => new MentionUserDto
                     {
@@ -569,9 +562,9 @@ public partial class Messages
                     LoadFavoriteChannelMessages()
                 );
 
-                // Dinamik count hesabla: UnreadCount əsasında (minimum 50, maksimum 200)
+                // Dinamik count hesabla: UnreadCount əsasında (minimum 30, maksimum 100)
                 // Əgər 30+ unread mesaj varsa bütün unread mesajları yükləmək üçün count artırılır
-                int messageCount = Math.Max(50, Math.Min(200, channel.UnreadCount * 2 + 20));
+                int messageCount = Math.Max(30, Math.Min(100, channel.UnreadCount * 2 + 20));
 
                 // First unread mesajının ətrafındakı mesajları yüklə və scroll et
                 await NavigateToMessageAsync(channel.FirstUnreadMessageId.Value, messageCount);
@@ -764,7 +757,7 @@ public partial class Messages
 
     /// <summary>
     /// "Load More" düyməsi basıldıqda çağrılır (yuxarı scroll - köhnə mesajlar).
-    /// Bitrix pattern: Həmişə 50 mesaj yüklənir.
+    /// PAGINATION STANDARD: Həmişə 30 mesaj yüklənir (consistent everywhere).
     /// </summary>
     private async Task LoadMoreMessages()
     {
@@ -915,8 +908,8 @@ public partial class Messages
     /// Mesaj yüklənmiş mesajlar arasındadırsa scroll edir,
     /// yoxdursa GetMessagesAround ilə mesajın ətrafını yükləyir.
     /// </summary>
-    /// <param name="count">GetMessagesAround count parametri (default 50, FirstUnreadMessage üçün dinamik hesablanır)</param>
-    private async Task NavigateToMessageAsync(Guid messageId, int count = 50)
+    /// <param name="count">GetMessagesAround count parametri (default 30, FirstUnreadMessage üçün dinamik hesablanır)</param>
+    private async Task NavigateToMessageAsync(Guid messageId, int count = 30)
     {
         // 1. Mesaj artıq yüklənibsə - sadəcə scroll et
         if (isDirectMessage)
@@ -1093,7 +1086,7 @@ public partial class Messages
     /// <summary>
     /// Ən aşağıya scroll edir (Scroll to Bottom).
     /// HƏMIŞƏ clear + reload (conversation switch kimi davranır).
-    /// Harada olursan ol, ən son 50 mesaj yüklənir.
+    /// Harada olursan ol, ən son 30 mesaj yüklənir.
     /// </summary>
     private async Task ScrollToBottomAsync()
     {

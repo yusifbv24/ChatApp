@@ -9,12 +9,12 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
             Guid conversationId,
             string searchTerm,
             int page = 1,
-            int pageSize = 50);
+            int pageSize = 30);
 
         Task<Result<SearchResultsDto>> SearchInChannelAsync(
             Guid channelId,
             string searchTerm,
             int page = 1,
-            int pageSize = 50);
+            int pageSize = 30);
     }
 }

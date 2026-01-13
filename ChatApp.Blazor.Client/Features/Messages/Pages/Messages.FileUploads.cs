@@ -122,8 +122,8 @@ public partial class Messages
     }
 
     /// <summary>
-    /// Direct message-lər üçün fayllarla mesaj göndərir.
-    /// Hər fayl üçün ayrı mesaj yaradılır.
+    /// PERFORMANCE: Direct message-lər üçün fayllarla mesaj göndərir.
+    /// Batch API istifadə edərək bütün mesajları bir request-də göndərir (N request → 1 request).
     /// </summary>
     private async Task SendDirectMessagesWithFiles(
         List<(bool IsSuccess, string? FileId, SelectedFile File)> uploadResults,
@@ -131,26 +131,40 @@ public partial class Messages
     {
         if (!selectedConversationId.HasValue) return;
 
-        // İlk mesajda mətn var (əgər user yazdısa), qalanları boş content ilə göndər
-        for (int i = 0; i < uploadResults.Count; i++)
-        {
-            var (_, fileId, file) = uploadResults[i];
-            if (fileId == null) continue;
-
-            // Yalnız ilk mesajda user-in yazdığı mətn göndər, qalanları boş göndər
-            var content = (i == 0 && !string.IsNullOrWhiteSpace(messageText)) ? messageText : string.Empty;
-
-            var result = await ConversationService.SendMessageAsync(
-                selectedConversationId.Value,
-                content,
-                fileId: fileId,
-                replyToMessageId: null,
-                isForwarded: false);
-
-            if (result.IsSuccess)
+        // Build batch request
+        var batchMessages = uploadResults
+            .Where(r => !string.IsNullOrEmpty(r.FileId))
+            .Select((r, index) => new BatchMessageItem
             {
-                var messageTime = DateTime.UtcNow;
-                var messageId = result.Value;
+                Content = (index == 0 && !string.IsNullOrWhiteSpace(messageText)) ? messageText : string.Empty,
+                FileId = r.FileId
+            })
+            .ToList();
+
+        if (batchMessages.Count == 0) return;
+
+        var batchRequest = new BatchSendMessagesRequest
+        {
+            Messages = batchMessages,
+            ReplyToMessageId = null,
+            IsForwarded = false,
+            Mentions = []
+        };
+
+        // PERFORMANCE: Single API call instead of N calls
+        var result = await ConversationService.SendBatchMessagesAsync(selectedConversationId.Value, batchRequest);
+
+        if (result.IsSuccess && result.Value != null)
+        {
+            var messageIds = result.Value;
+            var messageTime = DateTime.UtcNow;
+
+            // Create optimistic UI messages for each
+            for (int i = 0; i < messageIds.Count && i < uploadResults.Count; i++)
+            {
+                var (_, fileId, file) = uploadResults[i];
+                var messageId = messageIds[i];
+                var content = (i == 0 && !string.IsNullOrWhiteSpace(messageText)) ? messageText : string.Empty;
 
                 // Pending read receipt yoxla
                 bool hasReadReceipt = pendingReadReceipts.TryGetValue(messageId, out _);
@@ -197,18 +211,39 @@ public partial class Messages
                 {
                     pendingReadReceipts.Remove(messageId);
                 }
+            }
 
-                // Conversation list-i yenilə (yalnız sonuncu mesaj üçün)
-                if (i == uploadResults.Count - 1)
-                {
-                    var preview = GetFilePreview(newMessage);
-                    UpdateConversationLocally(selectedConversationId.Value, preview, messageTime);
-                }
-            }
-            else
+            // Conversation list-i yenilə (sonuncu mesaj ilə)
+            if (uploadResults.Count > 0 && messageIds.Count > 0)
             {
-                ShowError($"Failed to send message with file {file.FileName}: {result.Error}");
+                var lastIndex = uploadResults.Count - 1;
+                var (_, lastFileId, lastFile) = uploadResults[lastIndex];
+                var lastContent = !string.IsNullOrWhiteSpace(messageText) ? messageText : string.Empty;
+
+                var lastMessage = new DirectMessageDto(
+                    messageIds[messageIds.Count - 1],
+                    selectedConversationId.Value,
+                    currentUserId,
+                    UserState.CurrentUser?.Username ?? "",
+                    UserState.CurrentUser?.DisplayName ?? "",
+                    UserState.CurrentUser?.AvatarUrl,
+                    recipientUserId,
+                    lastContent,
+                    lastFileId,
+                    lastFile.FileName,
+                    lastFile.ContentType,
+                    lastFile.SizeInBytes,
+                    false, false, false, false, 0,
+                    messageTime,
+                    null, null, null, null, null, null, null, null, false, null);
+
+                var preview = GetFilePreview(lastMessage);
+                UpdateConversationLocally(selectedConversationId.Value, preview, messageTime);
             }
+        }
+        else
+        {
+            ShowError($"Failed to send batch messages: {result.Error}");
         }
 
         StateHasChanged();

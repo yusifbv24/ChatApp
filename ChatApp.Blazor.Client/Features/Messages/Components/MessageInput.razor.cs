@@ -1076,36 +1076,6 @@ public partial class MessageInput : IAsyncDisposable
         }
     }
 
-    /// <summary>
-    /// Mesaj content-dən mention edilmiş istifadəçi ID-lərini extract edir.
-    /// @ simvolu olmadan yalnız ad ilə check edir.
-    /// </summary>
-    private List<Guid> ExtractMentionedUserIds(string messageContent)
-    {
-        var mentionedIds = new List<Guid>();
-
-        Console.WriteLine($"[DEBUG] ExtractMentionedUserIds called with message: '{messageContent}'");
-        Console.WriteLine($"[DEBUG] MentionedUsers dictionary count: {mentionedUsers.Count}");
-
-        // MentionedUsers dictionary-dən user adlarını tap
-        foreach (var mentionedUser in mentionedUsers)
-        {
-            Console.WriteLine($"[DEBUG] Checking if '{messageContent}' contains '{mentionedUser.Key}'");
-
-            // Mesaj content-də bu user adı varmı?
-            if (messageContent.Contains(mentionedUser.Key, StringComparison.OrdinalIgnoreCase))
-            {
-                Console.WriteLine($"[DEBUG] Found mention: {mentionedUser.Key} -> {mentionedUser.Value}");
-                if (!mentionedIds.Contains(mentionedUser.Value))
-                {
-                    mentionedIds.Add(mentionedUser.Value);
-                }
-            }
-        }
-
-        Console.WriteLine($"[DEBUG] Total mentioned IDs found: {mentionedIds.Count}");
-        return mentionedIds;
-    }
 
     #endregion
 
