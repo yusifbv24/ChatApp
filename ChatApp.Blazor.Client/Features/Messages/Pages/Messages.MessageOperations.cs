@@ -853,23 +853,8 @@ public partial class Messages
             var notesConversation = directConversations.FirstOrDefault(c => c.IsNotes);
             if (notesConversation != null)
             {
-                // Switch to Direct Messages tab if currently on Channels
-                if (!isDirectMessage)
-                {
-                    isDirectMessage = true;
-                    StateHasChanged();
-                }
-
-                // Select Notes conversation
-                selectedConversationId = notesConversation.Id;
-                selectedChannelId = null;
-                recipientName = "Notes";
-                recipientAvatarUrl = null;
-                isNotesConversation = true;
-
-                // Load messages
-                await LoadDirectMessages();
-                StateHasChanged();
+                // Use SelectDirectConversation for proper state management + scroll
+                await SelectDirectConversation(notesConversation);
             }
             return;
         }
@@ -883,67 +868,41 @@ public partial class Messages
 
             if (existingConversation != null)
             {
-                // Conversation exists, just select it
-                Console.WriteLine($"[DEBUG] Conversation exists: {existingConversation.Id}");
-
-                // Switch to Direct Messages tab if currently on Channels
-                if (!isDirectMessage)
-                {
-                    isDirectMessage = true;
-                    StateHasChanged();
-                }
-
-                // Select conversation - this will switch to Direct Message view
-                selectedConversationId = existingConversation.Id;
-                selectedChannelId = null;
-                recipientName = existingConversation.OtherUserDisplayName;
-                recipientAvatarUrl = existingConversation.OtherUserAvatarUrl;
-
-                // Load messages
-                await LoadDirectMessages();
-                StateHasChanged();
+                // Conversation exists, use SelectDirectConversation for proper state management + scroll
+                await SelectDirectConversation(existingConversation);
             }
             else
             {
-                // Start new conversation
-                Console.WriteLine($"[DEBUG] Starting new conversation with userId: {userId}");
-
-                // Get user info first
-                var userResult = await UserService.GetUserByIdAsync(userId);
-                if (!userResult.IsSuccess || userResult.Value == null)
-                {
-                    Console.WriteLine($"[ERROR] Failed to get user info: {userResult.Error}");
-                    return;
-                }
-
+                // Start new conversation (pending conversation until first message)
+                // Backend StartConversationAsync artıq user yoxlamasını edir
                 var result = await ConversationService.StartConversationAsync(userId);
 
                 if (result.IsSuccess && result.Value != Guid.Empty)
                 {
-                    Console.WriteLine($"[DEBUG] New conversation created: {result.Value}");
+                    // Reload conversation list (yeni conversation əlavə olunub)
+                    await LoadConversationsAndChannels();
 
-                    // Switch to Direct Messages tab
-                    isDirectMessage = true;
-
-                    // Select the new conversation (will be empty until first message)
-                    selectedConversationId = result.Value;
-                    selectedChannelId = null;
-                    recipientName = userResult.Value.DisplayName;
-                    recipientAvatarUrl = userResult.Value.AvatarUrl;
-
-                    directMessages.Clear(); // Empty message list for new conversation
-                    pinnedDirectMessages.Clear(); // Clear pinned messages for new conversation
-                    StateHasChanged();
+                    // Find the new conversation
+                    var newConversation = directConversations.FirstOrDefault(c => c.Id == result.Value);
+                    if (newConversation != null)
+                    {
+                        // Use SelectDirectConversation for proper state management + scroll
+                        await SelectDirectConversation(newConversation);
+                    }
                 }
                 else
                 {
-                    Console.WriteLine($"[ERROR] Failed to start conversation: {result.Error}");
+                    // Backend error (user not found, silinib, və s.)
+                    errorMessage = result.Error ?? "Failed to start conversation with this user";
+                    StateHasChanged();
                 }
             }
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[ERROR] HandleMentionClick exception: {ex.Message}");
+            errorMessage = "An error occurred while opening the conversation";
+            StateHasChanged();
         }
     }
 

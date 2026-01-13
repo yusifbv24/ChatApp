@@ -1389,6 +1389,19 @@
     color: rgba(255, 255, 255, 0.9);
 }
 
+/* @All mention - klik disabled, yalnız rəngli göstər */
+.message-mention.mention-all {
+    cursor: default;
+}
+
+.message-mention.mention-all:hover {
+    color: var(--primary-600); /* Hover zamanı dəyişməz */
+}
+
+.own-bubble .message-mention.mention-all:hover {
+    color: var(--white); /* Own bubble-da da dəyişməz */
+}
+
 /* Message footer row - contains reactions and footer side by side */
 .message-footer-row {
     display: flex;

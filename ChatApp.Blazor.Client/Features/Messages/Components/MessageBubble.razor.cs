@@ -568,6 +568,12 @@ public partial class MessageBubble : IAsyncDisposable
                     {
                         mentionNames[m.UserName] = m.UserId.Value;
                     }
+                    else
+                    {
+                        // @All mention (UserId = null)
+                        // Guid.Empty istifadə edirik ki, render olunsun, lakin klik disabled olsun
+                        mentionNames[m.UserName] = Guid.Empty;
+                    }
                 }
             }
         }
@@ -576,12 +582,17 @@ public partial class MessageBubble : IAsyncDisposable
         foreach (var mention in mentionNames)
         {
             // Exact word match - case insensitive
-            var pattern = $@"\b({System.Text.RegularExpressions.Regex.Escape(mention.Key)})\b";
-            encoded = System.Text.RegularExpressions.Regex.Replace(
+            var pattern = $@"\b({Regex.Escape(mention.Key)})\b";
+
+            // @All üçün xüsusi stil (cursor default, klik disabled)
+            var cursorStyle = mention.Value == Guid.Empty ? "default" : "pointer";
+            var clickableClass = mention.Value == Guid.Empty ? "message-mention mention-all" : "message-mention";
+
+            encoded = Regex.Replace(
                 encoded,
                 pattern,
-                match => $"<span class=\"message-mention\" data-userid=\"{mention.Value}\" data-username=\"{mention.Key}\" style=\"cursor: pointer;\">{mention.Key}</span>",
-                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                match => $"<span class=\"{clickableClass}\" data-userid=\"{mention.Value}\" data-username=\"{mention.Key}\" style=\"cursor: {cursorStyle};\">{mention.Key}</span>",
+                RegexOptions.IgnoreCase);
         }
 
         // URL-ləri anchor tag-larla əvəz et
@@ -1071,12 +1082,17 @@ public partial class MessageBubble : IAsyncDisposable
 
     /// <summary>
     /// JS-dən çağrılan metod - mention-a klik edildikdə.
+    /// @All mention (Guid.Empty) ignore edilir.
     /// </summary>
     [JSInvokable]
     public async Task HandleMentionClickFromJS(string userIdStr)
     {
         if (Guid.TryParse(userIdStr, out var userId))
         {
+            // @All mention-u ignore et (Guid.Empty)
+            if (userId == Guid.Empty)
+                return;
+
             await OnMentionClick.InvokeAsync(userId);
         }
     }
