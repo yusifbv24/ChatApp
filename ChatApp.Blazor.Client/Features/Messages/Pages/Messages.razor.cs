@@ -762,10 +762,12 @@ public partial class Messages : IAsyncDisposable
 
         // Debounce timer-ı dispose et
         _stateChangeDebounceTimer?.Dispose();
+        _stateChangeDebounceTimer = null; // SAFEGUARD: Prevent dangling reference
 
         // MEMORY LEAK FIX: Dispose search CancellationTokenSource
         _searchCts?.Cancel();
         _searchCts?.Dispose();
+        _searchCts = null; // SAFEGUARD: Prevent dangling reference
 
         // Page visibility subscription-ı dispose et
         if (visibilitySubscription != null)
@@ -775,9 +777,11 @@ public partial class Messages : IAsyncDisposable
                 await visibilitySubscription.InvokeVoidAsync("dispose");
                 await visibilitySubscription.DisposeAsync();
             }
-            catch
+            catch (Exception ex)
             {
-                // Dispose error-larını ignore et
+                // LOW PRIORITY FIX: Log teardown errors for debugging
+                // Dispose error-larını ignore et, lakin debug üçün log
+                System.Diagnostics.Debug.WriteLine($"[Messages] Page visibility teardown error: {ex.Message}");
             }
         }
 

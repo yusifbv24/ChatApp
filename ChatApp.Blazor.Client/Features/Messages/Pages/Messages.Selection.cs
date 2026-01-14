@@ -111,9 +111,10 @@ public partial class Messages
                 {
                     await ChannelService.MarkAsReadAsync(selectedChannelId.Value);
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // Mark as read error-ları kritik deyil
+                    // LOW PRIORITY FIX: Log error for debugging
+                    System.Diagnostics.Debug.WriteLine($"[Messages] Mark channel as read on switch error: {ex.Message}");
                 }
             }
 
@@ -190,7 +191,11 @@ public partial class Messages
                         channelConversations = channelConversations.ToList();
                     }
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    // LOW PRIORITY FIX: Log for debugging
+                    System.Diagnostics.Debug.WriteLine($"[Messages] Operation error: {ex.Message}");
+                }
             }
 
             // Auto-unmark read later (conversation)
@@ -206,7 +211,11 @@ public partial class Messages
                         directConversations = directConversations.ToList();
                     }
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    // LOW PRIORITY FIX: Log for debugging
+                    System.Diagnostics.Debug.WriteLine($"[Messages] Operation error: {ex.Message}");
+                }
             }
 
             // Unread separator reset
@@ -412,7 +421,11 @@ public partial class Messages
                 {
                     await ChannelService.MarkAsReadAsync(selectedChannelId.Value);
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    // LOW PRIORITY FIX: Log for debugging
+                    System.Diagnostics.Debug.WriteLine($"[Messages] Operation error: {ex.Message}");
+                }
 
                 // Auto-unmark read later
                 if (lastReadLaterMessageId.HasValue && lastReadLaterMessageIdOnEntry.HasValue)
@@ -427,7 +440,11 @@ public partial class Messages
                             channelConversations = channelConversations.ToList();
                         }
                     }
-                    catch { }
+                    catch (Exception ex)
+                {
+                    // LOW PRIORITY FIX: Log for debugging
+                    System.Diagnostics.Debug.WriteLine($"[Messages] Operation error: {ex.Message}");
+                }
                 }
             }
 
@@ -462,7 +479,11 @@ public partial class Messages
                             directConversations = directConversations.ToList();
                         }
                     }
-                    catch { }
+                    catch (Exception ex)
+                {
+                    // LOW PRIORITY FIX: Log for debugging
+                    System.Diagnostics.Debug.WriteLine($"[Messages] Operation error: {ex.Message}");
+                }
                 }
 
                 await SignalRService.LeaveConversationAsync(selectedConversationId.Value);

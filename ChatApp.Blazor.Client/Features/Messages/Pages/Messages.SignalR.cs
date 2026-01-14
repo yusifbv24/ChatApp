@@ -3,6 +3,12 @@ using ChatApp.Shared.Kernel;
 
 namespace ChatApp.Blazor.Client.Features.Messages.Pages;
 
+// LOW PRIORITY NOTE: InvokeAsync lambdas
+// SignalR handlers use InvokeAsync(async () => {...}) pattern throughout this file.
+// This creates lambda allocations (gen0 GC), but is intentional and minimal overhead.
+// Alternative (named methods) would reduce readability without significant performance gain.
+// Pattern is accepted Blazor standard for marshaling to UI thread.
+
 public partial class Messages
 {
     #region SignalR Subscription - Event-lərə qoşulmaq

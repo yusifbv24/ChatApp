@@ -604,9 +604,11 @@ public partial class Messages
             }
             InvalidateMessageCache();
         }
-        catch
+        catch (Exception ex)
         {
-            // Mark-as-read error-ları kritik deyil
+            // LOW PRIORITY FIX: Log mark-as-read errors for debugging
+            // Mark-as-read error-ları kritik deyil (backend ola bilər ki, artıq read-dir)
+            System.Diagnostics.Debug.WriteLine($"[Messages] Mark DM as read error: {ex.Message}");
         }
     }
 
@@ -634,9 +636,11 @@ public partial class Messages
             }
             // SignalR event-i UI-ı avtomatik yeniləyəcək
         }
-        catch
+        catch (Exception ex)
         {
-            // Mark-as-read error-ları kritik deyil
+            // LOW PRIORITY FIX: Log mark-as-read errors for debugging
+            // Mark-as-read error-ları kritik deyil (backend ola bilər ki, artıq read-dir)
+            System.Diagnostics.Debug.WriteLine($"[Messages] Mark channel as read error: {ex.Message}");
         }
     }
 
