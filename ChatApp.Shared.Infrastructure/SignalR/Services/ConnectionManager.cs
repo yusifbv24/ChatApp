@@ -14,28 +14,39 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Services
         private readonly ConcurrentDictionary<string, Guid> _connectionToUser = new();
 
         // userId => list of connectionIds (one user can have multiple devices)
+        // CRITICAL FIX: Removed global lock - use ConcurrentDictionary atomic operations
         private readonly ConcurrentDictionary<Guid, List<UserConnection>> _userConnections = new();
 
-        private readonly object _lock = new();
+        // Per-user locks for thread-safe list modifications (prevents lock contention)
+        private readonly ConcurrentDictionary<Guid, SemaphoreSlim> _userLocks = new();
 
-        public Task AddConnectionAsync(Guid userId, string connectionId)
+        public async Task AddConnectionAsync(Guid userId, string connectionId)
         {
-            lock (_lock)
+            // Add connectionId => userId mapping (thread-safe, no lock needed)
+            _connectionToUser[connectionId] = userId;
+
+            // Get or create per-user lock (prevents global lock contention)
+            var userLock = _userLocks.GetOrAdd(userId, _ => new SemaphoreSlim(1, 1));
+            await userLock.WaitAsync();
+            try
             {
-                // Add connectionId => userId mapping
-                _connectionToUser[connectionId] = userId;
-
-                // Add to user's connection list
-                if(!_userConnections.TryGetValue(userId,out var connections)) // If there are not any connection with this UserId
-                {
-                    connections = [];
-                    _userConnections[userId] = connections;
-                }
-
-                var userConnection = new UserConnection(userId, connectionId);
-                connections.Add(userConnection);
+                // Add to user's connection list using atomic AddOrUpdate
+                _userConnections.AddOrUpdate(
+                    userId,
+                    // Factory: create new list if user doesn't exist
+                    _ => new List<UserConnection> { new UserConnection(userId, connectionId) },
+                    // Update: add to existing list
+                    (_, existingList) =>
+                    {
+                        existingList.Add(new UserConnection(userId, connectionId));
+                        return existingList;
+                    }
+                );
             }
-            return Task.CompletedTask;
+            finally
+            {
+                userLock.Release();
+            }
         }
 
 
@@ -93,25 +104,36 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Services
         }
 
 
-        public Task RemoveConnectionAsync(string connectionId)
+        public async Task RemoveConnectionAsync(string connectionId)
         {
-            lock (_lock)
+            // Remove connectionId => userId mapping (thread-safe, no lock needed)
+            if (_connectionToUser.TryRemove(connectionId, out var userId))
             {
-                if(_connectionToUser.TryRemove(connectionId, out var userId))
+                // Get per-user lock (prevents race condition when removing connections)
+                var userLock = _userLocks.GetOrAdd(userId, _ => new SemaphoreSlim(1, 1));
+                await userLock.WaitAsync();
+                try
                 {
-                    if(_userConnections.TryGetValue(userId,out var connections))
+                    if (_userConnections.TryGetValue(userId, out var connections))
                     {
                         connections.RemoveAll(c => c.ConnectionId == connectionId);
 
-                        // If user has no more connections, remove from dictionary
+                        // If user has no more connections, remove from dictionary AND cleanup lock
                         if (connections.Count == 0)
                         {
                             _userConnections.TryRemove(userId, out _);
+
+                            // Cleanup: remove per-user lock to prevent memory leak
+                            _userLocks.TryRemove(userId, out var lockToDispose);
+                            lockToDispose?.Dispose();
                         }
                     }
                 }
+                finally
+                {
+                    userLock.Release();
+                }
             }
-            return Task.CompletedTask;
         }
     }
 }

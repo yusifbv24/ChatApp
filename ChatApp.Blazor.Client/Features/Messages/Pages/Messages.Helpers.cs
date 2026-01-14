@@ -28,6 +28,7 @@ public partial class Messages
     {
         showNewConversationDialog = false;
         _searchCts?.Cancel();
+        _searchCts?.Dispose(); // MEMORY LEAK FIX: Dispose after cancel
         StateHasChanged();
     }
 
@@ -525,13 +526,20 @@ public partial class Messages
             _stateChangeDebounceTimer?.Dispose();
             _stateChangeDebounceTimer = new Timer(_ =>
             {
+                // MEMORY LEAK FIX: Don't invoke if component is disposed
+                if (_disposed) return;
+
                 InvokeAsync(() =>
                 {
                     lock (_stateChangeLock)
                     {
                         _stateChangeScheduled = false;
                     }
-                    StateHasChanged();
+                    // RACE CONDITION FIX: Check disposed again after lock
+                    if (!_disposed)
+                    {
+                        StateHasChanged();
+                    }
                 });
             }, null, 50, Timeout.Infinite);
         }

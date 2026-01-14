@@ -121,6 +121,13 @@ public partial class Messages
             isPendingConversation = false;
             pendingUser = null;
 
+            // MEMORY LEAK FIX: Clear processed message IDs to prevent unbounded growth
+            processedMessageIds.Clear();
+
+            // MEMORY LEAK FIX: Clear typing state collections
+            conversationTypingState.Clear();
+            channelTypingUsers.Clear();
+
             // LAZY LOADING: Əvvəlki group-dan leave
             if (selectedConversationId.HasValue && selectedConversationId.Value != conversation.Id)
             {
@@ -426,6 +433,13 @@ public partial class Messages
 
             isPendingConversation = false;
             pendingUser = null;
+
+            // MEMORY LEAK FIX: Clear processed message IDs to prevent unbounded growth
+            processedMessageIds.Clear();
+
+            // MEMORY LEAK FIX: Clear typing state collections
+            conversationTypingState.Clear();
+            channelTypingUsers.Clear();
 
             // LAZY LOADING: Leave previous groups
             if (selectedChannelId.HasValue && selectedChannelId.Value != channel.Id)

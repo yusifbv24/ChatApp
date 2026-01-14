@@ -61,7 +61,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                             message.CreatedAtUtc,
                             message.EditedAtUtc,
                             message.PinnedAtUtc,
-                            ReactionCount = _context.ChannelMessageReactions.Count(r => r.MessageId == message.Id),
+                            // REMOVED: ReactionCount N+1 query - now batched
                             message.ReplyToMessageId,
                             ReplyToContent = repliedMessage != null && !repliedMessage.IsDeleted ? repliedMessage.Content : null,
                             ReplyToIsDeleted = repliedMessage != null && repliedMessage.IsDeleted,
@@ -131,7 +131,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 result.IsEdited,
                 result.IsDeleted,
                 result.IsPinned,
-                result.ReactionCount,
+                reactions.Sum(r => r.Count), // ReactionCount from loaded reactions
                 result.CreatedAtUtc,
                 result.EditedAtUtc,
                 result.PinnedAtUtc,
@@ -188,7 +188,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                             message.CreatedAtUtc,
                             message.EditedAtUtc,
                             message.PinnedAtUtc,
-                            ReactionCount = _context.ChannelMessageReactions.Count(r => r.MessageId == message.Id),
+                            // REMOVED: ReactionCount N+1 query - now batched
                             message.ReplyToMessageId,
                             ReplyToContent = repliedMessage != null && !repliedMessage.IsDeleted ? repliedMessage.Content : null,
                             ReplyToIsDeleted = repliedMessage != null && repliedMessage.IsDeleted,
@@ -197,14 +197,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                             ReplyToFileName = repliedFile != null ? repliedFile.OriginalFileName : null,
                             ReplyToFileContentType = repliedFile != null ? repliedFile.ContentType : null,
                             message.IsForwarded,
-                            // Calculate read status using ChannelMessageRead table
-                            ReadByCount = _context.ChannelMessageReads.Count(r =>
-                                r.MessageId == message.Id &&
-                                r.UserId != message.SenderId),
-                            TotalMemberCount = _context.ChannelMembers.Count(m =>
-                                m.ChannelId == channelId &&
-                                m.IsActive &&
-                                m.UserId != message.SenderId),
+                            // REMOVED: ReadByCount and TotalMemberCount N+1 queries - now batched
                             // Get list of users who have read this message from ChannelMessageRead table
                             ReadBy = _context.ChannelMessageReads
                                 .Where(r => r.MessageId == message.Id && r.UserId != message.SenderId)
@@ -235,8 +228,31 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 .Take(pageSize)
                 .ToListAsync(cancellationToken);
 
-            // Load mentions grouped by message
+            // PERFORMANCE FIX: Batch load counts to eliminate N+1 queries (was 3 subqueries per message)
             var messageIds = results.Select(r => r.Id).ToList();
+
+            // TotalMemberCount is same for all messages in channel (count once, not N times)
+            var totalMemberCount = await _context.ChannelMembers
+                .Where(m => m.ChannelId == channelId && m.IsActive)
+                .CountAsync(cancellationToken) - 1; // Exclude sender
+
+            // Batch load reaction counts
+            var reactionCounts = await _context.ChannelMessageReactions
+                .Where(r => messageIds.Contains(r.MessageId))
+                .GroupBy(r => r.MessageId)
+                .Select(g => new { MessageId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.MessageId, x => x.Count, cancellationToken);
+
+            // Batch load read counts (exclude sender from read count)
+            var readCounts = await _context.ChannelMessageReads
+                .Where(r => messageIds.Contains(r.MessageId))
+                .Join(_context.ChannelMessages, r => r.MessageId, m => m.Id, (r, m) => new { r, m })
+                .Where(x => x.r.UserId != x.m.SenderId)
+                .GroupBy(x => x.r.MessageId)
+                .Select(g => new { MessageId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.MessageId, x => x.Count, cancellationToken);
+
+            // Load mentions grouped by message
             var mentions = await _context.ChannelMessageMentions
                 .Where(m => messageIds.Contains(m.MessageId))
                 .GroupBy(m => m.MessageId)
@@ -248,13 +264,17 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 .ToDictionaryAsync(x => x.MessageId, x => x.Mentions, cancellationToken);
 
             return results.Select(r => {
+                // Get batched counts
+                var readByCount = readCounts.TryGetValue(r.Id, out var rbc) ? rbc : 0;
+                var reactionCount = reactionCounts.TryGetValue(r.Id, out var rc) ? rc : 0;
+
                 // Calculate Status based on ReadByCount and TotalMemberCount
                 MessageStatus status;
-                if (r.TotalMemberCount == 0)
+                if (totalMemberCount == 0)
                     status = MessageStatus.Sent; // No other members
-                else if (r.ReadByCount >= r.TotalMemberCount)
+                else if (readByCount >= totalMemberCount)
                     status = MessageStatus.Read; // Everyone read
-                else if (r.ReadByCount > 0)
+                else if (readByCount > 0)
                     status = MessageStatus.Delivered; // At least one person read
                 else
                     status = MessageStatus.Sent; // No one read yet
@@ -274,7 +294,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                     r.IsEdited,
                     r.IsDeleted,
                     r.IsPinned,
-                    r.ReactionCount,
+                    reactionCount,
                     r.CreatedAtUtc,
                     r.EditedAtUtc,
                     r.PinnedAtUtc,
@@ -285,11 +305,11 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                     r.ReplyToFileName,
                     r.ReplyToFileContentType,
                     r.IsForwarded,
-                    r.ReadByCount,
-                    r.TotalMemberCount,
+                    readByCount,
+                    totalMemberCount,
                     r.ReadBy, // Include the ReadBy list for real-time read receipt updates
                     r.Reactions, // Include reactions grouped by emoji
-                    mentions.ContainsKey(r.Id) ? mentions[r.Id] : null, // Include mentions from dictionary
+                    mentions.TryGetValue(r.Id, out List<ChannelMessageMentionDto>? value) ? value : null, // Include mentions from dictionary
                     status // Set Status based on read receipts
                 );
             }).ToList();
@@ -344,7 +364,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                                message.CreatedAtUtc,
                                message.EditedAtUtc,
                                message.PinnedAtUtc,
-                               ReactionCount = _context.ChannelMessageReactions.Count(r => r.MessageId == message.Id),
+                               // REMOVED: ReactionCount N+1 query - now batched
                                message.ReplyToMessageId,
                                ReplyToContent = repliedMessage != null && !repliedMessage.IsDeleted ? repliedMessage.Content : null,
                                ReplyToIsDeleted = repliedMessage != null && repliedMessage.IsDeleted,
@@ -353,13 +373,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                                ReplyToFileName = repliedFile != null ? repliedFile.OriginalFileName : null,
                                ReplyToFileContentType = repliedFile != null ? repliedFile.ContentType : null,
                                message.IsForwarded,
-                               ReadByCount = _context.ChannelMessageReads.Count(r =>
-                                   r.MessageId == message.Id &&
-                                   r.UserId != message.SenderId),
-                               TotalMemberCount = _context.ChannelMembers.Count(m =>
-                                   m.ChannelId == channelId &&
-                                   m.IsActive &&
-                                   m.UserId != message.SenderId),
+                               // REMOVED: ReadByCount and TotalMemberCount N+1 queries - now batched
                                ReadBy = _context.ChannelMessageReads
                                    .Where(r => r.MessageId == message.Id && r.UserId != message.SenderId)
                                    .Select(r => r.UserId)
@@ -396,8 +410,31 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 .OrderBy(m => m.CreatedAtUtc)
                 .ToList();
 
-            // Load mentions grouped by message
+            // PERFORMANCE FIX: Batch load counts to eliminate N+1 queries (was 3 subqueries per message)
             var messageIds = results.Select(r => r.Id).ToList();
+
+            // TotalMemberCount is same for all messages in channel (count once, not N times)
+            var totalMemberCount = await _context.ChannelMembers
+                .Where(m => m.ChannelId == channelId && m.IsActive)
+                .CountAsync(cancellationToken) - 1; // Exclude sender
+
+            // Batch load reaction counts
+            var reactionCounts = await _context.ChannelMessageReactions
+                .Where(r => messageIds.Contains(r.MessageId))
+                .GroupBy(r => r.MessageId)
+                .Select(g => new { MessageId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.MessageId, x => x.Count, cancellationToken);
+
+            // Batch load read counts (exclude sender from read count)
+            var readCounts = await _context.ChannelMessageReads
+                .Where(r => messageIds.Contains(r.MessageId))
+                .Join(_context.ChannelMessages, r => r.MessageId, m => m.Id, (r, m) => new { r, m })
+                .Where(x => x.r.UserId != x.m.SenderId)
+                .GroupBy(x => x.r.MessageId)
+                .Select(g => new { MessageId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.MessageId, x => x.Count, cancellationToken);
+
+            // Load mentions grouped by message
             var mentions = await _context.ChannelMessageMentions
                 .Where(m => messageIds.Contains(m.MessageId))
                 .GroupBy(m => m.MessageId)
@@ -409,13 +446,17 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 .ToDictionaryAsync(x => x.MessageId, x => x.Mentions, cancellationToken);
 
             return results.Select(r => {
+                // Get batched counts
+                var readByCount = readCounts.TryGetValue(r.Id, out var rbc) ? rbc : 0;
+                var reactionCount = reactionCounts.TryGetValue(r.Id, out var rc) ? rc : 0;
+
                 // Calculate Status based on ReadByCount and TotalMemberCount
                 MessageStatus status;
-                if (r.TotalMemberCount == 0)
+                if (totalMemberCount == 0)
                     status = MessageStatus.Sent;
-                else if (r.ReadByCount >= r.TotalMemberCount)
+                else if (readByCount >= totalMemberCount)
                     status = MessageStatus.Read;
-                else if (r.ReadByCount > 0)
+                else if (readByCount > 0)
                     status = MessageStatus.Delivered;
                 else
                     status = MessageStatus.Sent;
@@ -435,7 +476,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                     r.IsEdited,
                     r.IsDeleted,
                     r.IsPinned,
-                    r.ReactionCount,
+                    reactionCount,
                     r.CreatedAtUtc,
                     r.EditedAtUtc,
                     r.PinnedAtUtc,
@@ -446,8 +487,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                     r.ReplyToFileName,
                     r.ReplyToFileContentType,
                     r.IsForwarded,
-                    r.ReadByCount,
-                    r.TotalMemberCount,
+                    readByCount,
+                    totalMemberCount,
                     r.ReadBy,
                     r.Reactions,
                     mentions.ContainsKey(r.Id) ? mentions[r.Id] : null,
@@ -494,7 +535,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                             message.CreatedAtUtc,
                             message.EditedAtUtc,
                             message.PinnedAtUtc,
-                            ReactionCount = _context.ChannelMessageReactions.Count(r => r.MessageId == message.Id),
+                            // REMOVED: ReactionCount N+1 query - now batched
                             message.ReplyToMessageId,
                             ReplyToContent = repliedMessage != null && !repliedMessage.IsDeleted ? repliedMessage.Content : null,
                             ReplyToIsDeleted = repliedMessage != null && repliedMessage.IsDeleted,
@@ -503,13 +544,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                             ReplyToFileName = repliedFile != null ? repliedFile.OriginalFileName : null,
                             ReplyToFileContentType = repliedFile != null ? repliedFile.ContentType : null,
                             message.IsForwarded,
-                            ReadByCount = _context.ChannelMessageReads.Count(r =>
-                                r.MessageId == message.Id &&
-                                r.UserId != message.SenderId),
-                            TotalMemberCount = _context.ChannelMembers.Count(m =>
-                                m.ChannelId == channelId &&
-                                m.IsActive &&
-                                m.UserId != message.SenderId),
+                            // REMOVED: ReadByCount and TotalMemberCount N+1 queries - now batched
                             ReadBy = _context.ChannelMessageReads
                                 .Where(r => r.MessageId == message.Id && r.UserId != message.SenderId)
                                 .Select(r => r.UserId)
@@ -533,8 +568,31 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 .Take(limit)
                 .ToListAsync(cancellationToken);
 
-            // Load mentions grouped by message
+            // PERFORMANCE FIX: Batch load counts to eliminate N+1 queries (was 3 subqueries per message)
             var messageIds = results.Select(r => r.Id).ToList();
+
+            // TotalMemberCount is same for all messages in channel (count once, not N times)
+            var totalMemberCount = await _context.ChannelMembers
+                .Where(m => m.ChannelId == channelId && m.IsActive)
+                .CountAsync(cancellationToken) - 1; // Exclude sender
+
+            // Batch load reaction counts
+            var reactionCounts = await _context.ChannelMessageReactions
+                .Where(r => messageIds.Contains(r.MessageId))
+                .GroupBy(r => r.MessageId)
+                .Select(g => new { MessageId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.MessageId, x => x.Count, cancellationToken);
+
+            // Batch load read counts (exclude sender from read count)
+            var readCounts = await _context.ChannelMessageReads
+                .Where(r => messageIds.Contains(r.MessageId))
+                .Join(_context.ChannelMessages, r => r.MessageId, m => m.Id, (r, m) => new { r, m })
+                .Where(x => x.r.UserId != x.m.SenderId)
+                .GroupBy(x => x.r.MessageId)
+                .Select(g => new { MessageId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.MessageId, x => x.Count, cancellationToken);
+
+            // Load mentions grouped by message
             var mentions = await _context.ChannelMessageMentions
                 .Where(m => messageIds.Contains(m.MessageId))
                 .GroupBy(m => m.MessageId)
@@ -546,13 +604,17 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 .ToDictionaryAsync(x => x.MessageId, x => x.Mentions, cancellationToken);
 
             return results.Select(r => {
+                // Get batched counts
+                var readByCount = readCounts.TryGetValue(r.Id, out var rbc) ? rbc : 0;
+                var reactionCount = reactionCounts.TryGetValue(r.Id, out var rc) ? rc : 0;
+
                 // Calculate Status based on ReadByCount and TotalMemberCount
                 MessageStatus status;
-                if (r.TotalMemberCount == 0)
+                if (totalMemberCount == 0)
                     status = MessageStatus.Sent;
-                else if (r.ReadByCount >= r.TotalMemberCount)
+                else if (readByCount >= totalMemberCount)
                     status = MessageStatus.Read;
-                else if (r.ReadByCount > 0)
+                else if (readByCount > 0)
                     status = MessageStatus.Delivered;
                 else
                     status = MessageStatus.Sent;
@@ -572,7 +634,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                     r.IsEdited,
                     r.IsDeleted,
                     r.IsPinned,
-                    r.ReactionCount,
+                    reactionCount,
                     r.CreatedAtUtc,
                     r.EditedAtUtc,
                     r.PinnedAtUtc,
@@ -583,11 +645,11 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                     r.ReplyToFileName,
                     r.ReplyToFileContentType,
                     r.IsForwarded,
-                    r.ReadByCount,
-                    r.TotalMemberCount,
+                    readByCount,
+                    totalMemberCount,
                     r.ReadBy,
                     r.Reactions,
-                    mentions.ContainsKey(r.Id) ? mentions[r.Id] : null,
+                    mentions.TryGetValue(r.Id, out List<ChannelMessageMentionDto>? value) ? value : null,
                     status
                 );
             }).ToList();
@@ -631,7 +693,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                             message.CreatedAtUtc,
                             message.EditedAtUtc,
                             message.PinnedAtUtc,
-                            ReactionCount = _context.ChannelMessageReactions.Count(r => r.MessageId == message.Id),
+                            // REMOVED: ReactionCount N+1 query - now batched
                             message.ReplyToMessageId,
                             ReplyToContent = repliedMessage != null && !repliedMessage.IsDeleted ? repliedMessage.Content : null,
                             ReplyToIsDeleted = repliedMessage != null && repliedMessage.IsDeleted,
@@ -640,13 +702,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                             ReplyToFileName = repliedFile != null ? repliedFile.OriginalFileName : null,
                             ReplyToFileContentType = repliedFile != null ? repliedFile.ContentType : null,
                             message.IsForwarded,
-                            ReadByCount = _context.ChannelMessageReads.Count(r =>
-                                r.MessageId == message.Id &&
-                                r.UserId != message.SenderId),
-                            TotalMemberCount = _context.ChannelMembers.Count(m =>
-                                m.ChannelId == channelId &&
-                                m.IsActive &&
-                                m.UserId != message.SenderId),
+                            // REMOVED: ReadByCount and TotalMemberCount N+1 queries - now batched
                             ReadBy = _context.ChannelMessageReads
                                 .Where(r => r.MessageId == message.Id && r.UserId != message.SenderId)
                                 .Select(r => r.UserId)
@@ -670,8 +726,31 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 .Take(limit)
                 .ToListAsync(cancellationToken);
 
-            // Load mentions grouped by message
+            // PERFORMANCE FIX: Batch load counts to eliminate N+1 queries (was 3 subqueries per message)
             var messageIds = results.Select(r => r.Id).ToList();
+
+            // TotalMemberCount is same for all messages in channel (count once, not N times)
+            var totalMemberCount = await _context.ChannelMembers
+                .Where(m => m.ChannelId == channelId && m.IsActive)
+                .CountAsync(cancellationToken) - 1; // Exclude sender
+
+            // Batch load reaction counts
+            var reactionCounts = await _context.ChannelMessageReactions
+                .Where(r => messageIds.Contains(r.MessageId))
+                .GroupBy(r => r.MessageId)
+                .Select(g => new { MessageId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.MessageId, x => x.Count, cancellationToken);
+
+            // Batch load read counts (exclude sender from read count)
+            var readCounts = await _context.ChannelMessageReads
+                .Where(r => messageIds.Contains(r.MessageId))
+                .Join(_context.ChannelMessages, r => r.MessageId, m => m.Id, (r, m) => new { r, m })
+                .Where(x => x.r.UserId != x.m.SenderId)
+                .GroupBy(x => x.r.MessageId)
+                .Select(g => new { MessageId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.MessageId, x => x.Count, cancellationToken);
+
+            // Load mentions grouped by message
             var mentions = await _context.ChannelMessageMentions
                 .Where(m => messageIds.Contains(m.MessageId))
                 .GroupBy(m => m.MessageId)
@@ -683,13 +762,17 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 .ToDictionaryAsync(x => x.MessageId, x => x.Mentions, cancellationToken);
 
             return results.Select(r => {
+                // Get batched counts
+                var readByCount = readCounts.TryGetValue(r.Id, out var rbc) ? rbc : 0;
+                var reactionCount = reactionCounts.TryGetValue(r.Id, out var rc) ? rc : 0;
+
                 // Calculate Status based on ReadByCount and TotalMemberCount
                 MessageStatus status;
-                if (r.TotalMemberCount == 0)
+                if (totalMemberCount == 0)
                     status = MessageStatus.Sent;
-                else if (r.ReadByCount >= r.TotalMemberCount)
+                else if (readByCount >= totalMemberCount)
                     status = MessageStatus.Read;
-                else if (r.ReadByCount > 0)
+                else if (readByCount > 0)
                     status = MessageStatus.Delivered;
                 else
                     status = MessageStatus.Sent;
@@ -709,7 +792,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                     r.IsEdited,
                     r.IsDeleted,
                     r.IsPinned,
-                    r.ReactionCount,
+                    reactionCount,
                     r.CreatedAtUtc,
                     r.EditedAtUtc,
                     r.PinnedAtUtc,
@@ -720,11 +803,11 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                     r.ReplyToFileName,
                     r.ReplyToFileContentType,
                     r.IsForwarded,
-                    r.ReadByCount,
-                    r.TotalMemberCount,
+                    readByCount,
+                    totalMemberCount,
                     r.ReadBy,
                     r.Reactions,
-                    mentions.ContainsKey(r.Id) ? mentions[r.Id] : null,
+                    mentions.TryGetValue(r.Id, out List<ChannelMessageMentionDto>? value) ? value : null,
                     status
                 );
             }).ToList();

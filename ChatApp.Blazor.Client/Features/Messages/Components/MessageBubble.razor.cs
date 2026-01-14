@@ -663,6 +663,7 @@ public partial class MessageBubble : IAsyncDisposable
     private async Task HandleReactionIconHover()
     {
         showReactionPickerCts?.Cancel();
+        showReactionPickerCts?.Dispose();
         showReactionPickerCts = new CancellationTokenSource();
         var token = showReactionPickerCts.Token;
 
@@ -689,6 +690,7 @@ public partial class MessageBubble : IAsyncDisposable
     private async Task CancelReactionIconHover()
     {
         showReactionPickerCts?.Cancel();
+        showReactionPickerCts?.Dispose();
         showReactionPickerCts = new CancellationTokenSource();
         var token = showReactionPickerCts.Token;
 
@@ -721,6 +723,7 @@ public partial class MessageBubble : IAsyncDisposable
     private async Task HandleReactionPickerLeave()
     {
         showReactionPickerCts?.Cancel();
+        showReactionPickerCts?.Dispose();
         showReactionPickerCts = new CancellationTokenSource();
         var token = showReactionPickerCts.Token;
 
@@ -758,6 +761,7 @@ public partial class MessageBubble : IAsyncDisposable
     private async Task ScheduleHideReactionUsers()
     {
         hideReactionPanelCts?.Cancel();
+        hideReactionPanelCts?.Dispose();
         hideReactionPanelCts = new CancellationTokenSource();
         var token = hideReactionPanelCts.Token;
 

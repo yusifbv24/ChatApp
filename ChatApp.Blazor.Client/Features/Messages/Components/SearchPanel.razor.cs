@@ -104,6 +104,7 @@ public partial class SearchPanel : IAsyncDisposable
     {
         // Əvvəlki axtarışı ləğv et
         _searchCts?.Cancel();
+        _searchCts?.Dispose();
         _searchCts = new CancellationTokenSource();
         var token = _searchCts.Token;
 

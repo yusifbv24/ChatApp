@@ -85,7 +85,7 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                             message.CreatedAtUtc,
                             message.EditedAtUtc,
                             message.PinnedAtUtc,
-                            ReactionCount = _context.DirectMessageReactions.Count(r => r.MessageId == message.Id),
+                            // REMOVED: ReactionCount N+1 query - now batched below
                             message.ReplyToMessageId,
                             ReplyToContent = repliedMessage != null && !repliedMessage.IsDeleted ? repliedMessage.Content : null,
                             ReplyToIsDeleted = repliedMessage != null && repliedMessage.IsDeleted,
@@ -110,6 +110,9 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 ))
                 .ToListAsync(cancellationToken);
 
+            // PERFORMANCE FIX: Calculate reaction count from loaded reactions (eliminates N+1 query)
+            var reactionCount = reactions.Sum(r => r.Count);
+
             // Load mentions for this message
             var mentions = await _context.DirectMessageMentions
                 .Where(m => m.MessageId == id)
@@ -133,7 +136,7 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 result.IsDeleted,
                 result.IsRead,
                 result.IsPinned,
-                result.ReactionCount,
+                reactionCount,
                 result.CreatedAtUtc,
                 result.EditedAtUtc,
                 result.PinnedAtUtc,
@@ -190,7 +193,7 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                             message.CreatedAtUtc,
                             message.EditedAtUtc,
                             message.PinnedAtUtc,
-                            ReactionCount = _context.DirectMessageReactions.Count(r => r.MessageId == message.Id),
+                            // REMOVED: ReactionCount N+1 query - now batched below
                             message.ReplyToMessageId,
                             ReplyToContent = repliedMessage != null && !repliedMessage.IsDeleted ? repliedMessage.Content : null,
                             ReplyToIsDeleted = repliedMessage != null && repliedMessage.IsDeleted,
@@ -213,6 +216,14 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
 
             // Get message IDs for reactions and mentions lookup
             var messageIds = results.Select(r => r.Id).ToList();
+
+            // PERFORMANCE FIX: Batch load reaction counts (was N+1 query in line 193)
+            // This eliminates "Count(r => r.MessageId == message.Id)" subquery per message
+            var reactionCounts = await _context.DirectMessageReactions
+                .Where(r => messageIds.Contains(r.MessageId))
+                .GroupBy(r => r.MessageId)
+                .Select(g => new { MessageId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.MessageId, x => x.Count, cancellationToken);
 
             // Load reactions grouped by message
             var reactions = await _context.DirectMessageReactions
@@ -258,7 +269,7 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 r.IsDeleted,
                 r.IsRead,
                 r.IsPinned,
-                r.ReactionCount,
+                reactionCounts.TryGetValue(r.Id, out var count) ? count : 0, // PERFORMANCE FIX: Use batched count instead of r.ReactionCount
                 r.CreatedAtUtc,
                 r.EditedAtUtc,
                 r.PinnedAtUtc,
@@ -269,8 +280,8 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 r.ReplyToFileName,
                 r.ReplyToFileContentType,
                 r.IsForwarded,
-                reactions.ContainsKey(r.Id) ? reactions[r.Id] : null,
-                mentions.ContainsKey(r.Id) ? mentions[r.Id] : null,
+                reactions.TryGetValue(r.Id, out List<DirectMessageReactionDto>? value) ? value : null,
+                mentions.TryGetValue(r.Id, out List<MessageMentionDto>? value1) ? value1 : null,
                 r.IsRead ? MessageStatus.Read : MessageStatus.Sent // Set Status based on IsRead
             )).ToList();
         }
@@ -327,7 +338,7 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                                message.CreatedAtUtc,
                                message.EditedAtUtc,
                                message.PinnedAtUtc,
-                               ReactionCount = _context.DirectMessageReactions.Count(r => r.MessageId == message.Id),
+                               // REMOVED: ReactionCount N+1 query - now batched below
                                message.ReplyToMessageId,
                                ReplyToContent = repliedMessage != null && !repliedMessage.IsDeleted ? repliedMessage.Content : null,
                                ReplyToIsDeleted = repliedMessage != null && repliedMessage.IsDeleted,
@@ -359,6 +370,13 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
 
             // Get message IDs for reactions lookup
             var messageIds = results.Select(r => r.Id).ToList();
+
+            // PERFORMANCE FIX: Batch load reaction counts (eliminates N+1 query)
+            var reactionCounts = await _context.DirectMessageReactions
+                .Where(r => messageIds.Contains(r.MessageId))
+                .GroupBy(r => r.MessageId)
+                .Select(g => new { MessageId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.MessageId, x => x.Count, cancellationToken);
 
             // Load reactions grouped by message
             var reactions = await _context.DirectMessageReactions
@@ -404,7 +422,7 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 r.IsDeleted,
                 r.IsRead,
                 r.IsPinned,
-                r.ReactionCount,
+                reactionCounts.TryGetValue(r.Id, out var count) ? count : 0, // PERFORMANCE FIX: Use batched count
                 r.CreatedAtUtc,
                 r.EditedAtUtc,
                 r.PinnedAtUtc,
@@ -415,8 +433,8 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 r.ReplyToFileName,
                 r.ReplyToFileContentType,
                 r.IsForwarded,
-                reactions.ContainsKey(r.Id) ? reactions[r.Id] : null,
-                mentions.ContainsKey(r.Id) ? mentions[r.Id] : null,
+                reactions.TryGetValue(r.Id, out List<DirectMessageReactionDto>? value) ? value : null,
+                mentions.TryGetValue(r.Id, out List<MessageMentionDto>? value1) ? value1 : null,
                 r.IsRead ? MessageStatus.Read : MessageStatus.Sent // Set Status based on IsRead
             )).ToList();
         }
@@ -462,7 +480,7 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                             message.CreatedAtUtc,
                             message.EditedAtUtc,
                             message.PinnedAtUtc,
-                            ReactionCount = _context.DirectMessageReactions.Count(r => r.MessageId == message.Id),
+                            // REMOVED: ReactionCount N+1 query - now batched below
                             message.ReplyToMessageId,
                             ReplyToContent = repliedMessage != null && !repliedMessage.IsDeleted ? repliedMessage.Content : null,
                             ReplyToIsDeleted = repliedMessage != null && repliedMessage.IsDeleted,
@@ -480,6 +498,13 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
 
             // Get message IDs for reactions lookup
             var messageIds = results.Select(r => r.Id).ToList();
+
+            // PERFORMANCE FIX: Batch load reaction counts (eliminates N+1 query)
+            var reactionCounts = await _context.DirectMessageReactions
+                .Where(r => messageIds.Contains(r.MessageId))
+                .GroupBy(r => r.MessageId)
+                .Select(g => new { MessageId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.MessageId, x => x.Count, cancellationToken);
 
             // Load reactions grouped by message
             var reactions = await _context.DirectMessageReactions
@@ -525,7 +550,7 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 r.IsDeleted,
                 r.IsRead,
                 r.IsPinned,
-                r.ReactionCount,
+                reactionCounts.TryGetValue(r.Id, out var count) ? count : 0, // PERFORMANCE FIX: Use batched count
                 r.CreatedAtUtc,
                 r.EditedAtUtc,
                 r.PinnedAtUtc,
@@ -536,8 +561,8 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 r.ReplyToFileName,
                 r.ReplyToFileContentType,
                 r.IsForwarded,
-                reactions.ContainsKey(r.Id) ? reactions[r.Id] : null,
-                mentions.ContainsKey(r.Id) ? mentions[r.Id] : null,
+                reactions.TryGetValue(r.Id, out List<DirectMessageReactionDto>? value) ? value : null,
+                mentions.TryGetValue(r.Id, out List<MessageMentionDto>? value1) ? value1 : null,
                 r.IsRead ? MessageStatus.Read : MessageStatus.Sent // Set Status based on IsRead
             )).ToList();
         }
@@ -583,7 +608,7 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                             message.CreatedAtUtc,
                             message.EditedAtUtc,
                             message.PinnedAtUtc,
-                            ReactionCount = _context.DirectMessageReactions.Count(r => r.MessageId == message.Id),
+                            // REMOVED: ReactionCount N+1 query - now batched below
                             message.ReplyToMessageId,
                             ReplyToContent = repliedMessage != null && !repliedMessage.IsDeleted ? repliedMessage.Content : null,
                             ReplyToIsDeleted = repliedMessage != null && repliedMessage.IsDeleted,
@@ -601,6 +626,13 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
 
             // Get message IDs for reactions lookup
             var messageIds = results.Select(r => r.Id).ToList();
+
+            // PERFORMANCE FIX: Batch load reaction counts (eliminates N+1 query)
+            var reactionCounts = await _context.DirectMessageReactions
+                .Where(r => messageIds.Contains(r.MessageId))
+                .GroupBy(r => r.MessageId)
+                .Select(g => new { MessageId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.MessageId, x => x.Count, cancellationToken);
 
             // Load reactions grouped by message
             var reactions = await _context.DirectMessageReactions
@@ -646,7 +678,7 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 r.IsDeleted,
                 r.IsRead,
                 r.IsPinned,
-                r.ReactionCount,
+                reactionCounts.TryGetValue(r.Id, out var count) ? count : 0, // PERFORMANCE FIX: Use batched count
                 r.CreatedAtUtc,
                 r.EditedAtUtc,
                 r.PinnedAtUtc,
@@ -733,7 +765,7 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                               message.CreatedAtUtc,
                               message.EditedAtUtc,
                               message.PinnedAtUtc,
-                              ReactionCount = _context.DirectMessageReactions.Count(r => r.MessageId == message.Id),
+                              // REMOVED: ReactionCount N+1 query - now batched below
                               message.ReplyToMessageId,
                               ReplyToContent = repliedMessage != null && !repliedMessage.IsDeleted ? repliedMessage.Content : null,
                               ReplyToIsDeleted = repliedMessage != null && repliedMessage.IsDeleted,
@@ -746,6 +778,13 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
 
             // Get message IDs for reactions lookup
             var messageIds = results.Select(r => r.Id).ToList();
+
+            // PERFORMANCE FIX: Batch load reaction counts (eliminates N+1 query)
+            var reactionCounts = await _context.DirectMessageReactions
+                .Where(r => messageIds.Contains(r.MessageId))
+                .GroupBy(r => r.MessageId)
+                .Select(g => new { MessageId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.MessageId, x => x.Count, cancellationToken);
 
             // Load reactions grouped by message
             var reactions = await _context.DirectMessageReactions
@@ -791,7 +830,7 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 r.IsDeleted,
                 r.IsRead,
                 r.IsPinned,
-                r.ReactionCount,
+                reactionCounts.TryGetValue(r.Id, out var count) ? count : 0, // PERFORMANCE FIX: Use batched count
                 r.CreatedAtUtc,
                 r.EditedAtUtc,
                 r.PinnedAtUtc,
@@ -802,8 +841,8 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 r.ReplyToFileName,
                 r.ReplyToFileContentType,
                 r.IsForwarded,
-                reactions.ContainsKey(r.Id) ? reactions[r.Id] : null,
-                mentions.ContainsKey(r.Id) ? mentions[r.Id] : null,
+                reactions.TryGetValue(r.Id, out List<DirectMessageReactionDto>? value) ? value : null,
+                mentions.TryGetValue(r.Id, out List<MessageMentionDto>? value1) ? value1 : null,
                 r.IsRead ? MessageStatus.Read : MessageStatus.Sent // Set Status based on IsRead
             )).ToList();
         }

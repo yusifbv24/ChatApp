@@ -763,6 +763,10 @@ public partial class Messages : IAsyncDisposable
         // Debounce timer-ı dispose et
         _stateChangeDebounceTimer?.Dispose();
 
+        // MEMORY LEAK FIX: Dispose search CancellationTokenSource
+        _searchCts?.Cancel();
+        _searchCts?.Dispose();
+
         // Page visibility subscription-ı dispose et
         if (visibilitySubscription != null)
         {

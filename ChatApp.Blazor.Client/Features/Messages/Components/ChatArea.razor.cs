@@ -1520,8 +1520,9 @@ public partial class ChatArea : IAsyncDisposable
         addMemberError = null;
         addMemberSuccess = null;
 
-        // Əvvəlki axtarışı ləğv et
+        // Əvvəlki axtarışı ləğv et və dispose et (memory leak fix)
         _memberSearchCts?.Cancel();
+        _memberSearchCts?.Dispose();
         _memberSearchCts = new CancellationTokenSource();
         var token = _memberSearchCts.Token;
 
