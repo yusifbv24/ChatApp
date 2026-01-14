@@ -677,7 +677,21 @@ public partial class Messages : IAsyncDisposable
     {
         try
         {
-            // Username ilə user search et
+            // FIX: Self-mention check - Əgər öz adına mention edirsə, birbaşa Notes aç
+            if (UserState.CurrentUser != null &&
+                (username.Equals(UserState.Username, StringComparison.OrdinalIgnoreCase) ||
+                 username.Equals(UserState.DisplayName, StringComparison.OrdinalIgnoreCase)))
+            {
+                var notesConversation = directConversations.FirstOrDefault(c => c.IsNotes);
+                if (notesConversation != null)
+                {
+                    await SelectDirectConversation(notesConversation);
+                }
+                // FIX: No error if Notes not found (should always exist, but silently fail)
+                return;
+            }
+
+            // Username ilə user search et (other users üçün)
             var searchResult = await UserService.SearchUsersAsync(username);
 
             if (searchResult.IsSuccess && searchResult.Value != null && searchResult.Value.Count > 0)
@@ -689,25 +703,9 @@ public partial class Messages : IAsyncDisposable
 
                 if (user != null)
                 {
-                    // Self-mention: Open Notes conversation
-                    if (user.Id == currentUserId)
-                    {
-                        var notesConversation = directConversations.FirstOrDefault(c => c.IsNotes);
-                        if (notesConversation != null)
-                        {
-                            await SelectDirectConversation(notesConversation);
-                        }
-                        else
-                        {
-                            ShowError("Notes conversation not found");
-                        }
-                    }
-                    else
-                    {
-                        // Other user mention: Open conversation with them
-                        userSearchResults = searchResult.Value;
-                        await StartConversationWithUser(user.Id);
-                    }
+                    // Other user mention: Open conversation with them
+                    userSearchResults = searchResult.Value;
+                    await StartConversationWithUser(user.Id);
                 }
                 else
                 {
