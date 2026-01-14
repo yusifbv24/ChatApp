@@ -2,6 +2,7 @@
 using ChatApp.Modules.Channels.Application.Interfaces;
 using ChatApp.Modules.Channels.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using ChatApp.Shared.Kernel;
 
 namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
 {
@@ -68,7 +69,18 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                             ReplyToFileId = repliedMessage != null ? repliedMessage.FileId : null,
                             ReplyToFileName = repliedFile != null ? repliedFile.OriginalFileName : null,
                             ReplyToFileContentType = repliedFile != null ? repliedFile.ContentType : null,
-                            message.IsForwarded
+                            message.IsForwarded,
+                            ReadByCount = _context.ChannelMessageReads.Count(r =>
+                                r.MessageId == message.Id &&
+                                r.UserId != message.SenderId),
+                            TotalMemberCount = _context.ChannelMembers.Count(m =>
+                                m.ChannelId == message.ChannelId &&
+                                m.IsActive &&
+                                m.UserId != message.SenderId),
+                            ReadBy = _context.ChannelMessageReads
+                                .Where(r => r.MessageId == message.Id && r.UserId != message.SenderId)
+                                .Select(r => r.UserId)
+                                .ToList()
                         }).FirstOrDefaultAsync(cancellationToken);
 
             if (result == null)
@@ -79,6 +91,30 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 .Where(m => m.MessageId == id)
                 .Select(m => new ChannelMessageMentionDto(m.MentionedUserId, m.MentionedUserName, m.IsAllMention))
                 .ToListAsync(cancellationToken);
+
+            // Load reactions for this message
+            var reactions = await (from reaction in _context.ChannelMessageReactions
+                                  join reactionUser in _context.Set<UserReadModel>() on reaction.UserId equals reactionUser.Id
+                                  where reaction.MessageId == id
+                                  group new { reaction, reactionUser } by reaction.Reaction into g
+                                  select new ChannelMessageReactionDto(
+                                      g.Key,
+                                      g.Count(),
+                                      g.Select(x => x.reaction.UserId).ToList(),
+                                      g.Select(x => x.reactionUser.DisplayName).ToList(),
+                                      g.Select(x => x.reactionUser.AvatarUrl).ToList()
+                                  )).ToListAsync(cancellationToken);
+
+            // Calculate Status based on ReadByCount and TotalMemberCount
+            MessageStatus status;
+            if (result.TotalMemberCount == 0)
+                status = MessageStatus.Sent;
+            else if (result.ReadByCount >= result.TotalMemberCount)
+                status = MessageStatus.Read;
+            else if (result.ReadByCount > 0)
+                status = MessageStatus.Delivered;
+            else
+                status = MessageStatus.Sent;
 
             return new ChannelMessageDto(
                 result.Id,
@@ -106,7 +142,12 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 result.ReplyToFileName,
                 result.ReplyToFileContentType,
                 result.IsForwarded,
-                Mentions: mentions.Count > 0 ? mentions : null
+                result.ReadByCount,
+                result.TotalMemberCount,
+                result.ReadBy,
+                reactions.Count > 0 ? reactions : null,
+                mentions.Count > 0 ? mentions : null,
+                status
             );
         }
 
@@ -206,38 +247,52 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 })
                 .ToDictionaryAsync(x => x.MessageId, x => x.Mentions, cancellationToken);
 
-            return results.Select(r => new ChannelMessageDto(
-                r.Id,
-                r.ChannelId,
-                r.SenderId,
-                r.Username,
-                r.DisplayName,
-                r.AvatarUrl,
-                r.IsDeleted ? "This message was deleted" : r.Content, // SECURITY: Sanitize deleted content
-                r.FileId,
-                r.FileName,
-                r.FileContentType,
-                r.FileSizeInBytes,
-                r.IsEdited,
-                r.IsDeleted,
-                r.IsPinned,
-                r.ReactionCount,
-                r.CreatedAtUtc,
-                r.EditedAtUtc,
-                r.PinnedAtUtc,
-                r.ReplyToMessageId,
-                r.ReplyToIsDeleted ? "This message was deleted" : r.ReplyToContent, // SECURITY: Sanitize deleted reply content
-                r.ReplyToSenderName,
-                r.ReplyToFileId,
-                r.ReplyToFileName,
-                r.ReplyToFileContentType,
-                r.IsForwarded,
-                r.ReadByCount,
-                r.TotalMemberCount,
-                r.ReadBy, // Include the ReadBy list for real-time read receipt updates
-                r.Reactions, // Include reactions grouped by emoji
-                mentions.ContainsKey(r.Id) ? mentions[r.Id] : null // Include mentions from dictionary
-            )).ToList();
+            return results.Select(r => {
+                // Calculate Status based on ReadByCount and TotalMemberCount
+                MessageStatus status;
+                if (r.TotalMemberCount == 0)
+                    status = MessageStatus.Sent; // No other members
+                else if (r.ReadByCount >= r.TotalMemberCount)
+                    status = MessageStatus.Read; // Everyone read
+                else if (r.ReadByCount > 0)
+                    status = MessageStatus.Delivered; // At least one person read
+                else
+                    status = MessageStatus.Sent; // No one read yet
+
+                return new ChannelMessageDto(
+                    r.Id,
+                    r.ChannelId,
+                    r.SenderId,
+                    r.Username,
+                    r.DisplayName,
+                    r.AvatarUrl,
+                    r.IsDeleted ? "This message was deleted" : r.Content, // SECURITY: Sanitize deleted content
+                    r.FileId,
+                    r.FileName,
+                    r.FileContentType,
+                    r.FileSizeInBytes,
+                    r.IsEdited,
+                    r.IsDeleted,
+                    r.IsPinned,
+                    r.ReactionCount,
+                    r.CreatedAtUtc,
+                    r.EditedAtUtc,
+                    r.PinnedAtUtc,
+                    r.ReplyToMessageId,
+                    r.ReplyToIsDeleted ? "This message was deleted" : r.ReplyToContent, // SECURITY: Sanitize deleted reply content
+                    r.ReplyToSenderName,
+                    r.ReplyToFileId,
+                    r.ReplyToFileName,
+                    r.ReplyToFileContentType,
+                    r.IsForwarded,
+                    r.ReadByCount,
+                    r.TotalMemberCount,
+                    r.ReadBy, // Include the ReadBy list for real-time read receipt updates
+                    r.Reactions, // Include reactions grouped by emoji
+                    mentions.ContainsKey(r.Id) ? mentions[r.Id] : null, // Include mentions from dictionary
+                    status // Set Status based on read receipts
+                );
+            }).ToList();
         }
 
         public async Task<List<ChannelMessageDto>> GetMessagesAroundAsync(
@@ -341,37 +396,64 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 .OrderBy(m => m.CreatedAtUtc)
                 .ToList();
 
-            return results.Select(r => new ChannelMessageDto(
-                r.Id,
-                r.ChannelId,
-                r.SenderId,
-                r.Username,
-                r.DisplayName,
-                r.AvatarUrl,
-                r.IsDeleted ? "This message was deleted" : r.Content,
-                r.FileId,
-                r.FileName,
-                r.FileContentType,
-                r.FileSizeInBytes,
-                r.IsEdited,
-                r.IsDeleted,
-                r.IsPinned,
-                r.ReactionCount,
-                r.CreatedAtUtc,
-                r.EditedAtUtc,
-                r.PinnedAtUtc,
-                r.ReplyToMessageId,
-                r.ReplyToIsDeleted ? "This message was deleted" : r.ReplyToContent,
-                r.ReplyToSenderName,
-                r.ReplyToFileId,
-                r.ReplyToFileName,
-                r.ReplyToFileContentType,
-                r.IsForwarded,
-                r.ReadByCount,
-                r.TotalMemberCount,
-                r.ReadBy,
-                r.Reactions
-            )).ToList();
+            // Load mentions grouped by message
+            var messageIds = results.Select(r => r.Id).ToList();
+            var mentions = await _context.ChannelMessageMentions
+                .Where(m => messageIds.Contains(m.MessageId))
+                .GroupBy(m => m.MessageId)
+                .Select(g => new
+                {
+                    MessageId = g.Key,
+                    Mentions = g.Select(m => new ChannelMessageMentionDto(m.MentionedUserId, m.MentionedUserName, m.IsAllMention)).ToList()
+                })
+                .ToDictionaryAsync(x => x.MessageId, x => x.Mentions, cancellationToken);
+
+            return results.Select(r => {
+                // Calculate Status based on ReadByCount and TotalMemberCount
+                MessageStatus status;
+                if (r.TotalMemberCount == 0)
+                    status = MessageStatus.Sent;
+                else if (r.ReadByCount >= r.TotalMemberCount)
+                    status = MessageStatus.Read;
+                else if (r.ReadByCount > 0)
+                    status = MessageStatus.Delivered;
+                else
+                    status = MessageStatus.Sent;
+
+                return new ChannelMessageDto(
+                    r.Id,
+                    r.ChannelId,
+                    r.SenderId,
+                    r.Username,
+                    r.DisplayName,
+                    r.AvatarUrl,
+                    r.IsDeleted ? "This message was deleted" : r.Content,
+                    r.FileId,
+                    r.FileName,
+                    r.FileContentType,
+                    r.FileSizeInBytes,
+                    r.IsEdited,
+                    r.IsDeleted,
+                    r.IsPinned,
+                    r.ReactionCount,
+                    r.CreatedAtUtc,
+                    r.EditedAtUtc,
+                    r.PinnedAtUtc,
+                    r.ReplyToMessageId,
+                    r.ReplyToIsDeleted ? "This message was deleted" : r.ReplyToContent,
+                    r.ReplyToSenderName,
+                    r.ReplyToFileId,
+                    r.ReplyToFileName,
+                    r.ReplyToFileContentType,
+                    r.IsForwarded,
+                    r.ReadByCount,
+                    r.TotalMemberCount,
+                    r.ReadBy,
+                    r.Reactions,
+                    mentions.ContainsKey(r.Id) ? mentions[r.Id] : null,
+                    status
+                );
+            }).ToList();
         }
 
         public async Task<List<ChannelMessageDto>> GetMessagesBeforeDateAsync(
@@ -451,37 +533,64 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 .Take(limit)
                 .ToListAsync(cancellationToken);
 
-            return results.Select(r => new ChannelMessageDto(
-                r.Id,
-                r.ChannelId,
-                r.SenderId,
-                r.Username,
-                r.DisplayName,
-                r.AvatarUrl,
-                r.IsDeleted ? "This message was deleted" : r.Content,
-                r.FileId,
-                r.FileName,
-                r.FileContentType,
-                r.FileSizeInBytes,
-                r.IsEdited,
-                r.IsDeleted,
-                r.IsPinned,
-                r.ReactionCount,
-                r.CreatedAtUtc,
-                r.EditedAtUtc,
-                r.PinnedAtUtc,
-                r.ReplyToMessageId,
-                r.ReplyToIsDeleted ? "This message was deleted" : r.ReplyToContent,
-                r.ReplyToSenderName,
-                r.ReplyToFileId,
-                r.ReplyToFileName,
-                r.ReplyToFileContentType,
-                r.IsForwarded,
-                r.ReadByCount,
-                r.TotalMemberCount,
-                r.ReadBy,
-                r.Reactions
-            )).ToList();
+            // Load mentions grouped by message
+            var messageIds = results.Select(r => r.Id).ToList();
+            var mentions = await _context.ChannelMessageMentions
+                .Where(m => messageIds.Contains(m.MessageId))
+                .GroupBy(m => m.MessageId)
+                .Select(g => new
+                {
+                    MessageId = g.Key,
+                    Mentions = g.Select(m => new ChannelMessageMentionDto(m.MentionedUserId, m.MentionedUserName, m.IsAllMention)).ToList()
+                })
+                .ToDictionaryAsync(x => x.MessageId, x => x.Mentions, cancellationToken);
+
+            return results.Select(r => {
+                // Calculate Status based on ReadByCount and TotalMemberCount
+                MessageStatus status;
+                if (r.TotalMemberCount == 0)
+                    status = MessageStatus.Sent;
+                else if (r.ReadByCount >= r.TotalMemberCount)
+                    status = MessageStatus.Read;
+                else if (r.ReadByCount > 0)
+                    status = MessageStatus.Delivered;
+                else
+                    status = MessageStatus.Sent;
+
+                return new ChannelMessageDto(
+                    r.Id,
+                    r.ChannelId,
+                    r.SenderId,
+                    r.Username,
+                    r.DisplayName,
+                    r.AvatarUrl,
+                    r.IsDeleted ? "This message was deleted" : r.Content,
+                    r.FileId,
+                    r.FileName,
+                    r.FileContentType,
+                    r.FileSizeInBytes,
+                    r.IsEdited,
+                    r.IsDeleted,
+                    r.IsPinned,
+                    r.ReactionCount,
+                    r.CreatedAtUtc,
+                    r.EditedAtUtc,
+                    r.PinnedAtUtc,
+                    r.ReplyToMessageId,
+                    r.ReplyToIsDeleted ? "This message was deleted" : r.ReplyToContent,
+                    r.ReplyToSenderName,
+                    r.ReplyToFileId,
+                    r.ReplyToFileName,
+                    r.ReplyToFileContentType,
+                    r.IsForwarded,
+                    r.ReadByCount,
+                    r.TotalMemberCount,
+                    r.ReadBy,
+                    r.Reactions,
+                    mentions.ContainsKey(r.Id) ? mentions[r.Id] : null,
+                    status
+                );
+            }).ToList();
         }
 
         public async Task<List<ChannelMessageDto>> GetMessagesAfterDateAsync(
@@ -561,37 +670,64 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 .Take(limit)
                 .ToListAsync(cancellationToken);
 
-            return results.Select(r => new ChannelMessageDto(
-                r.Id,
-                r.ChannelId,
-                r.SenderId,
-                r.Username,
-                r.DisplayName,
-                r.AvatarUrl,
-                r.IsDeleted ? "This message was deleted" : r.Content,
-                r.FileId,
-                r.FileName,
-                r.FileContentType,
-                r.FileSizeInBytes,
-                r.IsEdited,
-                r.IsDeleted,
-                r.IsPinned,
-                r.ReactionCount,
-                r.CreatedAtUtc,
-                r.EditedAtUtc,
-                r.PinnedAtUtc,
-                r.ReplyToMessageId,
-                r.ReplyToIsDeleted ? "This message was deleted" : r.ReplyToContent,
-                r.ReplyToSenderName,
-                r.ReplyToFileId,
-                r.ReplyToFileName,
-                r.ReplyToFileContentType,
-                r.IsForwarded,
-                r.ReadByCount,
-                r.TotalMemberCount,
-                r.ReadBy,
-                r.Reactions
-            )).ToList();
+            // Load mentions grouped by message
+            var messageIds = results.Select(r => r.Id).ToList();
+            var mentions = await _context.ChannelMessageMentions
+                .Where(m => messageIds.Contains(m.MessageId))
+                .GroupBy(m => m.MessageId)
+                .Select(g => new
+                {
+                    MessageId = g.Key,
+                    Mentions = g.Select(m => new ChannelMessageMentionDto(m.MentionedUserId, m.MentionedUserName, m.IsAllMention)).ToList()
+                })
+                .ToDictionaryAsync(x => x.MessageId, x => x.Mentions, cancellationToken);
+
+            return results.Select(r => {
+                // Calculate Status based on ReadByCount and TotalMemberCount
+                MessageStatus status;
+                if (r.TotalMemberCount == 0)
+                    status = MessageStatus.Sent;
+                else if (r.ReadByCount >= r.TotalMemberCount)
+                    status = MessageStatus.Read;
+                else if (r.ReadByCount > 0)
+                    status = MessageStatus.Delivered;
+                else
+                    status = MessageStatus.Sent;
+
+                return new ChannelMessageDto(
+                    r.Id,
+                    r.ChannelId,
+                    r.SenderId,
+                    r.Username,
+                    r.DisplayName,
+                    r.AvatarUrl,
+                    r.IsDeleted ? "This message was deleted" : r.Content,
+                    r.FileId,
+                    r.FileName,
+                    r.FileContentType,
+                    r.FileSizeInBytes,
+                    r.IsEdited,
+                    r.IsDeleted,
+                    r.IsPinned,
+                    r.ReactionCount,
+                    r.CreatedAtUtc,
+                    r.EditedAtUtc,
+                    r.PinnedAtUtc,
+                    r.ReplyToMessageId,
+                    r.ReplyToIsDeleted ? "This message was deleted" : r.ReplyToContent,
+                    r.ReplyToSenderName,
+                    r.ReplyToFileId,
+                    r.ReplyToFileName,
+                    r.ReplyToFileContentType,
+                    r.IsForwarded,
+                    r.ReadByCount,
+                    r.TotalMemberCount,
+                    r.ReadBy,
+                    r.Reactions,
+                    mentions.ContainsKey(r.Id) ? mentions[r.Id] : null,
+                    status
+                );
+            }).ToList();
         }
 
         public async Task<List<ChannelMessageDto>> GetPinnedMessagesAsync(Guid channelId, CancellationToken cancellationToken = default)
@@ -660,7 +796,9 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                                    g.Select(x => x.reactionUser.AvatarUrl).ToList()
                                   ))
                                   .ToList(),
-                              null // Mentions - pinned messages don't need mention loading in this query
+                              null, // Mentions - pinned messages don't need mention loading in this query
+                              MessageStatus.Sent, // Status - pinned messages default to Sent
+                              null // TempId - not used for pinned messages
                           ))
                          .ToListAsync(cancellationToken);
         }

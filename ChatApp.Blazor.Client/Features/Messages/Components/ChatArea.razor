@@ -258,7 +258,7 @@
                                     </div>
                                 }
 
-                                <MessageBubble @key="message.Id"
+                                <MessageBubble @key="message.TempId ?? message.Id"
                                        MessageId="message.Id"
                                        Content="@message.Content"
                                        FileId="@message.FileId"
@@ -274,6 +274,7 @@
                                        IsRead="@message.IsRead"
                                        IsPinned="@message.IsPinned"
                                        IsFavorite="@FavoriteMessageIds.Contains(message.Id)"
+                                       Status="@message.Status"
                                        ReactionCount="@message.ReactionCount"
                                        Reactions="@message.Reactions"
                                        CurrentUserId="@CurrentUserId"
@@ -345,7 +346,7 @@
                                     </div>
                                 }
 
-                                <MessageBubble @key="message.Id"
+                                <MessageBubble @key="message.TempId ?? message.Id"
                                        MessageId="message.Id"
                                        Content="@message.Content"
                                        FileId="@message.FileId"
@@ -360,6 +361,7 @@
                                        IsDeleted="@message.IsDeleted"
                                        IsPinned="@message.IsPinned"
                                        IsFavorite="@FavoriteMessageIds.Contains(message.Id)"
+                                       Status="@message.Status"
                                        ReactionCount="@message.ReactionCount"
                                        Reactions="@message.Reactions"
                                        CurrentUserId="@CurrentUserId"

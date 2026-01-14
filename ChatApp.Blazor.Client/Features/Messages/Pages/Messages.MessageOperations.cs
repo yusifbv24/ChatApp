@@ -1,5 +1,6 @@
 using ChatApp.Blazor.Client.Models.Common;
 using ChatApp.Blazor.Client.Models.Messages;
+using ChatApp.Shared.Kernel;
 
 namespace ChatApp.Blazor.Client.Features.Messages.Pages;
 
@@ -47,162 +48,149 @@ public partial class Messages
                 await LoadConversationsAndChannels();
             }
 
-            // DM MESAJI
+            // DM MESAJI - TRUE OPTIMISTIC UI
             if (isDirectMessage && selectedConversationId.HasValue)
             {
-                var result = await ConversationService.SendMessageAsync(
-                    selectedConversationId.Value,
-                    content,
-                    fileId: null,
-                    replyToMessageId: replyToMessageId,
-                    isForwarded: false,
-                    mentionedUsers: mentionedUsers);
+                var conversationId = selectedConversationId.Value;
+                var messageTime = DateTime.UtcNow;
+                var tempId = Guid.NewGuid();
 
-                if (result.IsSuccess)
+                // Mentions-ı include et
+                var optimisticMentions = mentionedUsers?.Select(m => new MessageMentionDto(m.Value, m.Key)).ToList();
+
+                // 1. OPTIMISTIC UI - Dərhal əlavə et (Pending status)
+                var pendingMessage = new DirectMessageDto(
+                    tempId,
+                    conversationId,
+                    currentUserId,
+                    UserState.CurrentUser?.Username ?? "",
+                    UserState.CurrentUser?.DisplayName ?? "",
+                    UserState.CurrentUser?.AvatarUrl,
+                    recipientUserId,
+                    content,
+                    null,                                           // FileId
+                    null,                                           // FileName
+                    null,                                           // FileContentType
+                    null,                                           // FileSizeInBytes
+                    false,                                          // IsEdited
+                    false,                                          // IsDeleted
+                    false,                                          // IsRead
+                    false,                                          // IsPinned
+                    0,                                              // ReactionCount
+                    messageTime,                                    // CreatedAtUtc
+                    null,                                           // EditedAtUtc
+                    null,                                           // PinnedAtUtc
+                    replyToMessageId,
+                    replyToContent,
+                    replyToSenderName,
+                    null,                                           // ReplyToFileId
+                    null,                                           // ReplyToFileName
+                    null,                                           // ReplyToFileContentType
+                    false,                                          // IsForwarded
+                    null,                                           // Reactions
+                    optimisticMentions,                             // Mentions
+                    MessageStatus.Pending,                          // Status
+                    tempId);                                        // TempId
+
+                directMessages.Add(pendingMessage);
+                UpdateConversationLocally(conversationId, content, messageTime);
+                StateHasChanged();
+
+                // 2. BACKGROUND SEND - Retry logic ilə (fire and forget)
+                _ = Task.Run(async () =>
                 {
-                    var messageTime = DateTime.UtcNow;
-                    var messageId = result.Value;
+                    var realId = await SendDirectMessageWithRetry(
+                        conversationId,
+                        content,
+                        replyToMessageId,
+                        mentionedUsers,
+                        tempId,
+                        maxRetries: 3);
 
                     // Pending read receipt yoxla (race condition halı)
-                    bool hasReadReceipt = pendingReadReceipts.TryGetValue(messageId, out var readReceipt);
-
-                    // OPTİMİSTİC UI: Dərhal UI-a əlavə et
-                    // Mentions-ı da include et ki, mention styling dərhal görünsün
-                    var optimisticMentions = mentionedUsers?.Select(m => new MessageMentionDto(m.Value, m.Key)).ToList();
-
-                    var newMessage = new DirectMessageDto(
-                        messageId,
-                        selectedConversationId.Value,
-                        currentUserId,
-                        UserState.CurrentUser?.Username ?? "",
-                        UserState.CurrentUser?.DisplayName ?? "",
-                        UserState.CurrentUser?.AvatarUrl,
-                        recipientUserId,
-                        content,
-                        null,                                           // FileId
-                        null,                                           // FileName
-                        null,                                           // FileContentType
-                        null,                                           // FileSizeInBytes
-                        false,                                          // IsEdited
-                        false,                                          // IsDeleted
-                        hasReadReceipt,                                 // IsRead
-                        false,                                          // IsPinned
-                        0,                                              // ReactionCount
-                        messageTime,                                    // CreatedAtUtc
-                        null,                                           // EditedAtUtc
-                        null,                                           // PinnedAtUtc
-                        replyToMessageId,
-                        replyToContent,
-                        replyToSenderName,
-                        null,                                           // ReplyToFileId
-                        null,                                           // ReplyToFileName
-                        null,                                           // ReplyToFileContentType
-                        false,                                          // IsForwarded
-                        null,                                           // Reactions
-                        optimisticMentions);                            // Mentions
-
-                    // Dublikat yoxla (SignalR-dan gəlmiş ola bilər)
-                    if (!directMessages.Any(m => m.Id == messageId))
+                    if (realId.HasValue && pendingReadReceipts.TryGetValue(realId.Value, out var _))
                     {
-                        directMessages.Add(newMessage);
+                        await InvokeAsync(() =>
+                        {
+                            pendingReadReceipts.Remove(realId.Value);
+                            // IsRead statusunu update et
+                            var message = directMessages.FirstOrDefault(m => m.Id == realId.Value);
+                            if (message != null)
+                            {
+                                var index = directMessages.IndexOf(message);
+                                directMessages[index] = message with { IsRead = true };
+                                InvalidateMessageCache();
+                                StateHasChanged();
+                            }
+                        });
                     }
-
-                    // Pending receipt istifadə olundusa, sil
-                    if (hasReadReceipt)
-                    {
-                        pendingReadReceipts.Remove(messageId);
-                    }
-
-                    // Conversation list-i yenilə (son mesaj olaraq)
-                    UpdateConversationLocally(selectedConversationId.Value, content, messageTime);
-                }
-                else
-                {
-                    ShowError(result.Error ?? "Failed to send message");
-                }
+                });
             }
 
-            // CHANNEL MESAJI
+            // CHANNEL MESAJI - TRUE OPTIMISTIC UI
             else if (!isDirectMessage && selectedChannelId.HasValue)
             {
-                var result = await ChannelService.SendMessageAsync(
-                    selectedChannelId.Value,
+                var channelId = selectedChannelId.Value;
+                var messageTime = DateTime.UtcNow;
+                var tempId = Guid.NewGuid();
+
+                // TotalMemberCount = üzvlər - sender
+                var totalMembers = Math.Max(0, selectedChannelMemberCount - 1);
+
+                // Mentions-ı include et
+                var optimisticChannelMentions = mentionedUsers?.Select(m =>
+                    new ChannelMessageMentionDto(m.Value, m.Key, false)).ToList();
+
+                // 1. OPTIMISTIC UI - Dərhal əlavə et (Pending status)
+                var pendingMessage = new ChannelMessageDto(
+                    tempId,
+                    channelId,
+                    currentUserId,
+                    UserState.CurrentUser?.Username ?? "",
+                    UserState.CurrentUser?.DisplayName ?? "",
+                    UserState.CurrentUser?.AvatarUrl,
                     content,
-                    fileId: null,
-                    replyToMessageId: replyToMessageId,
-                    isForwarded: false,
-                    mentionedUsers: mentionedUsers);
+                    null,                                       // FileId
+                    null,                                       // FileName
+                    null,                                       // FileContentType
+                    null,                                       // FileSizeInBytes
+                    false,                                      // IsEdited
+                    false,                                      // IsDeleted
+                    false,                                      // IsPinned
+                    0,                                          // ReactionCount
+                    messageTime,                                // CreatedAtUtc
+                    null,                                       // EditedAtUtc
+                    null,                                       // PinnedAtUtc
+                    replyToMessageId,
+                    replyToContent,
+                    replyToSenderName,
+                    null,                                       // ReplyToFileId
+                    null,                                       // ReplyToFileName
+                    null,                                       // ReplyToFileContentType
+                    false,                                      // IsForwarded
+                    0,                                          // ReadByCount
+                    totalMembers,                               // TotalMemberCount
+                    [],                                         // ReadBy
+                    [],                                         // Reactions
+                    optimisticChannelMentions,                  // Mentions
+                    MessageStatus.Pending,                      // Status
+                    tempId);                                    // TempId
 
-                if (result.IsSuccess)
+                channelMessages.Add(pendingMessage);
+                UpdateChannelLocally(channelId, content, messageTime, UserState.CurrentUser?.DisplayName);
+                StateHasChanged();
+
+                // 2. BACKGROUND SEND - Retry logic ilə (fire and forget)
+                _ = Task.Run(async () =>
                 {
-                    var messageTime = DateTime.UtcNow;
-                    var messageId = result.Value;
-
-                    // Race condition yoxla
-                    if (pendingMessageAdds.Contains(messageId))
-                    {
-                        // SignalR artıq əlavə edir
-                    }
-                    else if (channelMessages.Any(m => m.Id == messageId))
-                    {
-                        // SignalR artıq əlavə edib
-                    }
-                    else
-                    {
-                        // Pending marker qoy
-                        pendingMessageAdds.Add(messageId);
-
-                        // TotalMemberCount = üzvlər - sender
-                        var totalMembers = Math.Max(0, selectedChannelMemberCount - 1);
-
-                        // OPTİMİSTİK UI - Mentions-ı da include et
-                        var optimisticChannelMentions = mentionedUsers?.Select(m =>
-                            new ChannelMessageMentionDto(m.Value, m.Key, false)).ToList();
-
-                        var newMessage = new ChannelMessageDto(
-                            messageId,
-                            selectedChannelId.Value,
-                            currentUserId,
-                            UserState.CurrentUser?.Username ?? "",
-                            UserState.CurrentUser?.DisplayName ?? "",
-                            UserState.CurrentUser?.AvatarUrl,
-                            content,
-                            null,                                       // FileId
-                            null,                                       // FileName
-                            null,                                       // FileContentType
-                            null,                                       // FileSizeInBytes
-                            false,
-                            false,
-                            false,
-                            0,
-                            messageTime,
-                            null,
-                            null,
-                            replyToMessageId,
-                            replyToContent,
-                            replyToSenderName,
-                            null,                                       // ReplyToFileId
-                            null,                                       // ReplyToFileName
-                            null,                                       // ReplyToFileContentType
-                            false,                                      // IsForwarded
-                            0,                                          // ReadByCount
-                            totalMembers,                               // TotalMemberCount
-                            [],                                         // ReadBy
-                            [],                                         // Reactions
-                            optimisticChannelMentions);                 // Mentions
-
-                        channelMessages.Add(newMessage);
-
-                        // Pending marker sil
-                        pendingMessageAdds.Remove(messageId);
-                    }
-
-                    UpdateChannelLocally(selectedChannelId.Value, content, messageTime, UserState.CurrentUser?.DisplayName);
-                }
-                else
-                {
-                    ShowError(result.Error ?? "Failed to send message");
-                }
+                    await SendChannelMessageWithRetry(
+                        channelId,
+                        content,
+                        replyToMessageId,
+                        mentionedUsers,
+                        tempId,
+                        maxRetries: 3);
+                });
             }
         }
         catch (Exception ex)
@@ -904,6 +892,174 @@ public partial class Messages
             errorMessage = "An error occurred while opening the conversation";
             StateHasChanged();
         }
+    }
+
+    #endregion
+
+    #region Retry Logic - Yenidən cəhd
+
+    /// <summary>
+    /// Direct Message göndərir - retry logic ilə (exponential backoff).
+    /// 3 cəhd: 1s, 2s, 4s interval.
+    /// Uğurlu olduqda real ID-ni qaytarır, uğursuz olduqda null.
+    /// </summary>
+    private async Task<Guid?> SendDirectMessageWithRetry(
+        Guid conversationId,
+        string content,
+        Guid? replyToMessageId,
+        Dictionary<string, Guid>? mentionedUsers,
+        Guid tempId,
+        int maxRetries)
+    {
+        for (int attempt = 1; attempt <= maxRetries; attempt++)
+        {
+            try
+            {
+                var result = await ConversationService.SendMessageAsync(
+                    conversationId,
+                    content,
+                    fileId: null,
+                    replyToMessageId: replyToMessageId,
+                    isForwarded: false,
+                    mentionedUsers: mentionedUsers);
+
+                if (result.IsSuccess)
+                {
+                    var realId = result.Value;
+
+                    // Update: tempId → realId, Status → Sent
+                    // IMPORTANT: Keep TempId so SignalR can find and replace this message
+                    await InvokeAsync(() =>
+                    {
+                        var message = directMessages.FirstOrDefault(m => m.TempId == tempId);
+                        if (message != null)
+                        {
+                            var index = directMessages.IndexOf(message);
+                            var updatedMessage = message with
+                            {
+                                Id = realId,
+                                Status = MessageStatus.Sent
+                                // Keep TempId - SignalR will clear it when replacing
+                            };
+                            directMessages[index] = updatedMessage;
+                            InvalidateMessageCache();
+                            StateHasChanged();
+                        }
+                    });
+
+                    return realId;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[RETRY] Attempt {attempt}/{maxRetries} failed: {ex.Message}");
+            }
+
+            // Son cəhd deyilsə, gözlə (exponential backoff)
+            if (attempt < maxRetries)
+            {
+                var delayMs = (int)Math.Pow(2, attempt - 1) * 1000; // 1s, 2s, 4s
+                await Task.Delay(delayMs);
+            }
+        }
+
+        // Bütün cəhdlər uğursuz - Status → Failed
+        await InvokeAsync(() =>
+        {
+            var message = directMessages.FirstOrDefault(m => m.TempId == tempId);
+            if (message != null)
+            {
+                var index = directMessages.IndexOf(message);
+                var failedMessage = message with { Status = MessageStatus.Failed };
+                directMessages[index] = failedMessage;
+                InvalidateMessageCache();
+                StateHasChanged();
+            }
+        });
+
+        return null;
+    }
+
+    /// <summary>
+    /// Channel Message göndərir - retry logic ilə (exponential backoff).
+    /// 3 cəhd: 1s, 2s, 4s interval.
+    /// Uğurlu olduqda real ID-ni qaytarır, uğursuz olduqda null.
+    /// </summary>
+    private async Task<Guid?> SendChannelMessageWithRetry(
+        Guid channelId,
+        string content,
+        Guid? replyToMessageId,
+        Dictionary<string, Guid>? mentionedUsers,
+        Guid tempId,
+        int maxRetries)
+    {
+        for (int attempt = 1; attempt <= maxRetries; attempt++)
+        {
+            try
+            {
+                var result = await ChannelService.SendMessageAsync(
+                    channelId,
+                    content,
+                    fileId: null,
+                    replyToMessageId: replyToMessageId,
+                    isForwarded: false,
+                    mentionedUsers: mentionedUsers);
+
+                if (result.IsSuccess)
+                {
+                    var realId = result.Value;
+
+                    // Update: tempId → realId, Status → Sent
+                    // IMPORTANT: Keep TempId so SignalR can find and replace this message
+                    await InvokeAsync(() =>
+                    {
+                        var message = channelMessages.FirstOrDefault(m => m.TempId == tempId);
+                        if (message != null)
+                        {
+                            var index = channelMessages.IndexOf(message);
+                            var updatedMessage = message with
+                            {
+                                Id = realId,
+                                Status = MessageStatus.Sent
+                                // Keep TempId - SignalR will clear it when replacing
+                            };
+                            channelMessages[index] = updatedMessage;
+                            InvalidateMessageCache();
+                            StateHasChanged();
+                        }
+                    });
+
+                    return realId;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[RETRY] Channel attempt {attempt}/{maxRetries} failed: {ex.Message}");
+            }
+
+            // Son cəhd deyilsə, gözlə (exponential backoff)
+            if (attempt < maxRetries)
+            {
+                var delayMs = (int)Math.Pow(2, attempt - 1) * 1000; // 1s, 2s, 4s
+                await Task.Delay(delayMs);
+            }
+        }
+
+        // Bütün cəhdlər uğursuz - Status → Failed
+        await InvokeAsync(() =>
+        {
+            var message = channelMessages.FirstOrDefault(m => m.TempId == tempId);
+            if (message != null)
+            {
+                var index = channelMessages.IndexOf(message);
+                var failedMessage = message with { Status = MessageStatus.Failed };
+                channelMessages[index] = failedMessage;
+                InvalidateMessageCache();
+                StateHasChanged();
+            }
+        });
+
+        return null;
     }
 
     #endregion

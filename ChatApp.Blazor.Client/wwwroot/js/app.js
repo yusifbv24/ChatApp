@@ -144,8 +144,36 @@ window.chatAppUtils = {
     // Reset textarea height to default
     resetTextareaHeight: (element) => {
         if (!element) return;
+        // Reset height to default
         element.style.height = '24px';
         element.classList.remove('has-scroll');
+
+        // Force clear any lingering content (including newlines)
+        if (element.value === '' || element.value === '\n') {
+            element.value = '';
+        }
+    },
+
+    // Prevent Enter key default behavior (newline) when sending message
+    setupTextareaKeydownHandler: (element) => {
+        if (!element) return;
+
+        // Remove existing listener if any
+        if (element._keydownHandler) {
+            element.removeEventListener('keydown', element._keydownHandler);
+        }
+
+        // Create new handler
+        const handler = (e) => {
+            // Enter without Shift - prevent default (don't add newline)
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+            }
+        };
+
+        // Store handler reference for cleanup
+        element._keydownHandler = handler;
+        element.addEventListener('keydown', handler);
     },
 
     // Get element position for smart menu positioning

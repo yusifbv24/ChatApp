@@ -1,4 +1,5 @@
 using ChatApp.Blazor.Client.Models.Messages;
+using ChatApp.Shared.Kernel;
 
 namespace ChatApp.Blazor.Client.Features.Messages.Pages;
 
@@ -99,23 +100,33 @@ public partial class Messages
             // Əgər bu mesaj hazırda baxdığımız conversation-a gəlibsə
             if (message.ConversationId == selectedConversationId)
             {
-                // Mesaj artıq list-dədir? (Optimistic UI ilə əlavə edilib)
-                var existingIndex = directMessages.FindIndex(m => m.Id == message.Id);
+                // OPTIMISTIC UI - Check if this is confirmation of pending message
+                // 1. Check by TempId (retry logic keeps TempId until SignalR confirms)
+                // Note: Don't check CreatedAtUtc - frontend/backend timestamps may differ by milliseconds
+                var pendingIndex = directMessages.FindIndex(m =>
+                    m.TempId.HasValue &&
+                    m.SenderId == message.SenderId &&
+                    m.Content == message.Content);
 
-                if (existingIndex >= 0)
+                // 2. Check by real ID (already confirmed by retry logic)
+                var existingIndex = directMessages.FindIndex(m => m.Id == message.Id && !m.TempId.HasValue);
+
+                if (pendingIndex >= 0)
                 {
-                    // OPTİMİSTİC MESAJI ƏVƏZ ET
-                    // Blazor-un dəyişikliyi görməsi üçün yeni list yaradırıq
-                    var updatedList = new List<DirectMessageDto>(directMessages)
-                    {
-                        [existingIndex] = message
-                    };
-                    directMessages = updatedList;
+                    // OPTIMISTIC MESSAGE CONFIRMED - Replace with real message and clear TempId
+                    directMessages[pendingIndex] = message with { Status = MessageStatus.Sent, TempId = null };
+                    InvalidateMessageCache();
+                }
+                else if (existingIndex >= 0)
+                {
+                    // MESSAGE ALREADY EXISTS (without TempId) - Update it
+                    directMessages[existingIndex] = message with { Status = MessageStatus.Sent };
+                    InvalidateMessageCache();
                 }
                 else
                 {
-                    // BAŞQASININ MESAJI - list-ə əlavə et
-                    directMessages.Add(message);
+                    // NEW MESSAGE FROM OTHERS - Add to list
+                    directMessages.Add(message with { Status = MessageStatus.Sent, TempId = null });
                 }
             }
 
@@ -208,20 +219,32 @@ public partial class Messages
                 if (pendingMessageAdds.Contains(message.Id))
                     return;
 
-                var existingIndex = channelMessages.FindIndex(m => m.Id == message.Id);
+                // OPTIMISTIC UI - Check if this is confirmation of pending message
+                // 1. Check by TempId (retry logic keeps TempId until SignalR confirms)
+                // Note: Don't check CreatedAtUtc - frontend/backend timestamps may differ by milliseconds
+                var pendingIndex = channelMessages.FindIndex(m =>
+                    m.TempId.HasValue &&
+                    m.SenderId == message.SenderId &&
+                    m.Content == message.Content);
 
-                if (existingIndex >= 0)
+                // 2. Check by real ID (already confirmed by retry logic)
+                var existingIndex = channelMessages.FindIndex(m => m.Id == message.Id && !m.TempId.HasValue);
+
+                if (pendingIndex >= 0)
                 {
-                    // OPTİMİSTİC MESAJI ƏVƏZ ET
-                    var updatedList = new List<ChannelMessageDto>(channelMessages)
-                    {
-                        [existingIndex] = message
-                    };
-                    channelMessages = updatedList;
+                    // OPTIMISTIC MESSAGE CONFIRMED - Replace with real message and clear TempId
+                    channelMessages[pendingIndex] = message with { Status = MessageStatus.Sent, TempId = null };
+                    InvalidateMessageCache();
+                }
+                else if (existingIndex >= 0)
+                {
+                    // MESSAGE ALREADY EXISTS (without TempId) - Update it
+                    channelMessages[existingIndex] = message with { Status = MessageStatus.Sent };
+                    InvalidateMessageCache();
                 }
                 else
                 {
-                    // BAŞQASININ MESAJI
+                    // NEW MESSAGE FROM OTHERS - Add to list
                     pendingMessageAdds.Add(message.Id);
 
                     // Mark as read (səhifə görünürsə)
@@ -237,7 +260,7 @@ public partial class Messages
                         }
                     }
 
-                    channelMessages.Add(message);
+                    channelMessages.Add(message with { Status = MessageStatus.Sent, TempId = null });
                     pendingMessageAdds.Remove(message.Id);
                 }
             }
@@ -590,7 +613,7 @@ public partial class Messages
             if (message != null)
             {
                 var index = directMessages.IndexOf(message);
-                directMessages[index] = message with { IsRead = true };
+                directMessages[index] = message with { IsRead = true, Status = MessageStatus.Read };
                 InvalidateMessageCache();
             }
             else if (conversationId == selectedConversationId)
@@ -666,7 +689,7 @@ public partial class Messages
             if (channel != null &&
                 channel.LastMessageSenderId == currentUserId &&
                 channel.LastMessageId.HasValue &&
-                messageIds.Contains(channel.LastMessageId.Value)) // Note: Original list used here is fine (single lookup)
+                messageIds.Contains(channel.LastMessageId.Value))
             {
                 var lastMessageInView = channelMessages.FirstOrDefault(m => m.Id == channel.LastMessageId.Value);
 

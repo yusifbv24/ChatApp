@@ -1,4 +1,6 @@
-﻿namespace ChatApp.Modules.DirectMessages.Application.DTOs.Response
+﻿using ChatApp.Shared.Kernel;
+
+namespace ChatApp.Modules.DirectMessages.Application.DTOs.Response
 {
     public record DirectMessageDto(
         Guid Id,
@@ -29,7 +31,9 @@
         string? ReplyToFileContentType,
         bool IsForwarded,
         List<DirectMessageReactionDto>? Reactions = null,
-        List<MessageMentionDto>? Mentions = null);
+        List<MessageMentionDto>? Mentions = null,
+        MessageStatus Status = MessageStatus.Sent,
+        Guid? TempId = null);
 
     public record DirectMessageReactionDto(
         string Emoji,

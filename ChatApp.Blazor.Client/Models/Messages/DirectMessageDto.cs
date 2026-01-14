@@ -1,4 +1,6 @@
-﻿namespace ChatApp.Blazor.Client.Models.Messages
+﻿using ChatApp.Shared.Kernel;
+
+namespace ChatApp.Blazor.Client.Models.Messages
 {
     public record DirectMessageDto(
         Guid Id,
@@ -29,7 +31,9 @@
         string? ReplyToFileContentType = null,
         bool IsForwarded = false,
         List<MessageReactionDto>? Reactions = null,
-        List<MessageMentionDto>? Mentions = null);
+        List<MessageMentionDto>? Mentions = null,
+        MessageStatus Status = MessageStatus.Sent,
+        Guid? TempId = null);
 
     public record MessageReactionDto(
         string Emoji,

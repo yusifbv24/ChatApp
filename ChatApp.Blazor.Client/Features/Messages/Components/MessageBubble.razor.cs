@@ -6,6 +6,7 @@ using MudBlazor;
 using System.Globalization;
 using System.Net;
 using System.Text.RegularExpressions;
+using ChatApp.Shared.Kernel;
 
 namespace ChatApp.Blazor.Client.Features.Messages.Components;
 
@@ -122,6 +123,12 @@ public partial class MessageBubble : IAsyncDisposable
     /// Mesaj favorite-ə əlavə edilib?
     /// </summary>
     [Parameter] public bool IsFavorite { get; set; }
+
+    /// <summary>
+    /// Mesajın statusu (Optimistic UI üçün).
+    /// Pending: Göndərilir, Sent: Göndərildi, Delivered: Çatdırıldı, Read: Oxundu, Failed: Uğursuz
+    /// </summary>
+    [Parameter] public MessageStatus Status { get; set; } = MessageStatus.Sent;
 
     #endregion
 

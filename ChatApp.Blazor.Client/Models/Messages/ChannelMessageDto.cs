@@ -1,4 +1,6 @@
-﻿namespace ChatApp.Blazor.Client.Models.Messages
+﻿using ChatApp.Shared.Kernel;
+
+namespace ChatApp.Blazor.Client.Models.Messages
 {
     public record ChannelMessageDto(
         Guid Id,
@@ -30,11 +32,14 @@
         int TotalMemberCount = 0,
         List<Guid>? ReadBy = null,
         List<ChannelMessageReactionDto>? Reactions = null,
-        List<ChannelMessageMentionDto>? Mentions = null)
+        List<ChannelMessageMentionDto>? Mentions = null,
+        MessageStatus Status = MessageStatus.Sent,
+        Guid? TempId = null)
     {
         // Mutable properties for real-time updates
         public int ReadByCount { get; set; } = ReadByCount;
         public List<Guid>? ReadBy { get; set; } = ReadBy;
+        public MessageStatus Status { get; set; } = Status;
         public List<ChannelMessageReactionDto> Reactions { get; init; } = Reactions ?? [];
         public List<ChannelMessageMentionDto> Mentions { get; init; } = Mentions ?? [];
     }

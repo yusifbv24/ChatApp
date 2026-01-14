@@ -1,4 +1,6 @@
-﻿<div id="message-@MessageId" class="message-wrapper @(IsOwn ? "own" : "other") @(IsDeleted ? "deleted" : "") @(!IsDirectMessage && !IsOwn ? "group-message" : "") @(IsSelectMode ? "select-mode" : "")">
+@using ChatApp.Shared.Kernel
+
+<div id="message-@MessageId" class="message-wrapper @(IsOwn ? "own" : "other") @(IsDeleted ? "deleted" : "") @(!IsDirectMessage && !IsOwn ? "group-message" : "") @(IsSelectMode ? "select-mode" : "")">
 
     @* Selection checkbox - visible only in select mode and not for deleted messages *@
     @if (IsSelectMode && !IsDeleted)
@@ -212,38 +214,75 @@
                             <span class="message-time">@FormatTime(CreatedAt)</span>
                             @if (IsOwn && !IsDeleted)
                             {
-                                @if (IsDirectMessage)
-                                {
-                                    <span class="read-status">
-                                        @if (IsRead)
-                                        {
-                                            <MudIcon Icon="@Icons.Material.Filled.DoneAll" Size="Size.Small" Class="read-icon" />
-                                        }
-                                        else
-                                        {
+                                <span class="read-status">
+                                    @switch (Status)
+                                    {
+                                        case MessageStatus.Pending:
+                                            @* Göndərilir - saat iconu *@
+                                            <MudIcon Icon="@Icons.Material.Filled.AccessTime" Size="Size.Small" Class="pending-icon" />
+                                            break;
+
+                                        case MessageStatus.Failed:
+                                            @* Uğursuz - X iconu *@
+                                            <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Size="Size.Small" Class="failed-icon" />
+                                            break;
+
+                                        case MessageStatus.Sent:
+                                            @* Göndərildi *@
+                                            @if (IsDirectMessage)
+                                            {
+                                                @* DM: Tək checkmark (qarşı tərəf hələ oxumayıb) *@
+                                                <MudIcon Icon="@Icons.Material.Filled.Done" Size="Size.Small" />
+                                            }
+                                            else
+                                            {
+                                                @* Channel: ReadByCount əsasında *@
+                                                @if (ReadByCount > 0)
+                                                {
+                                                    @* At least one person read it - show double checkmark *@
+                                                    <MudIcon Icon="@Icons.Material.Filled.DoneAll" Size="Size.Small"
+                                                             Class="@(TotalMemberCount > 0 && ReadByCount >= TotalMemberCount ? "read-icon" : "")" />
+                                                }
+                                                else
+                                                {
+                                                    @* Not read by anyone - show single checkmark *@
+                                                    <MudIcon Icon="@Icons.Material.Filled.Done" Size="Size.Small" />
+                                                }
+                                            }
+                                            break;
+
+                                        case MessageStatus.Delivered:
+                                            @* Delivered - at least one person read (double checkmark gray) *@
+                                            @if (IsDirectMessage)
+                                            {
+                                                <MudIcon Icon="@Icons.Material.Filled.DoneAll" Size="Size.Small" />
+                                            }
+                                            else
+                                            {
+                                                @* Channel: Always double checkmark (at least one read) *@
+                                                <MudIcon Icon="@Icons.Material.Filled.DoneAll" Size="Size.Small" />
+                                            }
+                                            break;
+
+                                        case MessageStatus.Read:
+                                            @* Oxundu - mavi double checkmark *@
+                                            @if (IsDirectMessage)
+                                            {
+                                                <MudIcon Icon="@Icons.Material.Filled.DoneAll" Size="Size.Small" Class="read-icon" />
+                                            }
+                                            else
+                                            {
+                                                @* Channel: Blue double checkmark (everyone read) *@
+                                                <MudIcon Icon="@Icons.Material.Filled.DoneAll" Size="Size.Small" Class="read-icon" />
+                                            }
+                                            break;
+
+                                        default:
+                                            @* Fallback - tək checkmark *@
                                             <MudIcon Icon="@Icons.Material.Filled.Done" Size="Size.Small" />
-                                        }
-                                    </span>
-                                }
-                                else
-                                {
-                                    @* Channel message read status *@
-                                    <span class="read-status">
-                                        @if (ReadByCount > 0)
-                                        {
-                                            @* At least one person read it - show double checkmark *@
-                                            @* Blue if everyone (except sender) read it, gray if only some read it *@
-                                            @* TotalMemberCount already excludes sender (calculated in backend) *@
-                                            <MudIcon Icon="@Icons.Material.Filled.DoneAll" Size="Size.Small"
-                                                     Class="@(TotalMemberCount > 0 && ReadByCount >= TotalMemberCount ? "read-icon" : "")" />
-                                        }
-                                        else
-                                        {
-                                            @* Not read by anyone - show single checkmark *@
-                                            <MudIcon Icon="@Icons.Material.Filled.Done" Size="Size.Small" />
-                                        }
-                                    </span>
-                                }
+                                            break;
+                                    }
+                                </span>
                             }
                         </div>
                     </div>

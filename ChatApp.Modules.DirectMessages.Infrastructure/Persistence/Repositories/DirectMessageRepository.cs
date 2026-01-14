@@ -3,6 +3,7 @@ using ChatApp.Modules.DirectMessages.Application.DTOs.Response;
 using ChatApp.Modules.DirectMessages.Application.Interfaces;
 using ChatApp.Modules.DirectMessages.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using ChatApp.Shared.Kernel;
 
 namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
 {
@@ -144,7 +145,8 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 result.ReplyToFileContentType,
                 result.IsForwarded,
                 reactions.Count > 0 ? reactions : null,
-                mentions.Count > 0 ? mentions : null
+                mentions.Count > 0 ? mentions : null,
+                result.IsRead ? MessageStatus.Read : MessageStatus.Sent // Set Status based on IsRead
             );
         }
 
@@ -268,7 +270,8 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 r.ReplyToFileContentType,
                 r.IsForwarded,
                 reactions.ContainsKey(r.Id) ? reactions[r.Id] : null,
-                mentions.ContainsKey(r.Id) ? mentions[r.Id] : null
+                mentions.ContainsKey(r.Id) ? mentions[r.Id] : null,
+                r.IsRead ? MessageStatus.Read : MessageStatus.Sent // Set Status based on IsRead
             )).ToList();
         }
 
@@ -373,6 +376,17 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 })
                 .ToDictionaryAsync(x => x.MessageId, x => x.Reactions, cancellationToken);
 
+            // Load mentions grouped by message
+            var mentions = await _context.DirectMessageMentions
+                .Where(m => messageIds.Contains(m.MessageId))
+                .GroupBy(m => m.MessageId)
+                .Select(g => new
+                {
+                    MessageId = g.Key,
+                    Mentions = g.Select(m => new MessageMentionDto(m.MentionedUserId, m.MentionedUserName)).ToList()
+                })
+                .ToDictionaryAsync(x => x.MessageId, x => x.Mentions, cancellationToken);
+
             return results.Select(r => new DirectMessageDto(
                 r.Id,
                 r.ConversationId,
@@ -401,7 +415,9 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 r.ReplyToFileName,
                 r.ReplyToFileContentType,
                 r.IsForwarded,
-                reactions.ContainsKey(r.Id) ? reactions[r.Id] : null
+                reactions.ContainsKey(r.Id) ? reactions[r.Id] : null,
+                mentions.ContainsKey(r.Id) ? mentions[r.Id] : null,
+                r.IsRead ? MessageStatus.Read : MessageStatus.Sent // Set Status based on IsRead
             )).ToList();
         }
 
@@ -481,6 +497,17 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 })
                 .ToDictionaryAsync(x => x.MessageId, x => x.Reactions, cancellationToken);
 
+            // Load mentions grouped by message
+            var mentions = await _context.DirectMessageMentions
+                .Where(m => messageIds.Contains(m.MessageId))
+                .GroupBy(m => m.MessageId)
+                .Select(g => new
+                {
+                    MessageId = g.Key,
+                    Mentions = g.Select(m => new MessageMentionDto(m.MentionedUserId, m.MentionedUserName)).ToList()
+                })
+                .ToDictionaryAsync(x => x.MessageId, x => x.Mentions, cancellationToken);
+
             return results.Select(r => new DirectMessageDto(
                 r.Id,
                 r.ConversationId,
@@ -509,7 +536,9 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 r.ReplyToFileName,
                 r.ReplyToFileContentType,
                 r.IsForwarded,
-                reactions.ContainsKey(r.Id) ? reactions[r.Id] : null
+                reactions.ContainsKey(r.Id) ? reactions[r.Id] : null,
+                mentions.ContainsKey(r.Id) ? mentions[r.Id] : null,
+                r.IsRead ? MessageStatus.Read : MessageStatus.Sent // Set Status based on IsRead
             )).ToList();
         }
 
@@ -589,6 +618,17 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 })
                 .ToDictionaryAsync(x => x.MessageId, x => x.Reactions, cancellationToken);
 
+            // Load mentions grouped by message
+            var mentions = await _context.DirectMessageMentions
+                .Where(m => messageIds.Contains(m.MessageId))
+                .GroupBy(m => m.MessageId)
+                .Select(g => new
+                {
+                    MessageId = g.Key,
+                    Mentions = g.Select(m => new MessageMentionDto(m.MentionedUserId, m.MentionedUserName)).ToList()
+                })
+                .ToDictionaryAsync(x => x.MessageId, x => x.Mentions, cancellationToken);
+
             return results.Select(r => new DirectMessageDto(
                 r.Id,
                 r.ConversationId,
@@ -617,7 +657,9 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 r.ReplyToFileName,
                 r.ReplyToFileContentType,
                 r.IsForwarded,
-                reactions.ContainsKey(r.Id) ? reactions[r.Id] : null
+                reactions.ContainsKey(r.Id) ? reactions[r.Id] : null,
+                mentions.ContainsKey(r.Id) ? mentions[r.Id] : null,
+                r.IsRead ? MessageStatus.Read : MessageStatus.Sent // Set Status based on IsRead
             )).ToList();
         }
 
@@ -721,6 +763,17 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 })
                 .ToDictionaryAsync(x => x.MessageId, x => x.Reactions, cancellationToken);
 
+            // Load mentions grouped by message
+            var mentions = await _context.DirectMessageMentions
+                .Where(m => messageIds.Contains(m.MessageId))
+                .GroupBy(m => m.MessageId)
+                .Select(g => new
+                {
+                    MessageId = g.Key,
+                    Mentions = g.Select(m => new MessageMentionDto(m.MentionedUserId, m.MentionedUserName)).ToList()
+                })
+                .ToDictionaryAsync(x => x.MessageId, x => x.Mentions, cancellationToken);
+
             return results.Select(r => new DirectMessageDto(
                 r.Id,
                 r.ConversationId,
@@ -749,7 +802,9 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 r.ReplyToFileName,
                 r.ReplyToFileContentType,
                 r.IsForwarded,
-                reactions.ContainsKey(r.Id) ? reactions[r.Id] : null
+                reactions.ContainsKey(r.Id) ? reactions[r.Id] : null,
+                mentions.ContainsKey(r.Id) ? mentions[r.Id] : null,
+                r.IsRead ? MessageStatus.Read : MessageStatus.Sent // Set Status based on IsRead
             )).ToList();
         }
     }

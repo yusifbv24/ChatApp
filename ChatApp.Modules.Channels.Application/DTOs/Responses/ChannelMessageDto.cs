@@ -1,4 +1,6 @@
-﻿namespace ChatApp.Modules.Channels.Application.DTOs.Responses
+﻿using ChatApp.Shared.Kernel;
+
+namespace ChatApp.Modules.Channels.Application.DTOs.Responses
 {
     public record ChannelMessageDto(
         Guid Id,
@@ -30,6 +32,8 @@
         int TotalMemberCount = 0,
         List<Guid>? ReadBy = null,
         List<ChannelMessageReactionDto>? Reactions = null,
-        List<ChannelMessageMentionDto>? Mentions = null
+        List<ChannelMessageMentionDto>? Mentions = null,
+        MessageStatus Status = MessageStatus.Sent,
+        Guid? TempId = null
     );
 }

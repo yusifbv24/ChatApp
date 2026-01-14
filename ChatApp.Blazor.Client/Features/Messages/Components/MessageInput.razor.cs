@@ -370,17 +370,20 @@ public partial class MessageInput : IAsyncDisposable
             wasReplying = false;
         }
 
-        // Conversation dəyişdikdə draft-ı yüklə
+        // Conversation dəyişdikdə draft-ı yüklə və textarea reset et
         if (ConversationId != previousConversationId)
         {
             previousConversationId = ConversationId;
             shouldFocus = true;
             MessageText = InitialDraft ?? string.Empty;
+
+            // Textarea height-i reset et (conversation switch)
+            await ResetTextareaHeight();
         }
     }
 
     /// <summary>
-    /// Render-dən sonra focus.
+    /// Render-dən sonra focus və textarea reset (əgər MessageText boşdursa).
     /// </summary>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -390,6 +393,12 @@ public partial class MessageInput : IAsyncDisposable
             try
             {
                 await textAreaRef.FocusAsync();
+
+                // Əgər MessageText boşdursa, textarea-nın height-ini və value-sunu təmizlə
+                if (string.IsNullOrEmpty(MessageText))
+                {
+                    await JS.InvokeVoidAsync("chatAppUtils.resetTextareaHeight", textAreaRef);
+                }
             }
             catch
             {
@@ -397,13 +406,16 @@ public partial class MessageInput : IAsyncDisposable
             }
         }
 
-        // Setup mention panel outside click handler
+        // Setup mention panel outside click handler + textarea keydown preventDefault
         if (firstRender)
         {
             try
             {
                 dotNetRef = DotNetObjectReference.Create(this);
                 await JS.InvokeVoidAsync("setupMentionOutsideClickHandler", dotNetRef);
+
+                // Setup keydown handler - Enter basanda preventDefault et (textarea böyüməsin)
+                await JS.InvokeVoidAsync("chatAppUtils.setupTextareaKeydownHandler", textAreaRef);
             }
             catch
             {
@@ -440,8 +452,11 @@ public partial class MessageInput : IAsyncDisposable
         // Typing indicator göndər
         await StartTyping();
 
-        // Textarea auto-resize
-        await JS.InvokeVoidAsync("chatAppUtils.autoResizeTextarea", textAreaRef);
+        // Textarea auto-resize (skip if empty - already reset)
+        if (!string.IsNullOrEmpty(newValue))
+        {
+            await JS.InvokeVoidAsync("chatAppUtils.autoResizeTextarea", textAreaRef);
+        }
 
         // Draft dəyişikliyini parent-ə bildir
         await OnDraftChanged.InvokeAsync(newValue);
@@ -450,9 +465,6 @@ public partial class MessageInput : IAsyncDisposable
         await CheckMentionTrigger();
     }
 
-    /// <summary>
-    /// Key down handler.
-    /// </summary>
     private async Task HandleKeyDown(KeyboardEventArgs e)
     {
         // Mention panel açıqdırsa, Enter/Esc keyboard navigation üçündür
@@ -531,10 +543,6 @@ public partial class MessageInput : IAsyncDisposable
         // Draft-ı təmizlə
         await OnDraftChanged.InvokeAsync(string.Empty);
 
-        // Textarea height reset
-        await JS.InvokeVoidAsync("chatAppUtils.resetTextareaHeight", textAreaRef);
-
-
         if (IsEditing)
         {
             await OnEdit.InvokeAsync(message);
@@ -550,6 +558,14 @@ public partial class MessageInput : IAsyncDisposable
         }
 
         shouldFocus = true;
+
+        // Textarea height reset - IMMEDIATELY before StateHasChanged (sync DOM with state)
+        try
+        {
+            await JS.InvokeVoidAsync("chatAppUtils.resetTextareaHeight", textAreaRef);
+        }
+        catch { }
+
         StateHasChanged();
     }
 

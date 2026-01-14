@@ -1452,6 +1452,15 @@
     color: #34B7F1 !important;
 }
 
+.pending-icon {
+    color: #9CA3AF !important; /* Gray - pending status */
+}
+
+.failed-icon {
+    color: #EF4444 !important; /* Red - failed status */
+    cursor: pointer;
+}
+
 /* ===================================
    REPLY PREVIEW STYLES
    =================================== */

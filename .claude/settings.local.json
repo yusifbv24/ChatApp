@@ -10,7 +10,10 @@
       "Bash(taskkill:*)",
       "Bash(dotnet ef migrations:*)",
       "Bash(tasklist:*)",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash(dotnet add:*)",
+      "Bash(/tmp/channeldto_changes.patch)",
+      "Bash(del ChatApp.Blazor.ClientModelsMessagesMessageStatus.cs)"
     ],
     "deny": [],
     "ask": []

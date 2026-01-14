@@ -516,7 +516,7 @@ public partial class Messages
 
             // Mention data: Channel üçün member-lər (@All MessageInput-da dinamik əlavə olunur)
             currentConversationPartner = null; // Channel-da conversation partner yoxdur
-            currentChannelMembers = new List<MentionUserDto>();
+            currentChannelMembers = [];
 
             // PERFORMANCE: Fetch channel details once (was called twice: admin check + mentions)
             var channelDetails = await ChannelService.GetChannelAsync(channel.Id);
