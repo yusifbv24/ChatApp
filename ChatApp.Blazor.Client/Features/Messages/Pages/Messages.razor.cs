@@ -324,6 +324,14 @@ public partial class Messages : IAsyncDisposable
     /// </summary>
     private HashSet<Guid> pendingMessageAdds = [];
 
+    /// <summary>
+    /// DUPLICATE FIX: Pending message tracking (TempId → pending message).
+    /// Content-based matching ilə duplicate yaranmasının qarşısını alır.
+    /// Eyni content-li 2 mesaj tez göndərildikdə düzgün pending mesajı tap.
+    /// </summary>
+    private Dictionary<Guid, DirectMessageDto> pendingDirectMessages = [];
+    private Dictionary<Guid, ChannelMessageDto> pendingChannelMessages = [];
+
     #endregion
 
     #region Page Visibility State - Səhifə görünürlüyü state-i

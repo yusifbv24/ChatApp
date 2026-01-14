@@ -93,6 +93,10 @@ public partial class Messages
                     tempId);                                        // TempId
 
                 directMessages.Add(pendingMessage);
+
+                // DUPLICATE FIX: Track pending message by TempId
+                pendingDirectMessages[tempId] = pendingMessage;
+
                 UpdateConversationLocally(conversationId, content, messageTime);
                 StateHasChanged();
 
@@ -177,6 +181,10 @@ public partial class Messages
                     tempId);                                    // TempId
 
                 channelMessages.Add(pendingMessage);
+
+                // DUPLICATE FIX: Track pending message by TempId
+                pendingChannelMessages[tempId] = pendingMessage;
+
                 UpdateChannelLocally(channelId, content, messageTime, UserState.CurrentUser?.DisplayName);
                 StateHasChanged();
 

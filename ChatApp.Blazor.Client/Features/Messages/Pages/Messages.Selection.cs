@@ -125,6 +125,10 @@ public partial class Messages
             // MEMORY LEAK FIX: Clear processed message IDs to prevent unbounded growth
             processedMessageIds.Clear();
 
+            // DUPLICATE FIX: Clear pending message tracking dictionaries
+            pendingDirectMessages.Clear();
+            pendingChannelMessages.Clear();
+
             // MEMORY LEAK FIX: Clear typing state collections
             conversationTypingState.Clear();
             channelTypingUsers.Clear();
@@ -453,6 +457,10 @@ public partial class Messages
 
             // MEMORY LEAK FIX: Clear processed message IDs to prevent unbounded growth
             processedMessageIds.Clear();
+
+            // DUPLICATE FIX: Clear pending message tracking dictionaries
+            pendingDirectMessages.Clear();
+            pendingChannelMessages.Clear();
 
             // MEMORY LEAK FIX: Clear typing state collections
             conversationTypingState.Clear();

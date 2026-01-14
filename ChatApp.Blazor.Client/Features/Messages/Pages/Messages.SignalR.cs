@@ -106,13 +106,26 @@ public partial class Messages
             // Əgər bu mesaj hazırda baxdığımız conversation-a gəlibsə
             if (message.ConversationId == selectedConversationId)
             {
-                // OPTIMISTIC UI - Check if this is confirmation of pending message
-                // 1. Check by TempId (retry logic keeps TempId until SignalR confirms)
-                // Note: Don't check CreatedAtUtc - frontend/backend timestamps may differ by milliseconds
-                var pendingIndex = directMessages.FindIndex(m =>
-                    m.TempId.HasValue &&
-                    m.SenderId == message.SenderId &&
-                    m.Content == message.Content);
+                // DUPLICATE FIX: Check pending messages by exact TempId match
+                // Content-based matching duplicate yaradır (eyni content-li 2 mesaj)
+                DirectMessageDto? pendingMessage = null;
+                int pendingIndex = -1;
+
+                // Try to find pending message in tracking dictionary first
+                foreach (var kvp in pendingDirectMessages)
+                {
+                    if (kvp.Value.SenderId == message.SenderId && kvp.Value.Content == message.Content)
+                    {
+                        pendingMessage = kvp.Value;
+                        pendingIndex = directMessages.FindIndex(m => m.TempId == kvp.Key);
+                        if (pendingIndex >= 0)
+                        {
+                            // Remove from tracking dictionary
+                            pendingDirectMessages.Remove(kvp.Key);
+                            break;
+                        }
+                    }
+                }
 
                 // 2. Check by real ID (already confirmed by retry logic)
                 var existingIndex = directMessages.FindIndex(m => m.Id == message.Id && !m.TempId.HasValue);
@@ -120,7 +133,13 @@ public partial class Messages
                 if (pendingIndex >= 0)
                 {
                     // OPTIMISTIC MESSAGE CONFIRMED - Replace with real message
-                    directMessages[pendingIndex] = message with { Status = MessageStatus.Sent };
+                    // FLASH FIX: Preserve TempId for stable @key (prevents component re-mount)
+                    var oldMessage = directMessages[pendingIndex];
+                    directMessages[pendingIndex] = message with
+                    {
+                        TempId = oldMessage.TempId,  // Keep TempId so @key doesn't change
+                        Status = MessageStatus.Sent
+                    };
                     InvalidateMessageCache();
                 }
                 else if (existingIndex >= 0)
@@ -225,13 +244,26 @@ public partial class Messages
                 if (pendingMessageAdds.Contains(message.Id))
                     return;
 
-                // OPTIMISTIC UI - Check if this is confirmation of pending message
-                // 1. Check by TempId (retry logic keeps TempId until SignalR confirms)
-                // Note: Don't check CreatedAtUtc - frontend/backend timestamps may differ by milliseconds
-                var pendingIndex = channelMessages.FindIndex(m =>
-                    m.TempId.HasValue &&
-                    m.SenderId == message.SenderId &&
-                    m.Content == message.Content);
+                // DUPLICATE FIX: Check pending messages by exact TempId match
+                // Content-based matching duplicate yaradır (eyni content-li 2 mesaj)
+                ChannelMessageDto? pendingMessage = null;
+                int pendingIndex = -1;
+
+                // Try to find pending message in tracking dictionary first
+                foreach (var kvp in pendingChannelMessages)
+                {
+                    if (kvp.Value.SenderId == message.SenderId && kvp.Value.Content == message.Content)
+                    {
+                        pendingMessage = kvp.Value;
+                        pendingIndex = channelMessages.FindIndex(m => m.TempId == kvp.Key);
+                        if (pendingIndex >= 0)
+                        {
+                            // Remove from tracking dictionary
+                            pendingChannelMessages.Remove(kvp.Key);
+                            break;
+                        }
+                    }
+                }
 
                 // 2. Check by real ID (already confirmed by retry logic)
                 var existingIndex = channelMessages.FindIndex(m => m.Id == message.Id && !m.TempId.HasValue);
@@ -239,7 +271,13 @@ public partial class Messages
                 if (pendingIndex >= 0)
                 {
                     // OPTIMISTIC MESSAGE CONFIRMED - Replace with real message
-                    channelMessages[pendingIndex] = message with { Status = MessageStatus.Sent };
+                    // FLASH FIX: Preserve TempId for stable @key (prevents component re-mount)
+                    var oldMessage = channelMessages[pendingIndex];
+                    channelMessages[pendingIndex] = message with
+                    {
+                        TempId = oldMessage.TempId,  // Keep TempId so @key doesn't change
+                        Status = MessageStatus.Sent
+                    };
                     InvalidateMessageCache();
                 }
                 else if (existingIndex >= 0)

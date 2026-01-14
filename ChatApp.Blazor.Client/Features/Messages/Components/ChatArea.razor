@@ -258,7 +258,8 @@
                                     </div>
                                 }
 
-                                <MessageBubble @key="message.Id"
+                                @* FLASH FIX: Use TempId for stable key (prevents component re-mount when pending → confirmed) *@
+                                <MessageBubble @key="message.TempId ?? message.Id"
                                        MessageId="message.Id"
                                        Content="@message.Content"
                                        FileId="@message.FileId"
@@ -346,7 +347,8 @@
                                     </div>
                                 }
 
-                                <MessageBubble @key="message.Id"
+                                @* FLASH FIX: Use TempId for stable key (prevents component re-mount when pending → confirmed) *@
+                                <MessageBubble @key="message.TempId ?? message.Id"
                                        MessageId="message.Id"
                                        Content="@message.Content"
                                        FileId="@message.FileId"
