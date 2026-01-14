@@ -764,6 +764,12 @@ public partial class Messages : IAsyncDisposable
         _stateChangeDebounceTimer?.Dispose();
         _stateChangeDebounceTimer = null; // SAFEGUARD: Prevent dangling reference
 
+        // DEADLOCK FIX: Dispose mark-as-read debounce timers
+        _markDMAsReadDebounceTimer?.Dispose();
+        _markDMAsReadDebounceTimer = null;
+        _markAsReadDebounceTimer?.Dispose();
+        _markAsReadDebounceTimer = null;
+
         // MEMORY LEAK FIX: Dispose search CancellationTokenSource
         _searchCts?.Cancel();
         _searchCts?.Dispose();

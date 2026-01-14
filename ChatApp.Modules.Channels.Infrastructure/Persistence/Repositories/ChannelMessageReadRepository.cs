@@ -24,7 +24,33 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
             if (reads == null || reads.Count == 0)
                 return;
 
-            await _context.ChannelMessageReads.AddRangeAsync(reads, cancellationToken);
+            // DEADLOCK FIX: Use raw SQL with ON CONFLICT DO NOTHING
+            // Prevents deadlock when multiple concurrent mark-as-read requests arrive
+            // Index: ix_channel_message_reads_message_user (message_id, user_id) UNIQUE
+
+            // Build batch insert query with ON CONFLICT clause
+            var values = string.Join(", ", reads.Select((r, index) =>
+                $"(@id{index}, @createdAt{index}, @messageId{index}, @readAt{index}, @updatedAt{index}, @userId{index})"));
+
+            var sql = $@"
+                INSERT INTO channel_message_reads (id, created_at_utc, message_id, read_at_utc, updated_at_utc, user_id)
+                VALUES {values}
+                ON CONFLICT (message_id, user_id) DO NOTHING";
+
+            // Build parameters
+            var parameters = new List<object>();
+            for (int i = 0; i < reads.Count; i++)
+            {
+                var read = reads[i];
+                parameters.Add(new Npgsql.NpgsqlParameter($"@id{i}", read.Id));
+                parameters.Add(new Npgsql.NpgsqlParameter($"@createdAt{i}", read.CreatedAtUtc));
+                parameters.Add(new Npgsql.NpgsqlParameter($"@messageId{i}", read.MessageId));
+                parameters.Add(new Npgsql.NpgsqlParameter($"@readAt{i}", read.ReadAtUtc));
+                parameters.Add(new Npgsql.NpgsqlParameter($"@updatedAt{i}", read.UpdatedAtUtc));
+                parameters.Add(new Npgsql.NpgsqlParameter($"@userId{i}", read.UserId));
+            }
+
+            await _context.Database.ExecuteSqlRawAsync(sql, parameters, cancellationToken);
         }
 
         public async Task<List<Guid>> GetUnreadMessageIdsAsync(Guid channelId, Guid userId, CancellationToken cancellationToken = default)

@@ -131,7 +131,21 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Services
                 }
                 finally
                 {
-                    userLock.Release();
+                    // CRITICAL FIX: Only release if lock wasn't removed/disposed in try block
+                    // Race condition: if connections.Count == 0, lock was disposed at line 127-128
+                    try
+                    {
+                        // Check if lock still exists in dictionary before releasing
+                        if (_userLocks.ContainsKey(userId))
+                        {
+                            userLock.Release();
+                        }
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        // Lock was disposed in try block - this is expected and safe to ignore
+                        // This happens when the last connection is removed (line 127-128)
+                    }
                 }
             }
         }

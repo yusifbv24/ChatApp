@@ -571,76 +571,146 @@ public partial class Messages
         }
     }
 
+    // DEBOUNCE FIX: DirectMessage mark-as-read debounce timer
+    private System.Threading.Timer? _markDMAsReadDebounceTimer;
+    private readonly object _markDMAsReadLock = new object();
+    private Guid? _pendingConversationId;
+    private List<DirectMessageDto>? _pendingUnreadDMMessages;
+
     /// <summary>
     /// Direct Message-ları mark-as-read edir (bulk və ya individual API).
+    /// DEBOUNCE FIX: 500ms debounce - paralel request-ləri prevent edir.
     /// UI state-i də yenilə.
     /// </summary>
     private async Task MarkDirectMessagesAsReadAsync(List<DirectMessageDto> unreadMessages)
     {
         if (unreadMessages.Count == 0 || !selectedConversationId.HasValue) return;
 
-        try
+        // DEBOUNCE FIX: Prevent concurrent mark-as-read requests
+        lock (_markDMAsReadLock)
         {
-            // API call (5+ bulk, <5 individual)
-            if (unreadMessages.Count >= 5)
-            {
-                await ConversationService.MarkAllAsReadAsync(selectedConversationId.Value);
-            }
-            else
-            {
-                await Task.WhenAll(unreadMessages.Select(msg =>
-                    ConversationService.MarkAsReadAsync(selectedConversationId.Value, msg.Id)
-                ));
-            }
+            _pendingConversationId = selectedConversationId;
+            _pendingUnreadDMMessages = unreadMessages;
 
-            // UI state update
-            foreach (var message in unreadMessages)
+            // Reset timer - yalnız 500ms sonra request göndər
+            _markDMAsReadDebounceTimer?.Dispose();
+            _markDMAsReadDebounceTimer = new System.Threading.Timer(async _ =>
             {
-                var index = directMessages.IndexOf(message);
-                if (index >= 0)
+                Guid? conversationId;
+                List<DirectMessageDto>? messages;
+
+                lock (_markDMAsReadLock)
                 {
-                    directMessages[index] = message with { IsRead = true };
+                    conversationId = _pendingConversationId;
+                    messages = _pendingUnreadDMMessages;
+                    _pendingConversationId = null;
+                    _pendingUnreadDMMessages = null;
                 }
-            }
-            InvalidateMessageCache();
-        }
-        catch (Exception ex)
-        {
-            // LOW PRIORITY FIX: Log mark-as-read errors for debugging
-            // Mark-as-read error-ları kritik deyil (backend ola bilər ki, artıq read-dir)
-            System.Diagnostics.Debug.WriteLine($"[Messages] Mark DM as read error: {ex.Message}");
+
+                if (conversationId.HasValue && messages != null && messages.Count > 0)
+                {
+                    try
+                    {
+                        // API call (5+ bulk, <5 individual)
+                        if (messages.Count >= 5)
+                        {
+                            await ConversationService.MarkAllAsReadAsync(conversationId.Value);
+                        }
+                        else
+                        {
+                            await Task.WhenAll(messages.Select(msg =>
+                                ConversationService.MarkAsReadAsync(conversationId.Value, msg.Id)
+                            ));
+                        }
+
+                        // UI state update
+                        await InvokeAsync(() =>
+                        {
+                            foreach (var message in messages)
+                            {
+                                var index = directMessages.IndexOf(message);
+                                if (index >= 0)
+                                {
+                                    directMessages[index] = message with { IsRead = true };
+                                }
+                            }
+                            InvalidateMessageCache();
+                            StateHasChanged();
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        // LOW PRIORITY FIX: Log mark-as-read errors for debugging
+                        System.Diagnostics.Debug.WriteLine($"[Messages] Mark DM as read error: {ex.Message}");
+                    }
+                }
+            }, null, 500, Timeout.Infinite);
         }
     }
 
+    // DEADLOCK FIX: Channel mark-as-read debounce timer
+    private System.Threading.Timer? _markAsReadDebounceTimer;
+    private readonly object _markAsReadLock = new object();
+    private Guid? _pendingChannelId;
+    private List<ChannelMessageDto>? _pendingUnreadMessages;
+
     /// <summary>
     /// Channel mesajlarını mark-as-read edir (bulk və ya individual API).
+    /// DEADLOCK FIX: 500ms debounce - paralel request-ləri prevent edir.
     /// SignalR UI-ı update edəcək.
     /// </summary>
     private async Task MarkChannelMessagesAsReadAsync(List<ChannelMessageDto> unreadMessages)
     {
         if (unreadMessages.Count == 0 || !selectedChannelId.HasValue) return;
 
-        try
+        // DEADLOCK FIX: Debounce mark-as-read requests
+        // Prevents concurrent API calls that cause PostgreSQL index deadlock
+        lock (_markAsReadLock)
         {
-            // API call (5+ bulk, <5 individual)
-            if (unreadMessages.Count >= 5)
+            _pendingChannelId = selectedChannelId;
+            _pendingUnreadMessages = unreadMessages;
+
+            // Reset timer - yalnız 500ms sonra request göndər
+            _markAsReadDebounceTimer?.Dispose();
+            _markAsReadDebounceTimer = new System.Threading.Timer(async _ =>
             {
-                await ChannelService.MarkAsReadAsync(selectedChannelId.Value);
-            }
-            else
-            {
-                foreach (var msg in unreadMessages)
+                Guid? channelId;
+                List<ChannelMessageDto>? messages;
+
+                lock (_markAsReadLock)
                 {
-                    await ChannelService.MarkSingleMessageAsReadAsync(selectedChannelId.Value, msg.Id);
+                    channelId = _pendingChannelId;
+                    messages = _pendingUnreadMessages;
+                    _pendingChannelId = null;
+                    _pendingUnreadMessages = null;
                 }
-            }
-            // SignalR event-i UI-ı avtomatik yeniləyəcək
-        }
-        catch (Exception ex)
-        {
-            // LOW PRIORITY FIX: Log mark-as-read errors for debugging
-            // Mark-as-read error-ları kritik deyil (backend ola bilər ki, artıq read-dir)
-            System.Diagnostics.Debug.WriteLine($"[Messages] Mark channel as read error: {ex.Message}");
+
+                if (channelId.HasValue && messages != null && messages.Count > 0)
+                {
+                    try
+                    {
+                        // API call (5+ bulk, <5 individual)
+                        if (messages.Count >= 5)
+                        {
+                            await ChannelService.MarkAsReadAsync(channelId.Value);
+                        }
+                        else
+                        {
+                            foreach (var msg in messages)
+                            {
+                                await ChannelService.MarkSingleMessageAsReadAsync(channelId.Value, msg.Id);
+                            }
+                        }
+                        // SignalR event-i UI-ı avtomatik yeniləyəcək
+                    }
+                    catch (Exception ex)
+                    {
+                        // LOW PRIORITY FIX: Log mark-as-read errors for debugging
+                        // Mark-as-read error-ları kritik deyil (backend ola bilər ki, artıq read-dir)
+                        System.Diagnostics.Debug.WriteLine($"[Messages] Mark channel as read error: {ex.Message}");
+                    }
+                }
+            }, null, 500, Timeout.Infinite);
         }
     }
 
