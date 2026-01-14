@@ -41,15 +41,19 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Services
 
             // 2. ALSO send directly to each member's connections (for lazy loading support)
             // This ensures notifications work even if user hasn't joined the channel group yet
+            // OPTIMIZATION: Batch all connections and send once instead of N individual sends
+            var allConnections = new List<string>();
             foreach (var memberId in memberUserIds)
             {
                 var memberConnections = await _connectionManager.GetUserConnectionsAsync(memberId);
-                if (memberConnections.Count != 0)
-                {
-                    await _hubContext.Clients
-                        .Clients(memberConnections)
-                        .SendAsync("NewChannelMessage", messageDto);
-                }
+                allConnections.AddRange(memberConnections);
+            }
+
+            if (allConnections.Count > 0)
+            {
+                await _hubContext.Clients
+                    .Clients(allConnections)
+                    .SendAsync("NewChannelMessage", messageDto);
             }
         }
 
@@ -140,15 +144,19 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Services
                 .SendAsync("ChannelMessageEdited", messageDto);
 
             // 2. Send directly to each member's connections (for lazy loading)
+            // OPTIMIZATION: Batch all connections
+            var allConnections = new List<string>();
             foreach (var memberId in memberUserIds)
             {
                 var memberConnections = await _connectionManager.GetUserConnectionsAsync(memberId);
-                if (memberConnections.Count != 0)
-                {
-                    await _hubContext.Clients
-                        .Clients(memberConnections)
-                        .SendAsync("ChannelMessageEdited", messageDto);
-                }
+                allConnections.AddRange(memberConnections);
+            }
+
+            if (allConnections.Count > 0)
+            {
+                await _hubContext.Clients
+                    .Clients(allConnections)
+                    .SendAsync("ChannelMessageEdited", messageDto);
             }
         }
 
@@ -194,15 +202,19 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Services
                 .SendAsync("ChannelMessageDeleted", messageDto);
 
             // 2. Send directly to each member's connections (for lazy loading)
+            // OPTIMIZATION: Batch all connections
+            var allConnections = new List<string>();
             foreach (var memberId in memberUserIds)
             {
                 var memberConnections = await _connectionManager.GetUserConnectionsAsync(memberId);
-                if (memberConnections.Count != 0)
-                {
-                    await _hubContext.Clients
-                        .Clients(memberConnections)
-                        .SendAsync("ChannelMessageDeleted", messageDto);
-                }
+                allConnections.AddRange(memberConnections);
+            }
+
+            if (allConnections.Count > 0)
+            {
+                await _hubContext.Clients
+                    .Clients(allConnections)
+                    .SendAsync("ChannelMessageDeleted", messageDto);
             }
         }
 
@@ -228,15 +240,43 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Services
             }
         }
 
-        public async Task NotifyChannelMessagesReadAsync(Guid channelId, Guid userId, List<Guid> messageIds)
+        public async Task NotifyChannelMessagesReadAsync(Guid channelId, Guid userId, Dictionary<Guid, int> messageReadCounts)
         {
             _logger?.LogDebug("Broadcasting {Count} messages read for user {UserId} in channel {ChannelId}",
-                messageIds.Count, userId, channelId);
+                messageReadCounts.Count, userId, channelId);
 
             // Broadcast to all members in the channel group
+            // Send messageId -> readByCount pairs so conversation list can update status correctly
             await _hubContext.Clients
                 .Group($"channel_{channelId}")
-                .SendAsync("ChannelMessagesRead", channelId, userId, messageIds);
+                .SendAsync("ChannelMessagesRead", channelId, userId, messageReadCounts);
+        }
+
+        public async Task NotifyChannelMessagesReadToMembersAsync(Guid channelId, List<Guid> memberUserIds, Guid userId, Dictionary<Guid, int> messageReadCounts)
+        {
+            _logger?.LogDebug("Broadcasting {Count} messages read for user {UserId} to channel {ChannelId} and {MemberCount} members directly",
+                messageReadCounts.Count, userId, channelId, memberUserIds.Count);
+
+            // 1. Send to channel group (for users actively viewing the channel)
+            await NotifyChannelMessagesReadAsync(channelId, userId, messageReadCounts);
+
+            // 2. ALSO send directly to each member's connections (for lazy loading support)
+            // This ensures users who left the channel (and left the group) still receive the update
+            // OPTIMIZATION: Batch all connections and send once instead of N individual sends
+            var allConnections = new List<string>();
+            foreach (var memberId in memberUserIds)
+            {
+                var connections = await _connectionManager.GetUserConnectionsAsync(memberId);
+                allConnections.AddRange(connections);
+            }
+
+            if (allConnections.Count > 0)
+            {
+                // Send to all member connections in a single operation
+                await _hubContext.Clients
+                    .Clients(allConnections)
+                    .SendAsync("ChannelMessagesRead", channelId, userId, messageReadCounts);
+            }
         }
 
 
@@ -281,15 +321,19 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Services
 
             // 2. ALSO send directly to each member's connections (for lazy loading support)
             // This ensures reactions propagate even if user hasn't joined the channel group yet
+            // OPTIMIZATION: Batch all connections
+            var allConnections = new List<string>();
             foreach (var memberId in memberUserIds)
             {
                 var memberConnections = await _connectionManager.GetUserConnectionsAsync(memberId);
-                if (memberConnections.Count != 0)
-                {
-                    await _hubContext.Clients
-                        .Clients(memberConnections)
-                        .SendAsync("ChannelMessageReactionsUpdated", new { messageId, reactions });
-                }
+                allConnections.AddRange(memberConnections);
+            }
+
+            if (allConnections.Count > 0)
+            {
+                await _hubContext.Clients
+                    .Clients(allConnections)
+                    .SendAsync("ChannelMessageReactionsUpdated", new { messageId, reactions });
             }
         }
 
@@ -336,15 +380,19 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Services
 
             // 2. ALSO send directly to each member's connections (for lazy loading support)
             // This allows typing indicators to appear in conversation list even if user hasn't joined the channel
+            // OPTIMIZATION: Batch all connections
+            var allConnections = new List<string>();
             foreach (var memberId in memberUserIds)
             {
                 var memberConnections = await _connectionManager.GetUserConnectionsAsync(memberId);
-                if (memberConnections.Count != 0)
-                {
-                    await _hubContext.Clients
-                        .Clients(memberConnections)
-                        .SendAsync("UserTypingInChannel", channelId, typingUserId, displayName, isTyping);
-                }
+                allConnections.AddRange(memberConnections);
+            }
+
+            if (allConnections.Count > 0)
+            {
+                await _hubContext.Clients
+                    .Clients(allConnections)
+                    .SendAsync("UserTypingInChannel", channelId, typingUserId, displayName, isTyping);
             }
         }
 
@@ -360,15 +408,19 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Services
                 .SendAsync("UserTypingInConversation", conversationId, typingUserId, isTyping);
 
             // 2. ALSO send directly to each member's connections (for lazy loading)
+            // OPTIMIZATION: Batch all connections
+            var allConnections = new List<string>();
             foreach (var memberId in memberUserIds)
             {
                 var memberConnections = await _connectionManager.GetUserConnectionsAsync(memberId);
-                if (memberConnections.Count != 0)
-                {
-                    await _hubContext.Clients
-                        .Clients(memberConnections)
-                        .SendAsync("UserTypingInConversation", conversationId, typingUserId, isTyping);
-                }
+                allConnections.AddRange(memberConnections);
+            }
+
+            if (allConnections.Count > 0)
+            {
+                await _hubContext.Clients
+                    .Clients(allConnections)
+                    .SendAsync("UserTypingInConversation", conversationId, typingUserId, isTyping);
             }
         }
     }

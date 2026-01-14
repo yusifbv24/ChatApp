@@ -23,5 +23,16 @@ namespace ChatApp.Modules.Channels.Application.Interfaces
         /// Adds a single read record
         /// </summary>
         Task AddAsync(ChannelMessageRead read, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Gets the read count for a specific message (how many users have read it)
+        /// </summary>
+        Task<int> GetReadByCountAsync(Guid messageId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Gets the read counts for multiple messages in a single query (bulk operation)
+        /// Returns dictionary of messageId -> readByCount. Messages with 0 reads are included with count 0.
+        /// </summary>
+        Task<Dictionary<Guid, int>> GetReadByCountsAsync(List<Guid> messageIds, CancellationToken cancellationToken = default);
     }
 }

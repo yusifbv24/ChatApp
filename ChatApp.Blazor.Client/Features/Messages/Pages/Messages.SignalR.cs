@@ -638,8 +638,9 @@ public partial class Messages
     /// <summary>
     /// Channel mesajları oxunduqda çağrılır.
     /// Bir neçə mesaj eyni anda oxundu bildirilir.
+    /// messageReadCounts: MessageId -> ReadByCount dictionary
     /// </summary>
-    private void HandleChannelMessagesRead(Guid channelId, Guid userId, List<Guid> messageIds)
+    private void HandleChannelMessagesRead(Guid channelId, Guid userId, Dictionary<Guid, int> messageReadCounts)
     {
         InvokeAsync(() =>
         {
@@ -648,7 +649,7 @@ public partial class Messages
             if (selectedChannelId.HasValue && selectedChannelId.Value == channelId)
             {
                 // PERFORMANCE: Convert to HashSet for O(1) lookup (was O(n) in loop)
-                var messageIdSet = new HashSet<Guid>(messageIds);
+                var messageIdSet = new HashSet<Guid>(messageReadCounts.Keys);
                 var updatedList = new List<ChannelMessageDto>(channelMessages);
 
                 for (int i = 0; i < updatedList.Count; i++)
@@ -689,27 +690,22 @@ public partial class Messages
             if (channel != null &&
                 channel.LastMessageSenderId == currentUserId &&
                 channel.LastMessageId.HasValue &&
-                messageIds.Contains(channel.LastMessageId.Value))
+                messageReadCounts.ContainsKey(channel.LastMessageId.Value))
             {
-                var lastMessageInView = channelMessages.FirstOrDefault(m => m.Id == channel.LastMessageId.Value);
+                // CRITICAL FIX: Use ReadByCount from SignalR event instead of channelMessages
+                // When user is in another conversation, channelMessages doesn't contain this channel's messages
+                var readByCount = messageReadCounts[channel.LastMessageId.Value];
+                var totalMembers = channel.MemberCount - 1; // Exclude sender
 
                 string newStatus;
-                if (lastMessageInView != null)
-                {
-                    var totalMembers = channel.MemberCount - 1;
-                    if (totalMembers == 0)
-                        newStatus = "Sent";
-                    else if (lastMessageInView.ReadByCount >= totalMembers)
-                        newStatus = "Read";
-                    else if (lastMessageInView.ReadByCount > 0)
-                        newStatus = "Delivered";
-                    else
-                        newStatus = "Sent";
-                }
-                else
-                {
+                if (totalMembers == 0)
+                    newStatus = "Sent";
+                else if (readByCount >= totalMembers)
+                    newStatus = "Read";
+                else if (readByCount > 0)
                     newStatus = "Delivered";
-                }
+                else
+                    newStatus = "Sent";
 
                 // PERFORMANCE: Using helper method (eliminated duplicate pattern)
                 UpdateListItemWhere(

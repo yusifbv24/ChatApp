@@ -73,7 +73,7 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMessages
                     .Select(m => m.Id)
                     .ToList();
 
-                if (filteredMessageIds.Any())
+                if (filteredMessageIds.Count != 0)
                 {
                     // Create ChannelMessageRead records for all unread messages
                     var readRecords = filteredMessageIds
@@ -84,11 +84,27 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMessages
                     await _unitOfWork.ChannelMessageReads.BulkInsertAsync(readRecords, cancellationToken);
                     await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                    // Broadcast read status update to all channel members with the list of message IDs
-                    await _signalRNotificationService.NotifyChannelMessagesReadAsync(
+                    // Get current read counts for all messages in a single query (bulk operation)
+                    var messageReadCounts = await _unitOfWork.ChannelMessageReads
+                        .GetReadByCountsAsync(filteredMessageIds, cancellationToken);
+
+                    // Get all active channel members for hybrid notification (lazy loading support)
+                    var members = await _unitOfWork.ChannelMembers.GetChannelMembersAsync(
                         request.ChannelId,
+                        cancellationToken);
+
+                    var memberUserIds = members
+                        .Where(m => m.IsActive)
+                        .Select(m => m.UserId)
+                        .ToList();
+
+                    // Broadcast read status update to all channel members with HYBRID pattern
+                    // Sends to both channel group AND each member's direct connections (for lazy loading)
+                    await _signalRNotificationService.NotifyChannelMessagesReadToMembersAsync(
+                        request.ChannelId,
+                        memberUserIds,
                         request.UserId,
-                        filteredMessageIds);
+                        messageReadCounts);
                 }
 
                 _logger?.LogDebug(

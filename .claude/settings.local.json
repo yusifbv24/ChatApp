@@ -13,7 +13,8 @@
       "Bash(findstr:*)",
       "Bash(dotnet add:*)",
       "Bash(/tmp/channeldto_changes.patch)",
-      "Bash(del ChatApp.Blazor.ClientModelsMessagesMessageStatus.cs)"
+      "Bash(del ChatApp.Blazor.ClientModelsMessagesMessageStatus.cs)",
+      "Bash(cmd /c \"taskkill /F /PID 14076\")"
     ],
     "deny": [],
     "ask": []

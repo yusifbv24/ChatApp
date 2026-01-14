@@ -44,5 +44,33 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
         {
             await _context.ChannelMessageReads.AddAsync(read, cancellationToken);
         }
+
+        public async Task<int> GetReadByCountAsync(Guid messageId, CancellationToken cancellationToken = default)
+        {
+            return await _context.ChannelMessageReads
+                .CountAsync(r => r.MessageId == messageId, cancellationToken);
+        }
+
+        public async Task<Dictionary<Guid, int>> GetReadByCountsAsync(List<Guid> messageIds, CancellationToken cancellationToken = default)
+        {
+            if (messageIds == null || messageIds.Count == 0)
+                return new Dictionary<Guid, int>();
+
+            // Get read counts from database (only for messages that have been read)
+            var readCounts = await _context.ChannelMessageReads
+                .Where(r => messageIds.Contains(r.MessageId))
+                .GroupBy(r => r.MessageId)
+                .Select(g => new { MessageId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.MessageId, x => x.Count, cancellationToken);
+
+            // Add missing messages with 0 count (messages that haven't been read yet)
+            var result = new Dictionary<Guid, int>();
+            foreach (var messageId in messageIds)
+            {
+                result[messageId] = readCounts.TryGetValue(messageId, out var count) ? count : 0;
+            }
+
+            return result;
+        }
     }
 }

@@ -98,9 +98,18 @@
 
         /// <summary>
         /// Notify about channel messages read
-        /// Broadcasts when a member marks messages as read, includes the list of message IDs that were marked as read
+        /// Broadcasts when a member marks messages as read, includes the message IDs and their current read counts
         /// </summary>
-        Task NotifyChannelMessagesReadAsync(Guid channelId, Guid userId, List<Guid> messageIds);
+        /// <param name="channelId">Channel ID</param>
+        /// <param name="userId">User who read the messages</param>
+        /// <param name="messageReadCounts">Dictionary of message ID to current ReadByCount</param>
+        Task NotifyChannelMessagesReadAsync(Guid channelId, Guid userId, Dictionary<Guid, int> messageReadCounts);
+
+        /// <summary>
+        /// Notify channel members about messages read (hybrid: group + direct connections)
+        /// Sends to channel group AND each member's connections directly (for lazy loading support)
+        /// </summary>
+        Task NotifyChannelMessagesReadToMembersAsync(Guid channelId, List<Guid> memberUserIds, Guid userId, Dictionary<Guid, int> messageReadCounts);
 
 
         /// <summary>
