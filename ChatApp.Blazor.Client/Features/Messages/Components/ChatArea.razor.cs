@@ -23,6 +23,11 @@ public partial class ChatArea : IAsyncDisposable
     [Parameter] public bool IsEmpty { get; set; } = true;
 
     /// <summary>
+    /// Scroll version - scroll olduqda increment olunur (menu bağlamaq üçün).
+    /// </summary>
+    private int scrollVersion = 0;
+
+    /// <summary>
     /// Direct message və ya channel olduğunu ayırd edir.
     /// </summary>
     [Parameter] public bool IsDirectMessage { get; set; } = true;
@@ -1020,6 +1025,9 @@ public partial class ChatArea : IAsyncDisposable
 
         try
         {
+            // FIX: Close all open more menus on scroll
+            await HandleCloseAllMenus();
+
             var scrollTop = await JS.InvokeAsync<int>("chatAppUtils.getScrollTop", messagesContainerRef);
 
             // Scroll button visibility
@@ -1044,6 +1052,16 @@ public partial class ChatArea : IAsyncDisposable
         {
             // Scroll errors - ignore
         }
+    }
+
+    /// <summary>
+    /// Bütün açıq more menu-ları bağlamaq üçün scroll version-u increment edir.
+    /// </summary>
+    private async Task HandleCloseAllMenus()
+    {
+        // FIX: Increment scroll version to trigger menu close in all MessageBubbles
+        scrollVersion++;
+        await Task.CompletedTask;
     }
 
     /// <summary>

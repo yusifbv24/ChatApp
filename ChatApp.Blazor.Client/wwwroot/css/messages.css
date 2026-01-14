@@ -2071,7 +2071,7 @@
 .popup-overlay {
     position: fixed;
     inset: 0;
-    background: transparent;
+    background: rgba(0, 0, 0, 0.01); /* FIX: Very subtle background - makes overlay clickable area visible for debugging */
     z-index: 10000; /* FIX: Below menu (10001) but high enough to be on top of everything else */
     cursor: default;
     pointer-events: auto; /* Catch clicks to close menu */
@@ -4806,14 +4806,13 @@
    =========================== */
 
 .message-file-attachment {
-    margin-bottom: 8px;
     border-radius: 8px;
     overflow: hidden;
 }
 
 /* Image preview container */
 .file-image-container {
-    display: block;
+    display: inline;
     text-decoration: none;
     color: inherit;
 }
@@ -5047,7 +5046,7 @@
 /* Add cursor pointer to image container */
 .file-image-container {
     cursor: pointer;
-    display: block;
+    display: inline;
 }
 
 .file-image-container:hover .file-image-preview {

@@ -122,6 +122,12 @@ public partial class Messages
             isPendingConversation = false;
             pendingUser = null;
 
+            // FIX: Clear reply/edit mode when switching conversations
+            if (isReplying)
+            {
+                CancelReply();
+            }
+
             // MEMORY LEAK FIX: Clear processed message IDs to prevent unbounded growth
             processedMessageIds.Clear();
 
@@ -454,6 +460,12 @@ public partial class Messages
 
             isPendingConversation = false;
             pendingUser = null;
+
+            // FIX: Clear reply/edit mode when switching channels
+            if (isReplying)
+            {
+                CancelReply();
+            }
 
             // MEMORY LEAK FIX: Clear processed message IDs to prevent unbounded growth
             processedMessageIds.Clear();

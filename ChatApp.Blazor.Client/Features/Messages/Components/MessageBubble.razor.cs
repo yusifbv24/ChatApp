@@ -856,6 +856,30 @@ public partial class MessageBubble : IAsyncDisposable
     }
 
     /// <summary>
+    /// Scroll version - scroll detect olunduqda dəyişir.
+    /// </summary>
+    [Parameter] public int ScrollVersion { get; set; }
+
+    private int _previousScrollVersion = 0;
+
+    /// <summary>
+    /// OnScrollDetected callback handler - scroll edərkən menu bağlamaq üçün.
+    /// </summary>
+    protected override void OnParametersSet()
+    {
+        // FIX: Close menu when scroll is detected (ScrollVersion changed)
+        if (ScrollVersion != _previousScrollVersion)
+        {
+            _previousScrollVersion = ScrollVersion;
+            if (showMoreMenu)
+            {
+                showMoreMenu = false;
+                showMoreSubmenu = false;
+            }
+        }
+    }
+
+    /// <summary>
     /// More submenu-nu göstərir.
     /// </summary>
     private void ShowMoreSubmenu() => showMoreSubmenu = true;
