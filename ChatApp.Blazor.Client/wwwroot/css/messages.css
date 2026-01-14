@@ -3461,7 +3461,7 @@
 
 .scroll-to-bottom-btn {
     position: absolute;
-    bottom: 90px;
+    bottom: 150px; /* FIX: Increased from 90px to prevent overlap with reply/edit mode */
     right: 24px;
     width: 44px;
     height: 44px;
