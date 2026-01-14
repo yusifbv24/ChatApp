@@ -1230,6 +1230,12 @@
     min-width: 0;
     opacity: 0;
     animation: messageFadeIn 0.15s ease-out forwards;
+    z-index: 1; /* FIX: Default z-index for stacking */
+}
+
+/* FIX: When menu is open, raise wrapper above overlay so menu is clickable */
+.message-wrapper.menu-open {
+    z-index: 10002; /* Above menu (10001) and overlay (10000) */
 }
 
 @keyframes messageFadeIn {
@@ -1691,7 +1697,7 @@
     background: var(--white);
     border-radius: var(--radius-lg);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-    z-index: 10000;
+    z-index: 10001; /* FIX: Above overlay (9999) so menu is clickable */
     overflow: visible;
     border: 1px solid var(--gray-200);
     animation: fadeInDown 0.15s ease-out;
@@ -2066,8 +2072,9 @@
     position: fixed;
     inset: 0;
     background: transparent;
-    z-index: 9999;
+    z-index: 10000; /* FIX: Below menu (10001) but high enough to be on top of everything else */
     cursor: default;
+    pointer-events: auto; /* Catch clicks to close menu */
 }
 
 @keyframes fadeInUp {

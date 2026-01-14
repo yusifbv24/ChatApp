@@ -1,6 +1,6 @@
 @using ChatApp.Shared.Kernel
 
-<div id="message-@MessageId" class="message-wrapper @(IsOwn ? "own" : "other") @(IsDeleted ? "deleted" : "") @(!IsDirectMessage && !IsOwn ? "group-message" : "") @(IsSelectMode ? "select-mode" : "") @(Status == MessageStatus.Pending ? "pending" : "")">
+<div id="message-@MessageId" class="message-wrapper @(IsOwn ? "own" : "other") @(IsDeleted ? "deleted" : "") @(!IsDirectMessage && !IsOwn ? "group-message" : "") @(IsSelectMode ? "select-mode" : "") @(Status == MessageStatus.Pending ? "pending" : "") @(showMoreMenu ? "menu-open" : "")">
 
     @* Selection checkbox - visible only in select mode and not for deleted messages *@
     @if (IsSelectMode && !IsDeleted)
@@ -414,13 +414,13 @@
             }
         </div>
     </div>
-
-    <!-- More Menu Overlay -->
-    @if (showMoreMenu)
-    {
-        <div class="popup-overlay" @onclick="CloseMoreMenu"></div>
-    }
 </div>
+
+<!-- More Menu Overlay - OUTSIDE message-wrapper for full-screen coverage -->
+@if (showMoreMenu)
+{
+    <div class="popup-overlay" @onclick="CloseMoreMenu"></div>
+}
 
 <!-- Image Lightbox Modal -->
 @if (showImageLightbox && IsFileImage && !string.IsNullOrEmpty(FileId))
