@@ -113,8 +113,8 @@ public partial class Messages
 
                 if (pendingIndex >= 0)
                 {
-                    // OPTIMISTIC MESSAGE CONFIRMED - Replace with real message and clear TempId
-                    directMessages[pendingIndex] = message with { Status = MessageStatus.Sent, TempId = null };
+                    // OPTIMISTIC MESSAGE CONFIRMED - Replace with real message
+                    directMessages[pendingIndex] = message with { Status = MessageStatus.Sent };
                     InvalidateMessageCache();
                 }
                 else if (existingIndex >= 0)
@@ -126,7 +126,7 @@ public partial class Messages
                 else
                 {
                     // NEW MESSAGE FROM OTHERS - Add to list
-                    directMessages.Add(message with { Status = MessageStatus.Sent, TempId = null });
+                    directMessages.Add(message with { Status = MessageStatus.Sent });
                 }
             }
 
@@ -232,8 +232,8 @@ public partial class Messages
 
                 if (pendingIndex >= 0)
                 {
-                    // OPTIMISTIC MESSAGE CONFIRMED - Replace with real message and clear TempId
-                    channelMessages[pendingIndex] = message with { Status = MessageStatus.Sent, TempId = null };
+                    // OPTIMISTIC MESSAGE CONFIRMED - Replace with real message
+                    channelMessages[pendingIndex] = message with { Status = MessageStatus.Sent };
                     InvalidateMessageCache();
                 }
                 else if (existingIndex >= 0)
@@ -260,7 +260,7 @@ public partial class Messages
                         }
                     }
 
-                    channelMessages.Add(message with { Status = MessageStatus.Sent, TempId = null });
+                    channelMessages.Add(message with { Status = MessageStatus.Sent });
                     pendingMessageAdds.Remove(message.Id);
                 }
             }

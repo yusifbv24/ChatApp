@@ -1,6 +1,6 @@
 @using ChatApp.Shared.Kernel
 
-<div id="message-@MessageId" class="message-wrapper @(IsOwn ? "own" : "other") @(IsDeleted ? "deleted" : "") @(!IsDirectMessage && !IsOwn ? "group-message" : "") @(IsSelectMode ? "select-mode" : "")">
+<div id="message-@MessageId" class="message-wrapper @(IsOwn ? "own" : "other") @(IsDeleted ? "deleted" : "") @(!IsDirectMessage && !IsOwn ? "group-message" : "") @(IsSelectMode ? "select-mode" : "") @(Status == MessageStatus.Pending ? "pending" : "")">
 
     @* Selection checkbox - visible only in select mode and not for deleted messages *@
     @if (IsSelectMode && !IsDeleted)
