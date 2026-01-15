@@ -28,6 +28,7 @@
                   ChannelId="@selectedChannelId"
                   CacheVersion="@messageCacheVersion"
                   DirectMessages="@directMessages"
+                  RecipientId="@recipientUserId"
                   RecipientName="@recipientName"
                   RecipientAvatarUrl="@recipientAvatarUrl"
                   IsRecipientOnline="@isRecipientOnline"
@@ -111,6 +112,7 @@
             {
                 <div class="messages-sidebar-panel @(showSearchPanel ? "hidden" : "")">
                     <Sidebar IsDirectMessage="@isDirectMessage"
+                             RecipientId="@recipientUserId"
                              RecipientName="@recipientName"
                              RecipientAvatarUrl="@recipientAvatarUrl"
                              IsNotesConversation="@isNotesConversation"

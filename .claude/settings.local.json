@@ -17,7 +17,8 @@
       "Bash(cmd /c \"taskkill /F /PID 14076\")",
       "Bash(cmd /c \"taskkill /F /PID 18276\")",
       "Bash(powershell -Command \"Stop-Process -Id 18276 -Force\")",
-      "Bash(powershell -Command \"Stop-Process -Id 17912 -Force\")"
+      "Bash(powershell -Command \"Stop-Process -Id 17912 -Force\")",
+      "Bash(powershell -Command:*)"
     ],
     "deny": [],
     "ask": []

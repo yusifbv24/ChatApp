@@ -1,16 +1,19 @@
 using Microsoft.AspNetCore.Components;
 using ChatApp.Blazor.Client.Models.Messages;
 using ChatApp.Blazor.Client.State;
+using ChatApp.Blazor.Client.Helpers;
 using MudBlazor;
 using System.Globalization;
+using Microsoft.JSInterop;
 
 namespace ChatApp.Blazor.Client.Features.Messages.Components;
 
-public partial class ConversationList
+public partial class ConversationList : IAsyncDisposable
 {
     #region Injected Services
 
     [Inject] private UserState UserState { get; set; } = default!;
+    [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
 
     #endregion
 
@@ -117,6 +120,21 @@ public partial class ConversationList
     /// </summary>
     private bool showNewMenu = false;
 
+    /// <summary>
+    /// More menu açıqdır?
+    /// </summary>
+    private bool showMoreMenu = false;
+
+    /// <summary>
+    /// More menu-nun açıq olduğu item ID-si.
+    /// </summary>
+    private Guid? moreMenuItemId = null;
+
+    /// <summary>
+    /// Hover edən conversation item ID-si.
+    /// </summary>
+    private Guid? hoveredItemId = null;
+
     #endregion
 
     #region Private Fields - Cache
@@ -163,6 +181,8 @@ public partial class ConversationList
     {
         public Guid Id { get; set; }
 
+        public Guid? OtherUserId { get; set; } // DirectMessage üçün qarşı tərəfin ID-si (avatar rəngi üçün)
+
         public string Name { get; set; } = string.Empty;
 
         public string? AvatarUrl { get; set; }
@@ -205,6 +225,16 @@ public partial class ConversationList
     #region Lifecycle Methods
 
     /// <summary>
+    /// Reference to this component for JS callbacks.
+    /// </summary>
+    private DotNetObjectReference<ConversationList>? _dotNetRef;
+
+    /// <summary>
+    /// Flag to track if JS listeners are initialized.
+    /// </summary>
+    private bool _jsListenersInitialized = false;
+
+    /// <summary>
     /// Parameter dəyişiklikləri olduqda cache-i yenilə.
     /// </summary>
     protected override void OnParametersSet()
@@ -220,6 +250,32 @@ public partial class ConversationList
             _previousChannels = Channels;
             _previousSelectedConversationId = SelectedConversationId;
             _previousSelectedChannelId = SelectedChannelId;
+        }
+    }
+
+    /// <summary>
+    /// After render - initialize JS scroll listeners.
+    /// </summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_jsListenersInitialized)
+        {
+            _dotNetRef = DotNetObjectReference.Create(this);
+            await JSRuntime.InvokeVoidAsync("conversationListHelper.initialize", _dotNetRef);
+            _jsListenersInitialized = true;
+        }
+    }
+
+    /// <summary>
+    /// JS callback - called when window scrolls or clicks outside.
+    /// </summary>
+    [JSInvokable]
+    public void OnGlobalInteraction()
+    {
+        if (showMoreMenu)
+        {
+            CloseMoreMenu();
+            StateHasChanged();
         }
     }
 
@@ -314,6 +370,7 @@ public partial class ConversationList
         return new UnifiedChatItem
         {
             Id = conv.Id,
+            OtherUserId = conv.OtherUserId, // Avatar rəngi üçün qarşı tərəfin ID-si
             Name = conv.IsNotes ? "Notes" : conv.OtherUserDisplayName,
             AvatarUrl = conv.OtherUserAvatarUrl,
             LastMessage = conv.LastMessageContent,
@@ -447,6 +504,70 @@ public partial class ConversationList
 
     #endregion
 
+    #region More Menu Methods
+
+    /// <summary>
+    /// More menu toggle.
+    /// </summary>
+    private void ToggleMoreMenu(Guid itemId, bool isChannel)
+    {
+        if (showMoreMenu && moreMenuItemId == itemId)
+        {
+            CloseMoreMenu();
+        }
+        else
+        {
+            showMoreMenu = true;
+            moreMenuItemId = itemId;
+        }
+    }
+
+    /// <summary>
+    /// More menu-nu bağlayır.
+    /// </summary>
+    private void CloseMoreMenu()
+    {
+        showMoreMenu = false;
+        moreMenuItemId = null;
+    }
+
+    /// <summary>
+    /// Right-click event handler (context menu).
+    /// </summary>
+    private void HandleContextMenu(Guid itemId, bool isChannel)
+    {
+        ToggleMoreMenu(itemId, isChannel);
+    }
+
+    /// <summary>
+    /// Hover event - item üzərinə gəldikdə.
+    /// </summary>
+    private void HandleMouseEnter(Guid itemId)
+    {
+        hoveredItemId = itemId;
+    }
+
+    /// <summary>
+    /// Hover event - item-dan çıxdıqda.
+    /// </summary>
+    private void HandleMouseLeave()
+    {
+        hoveredItemId = null;
+    }
+
+    /// <summary>
+    /// Scroll event handler - scroll edərkən menu bağlanır.
+    /// </summary>
+    private void HandleScroll()
+    {
+        if (showMoreMenu)
+        {
+            CloseMoreMenu();
+        }
+    }
+
+    #endregion
+
     #region Formatting Methods
 
     /// <summary>
@@ -486,6 +607,30 @@ public partial class ConversationList
             "Read" => Icons.Material.Filled.DoneAll,         // İkiqat checkmark (mavi - CSS ilə)
             _ => Icons.Material.Filled.Check
         };
+    }
+
+    #endregion
+
+    #region IAsyncDisposable
+
+    /// <summary>
+    /// Dispose - cleanup JS listeners and DotNetObjectReference.
+    /// </summary>
+    public async ValueTask DisposeAsync()
+    {
+        if (_jsListenersInitialized && _dotNetRef != null)
+        {
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("menuPanelHelper.unregister", _dotNetRef);
+            }
+            catch (JSDisconnectedException)
+            {
+                // Ignore - circuit already disconnected
+            }
+        }
+
+        _dotNetRef?.Dispose();
     }
 
     #endregion

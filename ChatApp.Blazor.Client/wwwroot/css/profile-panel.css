@@ -202,7 +202,7 @@
 }
 
 .profile-avatar-large img,
-.profile-avatar-placeholder {
+.profile-avatar-large .profile-avatar-placeholder {
     width: 100%;
     height: 100%;
     border-radius: 50%;
@@ -211,12 +211,12 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.profile-avatar-placeholder {
+.profile-avatar-large .profile-avatar-placeholder {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--primary-gradient);
-    color: var(--white);
+    /* FIX: Background color set inline from GetAvatarBackgroundColor() */
+    color: var(--white) !important;
     font-size: 28px;
     font-weight: 600;
 }

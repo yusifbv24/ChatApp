@@ -32,7 +32,7 @@
                         }
                         else
                         {
-                            <div class="avatar-placeholder">@StringHelper.GetInitials(RecipientName)</div>
+                            <div class="avatar-placeholder" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(RecipientId ?? Guid.Empty);">@StringHelper.GetInitials(RecipientName)</div>
                         }
                         @if (!IsNotesConversation)
                         {
@@ -57,7 +57,7 @@
                 else
                 {
                     <div class="header-avatar">
-                        <div class="avatar-placeholder channel-avatar">@StringHelper.GetInitials(ChannelName)</div>
+                        <div class="avatar-placeholder channel-avatar" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(ChannelId ?? Guid.Empty);">@StringHelper.GetInitials(ChannelName)</div>
                     </div>
                     <div class="header-details">
                         <h3 class="header-name">@ChannelName</h3>

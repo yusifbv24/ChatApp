@@ -3,6 +3,7 @@ using Microsoft.JSInterop;
 using ChatApp.Blazor.Client.Models.Messages;
 using ChatApp.Blazor.Client.Models.Auth;
 using ChatApp.Blazor.Client.Models.Files;
+using ChatApp.Blazor.Client.Helpers;
 using System.Globalization;
 
 namespace ChatApp.Blazor.Client.Features.Messages.Components;
@@ -62,6 +63,11 @@ public partial class ChatArea : IAsyncDisposable
     /// Direct Message siyahısı - tarixə görə sıralanır və qruplaşdırılır.
     /// </summary>
     [Parameter] public List<DirectMessageDto> DirectMessages { get; set; } = [];
+
+    /// <summary>
+    /// DM-də qarşı tərəfin ID-si - avatar rəngi üçün.
+    /// </summary>
+    [Parameter] public Guid? RecipientId { get; set; }
 
     /// <summary>
     /// DM-də qarşı tərəfin adı - header-da göstərilir.
@@ -1660,12 +1666,12 @@ public partial class ChatArea : IAsyncDisposable
 
     #endregion
 
-    #region Helper Methods
+    #region Helper Methods - File Preview
 
     /// <summary>
     /// DirectMessage-dən file preview string-ini çıxarır (pinned messages üçün).
     /// </summary>
-    private string GetFilePreview(DirectMessageDto message)
+    private static string GetFilePreview(DirectMessageDto message)
     {
         if (message.FileId != null)
         {
@@ -1682,7 +1688,7 @@ public partial class ChatArea : IAsyncDisposable
     /// <summary>
     /// ChannelMessage-dən file preview string-ini çıxarır (pinned messages üçün).
     /// </summary>
-    private string GetFilePreview(ChannelMessageDto message)
+    private static string GetFilePreview(ChannelMessageDto message)
     {
         if (message.FileId != null)
         {

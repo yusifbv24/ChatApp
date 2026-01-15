@@ -34,6 +34,11 @@ public partial class Sidebar
     #region Parameters - Direct Message Info
 
     /// <summary>
+    /// DM-də qarşı tərəfin ID-si.
+    /// </summary>
+    [Parameter] public Guid? RecipientId { get; set; }
+
+    /// <summary>
     /// DM-də qarşı tərəfin adı.
     /// </summary>
     [Parameter] public string RecipientName { get; set; } = string.Empty;

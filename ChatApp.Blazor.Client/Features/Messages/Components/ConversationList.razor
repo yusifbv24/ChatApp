@@ -64,7 +64,7 @@
 
 
     <!-- Unified Conversation List -->
-    <div class="conversation-items">
+    <div class="conversation-items" @onscroll="HandleScroll">
         @if (IsLoading)
         {
             <div class="conversation-loading">
@@ -80,15 +80,19 @@
                 {
                     <!-- Channel Item -->
                     <div @key="item.Id" class="conversation-item @(SelectedChannelId == item.Id ? "selected" : "")"
-                         @onclick="()=> SelectChannelItem(item)">
-                        <div class="conversation-avatar group-avatar">
+                         @onclick="()=> SelectChannelItem(item)"
+                         @onmouseenter="()=> HandleMouseEnter(item.Id)"
+                         @onmouseleave="HandleMouseLeave"
+                         @oncontextmenu:preventDefault="true"
+                         @oncontextmenu="()=> HandleContextMenu(item.Id, true)">
+                        <div class="conversation-avatar group-avatar" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(item.Id);">
                             <span class="group-initials">@StringHelper.GetInitials(item.Name)</span>
                         </div>
                         <div class="conversation-info">
                             <div class="conversation-header">
                                 <span class="conversation-name">@item.Name</span>
                                 <div class="conversation-meta">
-                                    @if (item.IsMyLastMessage && !string.IsNullOrEmpty(item.LastMessageStatus))
+                                    @if (item.IsMyLastMessage && !string.IsNullOrEmpty(item.LastMessageStatus) && item.UnreadCount == 0)
                                     {
                                         <MudIcon Icon="@GetStatusIcon(item.LastMessageStatus)"
                                                  Class="@($"status-icon {(item.LastMessageStatus == "Read" ? "read" : "")}")"
@@ -101,80 +105,120 @@
                                 </div>
                             </div>
                             <div class="conversation-preview">
-                                @if (ChannelTypingUsers.TryGetValue(item.Id, out var typingUsers) && typingUsers.Any())
-                                {
-                                    <span class="preview-text typing-preview">
-                                        @if (typingUsers.Count == 1)
-                                        {
-                                            <text>@typingUsers[0] is typing...</text>
-                                        }
-                                        else if (typingUsers.Count == 2)
-                                        {
-                                            <text>@typingUsers[0] and @typingUsers[1] are typing...</text>
-                                        }
-                                        else
-                                        {
-                                            <text>@typingUsers.Count people are typing...</text>
-                                        }
-                                    </span>
-                                }
-                                else if (item.HasDraft)
-                                {
-                                    <span class="preview-text draft-preview">
-                                        <span class="draft-label">Draft:</span> @TruncateMessage(item.DraftText)
-                                    </span>
-                                }
-                                else if (!string.IsNullOrEmpty(item.LastMessage))
-                                {
-                                    @if (item.IsMyLastMessage)
+                                <div class="preview-content">
+                                    @if (ChannelTypingUsers.TryGetValue(item.Id, out var typingUsers) && typingUsers.Any())
                                     {
-                                        <span class="preview-text my-message-preview">
-                                            <MudIcon Icon="@Icons.Material.Filled.Reply" Class="reply-icon" Size="Size.Small" />
-                                            <span class="message-content">@TruncateMessage(item.LastMessage)</span>
-                                        </span>
-                                    }
-                                    else
-                                    {
-                                        <span class="preview-text other-message-preview">
-                                            @if (!string.IsNullOrEmpty(item.LastMessageSenderAvatarUrl))
+                                        <span class="preview-text typing-preview">
+                                            @if (typingUsers.Count == 1)
                                             {
-                                                <img src="@item.LastMessageSenderAvatarUrl" alt="Sender" class="sender-avatar-preview" />
+                                                <text>@typingUsers[0] is typing...</text>
+                                            }
+                                            else if (typingUsers.Count == 2)
+                                            {
+                                                <text>@typingUsers[0] and @typingUsers[1] are typing...</text>
                                             }
                                             else
                                             {
-                                                <div class="sender-avatar-placeholder">?</div>
+                                                <text>@typingUsers.Count people are typing...</text>
                                             }
-                                            <span class="message-content">@TruncateMessage(item.LastMessage)</span>
                                         </span>
                                     }
-                                }
-                                else
-                                {
-                                    <span class="preview-text">@($"{item.MemberCount} members")</span>
-                                }
-                                @if (item.HasUnreadMentions)
-                                {
-                                    <span class="mention-indicator">@@</span>
-                                }
-                                @if (item.UnreadCount > 0)
-                                {
-                                    <span class="unread-badge">@(item.UnreadCount > 99 ? "99+" : item.UnreadCount.ToString())</span>
-                                }
-                                @if (item.LastReadLaterMessageId.HasValue)
-                                {
-                                    <span class="read-later-badge">
-                                        <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" />
-                                    </span>
-                                }
+                                    else if (item.HasDraft)
+                                    {
+                                        <span class="preview-text draft-preview">
+                                            <span class="draft-label">Draft:</span> @item.DraftText
+                                        </span>
+                                    }
+                                    else if (!string.IsNullOrEmpty(item.LastMessage))
+                                    {
+                                        @if (item.IsMyLastMessage)
+                                        {
+                                            <span class="preview-text my-message-preview">
+                                                <MudIcon Icon="@Icons.Material.Filled.Reply" Class="reply-icon" Size="Size.Small" />
+                                                <span class="message-content">@item.LastMessage</span>
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="preview-text other-message-preview">
+                                                @if (!string.IsNullOrEmpty(item.LastMessageSenderAvatarUrl))
+                                                {
+                                                    <img src="@item.LastMessageSenderAvatarUrl" alt="Sender" class="sender-avatar-preview" />
+                                                }
+                                                else
+                                                {
+                                                    <div class="sender-avatar-placeholder">?</div>
+                                                }
+                                                <span class="message-content">@item.LastMessage</span>
+                                            </span>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="preview-text">@($"{item.MemberCount} members")</span>
+                                    }
+                                    @if (item.HasUnreadMentions)
+                                    {
+                                        <span class="mention-indicator">@@</span>
+                                    }
+                                    @if (item.LastReadLaterMessageId.HasValue)
+                                    {
+                                        <span class="read-later-badge">
+                                            <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" />
+                                        </span>
+                                    }
+                                </div>
+                                <div class="preview-actions">
+                                    @if (item.UnreadCount > 0)
+                                    {
+                                        <span class="unread-badge">@(item.UnreadCount > 99 ? "99+" : item.UnreadCount.ToString())</span>
+                                    }
+                                    <button class="conversation-more-btn @(hoveredItemId == item.Id || showMoreMenu && moreMenuItemId == item.Id ? "visible" : "")"
+                                            @onclick:stopPropagation="true"
+                                            @onclick="()=> ToggleMoreMenu(item.Id, true)">
+                                        <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" />
+                                    </button>
+                                </div>
                             </div>
                         </div>
+
+                        <!-- More Menu Panel -->
+                        @if (showMoreMenu && moreMenuItemId == item.Id)
+                        {
+                            <div class="conversation-more-menu" @onclick:stopPropagation="true">
+                                <button class="menu-item" @onclick="CloseMoreMenu">
+                                    <MudIcon Icon="@Icons.Material.Outlined.Schedule" Size="Size.Small" />
+                                    <span>Mark to read later</span>
+                                </button>
+                                <button class="menu-item" @onclick="CloseMoreMenu">
+                                    <MudIcon Icon="@Icons.Material.Outlined.PushPin" Size="Size.Small" />
+                                    <span>Pin</span>
+                                </button>
+                                <button class="menu-item" @onclick="CloseMoreMenu">
+                                    <MudIcon Icon="@Icons.Material.Outlined.NotificationsOff" Size="Size.Small" />
+                                    <span>Mute</span>
+                                </button>
+                                <button class="menu-item" @onclick="CloseMoreMenu">
+                                    <MudIcon Icon="@Icons.Material.Outlined.VisibilityOff" Size="Size.Small" />
+                                    <span>Hide</span>
+                                </button>
+                                <button class="menu-item" @onclick="CloseMoreMenu">
+                                    <MudIcon Icon="@Icons.Material.Outlined.ExitToApp" Size="Size.Small" />
+                                    <span>Leave</span>
+                                </button>
+                            </div>
+                        }
                     </div>
                 }
                 else
                 {
                     <!-- Direct Conversation Item -->
                     <div @key="item.Id" class="conversation-item @(SelectedConversationId == item.Id ? "selected": "") @(item.IsNotes ? "notes-conversation" : "")"
-                         @onclick="()=>SelectConversationItem(item)">
+                         @onclick="()=>SelectConversationItem(item)"
+                         @onmouseenter="()=> HandleMouseEnter(item.Id)"
+                         @onmouseleave="HandleMouseLeave"
+                         @oncontextmenu:preventDefault="true"
+                         @oncontextmenu="()=> HandleContextMenu(item.Id, false)">
                         <div class="conversation-avatar @(item.IsNotes ? "notes-avatar" : "")">
                             @if (item.IsNotes)
                             {
@@ -188,14 +232,14 @@
                             }
                             else
                             {
-                                <div class="avatar-placeholder">@StringHelper.GetInitials(item.Name)</div>
+                                <div class="avatar-placeholder" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(item.OtherUserId ?? item.Id);">@StringHelper.GetInitials(item.Name)</div>
                             }
                         </div>
                         <div class="conversation-info">
                             <div class="conversation-header">
                                 <span class="conversation-name @(item.IsNotes ? "notes-name" : "")">@item.Name</span>
                                 <div class="conversation-meta">
-                                    @if (item.IsMyLastMessage && !string.IsNullOrEmpty(item.LastMessageStatus))
+                                    @if (item.IsMyLastMessage && !string.IsNullOrEmpty(item.LastMessageStatus) && item.UnreadCount == 0)
                                     {
                                         <MudIcon Icon="@GetStatusIcon(item.LastMessageStatus)"
                                                  Class="@($"status-icon {(item.LastMessageStatus == "Read" ? "read" : "")}")"
@@ -208,50 +252,89 @@
                                 </div>
                             </div>
                             <div class="conversation-preview">
-                                @if (ConversationTypingState.GetValueOrDefault(item.Id, false))
-                                {
-                                    <span class="preview-text typing-preview">typing...</span>
-                                }
-                                else if (item.HasDraft)
-                                {
-                                    <span class="preview-text draft-preview">
-                                        <span class="draft-label">Draft:</span> @TruncateMessage(item.DraftText)
-                                    </span>
-                                }
-                                else if (!string.IsNullOrEmpty(item.LastMessage))
-                                {
-                                    @if (item.IsMyLastMessage)
+                                <div class="preview-content">
+                                    @if (ConversationTypingState.GetValueOrDefault(item.Id, false))
                                     {
-                                        <span class="preview-text my-message-preview">
-                                            <MudIcon Icon="@Icons.Material.Filled.Reply" Class="reply-icon" Size="Size.Small" />
-                                            <span class="message-content">@TruncateMessage(item.LastMessage)</span>
+                                        <span class="preview-text typing-preview">typing...</span>
+                                    }
+                                    else if (item.HasDraft)
+                                    {
+                                        <span class="preview-text draft-preview">
+                                            <span class="draft-label">Draft:</span> @item.DraftText
                                         </span>
+                                    }
+                                    else if (!string.IsNullOrEmpty(item.LastMessage))
+                                    {
+                                        @if (item.IsMyLastMessage)
+                                        {
+                                            <span class="preview-text my-message-preview">
+                                                <MudIcon Icon="@Icons.Material.Filled.Reply" Class="reply-icon" Size="Size.Small" />
+                                                <span class="message-content">@item.LastMessage</span>
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="preview-text">@item.LastMessage</span>
+                                        }
                                     }
                                     else
                                     {
-                                        <span class="preview-text">@TruncateMessage(item.LastMessage)</span>
+                                        <span class="preview-text">No messages yet</span>
                                     }
-                                }
-                                else
-                                {
-                                    <span class="preview-text">No messages yet</span>
-                                }
-                                @if (item.HasUnreadMentions)
-                                {
-                                    <span class="mention-indicator">@@</span>
-                                }
-                                @if (item.UnreadCount > 0)
-                                {
-                                    <span class="unread-badge">@(item.UnreadCount > 99 ? "99+" : item.UnreadCount.ToString())</span>
-                                }
-                                @if (item.LastReadLaterMessageId.HasValue)
-                                {
-                                    <span class="read-later-badge">
-                                        <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" />
-                                    </span>
-                                }
+                                    @if (item.HasUnreadMentions)
+                                    {
+                                        <span class="mention-indicator">@@</span>
+                                    }
+                                    @if (item.LastReadLaterMessageId.HasValue)
+                                    {
+                                        <span class="read-later-badge">
+                                            <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" />
+                                        </span>
+                                    }
+                                </div>
+                                <div class="preview-actions">
+                                    @if (item.UnreadCount > 0)
+                                    {
+                                        <span class="unread-badge">@(item.UnreadCount > 99 ? "99+" : item.UnreadCount.ToString())</span>
+                                    }
+                                    <button class="conversation-more-btn @(hoveredItemId == item.Id || showMoreMenu && moreMenuItemId == item.Id ? "visible" : "")"
+                                            @onclick:stopPropagation="true"
+                                            @onclick="()=> ToggleMoreMenu(item.Id, false)">
+                                        <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" />
+                                    </button>
+                                </div>
                             </div>
                         </div>
+
+                        <!-- More Menu Panel (DM) -->
+                        @if (showMoreMenu && moreMenuItemId == item.Id)
+                        {
+                            <div class="conversation-more-menu" @onclick:stopPropagation="true">
+                                <button class="menu-item" @onclick="CloseMoreMenu">
+                                    <MudIcon Icon="@Icons.Material.Outlined.Schedule" Size="Size.Small" />
+                                    <span>Mark to read later</span>
+                                </button>
+                                <button class="menu-item" @onclick="CloseMoreMenu">
+                                    <MudIcon Icon="@Icons.Material.Outlined.PushPin" Size="Size.Small" />
+                                    <span>Pin</span>
+                                </button>
+                                <button class="menu-item" @onclick="CloseMoreMenu">
+                                    <MudIcon Icon="@Icons.Material.Outlined.NotificationsOff" Size="Size.Small" />
+                                    <span>Mute</span>
+                                </button>
+                                @if (!item.IsNotes)
+                                {
+                                    <button class="menu-item" @onclick="CloseMoreMenu">
+                                        <MudIcon Icon="@Icons.Material.Outlined.Person" Size="Size.Small" />
+                                        <span>View profile</span>
+                                    </button>
+                                    <button class="menu-item" @onclick="CloseMoreMenu">
+                                        <MudIcon Icon="@Icons.Material.Outlined.Search" Size="Size.Small" />
+                                        <span>Find chats with this user</span>
+                                    </button>
+                                }
+                            </div>
+                        }
                     </div>
                 }
             }
@@ -268,4 +351,10 @@
             </div>
         }
     </div>
+
+    <!-- More Menu Overlay -->
+    @if (showMoreMenu)
+    {
+        <div class="conversation-menu-overlay" @onclick="CloseMoreMenu"></div>
+    }
 </div>

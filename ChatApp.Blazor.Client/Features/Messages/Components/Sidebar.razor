@@ -56,7 +56,7 @@
                                         }
                                         else
                                         {
-                                            <div class="favorites-avatar-placeholder">@StringHelper.GetInitials(message.SenderDisplayName)</div>
+                                            <div class="favorites-avatar-placeholder" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(message.SenderId);">@StringHelper.GetInitials(message.SenderDisplayName)</div>
                                         }
                                     </div>
                                     <div class="favorites-message-content" @onclick="() => NavigateToMessage(message.Id)">
@@ -107,7 +107,7 @@
                                         }
                                         else
                                         {
-                                            <div class="favorites-avatar-placeholder">@StringHelper.GetInitials(message.SenderDisplayName)</div>
+                                            <div class="favorites-avatar-placeholder" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(message.SenderId);">@StringHelper.GetInitials(message.SenderDisplayName)</div>
                                         }
                                     </div>
                                     <div class="favorites-message-content" @onclick="() => NavigateToMessage(message.Id)">
@@ -253,7 +253,7 @@
                         }
                         else
                         {
-                            <div class="sidebar-avatar-placeholder">@StringHelper.GetInitials(RecipientName)</div>
+                            <div class="sidebar-avatar-placeholder" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(RecipientId ?? Guid.Empty);">@StringHelper.GetInitials(RecipientName)</div>
                         }
                     </div>
                     <div class="sidebar-user-name">@(string.IsNullOrEmpty(RecipientName) ? "Unknown User" : RecipientName)</div>
@@ -262,7 +262,7 @@
                 else
                 {
                     <div class="sidebar-avatar-container">
-                        <div class="sidebar-avatar-placeholder">@StringHelper.GetInitials(ChannelName)</div>
+                        <div class="sidebar-avatar-placeholder" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(ChannelId ?? Guid.Empty);">@StringHelper.GetInitials(ChannelName)</div>
                     </div>
                     <div class="sidebar-user-name">@(string.IsNullOrEmpty(ChannelName) ? "Unknown Group" : ChannelName)</div>
                     <div class="sidebar-user-role">@MemberCount members</div>

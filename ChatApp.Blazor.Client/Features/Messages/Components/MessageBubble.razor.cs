@@ -355,6 +355,16 @@ public partial class MessageBubble : IAsyncDisposable
     /// </summary>
     private int? hoveredReactionIndex = null;
 
+    /// <summary>
+    /// DotNetObjectReference for global menu panel helper.
+    /// </summary>
+    private DotNetObjectReference<MessageBubble>? _menuPanelRef;
+
+    /// <summary>
+    /// Flag to track if global menu panel listeners are initialized.
+    /// </summary>
+    private bool _menuPanelListenersInitialized = false;
+
     #endregion
 
     #region Private Fields - Cancellation Tokens
@@ -1073,6 +1083,21 @@ public partial class MessageBubble : IAsyncDisposable
             }
         }
 
+        // Unregister from global menu panel helper
+        if (_menuPanelListenersInitialized && _menuPanelRef != null)
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("menuPanelHelper.unregister", _menuPanelRef);
+            }
+            catch (JSDisconnectedException)
+            {
+                // Ignore - circuit already disconnected
+            }
+        }
+
+        _menuPanelRef?.Dispose();
+
         GC.SuppressFinalize(this);
     }
 
@@ -1097,7 +1122,7 @@ public partial class MessageBubble : IAsyncDisposable
     private DotNetObjectReference<MessageBubble>? _dotNetHelper;
 
     /// <summary>
-    /// Component render olduqdan sonra mention-lara click event listener əlavə edir.
+    /// Component render olduqdan sonra mention-lara click event listener və global menu panel listener əlavə edir.
     /// </summary>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -1107,10 +1132,18 @@ public partial class MessageBubble : IAsyncDisposable
             {
                 _dotNetHelper = DotNetObjectReference.Create(this);
                 await JS.InvokeVoidAsync("window.initializeMentionClickHandlers", _dotNetHelper);
+
+                // Register with global menu panel helper
+                if (!_menuPanelListenersInitialized)
+                {
+                    _menuPanelRef = DotNetObjectReference.Create(this);
+                    await JS.InvokeVoidAsync("menuPanelHelper.register", _menuPanelRef);
+                    _menuPanelListenersInitialized = true;
+                }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[ERROR] Failed to initialize mention click handlers: {ex.Message}");
+                Console.WriteLine($"[ERROR] Failed to initialize handlers: {ex.Message}");
             }
         }
     }
@@ -1129,6 +1162,21 @@ public partial class MessageBubble : IAsyncDisposable
                 return;
 
             await OnMentionClick.InvokeAsync(userId);
+        }
+    }
+
+    /// <summary>
+    /// JS callback - called when global scroll or click detected (closes more menu).
+    /// </summary>
+    [JSInvokable]
+    public void OnGlobalInteraction()
+    {
+        if (showMoreMenu || showReactionPicker)
+        {
+            showMoreMenu = false;
+            showReactionPicker = false;
+            showMoreSubmenu = false;
+            StateHasChanged();
         }
     }
 
