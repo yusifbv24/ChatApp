@@ -198,9 +198,6 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
             var hasUnreadMentionsDictionary = new Dictionary<Guid, bool>();
             var channelIds = channelsWithLastMessage.Select(c => c.Id).ToList();
 
-            Console.WriteLine($"[DEBUG REPO CHANNEL] channelIds count: {channelIds.Count}");
-            Console.WriteLine($"[DEBUG REPO CHANNEL] userId: {userId}");
-
             if (channelIds.Any())
             {
                 var channelsWithMentions = await (
@@ -222,15 +219,10 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                     select msg.ChannelId
                 ).Distinct().ToListAsync(cancellationToken);
 
-                Console.WriteLine($"[DEBUG REPO CHANNEL] channelsWithMentions count: {channelsWithMentions.Count}");
-
                 foreach (var channelId in channelsWithMentions)
                 {
                     hasUnreadMentionsDictionary[channelId] = true;
-                    Console.WriteLine($"[DEBUG REPO CHANNEL] Channel {channelId} has unread mentions");
                 }
-
-                Console.WriteLine($"[DEBUG REPO CHANNEL] hasUnreadMentionsDictionary count: {hasUnreadMentionsDictionary.Count}");
             }
 
             // Map to ChannelDto with calculated status

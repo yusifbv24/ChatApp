@@ -43,7 +43,12 @@ document.addEventListener('click', (e) => {
 window.chatAppUtils = {
     // Subscribe to outside click events
     subscribeToOutsideClick: (dotNetHelper) => {
-        const handler = () => dotNetHelper.invokeMethodAsync('CloseUserMenuFromJS');
+        const handler = () => {
+            dotNetHelper.invokeMethodAsync('CloseUserMenuFromJS')
+                .catch(() => {
+                    // Ignore errors from disposed components
+                });
+        };
         window.addEventListener('closeUserMenu', handler);
         return {
             dispose: () => window.removeEventListener('closeUserMenu', handler)
@@ -304,7 +309,10 @@ window.chatAppUtils = {
     subscribeToVisibilityChange: (dotNetHelper) => {
         const handler = () => {
             const isVisible = !document.hidden;
-            dotNetHelper.invokeMethodAsync('OnVisibilityChanged', isVisible);
+            dotNetHelper.invokeMethodAsync('OnVisibilityChanged', isVisible)
+                .catch(() => {
+                    // Ignore errors from disposed components
+                });
         };
         document.addEventListener('visibilitychange', handler);
         return {
@@ -396,8 +404,6 @@ window.chatAppUtils = {
 
 // Mention click handlers - global delegation
 window.initializeMentionClickHandlers = function(dotNetHelper) {
-    console.log('[DEBUG] initializeMentionClickHandlers called');
-
     // Remove existing listener if any
     if (window._mentionClickHandler) {
         document.removeEventListener('click', window._mentionClickHandler);
@@ -414,8 +420,6 @@ window.initializeMentionClickHandlers = function(dotNetHelper) {
                 const userId = target.getAttribute('data-userid');
                 const username = target.getAttribute('data-username');
 
-                console.log(`[DEBUG] Mention clicked: ${username} (${userId})`);
-
                 if (userId) {
                     try {
                         await dotNetHelper.invokeMethodAsync('HandleMentionClickFromJS', userId);
@@ -430,11 +434,9 @@ window.initializeMentionClickHandlers = function(dotNetHelper) {
     };
 
     document.addEventListener('click', window._mentionClickHandler);
-    console.log('[DEBUG] Mention click handler attached');
 };
 
 window.disposeMentionClickHandlers = function() {
-    console.log('[DEBUG] disposeMentionClickHandlers called');
     if (window._mentionClickHandler) {
         document.removeEventListener('click', window._mentionClickHandler);
         window._mentionClickHandler = null;
@@ -443,8 +445,6 @@ window.disposeMentionClickHandlers = function() {
 
 // Mention panel outside click handler
 window.setupMentionOutsideClickHandler = function(dotNetHelper) {
-    console.log('[DEBUG] setupMentionOutsideClickHandler called');
-
     // Remove existing listener if any
     if (window._mentionOutsideClickHandler) {
         document.removeEventListener('click', window._mentionOutsideClickHandler);
@@ -459,7 +459,10 @@ window.setupMentionOutsideClickHandler = function(dotNetHelper) {
         const messageInput = document.querySelector('.message-input-container');
         if (!mentionPanelWrapper.contains(e.target) && !messageInput?.contains(e.target)) {
             try {
-                dotNetHelper.invokeMethodAsync('OnMentionPanelOutsideClick');
+                dotNetHelper.invokeMethodAsync('OnMentionPanelOutsideClick')
+                    .catch(() => {
+                        // Ignore errors from disposed components
+                    });
             } catch (err) {
                 console.error('[ERROR] Failed to invoke OnMentionPanelOutsideClick:', err);
             }
@@ -467,11 +470,9 @@ window.setupMentionOutsideClickHandler = function(dotNetHelper) {
     };
 
     document.addEventListener('click', window._mentionOutsideClickHandler);
-    console.log('[DEBUG] Mention outside click handler attached');
 };
 
 window.disposeMentionOutsideClickHandler = function() {
-    console.log('[DEBUG] disposeMentionOutsideClickHandler called');
     if (window._mentionOutsideClickHandler) {
         document.removeEventListener('click', window._mentionOutsideClickHandler);
         window._mentionOutsideClickHandler = null;

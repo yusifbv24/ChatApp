@@ -1370,7 +1370,6 @@ public partial class ChatArea : IAsyncDisposable
     /// </summary>
     private async Task HandleMentionClick(Guid userId)
     {
-        Console.WriteLine($"[DEBUG] HandleMentionClick - userId: {userId}");
         await OnMentionClick.InvokeAsync(userId);
     }
 

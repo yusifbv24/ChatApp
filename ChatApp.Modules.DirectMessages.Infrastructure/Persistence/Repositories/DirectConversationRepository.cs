@@ -121,9 +121,6 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
             var firstUnreadMessageIds = new Dictionary<Guid, Guid>();
             var hasUnreadMentionsDictionary = new Dictionary<Guid, bool>();
 
-            Console.WriteLine($"[DEBUG REPO] conversationIds count: {conversationIds.Count}");
-            Console.WriteLine($"[DEBUG REPO] userId: {userId}");
-
             if (conversationIds.Any())
             {
                 // Simple query - get all unread messages
@@ -135,8 +132,6 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                     .Select(m => new { m.Id, m.ConversationId, m.CreatedAtUtc })
                     .ToListAsync(cancellationToken);
 
-                Console.WriteLine($"[DEBUG REPO] allUnreadMessages count: {allUnreadMessages.Count}");
-
                 // In-memory GroupBy and OrderBy - EF Core translation issue workaround
                 firstUnreadMessageIds = allUnreadMessages
                     .GroupBy(m => m.ConversationId)
@@ -144,12 +139,6 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                         g => g.Key,
                         g => g.OrderBy(m => m.CreatedAtUtc).First().Id
                     );
-
-                Console.WriteLine($"[DEBUG REPO] firstUnreadMessageIds count: {firstUnreadMessageIds.Count}");
-                foreach (var kvp in firstUnreadMessageIds)
-                {
-                    Console.WriteLine($"[DEBUG REPO] Conversation {kvp.Key}: FirstUnread {kvp.Value}");
-                }
 
                 // Batch query: Get conversations with unread mentions
                 var conversationsWithMentions = await _context.DirectMessageMentions
@@ -165,8 +154,6 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 {
                     hasUnreadMentionsDictionary[convId] = true;
                 }
-
-                Console.WriteLine($"[DEBUG REPO] hasUnreadMentions count: {hasUnreadMentionsDictionary.Count}");
             }
 
             // Map to DTOs with message status

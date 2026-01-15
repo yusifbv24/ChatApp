@@ -361,12 +361,6 @@ public partial class ConversationList : IAsyncDisposable
         MessageDrafts.TryGetValue(draftKey, out var draftText);
         var hasDraft = !isSelected && !string.IsNullOrWhiteSpace(draftText);
 
-        // Debug log
-        if (conv.HasUnreadMentions)
-        {
-            Console.WriteLine($"[DEBUG ConvList] Conversation {conv.Id} has unread mentions: {conv.HasUnreadMentions}, UnreadCount: {conv.UnreadCount}");
-        }
-
         return new UnifiedChatItem
         {
             Id = conv.Id,
@@ -398,12 +392,6 @@ public partial class ConversationList : IAsyncDisposable
         var isSelected = SelectedChannelId == channel.Id;
         MessageDrafts.TryGetValue(draftKey, out var draftText);
         var hasDraft = !isSelected && !string.IsNullOrWhiteSpace(draftText);
-
-        // Debug log
-        if (channel.HasUnreadMentions)
-        {
-            Console.WriteLine($"[DEBUG ConvList] Channel {channel.Id} has unread mentions: {channel.HasUnreadMentions}, UnreadCount: {channel.UnreadCount}");
-        }
 
         return new UnifiedChatItem
         {

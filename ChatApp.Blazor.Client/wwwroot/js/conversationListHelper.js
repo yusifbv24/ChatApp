@@ -74,9 +74,13 @@ window.menuPanelHelper = {
         this.registeredComponents.forEach(dotNetRef => {
             if (dotNetRef) {
                 try {
-                    dotNetRef.invokeMethodAsync('OnGlobalInteraction');
+                    dotNetRef.invokeMethodAsync('OnGlobalInteraction')
+                        .catch(err => {
+                            // Silently ignore errors from disposed components
+                            // This is expected when components are disposed during navigation
+                        });
                 } catch (err) {
-                    console.warn('Failed to notify component:', err);
+                    // Catch synchronous errors
                 }
             }
         });
