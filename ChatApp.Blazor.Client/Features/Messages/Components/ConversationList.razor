@@ -187,23 +187,18 @@
                         {
                             <div class="conversation-more-menu" @onclick:stopPropagation="true">
                                 <button class="menu-item" @onclick="CloseMoreMenu">
-                                    <MudIcon Icon="@Icons.Material.Outlined.Schedule" Size="Size.Small" />
                                     <span>Mark to read later</span>
                                 </button>
                                 <button class="menu-item" @onclick="CloseMoreMenu">
-                                    <MudIcon Icon="@Icons.Material.Outlined.PushPin" Size="Size.Small" />
                                     <span>Pin</span>
                                 </button>
                                 <button class="menu-item" @onclick="CloseMoreMenu">
-                                    <MudIcon Icon="@Icons.Material.Outlined.NotificationsOff" Size="Size.Small" />
                                     <span>Mute</span>
                                 </button>
                                 <button class="menu-item" @onclick="CloseMoreMenu">
-                                    <MudIcon Icon="@Icons.Material.Outlined.VisibilityOff" Size="Size.Small" />
                                     <span>Hide</span>
                                 </button>
                                 <button class="menu-item" @onclick="CloseMoreMenu">
-                                    <MudIcon Icon="@Icons.Material.Outlined.ExitToApp" Size="Size.Small" />
                                     <span>Leave</span>
                                 </button>
                             </div>
@@ -311,25 +306,20 @@
                         {
                             <div class="conversation-more-menu" @onclick:stopPropagation="true">
                                 <button class="menu-item" @onclick="CloseMoreMenu">
-                                    <MudIcon Icon="@Icons.Material.Outlined.Schedule" Size="Size.Small" />
                                     <span>Mark to read later</span>
                                 </button>
                                 <button class="menu-item" @onclick="CloseMoreMenu">
-                                    <MudIcon Icon="@Icons.Material.Outlined.PushPin" Size="Size.Small" />
                                     <span>Pin</span>
                                 </button>
                                 <button class="menu-item" @onclick="CloseMoreMenu">
-                                    <MudIcon Icon="@Icons.Material.Outlined.NotificationsOff" Size="Size.Small" />
                                     <span>Mute</span>
                                 </button>
                                 @if (!item.IsNotes)
                                 {
                                     <button class="menu-item" @onclick="CloseMoreMenu">
-                                        <MudIcon Icon="@Icons.Material.Outlined.Person" Size="Size.Small" />
                                         <span>View profile</span>
                                     </button>
                                     <button class="menu-item" @onclick="CloseMoreMenu">
-                                        <MudIcon Icon="@Icons.Material.Outlined.Search" Size="Size.Small" />
                                         <span>Find chats with this user</span>
                                     </button>
                                 }
