@@ -1,6 +1,5 @@
 using ChatApp.Blazor.Client.Models.Messages;
 using Microsoft.AspNetCore.Components;
-using Microsoft.Extensions.Configuration;
 using Microsoft.JSInterop;
 using MudBlazor;
 using System.Globalization;
@@ -356,14 +355,9 @@ public partial class MessageBubble : IAsyncDisposable
     private int? hoveredReactionIndex = null;
 
     /// <summary>
-    /// DotNetObjectReference for global menu panel helper.
+    /// DotNetObjectReference for message menu outside click detection.
     /// </summary>
-    private DotNetObjectReference<MessageBubble>? _menuPanelRef;
-
-    /// <summary>
-    /// Flag to track if global menu panel listeners are initialized.
-    /// </summary>
-    private bool _menuPanelListenersInitialized = false;
+    private DotNetObjectReference<MessageBubble>? _messageMenuRef;
 
     #endregion
 
@@ -813,6 +807,21 @@ public partial class MessageBubble : IAsyncDisposable
         if (!showMoreMenu)
         {
             await CheckMenuPosition();
+
+            // Setup outside click detection when opening menu
+            // JS will automatically close all other open menus
+            try
+            {
+                if (_messageMenuRef == null)
+                {
+                    _messageMenuRef = DotNetObjectReference.Create(this);
+                }
+                await JS.InvokeVoidAsync("setupMessageMenuOutsideClickHandler", MessageId, _messageMenuRef);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ERROR] Failed to setup message menu outside click handler: {ex.Message}");
+            }
         }
         showMoreMenu = !showMoreMenu;
         showReactionPicker = false;
@@ -1083,20 +1092,19 @@ public partial class MessageBubble : IAsyncDisposable
             }
         }
 
-        // Unregister from global menu panel helper
-        if (_menuPanelListenersInitialized && _menuPanelRef != null)
+        // Dispose message menu outside click handler
+        if (_messageMenuRef != null)
         {
             try
             {
-                await JS.InvokeVoidAsync("menuPanelHelper.unregister", _menuPanelRef);
+                await JS.InvokeVoidAsync("disposeMessageMenuOutsideClickHandler", MessageId);
+                _messageMenuRef.Dispose();
             }
-            catch (JSDisconnectedException)
+            catch
             {
-                // Ignore - circuit already disconnected
+                // Ignore disposal errors
             }
         }
-
-        _menuPanelRef?.Dispose();
 
         GC.SuppressFinalize(this);
     }
@@ -1122,7 +1130,7 @@ public partial class MessageBubble : IAsyncDisposable
     private DotNetObjectReference<MessageBubble>? _dotNetHelper;
 
     /// <summary>
-    /// Component render olduqdan sonra mention-lara click event listener və global menu panel listener əlavə edir.
+    /// Component render olduqdan sonra mention-lara click event listener əlavə edir.
     /// </summary>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -1132,14 +1140,6 @@ public partial class MessageBubble : IAsyncDisposable
             {
                 _dotNetHelper = DotNetObjectReference.Create(this);
                 await JS.InvokeVoidAsync("window.initializeMentionClickHandlers", _dotNetHelper);
-
-                // Register with global menu panel helper
-                if (!_menuPanelListenersInitialized)
-                {
-                    _menuPanelRef = DotNetObjectReference.Create(this);
-                    await JS.InvokeVoidAsync("menuPanelHelper.register", _menuPanelRef);
-                    _menuPanelListenersInitialized = true;
-                }
             }
             catch (Exception ex)
             {
@@ -1166,16 +1166,14 @@ public partial class MessageBubble : IAsyncDisposable
     }
 
     /// <summary>
-    /// JS callback - called when global scroll or click detected (closes more menu).
+    /// JS callback - called when clicking outside message more menu.
     /// </summary>
     [JSInvokable]
-    public void OnGlobalInteraction()
+    public void OnMessageMenuOutsideClick()
     {
-        if (showMoreMenu || showReactionPicker)
+        if (showMoreMenu)
         {
-            showMoreMenu = false;
-            showReactionPicker = false;
-            showMoreSubmenu = false;
+            CloseMoreMenu();
             StateHasChanged();
         }
     }

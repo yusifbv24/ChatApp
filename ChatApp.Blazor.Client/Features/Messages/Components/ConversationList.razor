@@ -84,7 +84,7 @@
                          @onmouseenter="()=> HandleMouseEnter(item.Id)"
                          @onmouseleave="HandleMouseLeave"
                          @oncontextmenu:preventDefault="true"
-                         @oncontextmenu="()=> HandleContextMenu(item.Id, true)">
+                         @oncontextmenu="()=> HandleContextMenu(item.Id)">
                         <div class="conversation-avatar group-avatar" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(item.Id);">
                             <span class="group-initials">@StringHelper.GetInitials(item.Name)</span>
                         </div>
@@ -175,7 +175,7 @@
                                     }
                                     <button class="conversation-more-btn @(hoveredItemId == item.Id || showMoreMenu && moreMenuItemId == item.Id ? "visible" : "")"
                                             @onclick:stopPropagation="true"
-                                            @onclick="()=> ToggleMoreMenu(item.Id, true)">
+                                            @onclick="()=> ToggleMoreMenu(item.Id)">
                                         <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" />
                                     </button>
                                 </div>
@@ -213,7 +213,7 @@
                          @onmouseenter="()=> HandleMouseEnter(item.Id)"
                          @onmouseleave="HandleMouseLeave"
                          @oncontextmenu:preventDefault="true"
-                         @oncontextmenu="()=> HandleContextMenu(item.Id, false)">
+                         @oncontextmenu="()=> HandleContextMenu(item.Id)">
                         <div class="conversation-avatar @(item.IsNotes ? "notes-avatar" : "")">
                             @if (item.IsNotes)
                             {
@@ -294,7 +294,7 @@
                                     }
                                     <button class="conversation-more-btn @(hoveredItemId == item.Id || showMoreMenu && moreMenuItemId == item.Id ? "visible" : "")"
                                             @onclick:stopPropagation="true"
-                                            @onclick="()=> ToggleMoreMenu(item.Id, false)">
+                                            @onclick="()=> ToggleMoreMenu(item.Id)">
                                         <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" />
                                     </button>
                                 </div>
@@ -341,10 +341,4 @@
             </div>
         }
     </div>
-
-    <!-- More Menu Overlay -->
-    @if (showMoreMenu)
-    {
-        <div class="conversation-menu-overlay" @onclick="CloseMoreMenu"></div>
-    }
 </div>

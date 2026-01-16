@@ -478,3 +478,214 @@ window.disposeMentionOutsideClickHandler = function() {
         window._mentionOutsideClickHandler = null;
     }
 };
+
+// Global menu handlers - store all menu handlers (message menus and conversation menus)
+// Key format: "message-{messageId}" or "conversation-{conversationId}"
+window._allMenuHandlers = window._allMenuHandlers || {};
+
+window.setupMessageMenuOutsideClickHandler = function(messageId, dotNetHelper) {
+    const menuKey = `message-${messageId}`;
+
+    // FIRST: Close all other open menus (both message and conversation menus)
+    Object.keys(window._allMenuHandlers).forEach(otherKey => {
+        if (otherKey !== menuKey) {
+            const otherData = window._allMenuHandlers[otherKey];
+            if (otherData && otherData.dotNetHelper) {
+                try {
+                    otherData.dotNetHelper.invokeMethodAsync(otherData.closeMethod)
+                        .catch(() => {
+                            // Ignore errors from disposed components
+                        });
+                } catch (err) {
+                    // Ignore errors
+                }
+            }
+            // Remove the handler
+            if (otherData && otherData.handler) {
+                document.removeEventListener('click', otherData.handler);
+            }
+            delete window._allMenuHandlers[otherKey];
+        }
+    });
+
+    // Remove existing handler for this menu if any
+    if (window._allMenuHandlers[menuKey]) {
+        const oldData = window._allMenuHandlers[menuKey];
+        if (oldData.handler) {
+            document.removeEventListener('click', oldData.handler);
+        }
+        delete window._allMenuHandlers[menuKey];
+    }
+
+    const handler = (e) => {
+        // Check if more menu is visible for this message
+        const messageElement = document.getElementById(`message-${messageId}`);
+        if (!messageElement) return;
+
+        const moreMenu = messageElement.querySelector('.chevron-more-menu');
+        const chevronWrapper = messageElement.querySelector('.chevron-wrapper');
+
+        // Menu is not visible, remove handler
+        if (!moreMenu || !moreMenu.offsetParent) {
+            document.removeEventListener('click', handler);
+            delete window._allMenuHandlers[menuKey];
+            return;
+        }
+
+        // Ignore clicks on chevron (let Blazor handle toggle)
+        if (chevronWrapper && chevronWrapper.contains(e.target)) {
+            return;
+        }
+
+        // Check if click is outside menu
+        if (!moreMenu.contains(e.target)) {
+            try {
+                dotNetHelper.invokeMethodAsync('OnMessageMenuOutsideClick')
+                    .catch(() => {
+                        // Ignore errors from disposed components
+                    });
+            } catch (err) {
+                console.error('[ERROR] Failed to invoke OnMessageMenuOutsideClick:', err);
+            }
+        }
+    };
+
+    // Add handler on next tick to avoid catching the opening click event
+    setTimeout(() => {
+        window._allMenuHandlers[menuKey] = {
+            handler: handler,
+            dotNetHelper: dotNetHelper,
+            closeMethod: 'OnMessageMenuOutsideClick'
+        };
+        document.addEventListener('click', handler);
+    }, 0);
+};
+
+window.disposeMessageMenuOutsideClickHandler = function(messageId) {
+    const menuKey = messageId ? `message-${messageId}` : null;
+
+    // If messageId provided, dispose specific handler
+    if (menuKey && window._allMenuHandlers[menuKey]) {
+        const data = window._allMenuHandlers[menuKey];
+        if (data.handler) {
+            document.removeEventListener('click', data.handler);
+        }
+        delete window._allMenuHandlers[menuKey];
+    } else if (!messageId) {
+        // Otherwise dispose all handlers
+        if (window._allMenuHandlers) {
+            Object.keys(window._allMenuHandlers).forEach(key => {
+                const data = window._allMenuHandlers[key];
+                if (data && data.handler) {
+                    document.removeEventListener('click', data.handler);
+                }
+            });
+            window._allMenuHandlers = {};
+        }
+    }
+};
+
+// Conversation menu outside click handler
+window.setupConversationMenuOutsideClickHandler = function(conversationId, dotNetHelper) {
+    const menuKey = `conversation-${conversationId}`;
+
+    // FIRST: Close all other open menus (both message and conversation menus)
+    Object.keys(window._allMenuHandlers).forEach(otherKey => {
+        if (otherKey !== menuKey) {
+            const otherData = window._allMenuHandlers[otherKey];
+            if (otherData && otherData.dotNetHelper) {
+                try {
+                    otherData.dotNetHelper.invokeMethodAsync(otherData.closeMethod)
+                        .catch(() => {
+                            // Ignore errors from disposed components
+                        });
+                } catch (err) {
+                    // Ignore errors
+                }
+            }
+            // Remove the handler
+            if (otherData && otherData.handler) {
+                document.removeEventListener('click', otherData.handler);
+            }
+            delete window._allMenuHandlers[otherKey];
+        }
+    });
+
+    // Remove existing handler for this menu if any
+    if (window._allMenuHandlers[menuKey]) {
+        const oldData = window._allMenuHandlers[menuKey];
+        if (oldData.handler) {
+            document.removeEventListener('click', oldData.handler);
+        }
+        delete window._allMenuHandlers[menuKey];
+    }
+
+    const handler = (e) => {
+        // Check if menu is still visible
+        const allMenus = document.querySelectorAll('.conversation-more-menu');
+        let menuStillVisible = false;
+
+        allMenus.forEach(menu => {
+            if (menu.offsetParent) {
+                menuStillVisible = true;
+            }
+        });
+
+        // Menu is not visible, remove handler
+        if (!menuStillVisible) {
+            document.removeEventListener('click', handler);
+            delete window._allMenuHandlers[menuKey];
+            return;
+        }
+
+        // Check if click is inside any conversation more menu or more button
+        const clickedOnMenu = e.target.closest('.conversation-more-menu');
+        const clickedOnButton = e.target.closest('.conversation-more-btn');
+
+        // If click is outside both menu and button, close the menu
+        if (!clickedOnMenu && !clickedOnButton) {
+            try {
+                dotNetHelper.invokeMethodAsync('OnConversationMenuOutsideClick')
+                    .catch(() => {
+                        // Ignore errors from disposed components
+                    });
+            } catch (err) {
+                console.error('[ERROR] Failed to invoke OnConversationMenuOutsideClick:', err);
+            }
+        }
+    };
+
+    // Add handler on next tick to avoid catching the opening click event
+    setTimeout(() => {
+        window._allMenuHandlers[menuKey] = {
+            handler: handler,
+            dotNetHelper: dotNetHelper,
+            closeMethod: 'OnConversationMenuOutsideClick'
+        };
+        document.addEventListener('click', handler);
+    }, 0);
+};
+
+window.disposeConversationMenuOutsideClickHandler = function(conversationId) {
+    const menuKey = conversationId ? `conversation-${conversationId}` : null;
+
+    // If conversationId provided, dispose specific handler
+    if (menuKey && window._allMenuHandlers[menuKey]) {
+        const data = window._allMenuHandlers[menuKey];
+        if (data.handler) {
+            document.removeEventListener('click', data.handler);
+        }
+        delete window._allMenuHandlers[menuKey];
+    } else if (!conversationId) {
+        // Otherwise dispose all handlers
+        if (window._allMenuHandlers) {
+            Object.keys(window._allMenuHandlers).forEach(key => {
+                const data = window._allMenuHandlers[key];
+                if (data && data.handler) {
+                    document.removeEventListener('click', data.handler);
+                }
+            });
+            window._allMenuHandlers = {};
+        }
+    }
+};

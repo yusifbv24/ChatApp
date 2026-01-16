@@ -416,12 +416,6 @@
     </div>
 </div>
 
-<!-- More Menu Overlay - OUTSIDE message-wrapper for full-screen coverage -->
-@if (showMoreMenu)
-{
-    <div class="popup-overlay" @onclick="CloseMoreMenu"></div>
-}
-
 <!-- Image Lightbox Modal -->
 @if (showImageLightbox && IsFileImage && !string.IsNullOrEmpty(FileId))
 {

@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Components;
 using ChatApp.Blazor.Client.Models.Messages;
 using ChatApp.Blazor.Client.State;
-using ChatApp.Blazor.Client.Helpers;
 using MudBlazor;
 using System.Globalization;
 using Microsoft.JSInterop;
@@ -225,16 +224,6 @@ public partial class ConversationList : IAsyncDisposable
     #region Lifecycle Methods
 
     /// <summary>
-    /// Reference to this component for JS callbacks.
-    /// </summary>
-    private DotNetObjectReference<ConversationList>? _dotNetRef;
-
-    /// <summary>
-    /// Flag to track if JS listeners are initialized.
-    /// </summary>
-    private bool _jsListenersInitialized = false;
-
-    /// <summary>
     /// Parameter dəyişiklikləri olduqda cache-i yenilə.
     /// </summary>
     protected override void OnParametersSet()
@@ -253,31 +242,6 @@ public partial class ConversationList : IAsyncDisposable
         }
     }
 
-    /// <summary>
-    /// After render - initialize JS scroll listeners.
-    /// </summary>
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender && !_jsListenersInitialized)
-        {
-            _dotNetRef = DotNetObjectReference.Create(this);
-            await JSRuntime.InvokeVoidAsync("conversationListHelper.initialize", _dotNetRef);
-            _jsListenersInitialized = true;
-        }
-    }
-
-    /// <summary>
-    /// JS callback - called when window scrolls or clicks outside.
-    /// </summary>
-    [JSInvokable]
-    public void OnGlobalInteraction()
-    {
-        if (showMoreMenu)
-        {
-            CloseMoreMenu();
-            StateHasChanged();
-        }
-    }
 
     #endregion
 
@@ -443,7 +407,7 @@ public partial class ConversationList : IAsyncDisposable
     /// </summary>
     private void ClearSearch()
     {
-        SearchTerm = "";
+        SearchTerm = string.Empty;
     }
 
     #endregion
@@ -494,10 +458,12 @@ public partial class ConversationList : IAsyncDisposable
 
     #region More Menu Methods
 
+    private DotNetObjectReference<ConversationList>? _conversationMenuRef;
+
     /// <summary>
     /// More menu toggle.
     /// </summary>
-    private void ToggleMoreMenu(Guid itemId, bool isChannel)
+    private async Task ToggleMoreMenu(Guid itemId)
     {
         if (showMoreMenu && moreMenuItemId == itemId)
         {
@@ -507,6 +473,21 @@ public partial class ConversationList : IAsyncDisposable
         {
             showMoreMenu = true;
             moreMenuItemId = itemId;
+
+            // Setup outside click detection when opening menu
+            // JS will automatically close all other open menus (including message menus)
+            try
+            {
+                if (_conversationMenuRef == null)
+                {
+                    _conversationMenuRef = DotNetObjectReference.Create(this);
+                }
+                await JSRuntime.InvokeVoidAsync("setupConversationMenuOutsideClickHandler", itemId, _conversationMenuRef);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ERROR] Failed to setup conversation menu outside click handler: {ex.Message}");
+            }
         }
     }
 
@@ -520,11 +501,24 @@ public partial class ConversationList : IAsyncDisposable
     }
 
     /// <summary>
+    /// JS callback - called when clicking outside conversation more menu.
+    /// </summary>
+    [JSInvokable]
+    public void OnConversationMenuOutsideClick()
+    {
+        if (showMoreMenu)
+        {
+            CloseMoreMenu();
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
     /// Right-click event handler (context menu).
     /// </summary>
-    private void HandleContextMenu(Guid itemId, bool isChannel)
+    private async Task HandleContextMenu(Guid itemId)
     {
-        ToggleMoreMenu(itemId, isChannel);
+        await ToggleMoreMenu(itemId);
     }
 
     /// <summary>
@@ -569,19 +563,11 @@ public partial class ConversationList : IAsyncDisposable
 
         if (diff.TotalMinutes < 1) return "Now";
         if (diff.TotalHours < 1) return $"{(int)diff.TotalMinutes}m";
-        if (diff.TotalHours < 24) return dateTime.ToLocalTime().ToString("HH:mm");
+        if (diff.TotalHours < 24 && now.Day< dateTime.Day) return dateTime.ToLocalTime().ToString("HH:mm");
         if (diff.TotalDays < 7) return dateTime.ToLocalTime().ToString("ddd", CultureInfo.InvariantCulture);
         return dateTime.ToLocalTime().ToString("dd/MM/yy");
     }
 
-    /// <summary>
-    /// Mesajı qısaldır (35 simvol).
-    /// </summary>
-    private static string TruncateMessage(string? message)
-    {
-        if (string.IsNullOrEmpty(message)) return "No messages yet";
-        return message.Length > 35 ? message[..35] + "..." : message;
-    }
 
     /// <summary>
     /// Mesaj statusuna görə icon qaytarır.
@@ -602,23 +588,23 @@ public partial class ConversationList : IAsyncDisposable
     #region IAsyncDisposable
 
     /// <summary>
-    /// Dispose - cleanup JS listeners and DotNetObjectReference.
+    /// Dispose - cleanup resources.
     /// </summary>
     public async ValueTask DisposeAsync()
     {
-        if (_jsListenersInitialized && _dotNetRef != null)
+        if (_conversationMenuRef != null)
         {
             try
             {
-                await JSRuntime.InvokeVoidAsync("menuPanelHelper.unregister", _dotNetRef);
+                await JSRuntime.InvokeVoidAsync("disposeConversationMenuOutsideClickHandler", moreMenuItemId);
+                _conversationMenuRef.Dispose();
             }
-            catch (JSDisconnectedException)
+            catch
             {
-                // Ignore - circuit already disconnected
+                // Ignore disposal errors
             }
         }
-
-        _dotNetRef?.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     #endregion

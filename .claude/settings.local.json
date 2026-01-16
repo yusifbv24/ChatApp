@@ -18,7 +18,8 @@
       "Bash(cmd /c \"taskkill /F /PID 18276\")",
       "Bash(powershell -Command \"Stop-Process -Id 18276 -Force\")",
       "Bash(powershell -Command \"Stop-Process -Id 17912 -Force\")",
-      "Bash(powershell -Command:*)"
+      "Bash(powershell -Command:*)",
+      "Bash(del \"ChatApp.Blazor.Client\\wwwroot\\js\\conversationListHelper.js\")"
     ],
     "deny": [],
     "ask": []
