@@ -63,13 +63,20 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Migrations
                         .HasColumnName("created_at_utc");
 
                     b.Property<bool>("HasMessages")
-                        .HasColumnType("boolean");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("has_messages");
 
                     b.Property<Guid>("InitiatedByUserId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("initiated_by_user_id");
 
                     b.Property<bool>("IsNotes")
-                        .HasColumnType("boolean");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_notes");
 
                     b.Property<bool>("IsUser1Active")
                         .ValueGeneratedOnAdd()
@@ -95,15 +102,53 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("user1_id");
 
+                    b.Property<bool>("User1IsMarkedReadLater")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("user1_is_marked_read_later");
+
+                    b.Property<bool>("User1IsMuted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("user1_is_muted");
+
+                    b.Property<bool>("User1IsPinned")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("user1_is_pinned");
+
                     b.Property<Guid?>("User1LastReadLaterMessageId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("user1_last_read_later_message_id");
 
                     b.Property<Guid>("User2Id")
                         .HasColumnType("uuid")
                         .HasColumnName("user2_id");
 
+                    b.Property<bool>("User2IsMarkedReadLater")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("user2_is_marked_read_later");
+
+                    b.Property<bool>("User2IsMuted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("user2_is_muted");
+
+                    b.Property<bool>("User2IsPinned")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("user2_is_pinned");
+
                     b.Property<Guid?>("User2LastReadLaterMessageId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("user2_last_read_later_message_id");
 
                     b.HasKey("Id");
 

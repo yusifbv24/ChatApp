@@ -186,6 +186,21 @@ public partial class Messages : IAsyncDisposable
     /// </summary>
     private ChannelMemberRole currentUserChannelRole;
 
+    /// <summary>
+    /// Seçilmiş conversation/channel pinlənmişdir?
+    /// </summary>
+    private bool selectedConversationIsPinned;
+
+    /// <summary>
+    /// Seçilmiş conversation/channel mute edilmişdir?
+    /// </summary>
+    private bool selectedConversationIsMuted;
+
+    /// <summary>
+    /// Seçilmiş conversation/channel "read later" işarələnmişdir?
+    /// </summary>
+    private bool selectedConversationIsMarkedReadLater;
+
     #endregion
 
     #region Add Member State - Üzv əlavə etmə state-i

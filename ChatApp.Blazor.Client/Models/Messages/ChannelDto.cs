@@ -19,7 +19,10 @@
         Guid? LastMessageSenderId = null,
         string? LastMessageStatus = null,
         string? LastMessageSenderAvatarUrl = null,
-        Guid? FirstUnreadMessageId = null);
+        Guid? FirstUnreadMessageId = null,
+        bool IsPinned = false,
+        bool IsMuted = false,
+        bool IsMarkedReadLater = false);
 
 
 

@@ -284,6 +284,48 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
         }
 
 
+        public async Task<Result<bool>> TogglePinChannelAsync(Guid channelId)
+        {
+            var result = await apiClient.PostAsync<PinToggleResponse>(
+                $"/api/channels/{channelId}/toggle-pin");
+
+            if (result.IsSuccess && result.Value != null)
+            {
+                return Result.Success(result.Value.IsPinned);
+            }
+
+            return Result.Failure<bool>(result.Error ?? "Failed to toggle pin");
+        }
+
+
+        public async Task<Result<bool>> ToggleMuteChannelAsync(Guid channelId)
+        {
+            var result = await apiClient.PostAsync<MuteToggleResponse>(
+                $"/api/channels/{channelId}/toggle-mute");
+
+            if (result.IsSuccess && result.Value != null)
+            {
+                return Result.Success(result.Value.IsMuted);
+            }
+
+            return Result.Failure<bool>(result.Error ?? "Failed to toggle mute");
+        }
+
+
+        public async Task<Result<bool>> ToggleMarkChannelAsReadLaterAsync(Guid channelId)
+        {
+            var result = await apiClient.PostAsync<ReadLaterToggleResponse>(
+                $"/api/channels/{channelId}/toggle-read-later");
+
+            if (result.IsSuccess && result.Value != null)
+            {
+                return Result.Success(result.Value.IsMarkedReadLater);
+            }
+
+            return Result.Failure<bool>(result.Error ?? "Failed to toggle mark as read later");
+        }
+
+
         private record CreateChannelResponse(Guid ChannelId, string Message);
 
         private record SendMessageResponse(Guid MessageId, string Message);
@@ -291,5 +333,11 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
         private record UnreadCountResponse(int UnreadCount);
 
         private record FavoriteToggleResponse(bool IsFavorite, string Message);
+
+        private record PinToggleResponse(bool IsPinned);
+
+        private record MuteToggleResponse(bool IsMuted);
+
+        private record ReadLaterToggleResponse(bool IsMarkedReadLater);
     }
 }

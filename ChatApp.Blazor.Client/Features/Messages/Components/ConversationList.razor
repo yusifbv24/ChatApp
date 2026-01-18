@@ -90,7 +90,13 @@
                         </div>
                         <div class="conversation-info">
                             <div class="conversation-header">
-                                <span class="conversation-name">@item.Name</span>
+                                <div class="conversation-name-wrapper">
+                                    @if (item.IsPinned)
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Filled.PushPin" Class="pin-icon" Size="Size.Small" />
+                                    }
+                                    <span class="conversation-name">@item.Name</span>
+                                </div>
                                 <div class="conversation-meta">
                                     @if (item.IsMyLastMessage && !string.IsNullOrEmpty(item.LastMessageStatus) && item.UnreadCount == 0)
                                     {
@@ -167,6 +173,12 @@
                                             <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" />
                                         </span>
                                     }
+                                    @if (item.IsMarkedReadLater)
+                                    {
+                                        <span class="read-later-badge">
+                                            <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" />
+                                        </span>
+                                    }
                                 </div>
                                 <div class="preview-actions">
                                     @if (item.UnreadCount > 0)
@@ -186,14 +198,23 @@
                         @if (showMoreMenu && moreMenuItemId == item.Id)
                         {
                             <div class="conversation-more-menu" @onclick:stopPropagation="true">
-                                <button class="menu-item" @onclick="CloseMoreMenu">
-                                    <span>Mark to read later</span>
+                                @if (item.LastReadLaterMessageId.HasValue)
+                                {
+                                    <button class="menu-item" @onclick="async () => { await MarkChannelAllAsRead(item.Id); CloseMoreMenu(); }">
+                                        <span>Mark all as read</span>
+                                    </button>
+                                }
+                                else
+                                {
+                                    <button class="menu-item" @onclick="async () => { await ToggleMarkChannelAsReadLater(item.Id); CloseMoreMenu(); }">
+                                        <span>@(item.IsMarkedReadLater ? "Unmark read later" : "Mark to read later")</span>
+                                    </button>
+                                }
+                                <button class="menu-item" @onclick="async () => { await TogglePinChannel(item.Id); CloseMoreMenu(); }">
+                                    <span>@(item.IsPinned ? "Unpin" : "Pin")</span>
                                 </button>
-                                <button class="menu-item" @onclick="CloseMoreMenu">
-                                    <span>Pin</span>
-                                </button>
-                                <button class="menu-item" @onclick="CloseMoreMenu">
-                                    <span>Mute</span>
+                                <button class="menu-item" @onclick="async () => { await ToggleMuteChannel(item.Id); CloseMoreMenu(); }">
+                                    <span>@(item.IsMuted ? "Unmute" : "Mute")</span>
                                 </button>
                                 <button class="menu-item" @onclick="CloseMoreMenu">
                                     <span>Hide</span>
@@ -232,7 +253,13 @@
                         </div>
                         <div class="conversation-info">
                             <div class="conversation-header">
-                                <span class="conversation-name @(item.IsNotes ? "notes-name" : "")">@item.Name</span>
+                                <div class="conversation-name-wrapper">
+                                    @if (item.IsPinned)
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Filled.PushPin" Class="pin-icon" Size="Size.Small" />
+                                    }
+                                    <span class="conversation-name @(item.IsNotes ? "notes-name" : "")">@item.Name</span>
+                                </div>
                                 <div class="conversation-meta">
                                     @if (item.IsMyLastMessage && !string.IsNullOrEmpty(item.LastMessageStatus) && item.UnreadCount == 0)
                                     {
@@ -286,6 +313,12 @@
                                             <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" />
                                         </span>
                                     }
+                                    @if (item.IsMarkedReadLater)
+                                    {
+                                        <span class="read-later-badge">
+                                            <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" />
+                                        </span>
+                                    }
                                 </div>
                                 <div class="preview-actions">
                                     @if (item.UnreadCount > 0)
@@ -305,14 +338,23 @@
                         @if (showMoreMenu && moreMenuItemId == item.Id)
                         {
                             <div class="conversation-more-menu" @onclick:stopPropagation="true">
-                                <button class="menu-item" @onclick="CloseMoreMenu">
-                                    <span>Mark to read later</span>
+                                @if (item.LastReadLaterMessageId.HasValue)
+                                {
+                                    <button class="menu-item" @onclick="async () => { await MarkConversationAllAsRead(item.Id); CloseMoreMenu(); }">
+                                        <span>Mark all as read</span>
+                                    </button>
+                                }
+                                else
+                                {
+                                    <button class="menu-item" @onclick="async () => { await ToggleMarkConversationAsReadLater(item.Id); CloseMoreMenu(); }">
+                                        <span>@(item.IsMarkedReadLater ? "Unmark read later" : "Mark to read later")</span>
+                                    </button>
+                                }
+                                <button class="menu-item" @onclick="async () => { await TogglePinConversation(item.Id); CloseMoreMenu(); }">
+                                    <span>@(item.IsPinned ? "Unpin" : "Pin")</span>
                                 </button>
-                                <button class="menu-item" @onclick="CloseMoreMenu">
-                                    <span>Pin</span>
-                                </button>
-                                <button class="menu-item" @onclick="CloseMoreMenu">
-                                    <span>Mute</span>
+                                <button class="menu-item" @onclick="async () => { await ToggleMuteConversation(item.Id); CloseMoreMenu(); }">
+                                    <span>@(item.IsMuted ? "Unmute" : "Mute")</span>
                                 </button>
                                 @if (!item.IsNotes)
                                 {

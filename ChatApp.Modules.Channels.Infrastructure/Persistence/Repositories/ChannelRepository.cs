@@ -172,7 +172,10 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                     LastMessageSenderAvatarUrl = lastMessage != null ? lastMessage.AvatarUrl : null,
                     UnreadCount = unreadCount,
                     FirstUnreadMessageId = firstUnreadMessage != null ? (Guid?)firstUnreadMessage.Id : null,
-                    member.LastReadLaterMessageId
+                    member.LastReadLaterMessageId,
+                    member.IsPinned,
+                    member.IsMuted,
+                    member.IsMarkedReadLater
                 }
             ).ToListAsync(cancellationToken);
 
@@ -276,7 +279,10 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                     c.LastMessageSenderId,
                     status,
                     c.LastMessageSenderAvatarUrl,
-                    c.FirstUnreadMessageId
+                    c.FirstUnreadMessageId,
+                    c.IsPinned,
+                    c.IsMuted,
+                    c.IsMarkedReadLater
                 );
             }).ToList();
 

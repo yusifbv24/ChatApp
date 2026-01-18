@@ -64,10 +64,9 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMembers
 
                 var channel = await _unitOfWork.Channels.GetByIdAsync(
                     request.ChannelId,
-                    cancellationToken);
-
-                if (channel == null)
-                    throw new NotFoundException($"Channel with ID {request.ChannelId} not found");
+                    cancellationToken)
+                    
+                    ?? throw new NotFoundException($"Channel with ID {request.ChannelId} not found");
 
                 // Get member to remove
                 var member = await _unitOfWork.ChannelMembers.GetMemberAsync(

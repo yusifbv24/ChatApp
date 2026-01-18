@@ -89,5 +89,14 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
 
 
         Task<Result<bool>> ToggleFavoriteAsync(Guid channelId, Guid messageId);
+
+
+        Task<Result<bool>> TogglePinChannelAsync(Guid channelId);
+
+
+        Task<Result<bool>> ToggleMuteChannelAsync(Guid channelId);
+
+
+        Task<Result<bool>> ToggleMarkChannelAsReadLaterAsync(Guid channelId);
     }
 }

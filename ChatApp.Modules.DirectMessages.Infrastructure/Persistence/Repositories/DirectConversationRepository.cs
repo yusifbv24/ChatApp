@@ -2,6 +2,7 @@
 using ChatApp.Modules.DirectMessages.Application.DTOs.Response;
 using ChatApp.Modules.DirectMessages.Application.Interfaces;
 using ChatApp.Modules.DirectMessages.Domain.Entities;
+using ChatApp.Modules.Files.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
@@ -78,7 +79,7 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                                        let lastMessageInfo = (from m in _context.DirectMessages
                                           where m.ConversationId == conv.Id
                                           orderby m.CreatedAtUtc descending
-                                          join file in _context.Set<ChatApp.Modules.Files.Domain.Entities.FileMetadata>()
+                                          join file in _context.Set<FileMetadata>()
                                               on m.FileId equals file.Id.ToString() into fileGroup
                                           from file in fileGroup.DefaultIfEmpty()
                                           select new { m.Id, m.Content, m.IsDeleted, m.SenderId, m.IsRead, m.FileId, FileContentType = file != null ? file.ContentType : null })
@@ -91,6 +92,15 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                                        let lastReadLaterMessageId = conv.User1Id == userId
                                            ? conv.User1LastReadLaterMessageId
                                            : conv.User2LastReadLaterMessageId
+                                       let isPinned = conv.User1Id == userId
+                                           ? conv.User1IsPinned
+                                           : conv.User2IsPinned
+                                       let isMuted = conv.User1Id == userId
+                                           ? conv.User1IsMuted
+                                           : conv.User2IsMuted
+                                       let isMarkedReadLater = conv.User1Id == userId
+                                           ? conv.User1IsMarkedReadLater
+                                           : conv.User2IsMarkedReadLater
                                        orderby conv.LastMessageAtUtc descending
                                        select new
                                        {
@@ -112,7 +122,10 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                                            LastReadLaterMessageId=lastReadLaterMessageId,
                                            LastMessageSenderId = lastMessageInfo != null ? (Guid?)lastMessageInfo.SenderId : null,
                                            LastMessageIsRead = lastMessageInfo != null && lastMessageInfo.IsRead,
-                                           LastMessageId = lastMessageInfo != null ? (Guid?)lastMessageInfo.Id : null
+                                           LastMessageId = lastMessageInfo != null ? (Guid?)lastMessageInfo.Id : null,
+                                           IsPinned = isPinned,
+                                           IsMuted = isMuted,
+                                           IsMarkedReadLater = isMarkedReadLater
                                        })
                                        .ToListAsync(cancellationToken);
 
@@ -180,8 +193,11 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                     c.LastMessageSenderId,
                     status,
                     c.LastMessageId,
-                    firstUnreadMessageIds.ContainsKey(c.Id) ? (Guid?)firstUnreadMessageIds[c.Id] : null,
-                    c.IsNotes
+                    firstUnreadMessageIds.TryGetValue(c.Id, out Guid value) ? (Guid?)value : null,
+                    c.IsNotes,
+                    c.IsPinned,
+                    c.IsMuted,
+                    c.IsMarkedReadLater
                 );
             }).ToList();
 

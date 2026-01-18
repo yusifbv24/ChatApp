@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using ChatApp.Blazor.Client.Models.Messages;
 using ChatApp.Blazor.Client.State;
+using ChatApp.Blazor.Client.Features.Messages.Services;
 using MudBlazor;
 using System.Globalization;
 using Microsoft.JSInterop;
@@ -13,6 +14,8 @@ public partial class ConversationList : IAsyncDisposable
 
     [Inject] private UserState UserState { get; set; } = default!;
     [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
+    [Inject] private IChannelService ChannelService { get; set; } = default!;
+    [Inject] private IConversationService ConversationService { get; set; } = default!;
 
     #endregion
 
@@ -92,6 +95,16 @@ public partial class ConversationList : IAsyncDisposable
     /// Yeni channel yaratmaq callback-i.
     /// </summary>
     [Parameter] public EventCallback OnNewChannel { get; set; }
+
+    /// <summary>
+    /// Conversation data yeniləmə callback-i.
+    /// </summary>
+    [Parameter] public EventCallback OnRefreshData { get; set; }
+
+    /// <summary>
+    /// Conversation bağlanma callback-i.
+    /// </summary>
+    [Parameter] public EventCallback OnCloseConversation { get; set; }
 
     #endregion
 
@@ -214,6 +227,12 @@ public partial class ConversationList : IAsyncDisposable
 
         public string? LastMessageSenderAvatarUrl { get; set; }
 
+        public bool IsPinned { get; set; }
+
+        public bool IsMuted { get; set; }
+
+        public bool IsMarkedReadLater { get; set; }
+
         public DirectConversationDto? DirectConversation { get; set; }
 
         public ChannelDto? Channel { get; set; }
@@ -282,9 +301,16 @@ public partial class ConversationList : IAsyncDisposable
             ).ToList();
         }
 
-        // Son aktivliyə görə sırala (ən yeni birinci)
+        // Sıralama: Əvvəlcə pinned conversations, sonra son aktivliyə görə
         items.Sort((a, b) =>
-            (b.LastActivityTime ?? DateTime.MinValue).CompareTo(a.LastActivityTime ?? DateTime.MinValue));
+        {
+            // Pinned conversations ən yuxarıda
+            if (a.IsPinned && !b.IsPinned) return -1;
+            if (!a.IsPinned && b.IsPinned) return 1;
+
+            // Həm pinned və ya heç biri pinned deyilsə, son aktivliyə görə
+            return (b.LastActivityTime ?? DateTime.MinValue).CompareTo(a.LastActivityTime ?? DateTime.MinValue);
+        });
 
         _cachedUnifiedList = items;
         _isCacheValid = true;
@@ -342,6 +368,9 @@ public partial class ConversationList : IAsyncDisposable
             IsMyLastMessage = conv.LastMessageSenderId == UserState.UserId,
             LastMessageStatus = conv.LastMessageStatus,
             IsNotes = conv.IsNotes,
+            IsPinned = conv.IsPinned,
+            IsMuted = conv.IsMuted,
+            IsMarkedReadLater = conv.IsMarkedReadLater,
             DirectConversation = conv
         };
     }
@@ -374,6 +403,9 @@ public partial class ConversationList : IAsyncDisposable
             IsMyLastMessage = channel.LastMessageSenderId == UserState.UserId,
             LastMessageStatus = channel.LastMessageStatus,
             LastMessageSenderAvatarUrl = channel.LastMessageSenderAvatarUrl,
+            IsPinned = channel.IsPinned,
+            IsMuted = channel.IsMuted,
+            IsMarkedReadLater = channel.IsMarkedReadLater,
             Channel = channel
         };
     }
@@ -581,6 +613,126 @@ public partial class ConversationList : IAsyncDisposable
             "Read" => Icons.Material.Filled.DoneAll,         // İkiqat checkmark (mavi - CSS ilə)
             _ => Icons.Material.Filled.Check
         };
+    }
+
+    #endregion
+
+    #region Menu Action Handlers
+
+    /// <summary>
+    /// Pin/Unpin channel handler.
+    /// </summary>
+    private async Task TogglePinChannel(Guid channelId)
+    {
+        var result = await ChannelService.TogglePinChannelAsync(channelId);
+        if (result.IsSuccess)
+        {
+            await OnRefreshData.InvokeAsync();
+        }
+    }
+
+    /// <summary>
+    /// Mute/Unmute channel handler.
+    /// </summary>
+    private async Task ToggleMuteChannel(Guid channelId)
+    {
+        var result = await ChannelService.ToggleMuteChannelAsync(channelId);
+        if (result.IsSuccess)
+        {
+            await OnRefreshData.InvokeAsync();
+        }
+    }
+
+    /// <summary>
+    /// Mark channel as read later handler.
+    /// </summary>
+    private async Task ToggleMarkChannelAsReadLater(Guid channelId)
+    {
+        var result = await ChannelService.ToggleMarkChannelAsReadLaterAsync(channelId);
+        if (result.IsSuccess)
+        {
+            // If currently viewing this channel, close it
+            if (SelectedChannelId == channelId)
+            {
+                await OnCloseConversation.InvokeAsync();
+            }
+            await OnRefreshData.InvokeAsync();
+        }
+    }
+
+    /// <summary>
+    /// Pin/Unpin conversation handler.
+    /// </summary>
+    private async Task TogglePinConversation(Guid conversationId)
+    {
+        var result = await ConversationService.TogglePinConversationAsync(conversationId);
+        if (result.IsSuccess)
+        {
+            await OnRefreshData.InvokeAsync();
+        }
+    }
+
+    /// <summary>
+    /// Mute/Unmute conversation handler.
+    /// </summary>
+    private async Task ToggleMuteConversation(Guid conversationId)
+    {
+        var result = await ConversationService.ToggleMuteConversationAsync(conversationId);
+        if (result.IsSuccess)
+        {
+            await OnRefreshData.InvokeAsync();
+        }
+    }
+
+    /// <summary>
+    /// Mark conversation as read later handler.
+    /// </summary>
+    private async Task ToggleMarkConversationAsReadLater(Guid conversationId)
+    {
+        var result = await ConversationService.ToggleMarkConversationAsReadLaterAsync(conversationId);
+        if (result.IsSuccess)
+        {
+            // If currently viewing this conversation, close it
+            if (SelectedConversationId == conversationId)
+            {
+                await OnCloseConversation.InvokeAsync();
+            }
+            await OnRefreshData.InvokeAsync();
+        }
+    }
+
+    /// <summary>
+    /// Mark all as read handler for channels - removes message read later status.
+    /// </summary>
+    private async Task MarkChannelAllAsRead(Guid channelId)
+    {
+        var channel = Channels.FirstOrDefault(c => c.Id == channelId);
+        if (channel?.LastReadLaterMessageId.HasValue == true)
+        {
+            // Call ToggleMessageAsLater API to unmark the message
+            var result = await ChannelService.ToggleMessageAsLaterAsync(channelId, channel.LastReadLaterMessageId.Value);
+            if (result.IsSuccess)
+            {
+                await OnRefreshData.InvokeAsync();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Mark all as read handler for conversations - removes message read later status.
+    /// </summary>
+    private async Task MarkConversationAllAsRead(Guid conversationId)
+    {
+        var conversation = Conversations.FirstOrDefault(c => c.Id == conversationId);
+        if (conversation?.LastReadLaterMessageId.HasValue == true)
+        {
+            // Call ToggleMessageAsLater API to unmark the message
+            var result = await ConversationService.ToggleMessageAsLaterAsync(conversationId, conversation.LastReadLaterMessageId.Value);
+            if (result.IsSuccess)
+            {
+                await OnRefreshData.InvokeAsync();
+            }
+        }
     }
 
     #endregion

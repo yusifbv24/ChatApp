@@ -92,6 +92,25 @@ public partial class ChatArea : IAsyncDisposable
 
     #endregion
 
+    #region Parameters - Conversation Preferences
+
+    /// <summary>
+    /// Conversation pin edilib-edilmədiyi - header-da pin icon göstərilir.
+    /// </summary>
+    [Parameter] public bool IsPinned { get; set; }
+
+    /// <summary>
+    /// Conversation mute edilib-edilmədiyi - notification gəlmir.
+    /// </summary>
+    [Parameter] public bool IsMuted { get; set; }
+
+    /// <summary>
+    /// Conversation "read later" kimi işarələnib-işarələnmədiyi.
+    /// </summary>
+    [Parameter] public bool IsMarkedReadLater { get; set; }
+
+    #endregion
+
     #region Parameters - Channel
 
     /// <summary>

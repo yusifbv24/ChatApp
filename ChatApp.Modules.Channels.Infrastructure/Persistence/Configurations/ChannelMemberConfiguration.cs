@@ -53,6 +53,24 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Configurations
                 .HasColumnType("timestamp with time zone")
                 .IsRequired();
 
+            builder.Property(m => m.IsPinned)
+                .HasColumnName("is_pinned")
+                .IsRequired()
+                .HasDefaultValue(false);
+
+            builder.Property(m => m.IsMuted)
+                .HasColumnName("is_muted")
+                .IsRequired()
+                .HasDefaultValue(false);
+
+            builder.Property(m => m.IsMarkedReadLater)
+                .HasColumnName("is_marked_read_later")
+                .IsRequired()
+                .HasDefaultValue(false);
+
+            builder.Property(m => m.LastReadLaterMessageId)
+                .HasColumnName("last_read_later_message_id");
+
             // Indexes
             builder.HasIndex(m => new { m.ChannelId, m.UserId })
                 .IsUnique()

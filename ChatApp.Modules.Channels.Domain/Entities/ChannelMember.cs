@@ -13,6 +13,11 @@ namespace ChatApp.Modules.Channels.Domain.Entities
         public bool IsActive { get; private set; }
         public Guid? LastReadLaterMessageId { get; private set; }
 
+        // Conversation-level preferences
+        public bool IsPinned { get; private set; }
+        public bool IsMuted { get; private set; }
+        public bool IsMarkedReadLater { get; private set; }
+
         // Navigation properties
         public Channel Channel { get; private set; } = null!;
 
@@ -57,6 +62,30 @@ namespace ChatApp.Modules.Channels.Domain.Entities
         public void UnmarkMessageAsLater()
         {
             LastReadLaterMessageId = null;
+            UpdateTimestamp();
+        }
+
+        public void TogglePin()
+        {
+            IsPinned = !IsPinned;
+            UpdateTimestamp();
+        }
+
+        public void ToggleMute()
+        {
+            IsMuted = !IsMuted;
+            UpdateTimestamp();
+        }
+
+        public void MarkConversationAsReadLater()
+        {
+            IsMarkedReadLater = true;
+            UpdateTimestamp();
+        }
+
+        public void UnmarkConversationAsReadLater()
+        {
+            IsMarkedReadLater = false;
             UpdateTimestamp();
         }
     }

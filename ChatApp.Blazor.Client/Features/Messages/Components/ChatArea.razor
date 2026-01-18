@@ -40,7 +40,17 @@
                         }
                     </div>
                     <div class="header-details">
-                        <h3 class="header-name @(IsNotesConversation ? "notes-name" : "")">@RecipientName</h3>
+                        <div class="header-name-wrapper">
+                            <h3 class="header-name @(IsNotesConversation ? "notes-name" : "")">@RecipientName</h3>
+                            @if (IsPinned)
+                            {
+                                <MudIcon Icon="@Icons.Material.Outlined.PushPin" Class="header-pin-icon" Style="font-size: 14px;" />
+                            }
+                            @if (IsMuted)
+                            {
+                                <MudIcon Icon="@Icons.Material.Outlined.VolumeOff" Class="header-mute-icon" Style="font-size: 14px;" />
+                            }
+                        </div>
                         @if (!IsNotesConversation)
                         {
                             @if (TypingUsers?.Any() ?? false)
@@ -60,7 +70,17 @@
                         <div class="avatar-placeholder channel-avatar" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(ChannelId ?? Guid.Empty);">@StringHelper.GetInitials(ChannelName)</div>
                     </div>
                     <div class="header-details">
-                        <h3 class="header-name">@ChannelName</h3>
+                        <div class="header-name-wrapper">
+                            <h3 class="header-name">@ChannelName</h3>
+                            @if (IsPinned)
+                            {
+                                <MudIcon Icon="@Icons.Material.Outlined.PushPin" Class="header-pin-icon" Style="font-size: 14px;" />
+                            }
+                            @if (IsMuted)
+                            {
+                                <MudIcon Icon="@Icons.Material.Outlined.VolumeOff" Class="header-mute-icon" Style="font-size: 14px;" />
+                            }
+                        </div>
                         @if (TypingUsers?.Any() ?? false)
                         {
                             <span class="header-status typing">

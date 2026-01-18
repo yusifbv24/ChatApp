@@ -1,4 +1,5 @@
 ﻿using ChatApp.Modules.Channels.Application.Commands.Channels;
+using ChatApp.Modules.Channels.Application.Commands.ChannelMembers;
 using ChatApp.Modules.Channels.Application.DTOs.Requests;
 using ChatApp.Modules.Channels.Application.DTOs.Responses;
 using ChatApp.Modules.Channels.Application.Queries.GetChannel;
@@ -235,6 +236,90 @@ namespace ChatApp.Modules.Channels.Api.Controllers
                 return BadRequest(new { error = result.Error });
 
             return Ok(new { message = "Channel deleted successfully" });
+        }
+
+
+
+        /// <summary>
+        /// Toggle pin status for a channel
+        /// </summary>
+        [HttpPost("{channelId:guid}/toggle-pin")]
+        [RequirePermission("Channels.View")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> TogglePinChannel(
+            [FromRoute] Guid channelId,
+            CancellationToken cancellationToken)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == Guid.Empty)
+                return Unauthorized();
+
+            var result = await _mediator.Send(
+                new TogglePinChannelCommand(channelId, userId),
+                cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return Ok(new { isPinned = result.Value });
+        }
+
+
+
+        /// <summary>
+        /// Toggle mute status for a channel
+        /// </summary>
+        [HttpPost("{channelId:guid}/toggle-mute")]
+        [RequirePermission("Channels.View")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> ToggleMuteChannel(
+            [FromRoute] Guid channelId,
+            CancellationToken cancellationToken)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == Guid.Empty)
+                return Unauthorized();
+
+            var result = await _mediator.Send(
+                new ToggleMuteChannelCommand(channelId, userId),
+                cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return Ok(new { isMuted = result.Value });
+        }
+
+
+
+        /// <summary>
+        /// Toggle mark as read later for a channel
+        /// </summary>
+        [HttpPost("{channelId:guid}/toggle-read-later")]
+        [RequirePermission("Channels.View")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> ToggleMarkChannelAsReadLater(
+            [FromRoute] Guid channelId,
+            CancellationToken cancellationToken)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == Guid.Empty)
+                return Unauthorized();
+
+            var result = await _mediator.Send(
+                new ToggleMarkChannelAsReadLaterCommand(channelId, userId),
+                cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return Ok(new { isMarkedReadLater = result.Value });
         }
 
 

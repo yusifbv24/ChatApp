@@ -246,6 +246,11 @@ public partial class Messages
             recipientUserId = conversation.OtherUserId;
             isNotesConversation = conversation.IsNotes;
 
+            // Conversation preferences
+            selectedConversationIsPinned = conversation.IsPinned;
+            selectedConversationIsMuted = conversation.IsMuted;
+            selectedConversationIsMarkedReadLater = conversation.IsMarkedReadLater;
+
             // Mention data: DM üçün conversation partner
             currentConversationPartner = new MentionUserDto
             {
@@ -560,6 +565,11 @@ public partial class Messages
             selectedChannelDescription = channel.Description;
             selectedChannelType = channel.Type;
             selectedChannelMemberCount = channel.MemberCount;
+
+            // Channel preferences
+            selectedConversationIsPinned = channel.IsPinned;
+            selectedConversationIsMuted = channel.IsMuted;
+            selectedConversationIsMarkedReadLater = channel.IsMarkedReadLater;
 
             // Draft yüklə
             currentDraft = LoadDraft(null, channel.Id);

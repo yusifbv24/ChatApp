@@ -1,4 +1,5 @@
-﻿using ChatApp.Modules.DirectMessages.Application.Commands.DirectMessageReactions;
+﻿using ChatApp.Modules.DirectMessages.Application.Commands.DirectConversations;
+using ChatApp.Modules.DirectMessages.Application.Commands.DirectMessageReactions;
 using ChatApp.Modules.DirectMessages.Application.Commands.DirectMessages;
 using ChatApp.Modules.DirectMessages.Application.Commands.MessageConditions;
 using ChatApp.Modules.DirectMessages.Application.DTOs.Request;
@@ -11,7 +12,6 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using System.Security.Claims;
 using BackendMentionRequest = ChatApp.Modules.DirectMessages.Application.Commands.DirectMessages.MentionRequest;
 
@@ -595,6 +595,90 @@ namespace ChatApp.Modules.DirectMessages.Api.Controllers
                 return BadRequest(new { error = result.Error });
 
             return Ok(new { message = "Message unpinned successfully" });
+        }
+
+
+
+        /// <summary>
+        /// Toggle pin status for a conversation
+        /// </summary>
+        [HttpPost("toggle-pin")]
+        [RequirePermission("Messages.Read")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> TogglePinConversation(
+            [FromRoute] Guid conversationId,
+            CancellationToken cancellationToken)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == Guid.Empty)
+                return Unauthorized();
+
+            var result = await _mediator.Send(
+                new TogglePinConversationCommand(conversationId, userId),
+                cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return Ok(new { isPinned = result.Value });
+        }
+
+
+
+        /// <summary>
+        /// Toggle mute status for a conversation
+        /// </summary>
+        [HttpPost("toggle-mute")]
+        [RequirePermission("Messages.Read")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> ToggleMuteConversation(
+            [FromRoute] Guid conversationId,
+            CancellationToken cancellationToken)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == Guid.Empty)
+                return Unauthorized();
+
+            var result = await _mediator.Send(
+                new ToggleMuteConversationCommand(conversationId, userId),
+                cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return Ok(new { isMuted = result.Value });
+        }
+
+
+
+        /// <summary>
+        /// Toggle mark as read later for a conversation
+        /// </summary>
+        [HttpPost("toggle-read-later")]
+        [RequirePermission("Messages.Read")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> ToggleMarkConversationAsReadLater(
+            [FromRoute] Guid conversationId,
+            CancellationToken cancellationToken)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == Guid.Empty)
+                return Unauthorized();
+
+            var result = await _mediator.Send(
+                new ToggleMarkConversationAsReadLaterCommand(conversationId, userId),
+                cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return Ok(new { isMarkedReadLater = result.Value });
         }
 
 

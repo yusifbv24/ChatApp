@@ -19,7 +19,14 @@
       "Bash(powershell -Command \"Stop-Process -Id 18276 -Force\")",
       "Bash(powershell -Command \"Stop-Process -Id 17912 -Force\")",
       "Bash(powershell -Command:*)",
-      "Bash(del \"ChatApp.Blazor.Client\\wwwroot\\js\\conversationListHelper.js\")"
+      "Bash(del \"ChatApp.Blazor.Client\\wwwroot\\js\\conversationListHelper.js\")",
+      "Bash(Select-String \"error\" -Context 0,2)",
+      "Bash(del \"C:\\Users\\ybaghiyev\\Desktop\\ChatApp\\ChatApp.Modules.Channels.Infrastructure\\Migrations\\20260116101815_AddConversationPreferences.cs\")",
+      "Bash(del \"C:\\Users\\ybaghiyev\\Desktop\\ChatApp\\ChatApp.Modules.Channels.Infrastructure\\Migrations\\20260116101815_AddConversationPreferences.Designer.cs\")",
+      "Bash(del \"C:\\Users\\ybaghiyev\\Desktop\\ChatApp\\ChatApp.Modules.DirectMessages.Infrastructure\\Migrations\\20260116101828_AddConversationPreferences.cs\")",
+      "Bash(del \"C:\\Users\\ybaghiyev\\Desktop\\ChatApp\\ChatApp.Modules.DirectMessages.Infrastructure\\Migrations\\20260116101828_AddConversationPreferences.Designer.cs\")",
+      "Bash(dir:*)",
+      "Bash(nul)"
     ],
     "deny": [],
     "ask": []

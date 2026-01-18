@@ -48,6 +48,56 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Configuratio
                 .HasColumnType("timestamp with time zone")
                 .IsRequired();
 
+            builder.Property(c => c.User1IsPinned)
+                .HasColumnName("user1_is_pinned")
+                .IsRequired()
+                .HasDefaultValue(false);
+
+            builder.Property(c => c.User2IsPinned)
+                .HasColumnName("user2_is_pinned")
+                .IsRequired()
+                .HasDefaultValue(false);
+
+            builder.Property(c => c.User1IsMuted)
+                .HasColumnName("user1_is_muted")
+                .IsRequired()
+                .HasDefaultValue(false);
+
+            builder.Property(c => c.User2IsMuted)
+                .HasColumnName("user2_is_muted")
+                .IsRequired()
+                .HasDefaultValue(false);
+
+            builder.Property(c => c.User1IsMarkedReadLater)
+                .HasColumnName("user1_is_marked_read_later")
+                .IsRequired()
+                .HasDefaultValue(false);
+
+            builder.Property(c => c.User2IsMarkedReadLater)
+                .HasColumnName("user2_is_marked_read_later")
+                .IsRequired()
+                .HasDefaultValue(false);
+
+            builder.Property(c => c.User1LastReadLaterMessageId)
+                .HasColumnName("user1_last_read_later_message_id");
+
+            builder.Property(c => c.User2LastReadLaterMessageId)
+                .HasColumnName("user2_last_read_later_message_id");
+
+            builder.Property(c => c.InitiatedByUserId)
+                .HasColumnName("initiated_by_user_id")
+                .IsRequired();
+
+            builder.Property(c => c.HasMessages)
+                .HasColumnName("has_messages")
+                .IsRequired()
+                .HasDefaultValue(false);
+
+            builder.Property(c => c.IsNotes)
+                .HasColumnName("is_notes")
+                .IsRequired()
+                .HasDefaultValue(false);
+
             // Indexes for performance
             builder.HasIndex(c => new { c.User1Id, c.User2Id })
                 .IsUnique()

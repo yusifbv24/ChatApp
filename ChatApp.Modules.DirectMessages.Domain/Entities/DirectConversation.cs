@@ -26,6 +26,14 @@ namespace ChatApp.Modules.DirectMessages.Domain.Entities
         public Guid? User1LastReadLaterMessageId { get; private set; }
         public Guid? User2LastReadLaterMessageId { get; private set; }
 
+        // Conversation-level preferences (per user)
+        public bool User1IsPinned { get; private set; }
+        public bool User2IsPinned { get; private set; }
+        public bool User1IsMuted { get; private set; }
+        public bool User2IsMuted { get; private set; }
+        public bool User1IsMarkedReadLater { get; private set; }
+        public bool User2IsMarkedReadLater { get; private set; }
+
         /// <summary>
         /// Notes conversation (self-conversation) - User1Id = User2Id
         /// Always visible in conversation list
@@ -170,6 +178,104 @@ namespace ChatApp.Modules.DirectMessages.Domain.Entities
                 return User1LastReadLaterMessageId;
             if (userId == User2Id)
                 return User2LastReadLaterMessageId;
+
+            throw new InvalidOperationException("User is not a participant in this conversation");
+        }
+
+        public void TogglePin(Guid userId)
+        {
+            if (userId == User1Id)
+            {
+                User1IsPinned = !User1IsPinned;
+            }
+            else if (userId == User2Id)
+            {
+                User2IsPinned = !User2IsPinned;
+            }
+            else
+            {
+                throw new InvalidOperationException("User is not a participant in this conversation");
+            }
+            UpdateTimestamp();
+        }
+
+        public void ToggleMute(Guid userId)
+        {
+            if (userId == User1Id)
+            {
+                User1IsMuted = !User1IsMuted;
+            }
+            else if (userId == User2Id)
+            {
+                User2IsMuted = !User2IsMuted;
+            }
+            else
+            {
+                throw new InvalidOperationException("User is not a participant in this conversation");
+            }
+            UpdateTimestamp();
+        }
+
+        public void MarkConversationAsReadLater(Guid userId)
+        {
+            if (userId == User1Id)
+            {
+                User1IsMarkedReadLater = true;
+            }
+            else if (userId == User2Id)
+            {
+                User2IsMarkedReadLater = true;
+            }
+            else
+            {
+                throw new InvalidOperationException("User is not a participant in this conversation");
+            }
+            UpdateTimestamp();
+        }
+
+        public void UnmarkConversationAsReadLater(Guid userId)
+        {
+            if (userId == User1Id)
+            {
+                User1IsMarkedReadLater = false;
+            }
+            else if (userId == User2Id)
+            {
+                User2IsMarkedReadLater = false;
+            }
+            else
+            {
+                throw new InvalidOperationException("User is not a participant in this conversation");
+            }
+            UpdateTimestamp();
+        }
+
+        public bool IsPinned(Guid userId)
+        {
+            if (userId == User1Id)
+                return User1IsPinned;
+            if (userId == User2Id)
+                return User2IsPinned;
+
+            throw new InvalidOperationException("User is not a participant in this conversation");
+        }
+
+        public bool IsMuted(Guid userId)
+        {
+            if (userId == User1Id)
+                return User1IsMuted;
+            if (userId == User2Id)
+                return User2IsMuted;
+
+            throw new InvalidOperationException("User is not a participant in this conversation");
+        }
+
+        public bool IsMarkedReadLater(Guid userId)
+        {
+            if (userId == User1Id)
+                return User1IsMarkedReadLater;
+            if (userId == User2Id)
+                return User2IsMarkedReadLater;
 
             throw new InvalidOperationException("User is not a participant in this conversation");
         }
