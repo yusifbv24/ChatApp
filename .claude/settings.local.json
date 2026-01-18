@@ -26,7 +26,12 @@
       "Bash(del \"C:\\Users\\ybaghiyev\\Desktop\\ChatApp\\ChatApp.Modules.DirectMessages.Infrastructure\\Migrations\\20260116101828_AddConversationPreferences.cs\")",
       "Bash(del \"C:\\Users\\ybaghiyev\\Desktop\\ChatApp\\ChatApp.Modules.DirectMessages.Infrastructure\\Migrations\\20260116101828_AddConversationPreferences.Designer.cs\")",
       "Bash(dir:*)",
-      "Bash(nul)"
+      "Bash(nul)",
+      "Bash(del \"C:\\Users\\Joseph\\Desktop\\ChatApp\\ChatApp.Modules.DirectMessages.Infrastructure\\Migrations\\20260116112757_AddMissingUserLastReadLaterMessageIdColumns.cs\")",
+      "Bash(del \"C:\\Users\\Joseph\\Desktop\\ChatApp\\ChatApp.Modules.DirectMessages.Infrastructure\\Migrations\\20260116112757_AddMissingUserLastReadLaterMessageIdColumns.Designer.cs\")",
+      "Bash(rm:*)",
+      "Bash(dotnet run)",
+      "Bash(timeout 25 dotnet run:*)"
     ],
     "deny": [],
     "ask": []
