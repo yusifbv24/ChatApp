@@ -74,5 +74,19 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
 
 
         Task<Result<bool>> ToggleMarkConversationAsReadLaterAsync(Guid conversationId);
+
+
+        /// <summary>
+        /// Marks all unread messages as read AND clears all "mark as read later" flags.
+        /// Returns the count of messages marked as read.
+        /// </summary>
+        Task<Result<int>> MarkAllMessagesAsReadAsync(Guid conversationId);
+
+
+        /// <summary>
+        /// Clears all "mark as read later" flags (both conversation-level and message-level) when opening conversation.
+        /// Does NOT mark messages as read - only removes the icon from conversation list.
+        /// </summary>
+        Task<Result> UnmarkConversationReadLaterAsync(Guid conversationId);
     }
 }

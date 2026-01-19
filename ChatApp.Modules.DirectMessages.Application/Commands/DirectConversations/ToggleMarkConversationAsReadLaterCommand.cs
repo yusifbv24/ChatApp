@@ -52,26 +52,32 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectConversation
                 if (!conversation.IsParticipant(request.UserId))
                     return Result.Failure<bool>("User is not a participant in this conversation");
 
-                if (conversation.IsMarkedReadLater(request.UserId))
+                var member = await _unitOfWork.ConversationMembers.GetByConversationAndUserAsync(
+                    request.ConversationId,
+                    request.UserId,
+                    cancellationToken);
+
+                if (member == null)
+                    return Result.Failure<bool>("Conversation member not found");
+
+                if (member.IsMarkedReadLater)
                 {
-                    conversation.UnmarkConversationAsReadLater(request.UserId);
+                    member.UnmarkConversationAsReadLater();
                 }
                 else
                 {
-                    conversation.MarkConversationAsReadLater(request.UserId);
+                    member.MarkConversationAsReadLater();
                 }
 
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                var isMarkedReadLater = conversation.IsMarkedReadLater(request.UserId);
-
                 _logger?.LogInformation(
                     "Conversation {ConversationId} mark as read later toggled to {IsMarkedReadLater} for user {UserId}",
                     request.ConversationId,
-                    isMarkedReadLater,
+                    member.IsMarkedReadLater,
                     request.UserId);
 
-                return Result.Success(isMarkedReadLater);
+                return Result.Success(member.IsMarkedReadLater);
             }
             catch (Exception ex)
             {

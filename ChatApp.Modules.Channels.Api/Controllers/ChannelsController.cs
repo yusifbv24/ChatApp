@@ -323,6 +323,59 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         }
 
 
+        /// <summary>
+        /// Unmark channel as read later (clears both conversation-level and message-level marks)
+        /// </summary>
+        [HttpDelete("{channelId:guid}/read-later")]
+        [RequirePermission("Channels.View")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> UnmarkChannelAsReadLater(
+            [FromRoute] Guid channelId,
+            CancellationToken cancellationToken)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == Guid.Empty)
+                return Unauthorized();
+
+            var result = await _mediator.Send(
+                new UnmarkChannelReadLaterCommand(channelId, userId),
+                cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return Ok();
+        }
+
+
+        /// <summary>
+        /// Mark all unread channel messages as read and clear all read later flags
+        /// </summary>
+        [HttpPost("{channelId:guid}/messages/mark-all-read")]
+        [RequirePermission("Channels.View")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> MarkAllChannelMessagesAsRead(
+            [FromRoute] Guid channelId,
+            CancellationToken cancellationToken)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == Guid.Empty)
+                return Unauthorized();
+
+            var result = await _mediator.Send(
+                new MarkAllChannelMessagesAsReadCommand(channelId, userId),
+                cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return Ok(new { markedCount = result.Value, message = "All messages marked as read" });
+        }
+
 
         private Guid GetCurrentUserId()
         {

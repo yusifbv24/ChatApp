@@ -326,6 +326,26 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
         }
 
 
+        public async Task<Result> UnmarkChannelReadLaterAsync(Guid channelId)
+        {
+            return await apiClient.DeleteAsync($"/api/channels/{channelId}/read-later");
+        }
+
+
+        public async Task<Result<int>> MarkAllChannelMessagesAsReadAsync(Guid channelId)
+        {
+            var result = await apiClient.PostAsync<MarkAllReadResponse>(
+                $"/api/channels/{channelId}/messages/mark-all-read");
+
+            if (result.IsSuccess && result.Value != null)
+            {
+                return Result.Success(result.Value.MarkedCount);
+            }
+
+            return Result.Failure<int>(result.Error ?? "Failed to mark all messages as read");
+        }
+
+
         private record CreateChannelResponse(Guid ChannelId, string Message);
 
         private record SendMessageResponse(Guid MessageId, string Message);
@@ -339,5 +359,7 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
         private record MuteToggleResponse(bool IsMuted);
 
         private record ReadLaterToggleResponse(bool IsMarkedReadLater);
+
+        private record MarkAllReadResponse(int MarkedCount, string Message);
     }
 }

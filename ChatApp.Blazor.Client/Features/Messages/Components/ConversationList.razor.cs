@@ -448,6 +448,7 @@ public partial class ConversationList : IAsyncDisposable
 
     /// <summary>
     /// Conversation seçir.
+    /// Icon təmizləmə işi Messages.SelectDirectConversation metodunda edilir.
     /// </summary>
     private async Task SelectConversationItem(UnifiedChatItem item)
     {
@@ -510,10 +511,7 @@ public partial class ConversationList : IAsyncDisposable
             // JS will automatically close all other open menus (including message menus)
             try
             {
-                if (_conversationMenuRef == null)
-                {
-                    _conversationMenuRef = DotNetObjectReference.Create(this);
-                }
+                _conversationMenuRef ??= DotNetObjectReference.Create(this);
                 await JSRuntime.InvokeVoidAsync("setupConversationMenuOutsideClickHandler", itemId, _conversationMenuRef);
             }
             catch (Exception ex)
@@ -621,116 +619,416 @@ public partial class ConversationList : IAsyncDisposable
 
     /// <summary>
     /// Pin/Unpin channel handler.
+    /// PERFORMANCE FIX: Single StateHasChanged, proper error handling.
     /// </summary>
     private async Task TogglePinChannel(Guid channelId)
     {
-        var result = await ChannelService.TogglePinChannelAsync(channelId);
-        if (result.IsSuccess)
+        var index = Channels.FindIndex(c => c.Id == channelId);
+        if (index < 0) return;
+
+        var originalChannel = Channels[index];
+        var optimisticValue = !originalChannel.IsPinned;
+
+        // Optimistic UI
+        Channels[index] = originalChannel with { IsPinned = optimisticValue };
+        InvalidateCache();
+        StateHasChanged();
+
+        try
         {
-            await OnRefreshData.InvokeAsync();
+            var result = await ChannelService.TogglePinChannelAsync(channelId);
+            if (result.IsSuccess)
+            {
+                // Sync with backend
+                if (index < Channels.Count && Channels[index].Id == channelId)
+                {
+                    Channels[index] = Channels[index] with { IsPinned = result.Value };
+                    InvalidateCache();
+                }
+            }
+            else
+            {
+                // Revert on failure
+                if (index < Channels.Count && Channels[index].Id == channelId)
+                {
+                    Channels[index] = Channels[index] with { IsPinned = originalChannel.IsPinned };
+                    InvalidateCache();
+                }
+            }
+        }
+        catch
+        {
+            // Revert on exception
+            if (index < Channels.Count && Channels[index].Id == channelId)
+            {
+                Channels[index] = Channels[index] with { IsPinned = originalChannel.IsPinned };
+                InvalidateCache();
+            }
         }
     }
 
     /// <summary>
     /// Mute/Unmute channel handler.
+    /// PERFORMANCE FIX: Single StateHasChanged, proper error handling.
     /// </summary>
     private async Task ToggleMuteChannel(Guid channelId)
     {
-        var result = await ChannelService.ToggleMuteChannelAsync(channelId);
-        if (result.IsSuccess)
+        var index = Channels.FindIndex(c => c.Id == channelId);
+        if (index < 0) return;
+
+        var originalChannel = Channels[index];
+        var optimisticValue = !originalChannel.IsMuted;
+
+        // Optimistic UI
+        Channels[index] = originalChannel with { IsMuted = optimisticValue };
+        InvalidateCache();
+        StateHasChanged();
+
+        try
         {
-            await OnRefreshData.InvokeAsync();
+            var result = await ChannelService.ToggleMuteChannelAsync(channelId);
+            if (result.IsSuccess)
+            {
+                // Sync with backend
+                if (index < Channels.Count && Channels[index].Id == channelId)
+                {
+                    Channels[index] = Channels[index] with { IsMuted = result.Value };
+                    InvalidateCache();
+                }
+            }
+            else
+            {
+                // Revert on failure
+                if (index < Channels.Count && Channels[index].Id == channelId)
+                {
+                    Channels[index] = Channels[index] with { IsMuted = originalChannel.IsMuted };
+                    InvalidateCache();
+                }
+            }
+        }
+        catch
+        {
+            // Revert on exception
+            if (index < Channels.Count && Channels[index].Id == channelId)
+            {
+                Channels[index] = Channels[index] with { IsMuted = originalChannel.IsMuted };
+                InvalidateCache();
+            }
         }
     }
 
     /// <summary>
     /// Mark channel as read later handler.
+    /// PERFORMANCE FIX: Reduced console logging, single StateHasChanged call, proper error handling.
     /// </summary>
     private async Task ToggleMarkChannelAsReadLater(Guid channelId)
     {
-        var result = await ChannelService.ToggleMarkChannelAsReadLaterAsync(channelId);
-        if (result.IsSuccess)
+        var index = Channels.FindIndex(c => c.Id == channelId);
+        if (index < 0) return;
+
+        var originalChannel = Channels[index];
+        var optimisticValue = !originalChannel.IsMarkedReadLater;
+
+        // Optimistic UI: Toggle immediately
+        Channels[index] = originalChannel with { IsMarkedReadLater = optimisticValue };
+        InvalidateCache();
+        StateHasChanged();
+
+        // API call
+        try
         {
-            // If currently viewing this channel, close it
-            if (SelectedChannelId == channelId)
+            var result = await ChannelService.ToggleMarkChannelAsReadLaterAsync(channelId);
+
+            if (result.IsSuccess)
             {
-                await OnCloseConversation.InvokeAsync();
+                // Sync with backend value (in case of race condition)
+                if (index < Channels.Count && Channels[index].Id == channelId)
+                {
+                    Channels[index] = Channels[index] with { IsMarkedReadLater = result.Value };
+                    InvalidateCache();
+                }
             }
-            await OnRefreshData.InvokeAsync();
+            else
+            {
+                // Revert on failure
+                if (index < Channels.Count && Channels[index].Id == channelId)
+                {
+                    Channels[index] = Channels[index] with { IsMarkedReadLater = originalChannel.IsMarkedReadLater };
+                    InvalidateCache();
+                }
+            }
+        }
+        catch
+        {
+            // Revert on exception
+            if (index < Channels.Count && Channels[index].Id == channelId)
+            {
+                Channels[index] = Channels[index] with { IsMarkedReadLater = originalChannel.IsMarkedReadLater };
+                InvalidateCache();
+            }
         }
     }
 
     /// <summary>
     /// Pin/Unpin conversation handler.
+    /// PERFORMANCE FIX: Single StateHasChanged, proper error handling.
     /// </summary>
     private async Task TogglePinConversation(Guid conversationId)
     {
-        var result = await ConversationService.TogglePinConversationAsync(conversationId);
-        if (result.IsSuccess)
+        var index = Conversations.FindIndex(c => c.Id == conversationId);
+        if (index < 0) return;
+
+        var originalConversation = Conversations[index];
+        var optimisticValue = !originalConversation.IsPinned;
+
+        // Optimistic UI
+        Conversations[index] = originalConversation with { IsPinned = optimisticValue };
+        InvalidateCache();
+        StateHasChanged();
+
+        try
         {
-            await OnRefreshData.InvokeAsync();
+            var result = await ConversationService.TogglePinConversationAsync(conversationId);
+            if (result.IsSuccess)
+            {
+                // Sync with backend (race condition protection)
+                if (index < Conversations.Count && Conversations[index].Id == conversationId)
+                {
+                    Conversations[index] = Conversations[index] with { IsPinned = result.Value };
+                    InvalidateCache();
+                }
+            }
+            else
+            {
+                // Revert on failure
+                if (index < Conversations.Count && Conversations[index].Id == conversationId)
+                {
+                    Conversations[index] = Conversations[index] with { IsPinned = originalConversation.IsPinned };
+                    InvalidateCache();
+                }
+            }
+        }
+        catch
+        {
+            // Revert on exception
+            if (index < Conversations.Count && Conversations[index].Id == conversationId)
+            {
+                Conversations[index] = Conversations[index] with { IsPinned = originalConversation.IsPinned };
+                InvalidateCache();
+            }
         }
     }
 
     /// <summary>
     /// Mute/Unmute conversation handler.
+    /// PERFORMANCE FIX: Single StateHasChanged, proper error handling.
     /// </summary>
     private async Task ToggleMuteConversation(Guid conversationId)
     {
-        var result = await ConversationService.ToggleMuteConversationAsync(conversationId);
-        if (result.IsSuccess)
+        var index = Conversations.FindIndex(c => c.Id == conversationId);
+        if (index < 0) return;
+
+        var originalConversation = Conversations[index];
+        var optimisticValue = !originalConversation.IsMuted;
+
+        // Optimistic UI
+        Conversations[index] = originalConversation with { IsMuted = optimisticValue };
+        InvalidateCache();
+        StateHasChanged();
+
+        try
         {
-            await OnRefreshData.InvokeAsync();
+            var result = await ConversationService.ToggleMuteConversationAsync(conversationId);
+            if (result.IsSuccess)
+            {
+                // Sync with backend
+                if (index < Conversations.Count && Conversations[index].Id == conversationId)
+                {
+                    Conversations[index] = Conversations[index] with { IsMuted = result.Value };
+                    InvalidateCache();
+                }
+            }
+            else
+            {
+                // Revert on failure
+                if (index < Conversations.Count && Conversations[index].Id == conversationId)
+                {
+                    Conversations[index] = Conversations[index] with { IsMuted = originalConversation.IsMuted };
+                    InvalidateCache();
+                }
+            }
+        }
+        catch
+        {
+            // Revert on exception
+            if (index < Conversations.Count && Conversations[index].Id == conversationId)
+            {
+                Conversations[index] = Conversations[index] with { IsMuted = originalConversation.IsMuted };
+                InvalidateCache();
+            }
         }
     }
 
     /// <summary>
     /// Mark conversation as read later handler.
+    /// PERFORMANCE FIX: Removed console logging, single StateHasChanged, proper error handling.
     /// </summary>
     private async Task ToggleMarkConversationAsReadLater(Guid conversationId)
     {
-        var result = await ConversationService.ToggleMarkConversationAsReadLaterAsync(conversationId);
-        if (result.IsSuccess)
+        var index = Conversations.FindIndex(c => c.Id == conversationId);
+        if (index < 0) return;
+
+        var originalConversation = Conversations[index];
+        var optimisticValue = !originalConversation.IsMarkedReadLater;
+
+        // Optimistic UI
+        Conversations[index] = originalConversation with { IsMarkedReadLater = optimisticValue };
+        InvalidateCache();
+        StateHasChanged();
+
+        try
         {
-            // If currently viewing this conversation, close it
-            if (SelectedConversationId == conversationId)
+            var result = await ConversationService.ToggleMarkConversationAsReadLaterAsync(conversationId);
+            if (result.IsSuccess)
             {
-                await OnCloseConversation.InvokeAsync();
+                // Sync with backend
+                if (index < Conversations.Count && Conversations[index].Id == conversationId)
+                {
+                    Conversations[index] = Conversations[index] with { IsMarkedReadLater = result.Value };
+                    InvalidateCache();
+                }
             }
-            await OnRefreshData.InvokeAsync();
+            else
+            {
+                // Revert on failure
+                if (index < Conversations.Count && Conversations[index].Id == conversationId)
+                {
+                    Conversations[index] = Conversations[index] with { IsMarkedReadLater = originalConversation.IsMarkedReadLater };
+                    InvalidateCache();
+                }
+            }
+        }
+        catch
+        {
+            // Revert on exception
+            if (index < Conversations.Count && Conversations[index].Id == conversationId)
+            {
+                Conversations[index] = Conversations[index] with { IsMarkedReadLater = originalConversation.IsMarkedReadLater };
+                InvalidateCache();
+            }
         }
     }
 
     /// <summary>
-    /// Mark all as read handler for channels - removes message read later status.
+    /// Mark all as read handler for channels - marks all unread messages as read and clears ALL read later flags.
+    /// Clears both conversation-level (IsMarkedReadLater) and message-level (LastReadLaterMessageId) marks.
+    /// PERFORMANCE FIX: Removed console logging, single StateHasChanged.
     /// </summary>
     private async Task MarkChannelAllAsRead(Guid channelId)
     {
-        var channel = Channels.FirstOrDefault(c => c.Id == channelId);
-        if (channel?.LastReadLaterMessageId.HasValue == true)
+        var index = Channels.FindIndex(c => c.Id == channelId);
+        if (index < 0) return;
+
+        var originalChannel = Channels[index];
+
+        // Optimistic UI: Clear all flags immediately
+        Channels[index] = originalChannel with
         {
-            // Call ToggleMessageAsLater API to unmark the message
-            var result = await ChannelService.ToggleMessageAsLaterAsync(channelId, channel.LastReadLaterMessageId.Value);
-            if (result.IsSuccess)
+            IsMarkedReadLater = false,
+            LastReadLaterMessageId = null,
+            UnreadCount = 0
+        };
+        InvalidateCache();
+        StateHasChanged();
+
+        // Call backend API to mark all messages as read and clear all flags
+        try
+        {
+            var result = await ChannelService.MarkAllChannelMessagesAsReadAsync(channelId);
+            if (!result.IsSuccess)
             {
-                await OnRefreshData.InvokeAsync();
+                // Revert on failure
+                if (index < Channels.Count && Channels[index].Id == channelId)
+                {
+                    Channels[index] = Channels[index] with
+                    {
+                        IsMarkedReadLater = originalChannel.IsMarkedReadLater,
+                        LastReadLaterMessageId = originalChannel.LastReadLaterMessageId,
+                        UnreadCount = originalChannel.UnreadCount
+                    };
+                    InvalidateCache();
+                }
+            }
+        }
+        catch
+        {
+            // Revert on exception
+            if (index < Channels.Count && Channels[index].Id == channelId)
+            {
+                Channels[index] = Channels[index] with
+                {
+                    IsMarkedReadLater = originalChannel.IsMarkedReadLater,
+                    LastReadLaterMessageId = originalChannel.LastReadLaterMessageId,
+                    UnreadCount = originalChannel.UnreadCount
+                };
+                InvalidateCache();
             }
         }
     }
 
     /// <summary>
-    /// Mark all as read handler for conversations - removes message read later status.
+    /// Mark all as read handler for conversations - marks all unread messages as read and clears ALL read later flags.
+    /// Clears both conversation-level (IsMarkedReadLater) and message-level (LastReadLaterMessageId) marks.
+    /// PERFORMANCE FIX: Removed console logging, single StateHasChanged.
     /// </summary>
     private async Task MarkConversationAllAsRead(Guid conversationId)
     {
-        var conversation = Conversations.FirstOrDefault(c => c.Id == conversationId);
-        if (conversation?.LastReadLaterMessageId.HasValue == true)
+        var index = Conversations.FindIndex(c => c.Id == conversationId);
+        if (index < 0) return;
+
+        var originalConversation = Conversations[index];
+
+        // Optimistic UI: Clear all flags immediately
+        Conversations[index] = originalConversation with
         {
-            // Call ToggleMessageAsLater API to unmark the message
-            var result = await ConversationService.ToggleMessageAsLaterAsync(conversationId, conversation.LastReadLaterMessageId.Value);
-            if (result.IsSuccess)
+            IsMarkedReadLater = false,
+            LastReadLaterMessageId = null,
+            UnreadCount = 0
+        };
+        InvalidateCache();
+        StateHasChanged();
+
+        // API call
+        try
+        {
+            var result = await ConversationService.MarkAllMessagesAsReadAsync(conversationId);
+            if (!result.IsSuccess)
             {
-                await OnRefreshData.InvokeAsync();
+                // Revert on failure
+                if (index < Conversations.Count && Conversations[index].Id == conversationId)
+                {
+                    Conversations[index] = Conversations[index] with
+                    {
+                        IsMarkedReadLater = originalConversation.IsMarkedReadLater,
+                        LastReadLaterMessageId = originalConversation.LastReadLaterMessageId,
+                        UnreadCount = originalConversation.UnreadCount
+                    };
+                    InvalidateCache();
+                }
+            }
+        }
+        catch
+        {
+            // Revert on exception
+            if (index < Conversations.Count && Conversations[index].Id == conversationId)
+            {
+                Conversations[index] = Conversations[index] with
+                {
+                    IsMarkedReadLater = originalConversation.IsMarkedReadLater,
+                    LastReadLaterMessageId = originalConversation.LastReadLaterMessageId,
+                    UnreadCount = originalConversation.UnreadCount
+                };
+                InvalidateCache();
             }
         }
     }

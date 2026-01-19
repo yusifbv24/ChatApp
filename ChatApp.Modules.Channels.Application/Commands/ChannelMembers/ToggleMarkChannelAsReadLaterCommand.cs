@@ -51,6 +51,13 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMembers
                 if (member == null)
                     return Result.Failure<bool>("User is not a member of this channel");
 
+                var initialState = member.IsMarkedReadLater;
+                _logger?.LogInformation(
+                    "[BEFORE TOGGLE] Channel {ChannelId} User {UserId}: IsMarkedReadLater = {InitialState}",
+                    request.ChannelId,
+                    request.UserId,
+                    initialState);
+
                 if (member.IsMarkedReadLater)
                 {
                     member.UnmarkConversationAsReadLater();
@@ -60,12 +67,25 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMembers
                     member.MarkConversationAsReadLater();
                 }
 
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                var newState = member.IsMarkedReadLater;
+                _logger?.LogInformation(
+                    "[AFTER TOGGLE] Channel {ChannelId} User {UserId}: IsMarkedReadLater = {NewState}",
+                    request.ChannelId,
+                    request.UserId,
+                    newState);
+
+                var savedChanges = await _unitOfWork.SaveChangesAsync(cancellationToken);
+                _logger?.LogInformation(
+                    "[AFTER SAVE] Channel {ChannelId} User {UserId}: SaveChangesAsync returned {SavedChanges} entities updated",
+                    request.ChannelId,
+                    request.UserId,
+                    savedChanges);
 
                 _logger?.LogInformation(
-                    "Channel {ChannelId} mark as read later toggled to {IsMarkedReadLater} for user {UserId}",
+                    "[FINAL] Channel {ChannelId} mark as read later toggled from {InitialState} to {NewState} for user {UserId}",
                     request.ChannelId,
-                    member.IsMarkedReadLater,
+                    initialState,
+                    newState,
                     request.UserId);
 
                 return Result.Success(member.IsMarkedReadLater);

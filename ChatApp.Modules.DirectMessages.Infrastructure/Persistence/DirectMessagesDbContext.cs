@@ -12,6 +12,7 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence
         }
 
         public DbSet<DirectConversation> DirectConversations => Set<DirectConversation>();
+        public DbSet<DirectConversationMember> DirectConversationMembers => Set<DirectConversationMember>();
         public DbSet<DirectMessage> DirectMessages => Set<DirectMessage>();
         public DbSet<DirectMessageReaction> DirectMessageReactions => Set<DirectMessageReaction>();
         public DbSet<DirectMessageMention> DirectMessageMentions => Set<DirectMessageMention>();
@@ -23,6 +24,7 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence
 
             // Apply DirectMessages module configurations
             modelBuilder.ApplyConfiguration(new DirectConversationConfiguration());
+            modelBuilder.ApplyConfiguration(new DirectConversationMemberConfiguration());
             modelBuilder.ApplyConfiguration(new DirectMessageConfiguration());
             modelBuilder.ApplyConfiguration(new DirectMessageReactionConfiguration());
             modelBuilder.ApplyConfiguration(new DirectMessageMentionConfiguration());

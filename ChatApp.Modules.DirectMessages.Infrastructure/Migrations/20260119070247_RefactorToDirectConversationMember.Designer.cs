@@ -3,6 +3,7 @@ using System;
 using ChatApp.Modules.DirectMessages.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ChatApp.Modules.DirectMessages.Infrastructure.Migrations
 {
     [DbContext(typeof(DirectMessagesDbContext))]
-    partial class DirectMessagesDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260119070247_RefactorToDirectConversationMember")]
+    partial class RefactorToDirectConversationMember
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -162,7 +165,7 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Migrations
 
                     b.HasIndex("UserId", "IsActive");
 
-                    b.ToTable("direct_conversation_members", (string)null);
+                    b.ToTable("DirectConversationMembers", (string)null);
                 });
 
             modelBuilder.Entity("ChatApp.Modules.DirectMessages.Domain.Entities.DirectMessage", b =>

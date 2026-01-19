@@ -908,6 +908,29 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 .CountAsync(cancellationToken);
         }
 
+        public async Task<int> MarkAllAsReadAsync(Guid channelId, Guid userId, CancellationToken cancellationToken = default)
+        {
+            // Get all unread message IDs in the channel (excluding user's own messages)
+            var unreadMessageIds = await _context.ChannelMessages
+                .Where(m => m.ChannelId == channelId
+                         && !m.IsDeleted
+                         && m.SenderId != userId
+                         && !_context.ChannelMessageReads.Any(r => r.MessageId == m.Id && r.UserId == userId))
+                .Select(m => m.Id)
+                .ToListAsync(cancellationToken);
+
+            if (!unreadMessageIds.Any())
+                return 0;
+
+            // Bulk insert read records for all unread messages
+            var readRecords = unreadMessageIds.Select(msgId => new ChannelMessageRead(msgId, userId)).ToList();
+
+            await _context.ChannelMessageReads.AddRangeAsync(readRecords, cancellationToken);
+            await _context.SaveChangesAsync(cancellationToken);
+
+            return readRecords.Count;
+        }
+
         public async Task AddAsync(ChannelMessage message, CancellationToken cancellationToken = default)
         {
             await _context.ChannelMessages.AddAsync(message, cancellationToken);

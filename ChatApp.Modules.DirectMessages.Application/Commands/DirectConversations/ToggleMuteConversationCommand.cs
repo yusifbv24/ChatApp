@@ -52,18 +52,24 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectConversation
                 if (!conversation.IsParticipant(request.UserId))
                     return Result.Failure<bool>("User is not a participant in this conversation");
 
-                conversation.ToggleMute(request.UserId);
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                var member = await _unitOfWork.ConversationMembers.GetByConversationAndUserAsync(
+                    request.ConversationId,
+                    request.UserId,
+                    cancellationToken);
 
-                var isMuted = conversation.IsMuted(request.UserId);
+                if (member == null)
+                    return Result.Failure<bool>("Conversation member not found");
+
+                member.ToggleMute();
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 _logger?.LogInformation(
                     "Conversation {ConversationId} mute toggled to {IsMuted} for user {UserId}",
                     request.ConversationId,
-                    isMuted,
+                    member.IsMuted,
                     request.UserId);
 
-                return Result.Success(isMuted);
+                return Result.Success(member.IsMuted);
             }
             catch (Exception ex)
             {

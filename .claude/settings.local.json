@@ -31,7 +31,11 @@
       "Bash(del \"C:\\Users\\Joseph\\Desktop\\ChatApp\\ChatApp.Modules.DirectMessages.Infrastructure\\Migrations\\20260116112757_AddMissingUserLastReadLaterMessageIdColumns.Designer.cs\")",
       "Bash(rm:*)",
       "Bash(dotnet run)",
-      "Bash(timeout 25 dotnet run:*)"
+      "Bash(timeout 25 dotnet run:*)",
+      "Bash(git add:*)",
+      "Bash(del nul)",
+      "Bash(git commit:*)",
+      "Bash(git reset:*)"
     ],
     "deny": [],
     "ask": []

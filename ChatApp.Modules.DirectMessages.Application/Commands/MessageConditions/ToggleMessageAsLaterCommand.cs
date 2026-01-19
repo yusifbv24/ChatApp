@@ -78,16 +78,24 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.MessageConditions
                 if (!conversation.IsParticipant(request.RequestedBy))
                     return Result.Failure("User is not a participant in this conversation");
 
+                var member = await _unitOfWork.ConversationMembers.GetByConversationAndUserAsync(
+                    request.ConversationId,
+                    request.RequestedBy,
+                    cancellationToken);
+
+                if (member == null)
+                    return Result.Failure("Conversation member not found");
+
                 // Toggle logic:
                 // If clicking on already marked message -> unmark it (toggle off)
                 // If clicking on different message -> mark new one (auto-switches, previous mark is cleared)
                 // If no mark exists -> mark this message
-                var currentMarkedMessageId = conversation.GetLastReadLaterMessageId(request.RequestedBy);
+                var currentMarkedMessageId = member.LastReadLaterMessageId;
 
                 if (currentMarkedMessageId.HasValue && currentMarkedMessageId.Value == request.MessageId)
                 {
                     // Toggle OFF: Unmark the message
-                    conversation.UnmarkMessageAsLater(request.RequestedBy);
+                    member.UnmarkMessageAsLater();
                     _logger?.LogInformation(
                         "Message {MessageId} unmarked as later for user {UserId}",
                         request.MessageId,
@@ -96,7 +104,7 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.MessageConditions
                 else
                 {
                     // Toggle ON or SWITCH: Mark message as later (clears previous mark automatically)
-                    conversation.MarkMessageAsLater(request.RequestedBy, request.MessageId);
+                    member.MarkMessageAsLater(request.MessageId);
                     _logger?.LogInformation(
                         "Message {MessageId} marked as later for user {UserId}",
                         request.MessageId,

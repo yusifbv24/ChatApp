@@ -98,5 +98,11 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
 
 
         Task<Result<bool>> ToggleMarkChannelAsReadLaterAsync(Guid channelId);
+
+
+        Task<Result> UnmarkChannelReadLaterAsync(Guid channelId);
+
+
+        Task<Result<int>> MarkAllChannelMessagesAsReadAsync(Guid channelId);
     }
 }

@@ -1,6 +1,7 @@
 using ChatApp.Blazor.Client.Models.Common;
 using ChatApp.Blazor.Client.Models.Messages;
 using ChatApp.Blazor.Client.Models.Search;
+using ChatApp.Shared.Kernel;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 
@@ -582,6 +583,88 @@ public partial class Messages
 
     #endregion
 
+    #region Message Status Calculation - Mesaj status hesablama
+
+    /// <summary>
+    /// Direct message üçün status hesabla.
+    /// CRITICAL FIX: Status initial load-da hesablanmalıdır.
+    /// </summary>
+    private MessageStatus CalculateDirectMessageStatus(DirectMessageDto message)
+    {
+        // Başqası göndəribsə - status göstərilmir
+        if (message.SenderId != currentUserId)
+            return MessageStatus.Sent;
+
+        // Mən göndərmişəm
+        return message.IsRead ? MessageStatus.Read : MessageStatus.Sent;
+    }
+
+    /// <summary>
+    /// Channel message üçün status hesabla.
+    /// CRITICAL FIX: Status initial load-da hesablanmalıdır.
+    /// </summary>
+    private MessageStatus CalculateChannelMessageStatus(ChannelMessageDto message)
+    {
+        // Başqası göndəribsə - status göstərilmir
+        if (message.SenderId != currentUserId)
+            return MessageStatus.Sent;
+
+        // Mən göndərmişəm
+        if (message.ReadByCount == 0)
+            return MessageStatus.Sent;
+
+        // TotalMemberCount-1 çünki özümü saymamalıyıq
+        var otherMembersCount = message.TotalMemberCount > 0 ? message.TotalMemberCount - 1 : 0;
+
+        if (message.ReadByCount >= otherMembersCount && otherMembersCount > 0)
+            return MessageStatus.Read;
+
+        if (message.ReadByCount > 0)
+            return MessageStatus.Delivered;
+
+        return MessageStatus.Sent;
+    }
+
+    /// <summary>
+    /// Direct messages list-də hər bir mesajın status-unu hesabla və təyin et.
+    /// CRITICAL FIX: API-dən gələn mesajlarda status olmur, hesablamalıyıq.
+    /// </summary>
+    private void CalculateDirectMessageStatuses(List<DirectMessageDto> messages)
+    {
+        for (int i = 0; i < messages.Count; i++)
+        {
+            var message = messages[i];
+            var calculatedStatus = CalculateDirectMessageStatus(message);
+
+            // Əgər status default value-dan fərqlidirsə, yenilə
+            if (message.Status != calculatedStatus)
+            {
+                messages[i] = message with { Status = calculatedStatus };
+            }
+        }
+    }
+
+    /// <summary>
+    /// Channel messages list-də hər bir mesajın status-unu hesabla və təyin et.
+    /// CRITICAL FIX: API-dən gələn mesajlarda status olmur, hesablamalıyıq.
+    /// </summary>
+    private void CalculateChannelMessageStatuses(List<ChannelMessageDto> messages)
+    {
+        for (int i = 0; i < messages.Count; i++)
+        {
+            var message = messages[i];
+            var calculatedStatus = CalculateChannelMessageStatus(message);
+
+            // Əgər status default value-dan fərqlidirsə, yenilə
+            if (message.Status != calculatedStatus)
+            {
+                messages[i].Status = calculatedStatus; // Mutable property
+            }
+        }
+    }
+
+    #endregion
+
     #region List Update Helpers - List yeniləmə helper-ləri
 
     /// <summary>
@@ -601,17 +684,18 @@ public partial class Messages
 
     /// <summary>
     /// PERFORMANCE: Generic list update helper - update by predicate.
-    /// Finds item by predicate, updates it, and invalidates cache.
+    /// Creates NEW list with updated item to ensure Blazor change detection works.
+    /// CRITICAL FIX: Reverted from in-place mutation to immutable pattern.
+    /// Reason: Blazor's change detection relies on reference equality for [Parameter] List bindings.
+    /// When list reference doesn't change, ConversationList component doesn't detect updates.
     /// </summary>
     private static void UpdateListItemWhere<T>(ref List<T> list, Func<T, bool> predicate, Func<T, T> updateFunc)
     {
         var index = list.FindIndex(item => predicate(item));
         if (index >= 0)
         {
-            var newList = new List<T>(list)
-            {
-                [index] = updateFunc(list[index])
-            };
+            var newList = new List<T>(list);
+            newList[index] = updateFunc(list[index]);
             list = newList;
         }
     }

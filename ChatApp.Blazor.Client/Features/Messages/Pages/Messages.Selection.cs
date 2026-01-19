@@ -51,6 +51,23 @@ public partial class Messages
         }
     }
 
+    /// <summary>
+    /// Closes the currently selected conversation or channel.
+    /// Called when conversation is closed from ConversationList (e.g., toggle mark read later)
+    /// </summary>
+    private void CloseConversation()
+    {
+        selectedConversationId = null;
+        selectedChannelId = null;
+        isDirectMessage = false;
+
+        // Clear all conversation-specific state
+        directMessages.Clear();
+        channelMessages.Clear();
+
+        StateHasChanged();
+    }
+
     #endregion
 
     #region Select Conversation - DM seçimi
@@ -151,16 +168,22 @@ public partial class Messages
                 await SignalRService.LeaveChannelAsync(selectedChannelId.Value);
             }
 
-            // Unread count, mention badge və FirstUnreadMessageId-ni clear et
+            // Unread count, mention badge, FirstUnreadMessageId VƏ read later marks clear et
             // CRITICAL: FirstUnreadMessageId clear edilməlidir ki, geri qayıtdıqda köhnə mesaja scroll olunmasın
-            if (conversation.UnreadCount > 0 || conversation.HasUnreadMentions || conversation.FirstUnreadMessageId.HasValue)
+            // CRITICAL: IsMarkedReadLater və LastReadLaterMessageId də clear edilməlidir (conversation açıldıqda icon yox olmalıdır)
+            if (conversation.UnreadCount > 0 || conversation.HasUnreadMentions || conversation.FirstUnreadMessageId.HasValue
+                || conversation.IsMarkedReadLater || conversation.LastReadLaterMessageId.HasValue)
             {
+                // CRITICAL FIX: Save original state for revert if API fails
+                var originalIsMarkedReadLater = conversation.IsMarkedReadLater;
+                var originalLastReadLaterMessageId = conversation.LastReadLaterMessageId;
+
                 if (conversation.UnreadCount > 0)
                 {
                     AppState.DecrementUnreadMessages(conversation.UnreadCount);
                 }
 
-                // PERFORMANCE: Using helper method (eliminated duplicate pattern)
+                // Optimistic UI update: Clear flags
                 UpdateListItemWhere(
                     ref directConversations,
                     c => c.Id == conversation.Id,
@@ -168,9 +191,50 @@ public partial class Messages
                     {
                         UnreadCount = 0,
                         HasUnreadMentions = false,
-                        FirstUnreadMessageId = null // Clear after reading
+                        FirstUnreadMessageId = null, // Clear after reading
+                        IsMarkedReadLater = false,   // Clear conversation-level mark
+                        LastReadLaterMessageId = null // Clear message-level mark
                     }
                 );
+
+                // API call to backend - only if flags were set
+                if (originalIsMarkedReadLater || originalLastReadLaterMessageId.HasValue)
+                {
+                    try
+                    {
+                        var result = await ConversationService.UnmarkConversationReadLaterAsync(conversation.Id);
+                        if (!result.IsSuccess)
+                        {
+                            // CRITICAL FIX: Revert optimistic update on failure
+                            UpdateListItemWhere(
+                                ref directConversations,
+                                c => c.Id == conversation.Id,
+                                c => c with
+                                {
+                                    IsMarkedReadLater = originalIsMarkedReadLater,
+                                    LastReadLaterMessageId = originalLastReadLaterMessageId
+                                }
+                            );
+
+                            ShowError($"Failed to unmark conversation: {result.Error}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // CRITICAL FIX: Revert on exception
+                        UpdateListItemWhere(
+                            ref directConversations,
+                            c => c.Id == conversation.Id,
+                            c => c with
+                            {
+                                IsMarkedReadLater = originalIsMarkedReadLater,
+                                LastReadLaterMessageId = originalLastReadLaterMessageId
+                            }
+                        );
+
+                        ShowError($"Error unmarking conversation: {ex.Message}");
+                    }
+                }
             }
 
             // STATE RESET
@@ -514,24 +578,72 @@ public partial class Messages
                 await SignalRService.LeaveConversationAsync(selectedConversationId.Value);
             }
 
-            // Unread count və FirstUnreadMessageId-ni clear et
+            // Unread count, FirstUnreadMessageId VƏ read later marks clear et
             // CRITICAL: FirstUnreadMessageId clear edilməlidir ki, geri qayıtdıqda köhnə mesaja scroll olunmasın
-            if (channel.UnreadCount > 0 || channel.FirstUnreadMessageId.HasValue)
+            // CRITICAL: IsMarkedReadLater və LastReadLaterMessageId də clear edilməlidir (channel açıldıqda icon yox olmalıdır)
+            if (channel.UnreadCount > 0 || channel.FirstUnreadMessageId.HasValue
+                || channel.IsMarkedReadLater || channel.LastReadLaterMessageId.HasValue)
             {
+                // CRITICAL FIX: Save original state for revert if API fails
+                var originalIsMarkedReadLater = channel.IsMarkedReadLater;
+                var originalLastReadLaterMessageId = channel.LastReadLaterMessageId;
+
                 if (channel.UnreadCount > 0)
                 {
                     AppState.DecrementUnreadMessages(channel.UnreadCount);
                 }
-                // PERFORMANCE: Using helper method (eliminated duplicate pattern)
+
+                // Optimistic UI update: Clear flags
                 UpdateListItemWhere(
                     ref channelConversations,
                     ch => ch.Id == channel.Id,
                     ch => ch with
                     {
                         UnreadCount = 0,
-                        FirstUnreadMessageId = null // Clear after reading
+                        FirstUnreadMessageId = null, // Clear after reading
+                        IsMarkedReadLater = false,   // Clear conversation-level mark
+                        LastReadLaterMessageId = null // Clear message-level mark
                     }
                 );
+
+                // API call to backend - only if flags were set
+                if (originalIsMarkedReadLater || originalLastReadLaterMessageId.HasValue)
+                {
+                    try
+                    {
+                        var result = await ChannelService.UnmarkChannelReadLaterAsync(channel.Id);
+                        if (!result.IsSuccess)
+                        {
+                            // CRITICAL FIX: Revert optimistic update on failure
+                            UpdateListItemWhere(
+                                ref channelConversations,
+                                ch => ch.Id == channel.Id,
+                                ch => ch with
+                                {
+                                    IsMarkedReadLater = originalIsMarkedReadLater,
+                                    LastReadLaterMessageId = originalLastReadLaterMessageId
+                                }
+                            );
+
+                            ShowError($"Failed to unmark channel: {result.Error}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // CRITICAL FIX: Revert on exception
+                        UpdateListItemWhere(
+                            ref channelConversations,
+                            ch => ch.Id == channel.Id,
+                            ch => ch with
+                            {
+                                IsMarkedReadLater = originalIsMarkedReadLater,
+                                LastReadLaterMessageId = originalLastReadLaterMessageId
+                            }
+                        );
+
+                        ShowError($"Error unmarking channel: {ex.Message}");
+                    }
+                }
             }
 
             // STATE RESET
@@ -713,6 +825,9 @@ public partial class Messages
                     var existingIds = directMessages.Select(m => m.Id).ToHashSet();
                     var newMessages = messages.Where(m => !existingIds.Contains(m.Id)).OrderBy(m => m.CreatedAtUtc).ToList();
 
+                    // CRITICAL FIX: Calculate status for loaded messages
+                    CalculateDirectMessageStatuses(newMessages);
+
                     // YENİ MESAJLARI ƏVVƏLƏ ƏLAVƏ ET (köhnə mesajlar üstdədir)
                     directMessages.InsertRange(0, newMessages);
 
@@ -780,6 +895,9 @@ public partial class Messages
                     // DUBLİKAT YOXLAMASI - artıq olan mesajları əlavə etmə
                     var existingIds = channelMessages.Select(m => m.Id).ToHashSet();
                     var newMessages = messages.Where(m => !existingIds.Contains(m.Id)).OrderBy(m => m.CreatedAtUtc).ToList();
+
+                    // CRITICAL FIX: Calculate status for loaded messages
+                    CalculateChannelMessageStatuses(newMessages);
 
                     channelMessages.InsertRange(0, newMessages);
 

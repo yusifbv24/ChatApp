@@ -62,7 +62,7 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
 
 
         public async Task<List<DirectConversationDto>> GetUserConversationsAsync(
-            Guid userId, 
+            Guid userId,
             CancellationToken cancellationToken = default)
         {
             // Get conversations with other user details and last message
@@ -71,8 +71,9 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
             // 2. User is NOT the initiator AND the conversation has messages, OR
             // 3. Notes conversation (always visible)
             var conversationsQuery = await (from conv in _context.DirectConversations
-                                       where ((conv.User1Id == userId && conv.IsUser1Active) ||
-                                              (conv.User2Id == userId && conv.IsUser2Active))
+                                       join member in _context.DirectConversationMembers
+                                           on new { conv.Id, UserId = userId } equals new { Id = member.ConversationId, member.UserId }
+                                       where member.IsActive
                                              && (conv.InitiatedByUserId == userId || conv.HasMessages || conv.IsNotes)
                                        let otherUserId = conv.User1Id == userId ? conv.User2Id : conv.User1Id
                                        join user in _context.Set<UserReadModel>() on otherUserId equals user.Id
@@ -84,23 +85,6 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                                           from file in fileGroup.DefaultIfEmpty()
                                           select new { m.Id, m.Content, m.IsDeleted, m.SenderId, m.IsRead, m.FileId, FileContentType = file != null ? file.ContentType : null })
                                           .FirstOrDefault()
-                                       let unreadCount = _context.DirectMessages
-                                          .Count(m => m.ConversationId == conv.Id &&
-                                                    m.ReceiverId == userId &&
-                                                    !m.IsRead &&
-                                                    !m.IsDeleted)
-                                       let lastReadLaterMessageId = conv.User1Id == userId
-                                           ? conv.User1LastReadLaterMessageId
-                                           : conv.User2LastReadLaterMessageId
-                                       let isPinned = conv.User1Id == userId
-                                           ? conv.User1IsPinned
-                                           : conv.User2IsPinned
-                                       let isMuted = conv.User1Id == userId
-                                           ? conv.User1IsMuted
-                                           : conv.User2IsMuted
-                                       let isMarkedReadLater = conv.User1Id == userId
-                                           ? conv.User1IsMarkedReadLater
-                                           : conv.User2IsMarkedReadLater
                                        orderby conv.LastMessageAtUtc descending
                                        select new
                                        {
@@ -118,20 +102,20 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                                                        (string.IsNullOrWhiteSpace(lastMessageInfo.Content) ? "[File]" : "[File] " + lastMessageInfo.Content)) :
                                                lastMessageInfo.Content,
                                            conv.LastMessageAtUtc,
-                                           UnreadCount=unreadCount,
-                                           LastReadLaterMessageId=lastReadLaterMessageId,
+                                           member.LastReadLaterMessageId,
                                            LastMessageSenderId = lastMessageInfo != null ? (Guid?)lastMessageInfo.SenderId : null,
                                            LastMessageIsRead = lastMessageInfo != null && lastMessageInfo.IsRead,
                                            LastMessageId = lastMessageInfo != null ? (Guid?)lastMessageInfo.Id : null,
-                                           IsPinned = isPinned,
-                                           IsMuted = isMuted,
-                                           IsMarkedReadLater = isMarkedReadLater
+                                           member.IsPinned,
+                                           member.IsMuted,
+                                           member.IsMarkedReadLater
                                        })
                                        .ToListAsync(cancellationToken);
 
             // Batch query: Get ALL unread messages, then find first for each conversation in-memory
             var conversationIds = conversationsQuery.Select(c => c.Id).ToList();
             var firstUnreadMessageIds = new Dictionary<Guid, Guid>();
+            var unreadCountDictionary = new Dictionary<Guid, int>();
             var hasUnreadMentionsDictionary = new Dictionary<Guid, bool>();
 
             if (conversationIds.Any())
@@ -146,11 +130,18 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                     .ToListAsync(cancellationToken);
 
                 // In-memory GroupBy and OrderBy - EF Core translation issue workaround
-                firstUnreadMessageIds = allUnreadMessages
-                    .GroupBy(m => m.ConversationId)
+                var groupedUnreadMessages = allUnreadMessages.GroupBy(m => m.ConversationId);
+
+                firstUnreadMessageIds = groupedUnreadMessages
                     .ToDictionary(
                         g => g.Key,
                         g => g.OrderBy(m => m.CreatedAtUtc).First().Id
+                    );
+
+                unreadCountDictionary = groupedUnreadMessages
+                    .ToDictionary(
+                        g => g.Key,
+                        g => g.Count()
                     );
 
                 // Batch query: Get conversations with unread mentions
@@ -187,7 +178,7 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                     c.AvatarUrl,
                     c.LastMessage,
                     c.LastMessageAtUtc,
-                    c.UnreadCount,
+                    unreadCountDictionary.TryGetValue(c.Id, out int unreadCount) ? unreadCount : 0,
                     hasUnreadMentionsDictionary.ContainsKey(c.Id) && hasUnreadMentionsDictionary[c.Id],
                     c.LastReadLaterMessageId,
                     c.LastMessageSenderId,

@@ -286,6 +286,37 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
         }
 
 
+        /// <summary>
+        /// Marks all unread messages as read AND clears message-level "mark as read later".
+        /// Used when user clicks "Mark all as read" button in conversation more menu.
+        /// </summary>
+        public async Task<Result<int>> MarkAllMessagesAsReadAsync(Guid conversationId)
+        {
+            var result = await _apiClient.PostAsync<MarkAllReadResponse>(
+                $"/api/conversations/{conversationId}/messages/mark-all-read");
+
+            if (result.IsSuccess && result.Value != null)
+            {
+                return Result.Success(result.Value.MarkedCount);
+            }
+
+            return Result.Failure<int>(result.Error ?? "Failed to mark all messages as read");
+        }
+
+
+        /// <summary>
+        /// Clears all "mark as read later" flags when user opens the conversation.
+        /// Called automatically when user opens the conversation.
+        /// Clears both IsMarkedReadLater and LastReadLaterMessageId.
+        /// This removes the icon from conversation list but does NOT mark messages as read.
+        /// </summary>
+        public async Task<Result> UnmarkConversationReadLaterAsync(Guid conversationId)
+        {
+            return await _apiClient.DeleteAsync(
+                $"/api/conversations/{conversationId}/messages/read-later");
+        }
+
+
         private record StartConversationResponse(Guid ConversationId, string Message);
         private record SendMessageResponse(Guid MessageId, string Message);
         private record UnreadCountResponse(int UnreadCount);
@@ -293,5 +324,6 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
         private record PinToggleResponse(bool IsPinned);
         private record MuteToggleResponse(bool IsMuted);
         private record ReadLaterToggleResponse(bool IsMarkedReadLater);
+        private record MarkAllReadResponse(int MarkedCount, string Message);
     }
 }

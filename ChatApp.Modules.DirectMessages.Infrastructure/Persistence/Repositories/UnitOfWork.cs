@@ -9,6 +9,7 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
         private IDbContextTransaction? _transaction;
 
         public IDirectConversationRepository Conversations { get; }
+        public IDirectConversationMemberRepository ConversationMembers { get; }
         public IDirectMessageRepository Messages { get; }
         public IDirectMessageReactionRepository Reactions { get; }
         public IUserFavoriteMessageRepository Favorites { get; }
@@ -17,6 +18,7 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
         {
             _context = context;
             Conversations = new DirectConversationRepository(context);
+            ConversationMembers = new DirectConversationMemberRepository(context);
             Messages = new DirectMessageRepository(context);
             Reactions = new DirectMessageReactionRepository(context);
             Favorites = new UserFavoriteMessageRepository(context);

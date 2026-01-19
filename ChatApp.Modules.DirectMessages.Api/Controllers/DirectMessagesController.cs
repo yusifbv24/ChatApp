@@ -683,6 +683,64 @@ namespace ChatApp.Modules.DirectMessages.Api.Controllers
 
 
 
+        /// <summary>
+        /// Mark all unread messages as read in a conversation
+        /// Clears LastReadLaterMessageId and IsMarkedReadLater flags
+        /// </summary>
+        [HttpPost("mark-all-read")]
+        [RequirePermission("Messages.Read")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> MarkAllMessagesAsRead(
+            [FromRoute] Guid conversationId,
+            CancellationToken cancellationToken)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == Guid.Empty)
+                return Unauthorized();
+
+            var result = await _mediator.Send(
+                new MarkAllMessagesAsReadCommand(conversationId, userId),
+                cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return Ok(new { markedCount = result.Value, message = "All messages marked as read" });
+        }
+
+
+
+        /// <summary>
+        /// Unmark conversation as read later (called when conversation is opened)
+        /// Only clears IsMarkedReadLater flag, keeps LastReadLaterMessageId if exists
+        /// </summary>
+        [HttpDelete("read-later")]
+        [RequirePermission("Messages.Read")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> UnmarkConversationReadLater(
+            [FromRoute] Guid conversationId,
+            CancellationToken cancellationToken)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == Guid.Empty)
+                return Unauthorized();
+
+            var result = await _mediator.Send(
+                new UnmarkConversationReadLaterCommand(conversationId, userId),
+                cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return Ok(new { message = "Conversation unmarked as read later" });
+        }
+
+
+
         private Guid GetCurrentUserId()
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;

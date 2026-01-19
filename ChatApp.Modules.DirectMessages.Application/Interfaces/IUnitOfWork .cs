@@ -3,6 +3,7 @@
     public interface IUnitOfWork : IDisposable
     {
         IDirectConversationRepository Conversations { get; }
+        IDirectConversationMemberRepository ConversationMembers { get; }
         IDirectMessageRepository Messages { get; }
         IDirectMessageReactionRepository Reactions { get; }
         IUserFavoriteMessageRepository Favorites { get; }

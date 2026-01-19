@@ -52,18 +52,24 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectConversation
                 if (!conversation.IsParticipant(request.UserId))
                     return Result.Failure<bool>("User is not a participant in this conversation");
 
-                conversation.TogglePin(request.UserId);
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                var member = await _unitOfWork.ConversationMembers.GetByConversationAndUserAsync(
+                    request.ConversationId,
+                    request.UserId,
+                    cancellationToken);
 
-                var isPinned = conversation.IsPinned(request.UserId);
+                if (member == null)
+                    return Result.Failure<bool>("Conversation member not found");
+
+                member.TogglePin();
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 _logger?.LogInformation(
                     "Conversation {ConversationId} pin toggled to {IsPinned} for user {UserId}",
                     request.ConversationId,
-                    isPinned,
+                    member.IsPinned,
                     request.UserId);
 
-                return Result.Success(isPinned);
+                return Result.Success(member.IsPinned);
             }
             catch (Exception ex)
             {

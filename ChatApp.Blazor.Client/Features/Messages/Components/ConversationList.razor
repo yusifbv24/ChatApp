@@ -167,13 +167,7 @@
                                     {
                                         <span class="mention-indicator">@@</span>
                                     }
-                                    @if (item.LastReadLaterMessageId.HasValue)
-                                    {
-                                        <span class="read-later-badge">
-                                            <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" />
-                                        </span>
-                                    }
-                                    @if (item.IsMarkedReadLater)
+                                    @if (item.IsMarkedReadLater || item.LastReadLaterMessageId.HasValue)
                                     {
                                         <span class="read-later-badge">
                                             <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" />
@@ -198,7 +192,7 @@
                         @if (showMoreMenu && moreMenuItemId == item.Id)
                         {
                             <div class="conversation-more-menu" @onclick:stopPropagation="true">
-                                @if (item.LastReadLaterMessageId.HasValue)
+                                @if (item.LastReadLaterMessageId.HasValue || item.IsMarkedReadLater)
                                 {
                                     <button class="menu-item" @onclick="async () => { await MarkChannelAllAsRead(item.Id); CloseMoreMenu(); }">
                                         <span>Mark all as read</span>
@@ -207,7 +201,7 @@
                                 else
                                 {
                                     <button class="menu-item" @onclick="async () => { await ToggleMarkChannelAsReadLater(item.Id); CloseMoreMenu(); }">
-                                        <span>@(item.IsMarkedReadLater ? "Unmark read later" : "Mark to read later")</span>
+                                        <span>Mark to read later</span>
                                     </button>
                                 }
                                 <button class="menu-item" @onclick="async () => { await TogglePinChannel(item.Id); CloseMoreMenu(); }">
@@ -307,13 +301,7 @@
                                     {
                                         <span class="mention-indicator">@@</span>
                                     }
-                                    @if (item.LastReadLaterMessageId.HasValue)
-                                    {
-                                        <span class="read-later-badge">
-                                            <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" />
-                                        </span>
-                                    }
-                                    @if (item.IsMarkedReadLater)
+                                    @if (item.IsMarkedReadLater || item.LastReadLaterMessageId.HasValue)
                                     {
                                         <span class="read-later-badge">
                                             <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" />
@@ -338,7 +326,7 @@
                         @if (showMoreMenu && moreMenuItemId == item.Id)
                         {
                             <div class="conversation-more-menu" @onclick:stopPropagation="true">
-                                @if (item.LastReadLaterMessageId.HasValue)
+                                @if (item.LastReadLaterMessageId.HasValue || item.IsMarkedReadLater)
                                 {
                                     <button class="menu-item" @onclick="async () => { await MarkConversationAllAsRead(item.Id); CloseMoreMenu(); }">
                                         <span>Mark all as read</span>
@@ -347,7 +335,7 @@
                                 else
                                 {
                                     <button class="menu-item" @onclick="async () => { await ToggleMarkConversationAsReadLater(item.Id); CloseMoreMenu(); }">
-                                        <span>@(item.IsMarkedReadLater ? "Unmark read later" : "Mark to read later")</span>
+                                        <span>Mark to read later</span>
                                     </button>
                                 }
                                 <button class="menu-item" @onclick="async () => { await TogglePinConversation(item.Id); CloseMoreMenu(); }">

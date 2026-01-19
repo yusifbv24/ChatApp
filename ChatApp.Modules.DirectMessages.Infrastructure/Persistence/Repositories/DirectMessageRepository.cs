@@ -725,6 +725,25 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
         }
 
 
+        public async Task<int> MarkAllAsReadAsync(
+            Guid conversationId,
+            Guid userId,
+            CancellationToken cancellationToken = default)
+        {
+            // Bulk update all unread messages in the conversation for the user
+            var affectedRows = await _context.DirectMessages
+                .Where(m => m.ConversationId == conversationId &&
+                       m.ReceiverId == userId &&
+                       !m.IsRead &&
+                       !m.IsDeleted)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(m => m.IsRead, true),
+                    cancellationToken);
+
+            return affectedRows;
+        }
+
+
         public async Task<List<DirectMessageDto>> GetPinnedMessagesAsync(
             Guid conversationId,
             CancellationToken cancellationToken = default)
