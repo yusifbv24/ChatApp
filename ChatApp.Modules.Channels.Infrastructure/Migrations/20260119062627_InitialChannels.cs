@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace ChatApp.Modules.Channels.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialChannelsSchema : Migration
+    public partial class InitialChannels : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -41,6 +41,10 @@ namespace ChatApp.Modules.Channels.Infrastructure.Migrations
                     joined_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     left_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     is_active = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
+                    last_read_later_message_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    is_pinned = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    is_muted = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    is_marked_read_later = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
                     created_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     updated_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
@@ -71,6 +75,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Migrations
                     deleted_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     pinned_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     pinned_by = table.Column<Guid>(type: "uuid", nullable: true),
+                    ReplyToMessageId = table.Column<Guid>(type: "uuid", nullable: true),
+                    IsForwarded = table.Column<bool>(type: "boolean", nullable: false),
                     created_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     updated_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
@@ -81,6 +87,29 @@ namespace ChatApp.Modules.Channels.Infrastructure.Migrations
                         name: "FK_channel_messages_channels_channel_id",
                         column: x => x.channel_id,
                         principalTable: "channels",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "channel_message_mentions",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    message_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    mentioned_user_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    mentioned_user_name = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
+                    is_all_mention = table.Column<bool>(type: "boolean", nullable: false),
+                    created_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_channel_message_mentions", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_channel_message_mentions_channel_messages_message_id",
+                        column: x => x.message_id,
+                        principalTable: "channel_messages",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -129,6 +158,28 @@ namespace ChatApp.Modules.Channels.Infrastructure.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "user_favorite_channel_messages",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    user_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    message_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    favorited_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    created_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_user_favorite_channel_messages", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_user_favorite_channel_messages_channel_messages_message_id",
+                        column: x => x.message_id,
+                        principalTable: "channel_messages",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
             migrationBuilder.CreateIndex(
                 name: "ix_channel_members_channel_user",
                 table: "channel_members",
@@ -144,6 +195,16 @@ namespace ChatApp.Modules.Channels.Infrastructure.Migrations
                 name: "ix_channel_members_user_id",
                 table: "channel_members",
                 column: "user_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_channel_message_mentions_mentioned_user_id",
+                table: "channel_message_mentions",
+                column: "mentioned_user_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_channel_message_mentions_message_id",
+                table: "channel_message_mentions",
+                column: "message_id");
 
             migrationBuilder.CreateIndex(
                 name: "ix_channel_message_reactions_message_id",
@@ -207,6 +268,22 @@ namespace ChatApp.Modules.Channels.Infrastructure.Migrations
                 name: "ix_channels_type",
                 table: "channels",
                 column: "type");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_user_favorite_channel_messages_message_id",
+                table: "user_favorite_channel_messages",
+                column: "message_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_user_favorite_channel_messages_unique",
+                table: "user_favorite_channel_messages",
+                columns: new[] { "user_id", "message_id" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "ix_user_favorite_channel_messages_user_id",
+                table: "user_favorite_channel_messages",
+                column: "user_id");
         }
 
         /// <inheritdoc />
@@ -216,10 +293,16 @@ namespace ChatApp.Modules.Channels.Infrastructure.Migrations
                 name: "channel_members");
 
             migrationBuilder.DropTable(
+                name: "channel_message_mentions");
+
+            migrationBuilder.DropTable(
                 name: "channel_message_reactions");
 
             migrationBuilder.DropTable(
                 name: "channel_message_reads");
+
+            migrationBuilder.DropTable(
+                name: "user_favorite_channel_messages");
 
             migrationBuilder.DropTable(
                 name: "channel_messages");

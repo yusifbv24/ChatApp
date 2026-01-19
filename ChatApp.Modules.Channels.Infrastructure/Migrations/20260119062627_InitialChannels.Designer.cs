@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ChatApp.Modules.Channels.Infrastructure.Migrations
 {
     [DbContext(typeof(ChannelsDbContext))]
-    [Migration("20260101170811_AddUserFavoriteChannelMessage")]
-    partial class AddUserFavoriteChannelMessage
+    [Migration("20260119062627_InitialChannels")]
+    partial class InitialChannels
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -139,12 +139,31 @@ namespace ChatApp.Modules.Channels.Infrastructure.Migrations
                         .HasDefaultValue(true)
                         .HasColumnName("is_active");
 
+                    b.Property<bool>("IsMarkedReadLater")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_marked_read_later");
+
+                    b.Property<bool>("IsMuted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_muted");
+
+                    b.Property<bool>("IsPinned")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_pinned");
+
                     b.Property<DateTime>("JoinedAtUtc")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("joined_at_utc");
 
                     b.Property<Guid?>("LastReadLaterMessageId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("last_read_later_message_id");
 
                     b.Property<DateTime?>("LeftAtUtc")
                         .HasColumnType("timestamp with time zone")
@@ -270,6 +289,50 @@ namespace ChatApp.Modules.Channels.Infrastructure.Migrations
                     b.ToTable("channel_messages", (string)null);
                 });
 
+            modelBuilder.Entity("ChatApp.Modules.Channels.Domain.Entities.ChannelMessageMention", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<bool>("IsAllMention")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_all_mention");
+
+                    b.Property<Guid?>("MentionedUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("mentioned_user_id");
+
+                    b.Property<string>("MentionedUserName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("mentioned_user_name");
+
+                    b.Property<Guid>("MessageId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("message_id");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MentionedUserId")
+                        .HasDatabaseName("ix_channel_message_mentions_mentioned_user_id");
+
+                    b.HasIndex("MessageId")
+                        .HasDatabaseName("ix_channel_message_mentions_message_id");
+
+                    b.ToTable("channel_message_mentions", (string)null);
+                });
+
             modelBuilder.Entity("ChatApp.Modules.Channels.Domain.Entities.ChannelMessageReaction", b =>
                 {
                     b.Property<Guid>("Id")
@@ -392,6 +455,73 @@ namespace ChatApp.Modules.Channels.Infrastructure.Migrations
                     b.ToTable("user_favorite_channel_messages", (string)null);
                 });
 
+            modelBuilder.Entity("ChatApp.Modules.Files.Domain.Entities.FileMetadata", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("content_type");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("text");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<long>("FileSizeInBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("file_size_in_bytes");
+
+                    b.Property<int>("FileType")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("Height")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("original_file_name");
+
+                    b.Property<string>("StoragePath")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ThumbnailPath")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UploadedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("Width")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("file_metadata", null, t =>
+                        {
+                            t.ExcludeFromMigrations();
+                        });
+                });
+
             modelBuilder.Entity("ChatApp.Modules.Channels.Domain.Entities.ChannelMember", b =>
                 {
                     b.HasOne("ChatApp.Modules.Channels.Domain.Entities.Channel", "Channel")
@@ -412,6 +542,17 @@ namespace ChatApp.Modules.Channels.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Channel");
+                });
+
+            modelBuilder.Entity("ChatApp.Modules.Channels.Domain.Entities.ChannelMessageMention", b =>
+                {
+                    b.HasOne("ChatApp.Modules.Channels.Domain.Entities.ChannelMessage", "Message")
+                        .WithMany("Mentions")
+                        .HasForeignKey("MessageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Message");
                 });
 
             modelBuilder.Entity("ChatApp.Modules.Channels.Domain.Entities.ChannelMessageReaction", b =>
@@ -456,6 +597,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Migrations
 
             modelBuilder.Entity("ChatApp.Modules.Channels.Domain.Entities.ChannelMessage", b =>
                 {
+                    b.Navigation("Mentions");
+
                     b.Navigation("Reactions");
 
                     b.Navigation("Reads");

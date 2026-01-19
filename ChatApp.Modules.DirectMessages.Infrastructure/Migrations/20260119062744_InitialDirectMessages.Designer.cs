@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ChatApp.Modules.DirectMessages.Infrastructure.Migrations
 {
     [DbContext(typeof(DirectMessagesDbContext))]
-    [Migration("20251230070143_AddDirectMessagePinSupport")]
-    partial class AddDirectMessagePinSupport
+    [Migration("20260119062744_InitialDirectMessages")]
+    partial class InitialDirectMessages
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -66,10 +66,20 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Migrations
                         .HasColumnName("created_at_utc");
 
                     b.Property<bool>("HasMessages")
-                        .HasColumnType("boolean");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("has_messages");
 
                     b.Property<Guid>("InitiatedByUserId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("initiated_by_user_id");
+
+                    b.Property<bool>("IsNotes")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_notes");
 
                     b.Property<bool>("IsUser1Active")
                         .ValueGeneratedOnAdd()
@@ -95,15 +105,53 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("user1_id");
 
+                    b.Property<bool>("User1IsMarkedReadLater")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("user1_is_marked_read_later");
+
+                    b.Property<bool>("User1IsMuted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("user1_is_muted");
+
+                    b.Property<bool>("User1IsPinned")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("user1_is_pinned");
+
                     b.Property<Guid?>("User1LastReadLaterMessageId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("user1_last_read_later_message_id");
 
                     b.Property<Guid>("User2Id")
                         .HasColumnType("uuid")
                         .HasColumnName("user2_id");
 
+                    b.Property<bool>("User2IsMarkedReadLater")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("user2_is_marked_read_later");
+
+                    b.Property<bool>("User2IsMuted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("user2_is_muted");
+
+                    b.Property<bool>("User2IsPinned")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("user2_is_pinned");
+
                     b.Property<Guid?>("User2LastReadLaterMessageId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("user2_last_read_later_message_id");
 
                     b.HasKey("Id");
 
@@ -187,10 +235,6 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Migrations
                     b.Property<Guid?>("PinnedBy")
                         .HasColumnType("uuid");
 
-                    b.Property<DateTime?>("ReadAtUtc")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("read_at_utc");
-
                     b.Property<Guid>("ReceiverId")
                         .HasColumnType("uuid")
                         .HasColumnName("receiver_id");
@@ -224,6 +268,46 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Migrations
                         .HasDatabaseName("ix_direct_messages_receiver_read");
 
                     b.ToTable("direct_messages", (string)null);
+                });
+
+            modelBuilder.Entity("ChatApp.Modules.DirectMessages.Domain.Entities.DirectMessageMention", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid>("MentionedUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("mentioned_user_id");
+
+                    b.Property<string>("MentionedUserName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("mentioned_user_name");
+
+                    b.Property<Guid>("MessageId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("message_id");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MentionedUserId")
+                        .HasDatabaseName("ix_direct_message_mentions_mentioned_user_id");
+
+                    b.HasIndex("MessageId")
+                        .HasDatabaseName("ix_direct_message_mentions_message_id");
+
+                    b.ToTable("direct_message_mentions", (string)null);
                 });
 
             modelBuilder.Entity("ChatApp.Modules.DirectMessages.Domain.Entities.DirectMessageReaction", b =>
@@ -267,6 +351,115 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Migrations
                     b.ToTable("direct_message_reactions", (string)null);
                 });
 
+            modelBuilder.Entity("ChatApp.Modules.DirectMessages.Domain.Entities.UserFavoriteMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<DateTime>("FavoritedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("favorited_at_utc");
+
+                    b.Property<Guid>("MessageId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("message_id");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MessageId")
+                        .HasDatabaseName("ix_user_favorite_messages_message_id");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_user_favorite_messages_user_id");
+
+                    b.HasIndex("UserId", "MessageId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_user_favorite_messages_unique");
+
+                    b.ToTable("user_favorite_messages", (string)null);
+                });
+
+            modelBuilder.Entity("ChatApp.Modules.Files.Domain.Entities.FileMetadata", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("content_type");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("text");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<long>("FileSizeInBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("file_size_in_bytes");
+
+                    b.Property<int>("FileType")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("Height")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("original_file_name");
+
+                    b.Property<string>("StoragePath")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ThumbnailPath")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UploadedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("Width")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("file_metadata", null, t =>
+                        {
+                            t.ExcludeFromMigrations();
+                        });
+                });
+
             modelBuilder.Entity("ChatApp.Modules.DirectMessages.Domain.Entities.DirectMessage", b =>
                 {
                     b.HasOne("ChatApp.Modules.DirectMessages.Domain.Entities.DirectConversation", "Conversation")
@@ -278,10 +471,32 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Migrations
                     b.Navigation("Conversation");
                 });
 
+            modelBuilder.Entity("ChatApp.Modules.DirectMessages.Domain.Entities.DirectMessageMention", b =>
+                {
+                    b.HasOne("ChatApp.Modules.DirectMessages.Domain.Entities.DirectMessage", "Message")
+                        .WithMany("Mentions")
+                        .HasForeignKey("MessageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Message");
+                });
+
             modelBuilder.Entity("ChatApp.Modules.DirectMessages.Domain.Entities.DirectMessageReaction", b =>
                 {
                     b.HasOne("ChatApp.Modules.DirectMessages.Domain.Entities.DirectMessage", "Message")
                         .WithMany("Reactions")
+                        .HasForeignKey("MessageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Message");
+                });
+
+            modelBuilder.Entity("ChatApp.Modules.DirectMessages.Domain.Entities.UserFavoriteMessage", b =>
+                {
+                    b.HasOne("ChatApp.Modules.DirectMessages.Domain.Entities.DirectMessage", "Message")
+                        .WithMany()
                         .HasForeignKey("MessageId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -296,6 +511,8 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Migrations
 
             modelBuilder.Entity("ChatApp.Modules.DirectMessages.Domain.Entities.DirectMessage", b =>
                 {
+                    b.Navigation("Mentions");
+
                     b.Navigation("Reactions");
                 });
 #pragma warning restore 612, 618
