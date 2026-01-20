@@ -363,7 +363,8 @@
                                         <span>@(IsFavorite ? "Remove from Favorites" : "Add to Favorites")</span>
                                         <MudIcon Icon="@(IsFavorite ? Icons.Material.Filled.Star : Icons.Material.Outlined.StarBorder)" Size="Size.Small" />
                                     </button>
-                                    @if (!IsMarkedAsLater)
+                                    @* FIX: User can only mark OTHER people's messages as later, not their own *@
+                                    @if (!IsMarkedAsLater && !IsOwn)
                                     {
                                         <button class="menu-item" @onclick="HandleMarkAsLaterClick">
                                             <span>Mark as Later</span>

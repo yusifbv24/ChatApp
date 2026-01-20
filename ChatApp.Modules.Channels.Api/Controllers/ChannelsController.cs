@@ -244,7 +244,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         /// Toggle pin status for a channel
         /// </summary>
         [HttpPost("{channelId:guid}/toggle-pin")]
-        [RequirePermission("Channels.View")]
+        [RequirePermission("Groups.Read")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -272,7 +272,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         /// Toggle mute status for a channel
         /// </summary>
         [HttpPost("{channelId:guid}/toggle-mute")]
-        [RequirePermission("Channels.View")]
+        [RequirePermission("Groups.Read")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -300,7 +300,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         /// Toggle mark as read later for a channel
         /// </summary>
         [HttpPost("{channelId:guid}/toggle-read-later")]
-        [RequirePermission("Channels.View")]
+        [RequirePermission("Groups.Read")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -327,7 +327,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         /// Unmark channel as read later (clears both conversation-level and message-level marks)
         /// </summary>
         [HttpDelete("{channelId:guid}/read-later")]
-        [RequirePermission("Channels.View")]
+        [RequirePermission("Groups.Read")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -354,7 +354,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         /// Mark all unread channel messages as read and clear all read later flags
         /// </summary>
         [HttpPost("{channelId:guid}/messages/mark-all-read")]
-        [RequirePermission("Channels.View")]
+        [RequirePermission("Groups.Read")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
