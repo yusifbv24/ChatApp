@@ -92,6 +92,16 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectMessages
                 // Get receiver ID
                 var receiverId = conversation.GetOtherUserId(request.SenderId);
 
+                // Auto-unhide: When new message arrives, unhide conversation for the receiver
+                var receiverMember = await _unitOfWork.ConversationMembers.GetByConversationAndUserAsync(
+                    request.ConversationId,
+                    receiverId,
+                    cancellationToken);
+                if (receiverMember != null && receiverMember.IsHidden)
+                {
+                    receiverMember.Unhide();
+                }
+
                 // Create message
                 var message = new DirectMessage(
                     request.ConversationId,

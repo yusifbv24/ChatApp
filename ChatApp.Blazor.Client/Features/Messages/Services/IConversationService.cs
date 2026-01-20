@@ -88,5 +88,11 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
         /// Does NOT mark messages as read - only removes the icon from conversation list.
         /// </summary>
         Task<Result> UnmarkConversationReadLaterAsync(Guid conversationId);
+
+
+        /// <summary>
+        /// Hides a conversation from the list. It will reappear when a new message arrives.
+        /// </summary>
+        Task<Result> HideConversationAsync(Guid conversationId);
     }
 }

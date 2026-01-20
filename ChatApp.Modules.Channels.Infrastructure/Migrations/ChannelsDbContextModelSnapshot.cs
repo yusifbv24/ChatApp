@@ -136,6 +136,9 @@ namespace ChatApp.Modules.Channels.Infrastructure.Migrations
                         .HasDefaultValue(true)
                         .HasColumnName("is_active");
 
+                    b.Property<bool>("IsHidden")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsMarkedReadLater")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")

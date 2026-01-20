@@ -73,7 +73,7 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
             var conversationsQuery = await (from conv in _context.DirectConversations
                                        join member in _context.DirectConversationMembers
                                            on new { conv.Id, UserId = userId } equals new { Id = member.ConversationId, member.UserId }
-                                       where member.IsActive
+                                       where member.IsActive && !member.IsHidden
                                              && (conv.InitiatedByUserId == userId || conv.HasMessages || conv.IsNotes)
                                        let otherUserId = conv.User1Id == userId ? conv.User2Id : conv.User1Id
                                        join user in _context.Set<UserReadModel>() on otherUserId equals user.Id
@@ -194,7 +194,6 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
 
             return conversations;
         }
-
 
 
         public Task UpdateAsync(DirectConversation conversation, CancellationToken cancellationToken = default)

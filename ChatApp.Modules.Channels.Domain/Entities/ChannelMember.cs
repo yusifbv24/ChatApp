@@ -17,6 +17,7 @@ namespace ChatApp.Modules.Channels.Domain.Entities
         public bool IsPinned { get; private set; }
         public bool IsMuted { get; private set; }
         public bool IsMarkedReadLater { get; private set; }
+        public bool IsHidden { get; private set; }
 
         // Navigation properties
         public Channel Channel { get; private set; } = null!;
@@ -86,6 +87,18 @@ namespace ChatApp.Modules.Channels.Domain.Entities
         public void UnmarkConversationAsReadLater()
         {
             IsMarkedReadLater = false;
+            UpdateTimestamp();
+        }
+
+        public void Hide()
+        {
+            IsHidden = true;
+            UpdateTimestamp();
+        }
+
+        public void Unhide()
+        {
+            IsHidden = false;
             UpdateTimestamp();
         }
     }

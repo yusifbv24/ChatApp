@@ -106,7 +106,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
             var channelsWithLastMessage = await (
                 from channel in _context.Channels
                 join member in _context.ChannelMembers on channel.Id equals member.ChannelId
-                where member.UserId == userId && member.IsActive && !channel.IsArchived
+                where member.UserId == userId && member.IsActive && !channel.IsArchived && !member.IsHidden
                 // Get last message for each channel (LEFT JOIN) - Include deleted messages to show "This message was deleted"
                 let lastMessage = (from msg in _context.ChannelMessages
                                    join sender in _context.Set<UserReadModel>() on msg.SenderId equals sender.Id

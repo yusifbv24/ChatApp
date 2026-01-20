@@ -7,7 +7,7 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
     {
         Task<Result<List<ChannelDto>>> GetMyChannelsAsync();
 
-        
+
         Task<Result<List<ChannelDto>>> GetPublicChannelsAsync();
 
 
@@ -104,5 +104,8 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
 
 
         Task<Result<int>> MarkAllChannelMessagesAsReadAsync(Guid channelId);
+
+
+        Task<Result> HideChannelAsync(Guid channelId);
     }
 }

@@ -346,6 +346,12 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
         }
 
 
+        public async Task<Result> HideChannelAsync(Guid channelId)
+        {
+            return await apiClient.PostAsync($"/api/channels/{channelId}/hide");
+        }
+
+
         private record CreateChannelResponse(Guid ChannelId, string Message);
 
         private record SendMessageResponse(Guid MessageId, string Message);

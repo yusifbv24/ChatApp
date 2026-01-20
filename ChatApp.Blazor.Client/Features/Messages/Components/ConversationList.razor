@@ -91,11 +91,11 @@
                         <div class="conversation-info">
                             <div class="conversation-header">
                                 <div class="conversation-name-wrapper">
-                                    @if (item.IsPinned)
-                                    {
-                                        <MudIcon Icon="@Icons.Material.Filled.PushPin" Class="pin-icon" Size="Size.Small" />
-                                    }
                                     <span class="conversation-name">@item.Name</span>
+                                    @if (item.IsMuted)
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Outlined.VolumeOff" Class="conv-mute-icon" />
+                                    }
                                 </div>
                                 <div class="conversation-meta">
                                     @if (item.IsMyLastMessage && !string.IsNullOrEmpty(item.LastMessageStatus) && item.UnreadCount == 0)
@@ -179,6 +179,10 @@
                                     {
                                         <span class="unread-badge">@(item.UnreadCount > 99 ? "99+" : item.UnreadCount.ToString())</span>
                                     }
+                                    @if (item.IsPinned)
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Outlined.PushPin" Class="conv-status-icon pin-icon" />
+                                    }
                                     <button class="conversation-more-btn @(hoveredItemId == item.Id || showMoreMenu && moreMenuItemId == item.Id ? "visible" : "")"
                                             @onclick:stopPropagation="true"
                                             @onclick="()=> ToggleMoreMenu(item.Id)">
@@ -210,7 +214,7 @@
                                 <button class="menu-item" @onclick="async () => { await ToggleMuteChannel(item.Id); CloseMoreMenu(); }">
                                     <span>@(item.IsMuted ? "Unmute" : "Mute")</span>
                                 </button>
-                                <button class="menu-item" @onclick="CloseMoreMenu">
+                                <button class="menu-item" @onclick="async () => { await HideChannel(item.Id); CloseMoreMenu(); }">
                                     <span>Hide</span>
                                 </button>
                                 <button class="menu-item" @onclick="CloseMoreMenu">
@@ -248,11 +252,11 @@
                         <div class="conversation-info">
                             <div class="conversation-header">
                                 <div class="conversation-name-wrapper">
-                                    @if (item.IsPinned)
-                                    {
-                                        <MudIcon Icon="@Icons.Material.Filled.PushPin" Class="pin-icon" Size="Size.Small" />
-                                    }
                                     <span class="conversation-name @(item.IsNotes ? "notes-name" : "")">@item.Name</span>
+                                    @if (item.IsMuted)
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Outlined.VolumeOff" Class="conv-mute-icon" />
+                                    }
                                 </div>
                                 <div class="conversation-meta">
                                     @if (item.IsMyLastMessage && !string.IsNullOrEmpty(item.LastMessageStatus) && item.UnreadCount == 0)
@@ -313,6 +317,10 @@
                                     {
                                         <span class="unread-badge">@(item.UnreadCount > 99 ? "99+" : item.UnreadCount.ToString())</span>
                                     }
+                                    @if (item.IsPinned)
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Outlined.PushPin" Class="conv-status-icon pin-icon" />
+                                    }
                                     <button class="conversation-more-btn @(hoveredItemId == item.Id || showMoreMenu && moreMenuItemId == item.Id ? "visible" : "")"
                                             @onclick:stopPropagation="true"
                                             @onclick="()=> ToggleMoreMenu(item.Id)">
@@ -346,6 +354,9 @@
                                 </button>
                                 @if (!item.IsNotes)
                                 {
+                                    <button class="menu-item" @onclick="async () => { await HideConversation(item.Id); CloseMoreMenu(); }">
+                                        <span>Hide</span>
+                                    </button>
                                     <button class="menu-item" @onclick="CloseMoreMenu">
                                         <span>View profile</span>
                                     </button>

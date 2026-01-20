@@ -13,6 +13,7 @@ public partial class ConversationList : IAsyncDisposable
     #region Injected Services
 
     [Inject] private UserState UserState { get; set; } = default!;
+    [Inject] private AppState AppState { get; set; } = default!;
     [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
     [Inject] private IChannelService ChannelService { get; set; } = default!;
     [Inject] private IConversationService ConversationService { get; set; } = default!;
@@ -95,6 +96,16 @@ public partial class ConversationList : IAsyncDisposable
     /// Yeni channel yaratmaq callback-i.
     /// </summary>
     [Parameter] public EventCallback OnNewChannel { get; set; }
+
+    /// <summary>
+    /// Conversation bağlandığında (hide olduqda) callback.
+    /// </summary>
+    [Parameter] public EventCallback OnConversationClosed { get; set; }
+
+    /// <summary>
+    /// Channel bağlandığında (hide olduqda) callback.
+    /// </summary>
+    [Parameter] public EventCallback OnChannelClosed { get; set; }
 
     #endregion
 
@@ -1021,6 +1032,102 @@ public partial class ConversationList : IAsyncDisposable
                 };
                 InvalidateCache();
             }
+        }
+    }
+
+    /// <summary>
+    /// Hide channel handler - removes channel from list until new message arrives.
+    /// If currently selected, closes the channel first.
+    /// </summary>
+    private async Task HideChannel(Guid channelId)
+    {
+        var index = Channels.FindIndex(c => c.Id == channelId);
+        if (index < 0) return;
+
+        var channel = Channels[index];
+
+        // If this channel is currently selected, close it first
+        var wasSelected = SelectedChannelId == channelId;
+
+        // Decrement global unread count if channel has unread messages
+        if (channel.UnreadCount > 0)
+        {
+            AppState.DecrementUnreadMessages(channel.UnreadCount);
+        }
+
+        // Optimistic UI: Remove from list immediately
+        Channels.RemoveAt(index);
+        InvalidateCache();
+
+        // Close the channel if it was selected
+        if (wasSelected)
+        {
+            await OnChannelClosed.InvokeAsync();
+        }
+
+        StateHasChanged();
+
+        try
+        {
+            var result = await ChannelService.HideChannelAsync(channelId);
+            if (!result.IsSuccess)
+            {
+                // Reload on failure (backend didn't hide, need to show again)
+                await OnInitializedAsync();
+            }
+        }
+        catch
+        {
+            // Reload on exception
+            await OnInitializedAsync();
+        }
+    }
+
+    /// <summary>
+    /// Hide conversation handler - removes conversation from list until new message arrives.
+    /// If currently selected, closes the conversation first.
+    /// </summary>
+    private async Task HideConversation(Guid conversationId)
+    {
+        var index = Conversations.FindIndex(c => c.Id == conversationId);
+        if (index < 0) return;
+
+        var conversation = Conversations[index];
+
+        // If this conversation is currently selected, close it first
+        var wasSelected = SelectedConversationId == conversationId;
+
+        // Decrement global unread count if conversation has unread messages
+        if (conversation.UnreadCount > 0)
+        {
+            AppState.DecrementUnreadMessages(conversation.UnreadCount);
+        }
+
+        // Optimistic UI: Remove from list immediately
+        Conversations.RemoveAt(index);
+        InvalidateCache();
+
+        // Close the conversation if it was selected
+        if (wasSelected)
+        {
+            await OnConversationClosed.InvokeAsync();
+        }
+
+        StateHasChanged();
+
+        try
+        {
+            var result = await ConversationService.HideConversationAsync(conversationId);
+            if (!result.IsSuccess)
+            {
+                // Reload on failure (backend didn't hide, need to show again)
+                await OnInitializedAsync();
+            }
+        }
+        catch
+        {
+            // Reload on exception
+            await OnInitializedAsync();
         }
     }
 

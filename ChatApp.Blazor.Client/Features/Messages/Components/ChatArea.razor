@@ -42,10 +42,6 @@
                     <div class="header-details">
                         <div class="header-name-wrapper">
                             <h3 class="header-name @(IsNotesConversation ? "notes-name" : "")">@RecipientName</h3>
-                            @if (IsPinned)
-                            {
-                                <MudIcon Icon="@Icons.Material.Outlined.PushPin" Class="header-pin-icon" Style="font-size: 14px;" />
-                            }
                             @if (IsMuted)
                             {
                                 <MudIcon Icon="@Icons.Material.Outlined.VolumeOff" Class="header-mute-icon" Style="font-size: 14px;" />
@@ -72,10 +68,6 @@
                     <div class="header-details">
                         <div class="header-name-wrapper">
                             <h3 class="header-name">@ChannelName</h3>
-                            @if (IsPinned)
-                            {
-                                <MudIcon Icon="@Icons.Material.Outlined.PushPin" Class="header-pin-icon" Style="font-size: 14px;" />
-                            }
                             @if (IsMuted)
                             {
                                 <MudIcon Icon="@Icons.Material.Outlined.VolumeOff" Class="header-mute-icon" Style="font-size: 14px;" />

@@ -393,6 +393,11 @@ public partial class Messages
                 }
 
                 var preview = GetFilePreview(message);
+
+                // Check if current user is mentioned (directly or via @All)
+                bool hasMention = message.Mentions != null && message.Mentions.Any(m =>
+                    m.UserId == currentUserId || m.IsAllMention);
+
                 var updatedChannel = channel with
                 {
                     LastMessageContent = preview,
@@ -401,7 +406,9 @@ public partial class Messages
                     LastMessageSenderId = message.SenderId,
                     LastMessageSenderAvatarUrl = message.SenderAvatarUrl,
                     LastMessageStatus = status,
-                    UnreadCount = isCurrentChannel ? 0 : (isMyMessage ? channel.UnreadCount : channel.UnreadCount + 1)
+                    UnreadCount = isCurrentChannel ? 0 : (isMyMessage ? channel.UnreadCount : channel.UnreadCount + 1),
+                    // HasUnreadMentions: aktiv channel-da false, mention varsa true
+                    HasUnreadMentions = isCurrentChannel ? false : (isMyMessage ? channel.HasUnreadMentions : (hasMention || channel.HasUnreadMentions))
                 };
 
                 // PERFORMANCE: Using helper method (move to top pattern)
@@ -411,6 +418,11 @@ public partial class Messages
                 {
                     AppState.IncrementUnreadMessages();
                 }
+            }
+            else if (message.SenderId != currentUserId)
+            {
+                // Channel listdə yoxdur (gizli idi) - list-i yenidən yüklə
+                _ = LoadConversationsAndChannels();
             }
 
             StateHasChanged();

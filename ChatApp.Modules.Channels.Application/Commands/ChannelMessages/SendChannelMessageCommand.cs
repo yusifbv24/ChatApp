@@ -139,6 +139,17 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMessages
                         request.ChannelId,
                         cancellationToken);
 
+                    // Auto-unhide: When new message arrives, unhide channel for all hidden members
+                    var hiddenMembers = members.Where(m => m.IsActive && m.IsHidden && m.UserId != request.SenderId).ToList();
+                    foreach (var hiddenMember in hiddenMembers)
+                    {
+                        hiddenMember.Unhide();
+                    }
+                    if (hiddenMembers.Count > 0)
+                    {
+                        await _unitOfWork.SaveChangesAsync(cancellationToken);
+                    }
+
                     // Count active members except the sender (sender is not in ReadBy list)
                     var adjustedMemberCount = members.Count(m => m.IsActive && m.UserId != request.SenderId);
 

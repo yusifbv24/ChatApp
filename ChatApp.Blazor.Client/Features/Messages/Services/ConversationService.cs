@@ -317,6 +317,16 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
         }
 
 
+        /// <summary>
+        /// Hides a conversation from the list. It will reappear when a new message arrives.
+        /// </summary>
+        public async Task<Result> HideConversationAsync(Guid conversationId)
+        {
+            return await _apiClient.PostAsync(
+                $"/api/conversations/{conversationId}/messages/hide");
+        }
+
+
         private record StartConversationResponse(Guid ConversationId, string Message);
         private record SendMessageResponse(Guid MessageId, string Message);
         private record UnreadCountResponse(int UnreadCount);

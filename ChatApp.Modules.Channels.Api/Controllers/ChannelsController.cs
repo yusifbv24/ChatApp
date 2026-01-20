@@ -297,6 +297,34 @@ namespace ChatApp.Modules.Channels.Api.Controllers
 
 
         /// <summary>
+        /// Hide a channel from conversation list
+        /// </summary>
+        [HttpPost("{channelId:guid}/hide")]
+        [RequirePermission("Groups.Read")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> HideChannel(
+            [FromRoute] Guid channelId,
+            CancellationToken cancellationToken)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == Guid.Empty)
+                return Unauthorized();
+
+            var result = await _mediator.Send(
+                new HideChannelCommand(channelId, userId),
+                cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return Ok();
+        }
+
+
+
+        /// <summary>
         /// Toggle mark as read later for a channel
         /// </summary>
         [HttpPost("{channelId:guid}/toggle-read-later")]
