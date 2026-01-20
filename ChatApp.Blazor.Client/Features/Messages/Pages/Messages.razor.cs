@@ -740,15 +740,63 @@ public partial class Messages : IAsyncDisposable
 
     /// <summary>
     /// Page visibility dəyişdikdə JS-dən çağrılır.
-    /// Tab görünür olduqda state-i yenilə (mark-as-read yalnız scroll event-də olacaq).
+    /// Tab görünür olduqda unread mesajları mark-as-read edir.
     /// </summary>
     [JSInvokable]
-    public void OnVisibilityChanged(bool isVisible)
+    public async Task OnVisibilityChanged(bool isVisible)
     {
+        var wasHidden = !isPageVisible;
         isPageVisible = isVisible;
 
+        // Tab-a qayıdanda unread mesajları mark-as-read et
+        if (isVisible && wasHidden)
+        {
+            await MarkUnreadMessagesOnVisibilityRestoreAsync();
+        }
+
         // State dəyişikliyini bildir (UI yenilənməsi üçün)
-        InvokeAsync(StateHasChanged);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// Tab-a qayıdanda conversation/channel-dakı unread mesajları mark-as-read edir.
+    /// </summary>
+    private async Task MarkUnreadMessagesOnVisibilityRestoreAsync()
+    {
+        if (_disposed) return;
+
+        try
+        {
+            if (isDirectMessage && selectedConversationId.HasValue)
+            {
+                // DM: Unread mesajları tap və mark-as-read et
+                var unreadMessages = directMessages
+                    .Where(m => !m.IsRead && m.SenderId != currentUserId)
+                    .ToList();
+
+                if (unreadMessages.Count > 0)
+                {
+                    await MarkDirectMessagesAsReadAsync(unreadMessages);
+                }
+            }
+            else if (!isDirectMessage && selectedChannelId.HasValue)
+            {
+                // Channel: Unread mesajları tap və mark-as-read et
+                var unreadMessages = channelMessages
+                    .Where(m => m.SenderId != currentUserId &&
+                                (m.ReadBy == null || !m.ReadBy.Contains(currentUserId)))
+                    .ToList();
+
+                if (unreadMessages.Count > 0)
+                {
+                    await MarkChannelMessagesAsReadAsync(unreadMessages);
+                }
+            }
+        }
+        catch
+        {
+            // Silently handle mark-as-read errors
+        }
     }
 
     /// <summary>
