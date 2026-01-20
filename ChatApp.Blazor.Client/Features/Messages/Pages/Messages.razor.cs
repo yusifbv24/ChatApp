@@ -804,11 +804,9 @@ public partial class Messages : IAsyncDisposable
                 await visibilitySubscription.InvokeVoidAsync("dispose");
                 await visibilitySubscription.DisposeAsync();
             }
-            catch (Exception ex)
+            catch
             {
-                // LOW PRIORITY FIX: Log teardown errors for debugging
-                // Dispose error-larını ignore et, lakin debug üçün log
-                System.Diagnostics.Debug.WriteLine($"[Messages] Page visibility teardown error: {ex.Message}");
+                // Silently handle dispose errors
             }
         }
 

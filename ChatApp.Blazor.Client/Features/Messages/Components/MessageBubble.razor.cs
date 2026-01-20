@@ -818,9 +818,9 @@ public partial class MessageBubble : IAsyncDisposable
                 }
                 await JS.InvokeVoidAsync("setupMessageMenuOutsideClickHandler", MessageId, _messageMenuRef);
             }
-            catch (Exception ex)
+            catch
             {
-                Console.WriteLine($"[ERROR] Failed to setup message menu outside click handler: {ex.Message}");
+                // Silently handle JS interop errors
             }
         }
         showMoreMenu = !showMoreMenu;
@@ -1079,30 +1079,40 @@ public partial class MessageBubble : IAsyncDisposable
         showReactionPickerCts?.Dispose();
         showReactionPickerCts = null;
 
+        // FIX: Always dispose DotNetObjectReference even if JS call fails
         if (_dotNetHelper != null)
         {
             try
             {
                 await JS.InvokeVoidAsync("window.disposeMentionClickHandlers");
-                _dotNetHelper.Dispose();
             }
             catch
             {
-                // Ignore disposal errors
+                // Ignore JS disposal errors
+            }
+            finally
+            {
+                _dotNetHelper.Dispose();
+                _dotNetHelper = null;
             }
         }
 
         // Dispose message menu outside click handler
+        // FIX: Always dispose DotNetObjectReference even if JS call fails
         if (_messageMenuRef != null)
         {
             try
             {
                 await JS.InvokeVoidAsync("disposeMessageMenuOutsideClickHandler", MessageId);
-                _messageMenuRef.Dispose();
             }
             catch
             {
-                // Ignore disposal errors
+                // Ignore JS disposal errors
+            }
+            finally
+            {
+                _messageMenuRef.Dispose();
+                _messageMenuRef = null;
             }
         }
 
@@ -1141,9 +1151,9 @@ public partial class MessageBubble : IAsyncDisposable
                 _dotNetHelper = DotNetObjectReference.Create(this);
                 await JS.InvokeVoidAsync("window.initializeMentionClickHandlers", _dotNetHelper);
             }
-            catch (Exception ex)
+            catch
             {
-                Console.WriteLine($"[ERROR] Failed to initialize handlers: {ex.Message}");
+                // Silently handle initialization errors
             }
         }
     }

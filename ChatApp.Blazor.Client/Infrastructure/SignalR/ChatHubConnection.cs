@@ -13,6 +13,7 @@ public class ChatHubConnection : IChatHubConnection, IAsyncDisposable
     private readonly string _hubUrl;
     private string? _cachedToken;
     private Timer? _tokenRefreshTimer;
+    private readonly SemaphoreSlim _tokenLock = new(1, 1);
 
     // Connection lifecycle events
     public event Func<Exception?, Task>? Reconnecting;
@@ -67,7 +68,15 @@ public class ChatHubConnection : IChatHubConnection, IAsyncDisposable
         // Handle reconnection - refresh token when reconnecting
         _hubConnection.Reconnecting += async (error) =>
         {
-            _cachedToken = await GetAccessTokenAsync();
+            await _tokenLock.WaitAsync();
+            try
+            {
+                _cachedToken = await GetAccessTokenAsync();
+            }
+            finally
+            {
+                _tokenLock.Release();
+            }
 
             // Propagate event to subscribers
             if (Reconnecting != null)
@@ -100,7 +109,15 @@ public class ChatHubConnection : IChatHubConnection, IAsyncDisposable
                 var newToken = await GetAccessTokenAsync();
                 if (!string.IsNullOrEmpty(newToken))
                 {
-                    _cachedToken = newToken;
+                    await _tokenLock.WaitAsync();
+                    try
+                    {
+                        _cachedToken = newToken;
+                    }
+                    finally
+                    {
+                        _tokenLock.Release();
+                    }
                 }
             }
             catch
@@ -130,6 +147,10 @@ public class ChatHubConnection : IChatHubConnection, IAsyncDisposable
 
     public async Task StopAsync()
     {
+        // Dispose timer first to prevent race conditions during shutdown
+        _tokenRefreshTimer?.Dispose();
+        _tokenRefreshTimer = null;
+
         if (_hubConnection != null)
         {
             await _hubConnection.StopAsync();
@@ -242,5 +263,8 @@ public class ChatHubConnection : IChatHubConnection, IAsyncDisposable
         {
             await _hubConnection.DisposeAsync();
         }
+
+        // Dispose synchronization primitive
+        _tokenLock.Dispose();
     }
 }

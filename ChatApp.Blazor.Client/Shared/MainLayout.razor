@@ -256,6 +256,7 @@
     private DateTime currentTime = DateTime.Now;
     private System.Threading.Timer? timer;
     private bool signalRInitialized = false;
+    private DotNetObjectReference<MainLayout>? _dotNetRef;
 
     protected override async Task OnInitializedAsync()
     {
@@ -279,9 +280,9 @@
                 await SignalRService.InitializeAsync();
                 signalRInitialized = true;
             }
-            catch (Exception ex)
+            catch
             {
-                Console.WriteLine($"Failed to initialize SignalR: {ex.Message}");
+                // Silently handle SignalR initialization errors
             }
         }
 
@@ -300,8 +301,8 @@
     {
         if (firstRender)
         {
-            await JS.InvokeVoidAsync("chatAppUtils.subscribeToOutsideClick",
-                DotNetObjectReference.Create(this));
+            _dotNetRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("chatAppUtils.subscribeToOutsideClick", _dotNetRef);
         }
     }
 
@@ -374,6 +375,7 @@
     public void Dispose()
     {
         timer?.Dispose();
+        _dotNetRef?.Dispose();
         UserState.OnChange -= StateHasChanged;
         AppState.OnChange -= StateHasChanged;
 

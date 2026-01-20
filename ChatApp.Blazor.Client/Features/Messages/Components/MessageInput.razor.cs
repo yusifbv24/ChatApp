@@ -282,6 +282,11 @@ public partial class MessageInput : IAsyncDisposable
     private System.Timers.Timer? typingTimer;
 
     /// <summary>
+    /// Typing timer event handler (stored for proper unsubscription).
+    /// </summary>
+    private System.Timers.ElapsedEventHandler? _typingTimerHandler;
+
+    /// <summary>
     /// Əvvəlki conversation ID.
     /// </summary>
     private Guid? previousConversationId;
@@ -333,7 +338,8 @@ public partial class MessageInput : IAsyncDisposable
     protected override void OnInitialized()
     {
         typingTimer = new System.Timers.Timer(2000);
-        typingTimer.Elapsed += async (s, e) => await StopTyping();
+        _typingTimerHandler = async (s, e) => await StopTyping();
+        typingTimer.Elapsed += _typingTimerHandler;
         typingTimer.AutoReset = false;
     }
 
@@ -700,9 +706,9 @@ public partial class MessageInput : IAsyncDisposable
                         var base64 = Convert.ToBase64String(bytes);
                         selectedFile.PreviewDataUrl = $"data:{browserFile.ContentType};base64,{base64}";
                     }
-                    catch (Exception ex)
+                    catch
                     {
-                        Console.WriteLine($"Error generating preview for {browserFile.Name}: {ex.Message}");
+                        // Silently handle preview generation errors
                     }
                 }
 
@@ -1102,6 +1108,12 @@ public partial class MessageInput : IAsyncDisposable
     /// </summary>
     public async ValueTask DisposeAsync()
     {
+        // Unsubscribe event handler before disposing timer
+        if (typingTimer != null && _typingTimerHandler != null)
+        {
+            typingTimer.Elapsed -= _typingTimerHandler;
+            _typingTimerHandler = null;
+        }
         typingTimer?.Dispose();
 
         // Dispose mention outside click handler

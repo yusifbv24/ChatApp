@@ -112,7 +112,8 @@ public partial class Messages
                 int pendingIndex = -1;
 
                 // Try to find pending message in tracking dictionary first
-                foreach (var kvp in pendingDirectMessages)
+                // FIX: Use ToList() to avoid InvalidOperationException on dictionary modification
+                foreach (var kvp in pendingDirectMessages.ToList())
                 {
                     if (kvp.Value.SenderId == message.SenderId && kvp.Value.Content == message.Content)
                     {
@@ -250,7 +251,8 @@ public partial class Messages
                 int pendingIndex = -1;
 
                 // Try to find pending message in tracking dictionary first
-                foreach (var kvp in pendingChannelMessages)
+                // FIX: Use ToList() to avoid InvalidOperationException on dictionary modification
+                foreach (var kvp in pendingChannelMessages.ToList())
                 {
                     if (kvp.Value.SenderId == message.SenderId && kvp.Value.Content == message.Content)
                     {

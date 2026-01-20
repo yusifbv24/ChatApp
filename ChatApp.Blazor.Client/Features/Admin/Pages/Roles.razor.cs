@@ -281,14 +281,10 @@ public partial class Roles
 
             await LoadRoles(); // Refresh the data
         }
-        catch (Exception ex) // More specific exception handling
+        catch (Exception ex)
         {
             permissionsSuccess = false;
             permissionsMessage = $"Failed to update permissions: {GetUserFriendlyErrorMessage(ex)}";
-
-            // Log the actual exception for debugging
-            Console.WriteLine($"Permission update error: {ex.Message}");
-            // Or use your logging service: _logger.LogError(ex, "Failed to update permissions for role {RoleId}", managingPermissionsRole?.Id);
         }
         finally
         {

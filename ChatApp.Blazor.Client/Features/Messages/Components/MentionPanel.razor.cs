@@ -176,11 +176,11 @@ public partial class MentionPanel : IAsyncDisposable
         switch (key)
         {
             case "ArrowDown":
-                MoveSelectionDown();
+                await MoveSelectionDownAsync();
                 break;
 
             case "ArrowUp":
-                MoveSelectionUp();
+                await MoveSelectionUpAsync();
                 break;
 
             case "Enter":
@@ -196,7 +196,7 @@ public partial class MentionPanel : IAsyncDisposable
         }
     }
 
-    private async void MoveSelectionDown()
+    private async Task MoveSelectionDownAsync()
     {
         if (displayedUsers.Count == 0) return;
 
@@ -216,7 +216,7 @@ public partial class MentionPanel : IAsyncDisposable
         await ScrollToSelectedItem();
     }
 
-    private async void MoveSelectionUp()
+    private async Task MoveSelectionUpAsync()
     {
         if (displayedUsers.Count == 0) return;
 

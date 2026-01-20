@@ -331,17 +331,9 @@ public partial class Users
 
                     var updateResult = await UserService.UpdateUserAsync(newUserId, updateRequest);
 
-                    if (!updateResult.IsSuccess)
-                    {
-                        // User created but avatar update failed - still show success
-                        Console.WriteLine($"Warning: User created but avatar update failed: {updateResult.Error}");
-                    }
+                    // Silently continue if avatar update failed - user was created
                 }
-                else
-                {
-                    // User created but avatar upload failed - still show success with warning
-                    Console.WriteLine($"Warning: User created but avatar upload failed: {uploadResult.Error}");
-                }
+                // Silently continue if avatar upload failed - user was created
 
                 isUploadingAvatar = false;
             }
@@ -361,8 +353,6 @@ public partial class Users
         catch (Exception ex)
         {
             createUserSuccess = false;
-            // Log the full exception but show user-friendly message
-            Console.WriteLine($"Error creating user: {ex}");
             createUserMessage = !string.IsNullOrEmpty(ex.Message)
                 ? ex.Message
                 : "An unexpected error occurred. Please try again.";

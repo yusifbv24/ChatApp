@@ -128,10 +128,9 @@ public partial class Messages
                 {
                     await ChannelService.MarkAsReadAsync(selectedChannelId.Value);
                 }
-                catch (Exception ex)
+                catch
                 {
-                    // LOW PRIORITY FIX: Log error for debugging
-                    System.Diagnostics.Debug.WriteLine($"[Messages] Mark channel as read on switch error: {ex.Message}");
+                    // Silently handle mark-as-read errors
                 }
             }
 
@@ -251,46 +250,6 @@ public partial class Messages
             favoriteMessageIds.Clear();
             showSearchPanel = false;
             pageSize = 30; // İlk yükləmə 30 mesaj (optimizasiya)
-
-            // Auto-unmark read later (channel)
-            if (selectedChannelId.HasValue && lastReadLaterMessageId.HasValue && lastReadLaterMessageIdOnEntry.HasValue)
-            {
-                try
-                {
-                    await ChannelService.ToggleMessageAsLaterAsync(selectedChannelId.Value, lastReadLaterMessageId.Value);
-                    var channelIndex = channelConversations.FindIndex(c => c.Id == selectedChannelId.Value);
-                    if (channelIndex >= 0)
-                    {
-                        channelConversations[channelIndex] = channelConversations[channelIndex] with { LastReadLaterMessageId = null };
-                        channelConversations = channelConversations.ToList();
-                    }
-                }
-                catch (Exception ex)
-                {
-                    // LOW PRIORITY FIX: Log for debugging
-                    System.Diagnostics.Debug.WriteLine($"[Messages] Operation error: {ex.Message}");
-                }
-            }
-
-            // Auto-unmark read later (conversation)
-            if (selectedConversationId.HasValue && lastReadLaterMessageId.HasValue && lastReadLaterMessageIdOnEntry.HasValue)
-            {
-                try
-                {
-                    await ConversationService.ToggleMessageAsLaterAsync(selectedConversationId.Value, lastReadLaterMessageId.Value);
-                    var conversationIndex = directConversations.FindIndex(c => c.Id == selectedConversationId.Value);
-                    if (conversationIndex >= 0)
-                    {
-                        directConversations[conversationIndex] = directConversations[conversationIndex] with { LastReadLaterMessageId = null };
-                        directConversations = directConversations.ToList();
-                    }
-                }
-                catch (Exception ex)
-                {
-                    // LOW PRIORITY FIX: Log for debugging
-                    System.Diagnostics.Debug.WriteLine($"[Messages] Operation error: {ex.Message}");
-                }
-            }
 
             // Unread separator reset
             unreadSeparatorAfterMessageId = null;
@@ -500,30 +459,9 @@ public partial class Messages
                 {
                     await ChannelService.MarkAsReadAsync(selectedChannelId.Value);
                 }
-                catch (Exception ex)
+                catch
                 {
-                    // LOW PRIORITY FIX: Log for debugging
-                    System.Diagnostics.Debug.WriteLine($"[Messages] Operation error: {ex.Message}");
-                }
-
-                // Auto-unmark read later
-                if (lastReadLaterMessageId.HasValue && lastReadLaterMessageIdOnEntry.HasValue)
-                {
-                    try
-                    {
-                        await ChannelService.ToggleMessageAsLaterAsync(selectedChannelId.Value, lastReadLaterMessageId.Value);
-                        var channelIndex = channelConversations.FindIndex(c => c.Id == selectedChannelId.Value);
-                        if (channelIndex >= 0)
-                        {
-                            channelConversations[channelIndex] = channelConversations[channelIndex] with { LastReadLaterMessageId = null };
-                            channelConversations = channelConversations.ToList();
-                        }
-                    }
-                    catch (Exception ex)
-                {
-                    // LOW PRIORITY FIX: Log for debugging
-                    System.Diagnostics.Debug.WriteLine($"[Messages] Operation error: {ex.Message}");
-                }
+                    // Silently handle mark-as-read errors
                 }
             }
 
@@ -555,26 +493,6 @@ public partial class Messages
 
             if (selectedConversationId.HasValue)
             {
-                // Auto-unmark read later (conversation)
-                if (lastReadLaterMessageId.HasValue && lastReadLaterMessageIdOnEntry.HasValue)
-                {
-                    try
-                    {
-                        await ConversationService.ToggleMessageAsLaterAsync(selectedConversationId.Value, lastReadLaterMessageId.Value);
-                        var conversationIndex = directConversations.FindIndex(c => c.Id == selectedConversationId.Value);
-                        if (conversationIndex >= 0)
-                        {
-                            directConversations[conversationIndex] = directConversations[conversationIndex] with { LastReadLaterMessageId = null };
-                            directConversations = directConversations.ToList();
-                        }
-                    }
-                    catch (Exception ex)
-                {
-                    // LOW PRIORITY FIX: Log for debugging
-                    System.Diagnostics.Debug.WriteLine($"[Messages] Operation error: {ex.Message}");
-                }
-                }
-
                 await SignalRService.LeaveConversationAsync(selectedConversationId.Value);
             }
 

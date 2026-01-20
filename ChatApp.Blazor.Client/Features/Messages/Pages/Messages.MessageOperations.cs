@@ -602,8 +602,11 @@ public partial class Messages
 
             // Reset timer - yalnız 500ms sonra request göndər
             _markDMAsReadDebounceTimer?.Dispose();
-            _markDMAsReadDebounceTimer = new System.Threading.Timer(async _ =>
+            _markDMAsReadDebounceTimer = new Timer(async _ =>
             {
+                // FIX: Check disposed before processing (timer may fire after component disposal)
+                if (_disposed) return;
+
                 Guid? conversationId;
                 List<DirectMessageDto>? messages;
 
@@ -632,8 +635,10 @@ public partial class Messages
                         }
 
                         // UI state update
+                        if (_disposed) return;
                         await InvokeAsync(() =>
                         {
+                            if (_disposed) return;
                             foreach (var message in messages)
                             {
                                 var index = directMessages.IndexOf(message);
@@ -646,10 +651,9 @@ public partial class Messages
                             StateHasChanged();
                         });
                     }
-                    catch (Exception ex)
+                    catch
                     {
-                        // LOW PRIORITY FIX: Log mark-as-read errors for debugging
-                        System.Diagnostics.Debug.WriteLine($"[Messages] Mark DM as read error: {ex.Message}");
+                        // Silently handle mark-as-read errors
                     }
                 }
             }, null, 500, Timeout.Infinite);
@@ -682,6 +686,9 @@ public partial class Messages
             _markAsReadDebounceTimer?.Dispose();
             _markAsReadDebounceTimer = new System.Threading.Timer(async _ =>
             {
+                // FIX: Check disposed before processing (timer may fire after component disposal)
+                if (_disposed) return;
+
                 Guid? channelId;
                 List<ChannelMessageDto>? messages;
 
@@ -706,16 +713,15 @@ public partial class Messages
                         {
                             foreach (var msg in messages)
                             {
+                                if (_disposed) return;
                                 await ChannelService.MarkSingleMessageAsReadAsync(channelId.Value, msg.Id);
                             }
                         }
                         // SignalR event-i UI-ı avtomatik yeniləyəcək
                     }
-                    catch (Exception ex)
+                    catch
                     {
-                        // LOW PRIORITY FIX: Log mark-as-read errors for debugging
-                        // Mark-as-read error-ları kritik deyil (backend ola bilər ki, artıq read-dir)
-                        System.Diagnostics.Debug.WriteLine($"[Messages] Mark channel as read error: {ex.Message}");
+                        // Silently handle mark-as-read errors
                     }
                 }
             }, null, 500, Timeout.Infinite);
@@ -968,9 +974,8 @@ public partial class Messages
                 }
             }
         }
-        catch (Exception ex)
+        catch
         {
-            Console.WriteLine($"[ERROR] HandleMentionClick exception: {ex.Message}");
             errorMessage = "An error occurred while opening the conversation";
             StateHasChanged();
         }
@@ -1032,9 +1037,9 @@ public partial class Messages
                     return realId;
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                Console.WriteLine($"[RETRY] Attempt {attempt}/{maxRetries} failed: {ex.Message}");
+                // Retry on failure
             }
 
             // Son cəhd deyilsə, gözlə (exponential backoff)
@@ -1114,9 +1119,9 @@ public partial class Messages
                     return realId;
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                Console.WriteLine($"[RETRY] Channel attempt {attempt}/{maxRetries} failed: {ex.Message}");
+                // Retry on failure
             }
 
             // Son cəhd deyilsə, gözlə (exponential backoff)

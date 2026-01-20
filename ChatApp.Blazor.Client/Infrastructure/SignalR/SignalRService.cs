@@ -15,6 +15,11 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
         PropertyNameCaseInsensitive = true
     };
 
+    // Connection event handlers (stored for proper unsubscription)
+    private Func<Exception?, Task>? _reconnectingHandler;
+    private Func<string?, Task>? _reconnectedHandler;
+    private Func<Exception?, Task>? _closedHandler;
+
 
     // Connection state
     public bool IsConnected { get; private set; }
@@ -74,23 +79,31 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
     private void RegisterConnectionEvents()
     {
         // Register connection lifecycle events from the hub connection
-        hubConnection.Reconnecting += async (error) =>
+        // Store handlers as fields for proper unsubscription in DisconnectAsync
+        // FIX: Removed Task.Run - direct invocation is safer for UI thread operations
+        _reconnectingHandler = (error) =>
         {
             IsConnected = false;
-            await Task.Run(() => OnReconnecting?.Invoke());
+            OnReconnecting?.Invoke();
+            return Task.CompletedTask;
         };
+        hubConnection.Reconnecting += _reconnectingHandler;
 
-        hubConnection.Reconnected += async (connectionId) =>
+        _reconnectedHandler = (connectionId) =>
         {
             IsConnected = true;
-            await Task.Run(() => OnReconnected?.Invoke());
+            OnReconnected?.Invoke();
+            return Task.CompletedTask;
         };
+        hubConnection.Reconnected += _reconnectedHandler;
 
-        hubConnection.Closed += async (error) =>
+        _closedHandler = (error) =>
         {
             IsConnected = false;
-            await Task.Run(() => OnDisconnected?.Invoke());
+            OnDisconnected?.Invoke();
+            return Task.CompletedTask;
         };
+        hubConnection.Closed += _closedHandler;
     }
 
     private void RegisterEventHandlers()
@@ -119,9 +132,9 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
                     OnNewDirectMessage?.Invoke(message);
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                Console.WriteLine($"Error deserializing direct message: {ex.Message}");
+                // Silently handle deserialization errors
             }
         }));
 
@@ -137,9 +150,9 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
                     OnDirectMessageEdited?.Invoke(message);
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                Console.WriteLine($"Error deserializing edited direct message: {ex.Message}");
+                // Silently handle deserialization errors
             }
         }));
 
@@ -155,9 +168,9 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
                     OnDirectMessageDeleted?.Invoke(message);
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                Console.WriteLine($"Error deserializing deleted direct message: {ex.Message}");
+                // Silently handle deserialization errors
             }
         }));
 
@@ -174,9 +187,9 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
                     OnNewChannelMessage?.Invoke(message);
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                Console.WriteLine($"Error deserializing channel message: {ex.Message}");
+                // Silently handle deserialization errors
             }
         }));
 
@@ -192,9 +205,9 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
                     OnChannelMessageEdited?.Invoke(message);
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                Console.WriteLine($"Error deserializing edited channel message: {ex.Message}");
+                // Silently handle deserialization errors
             }
         }));
 
@@ -210,9 +223,9 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
                     OnChannelMessageDeleted?.Invoke(message);
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                Console.WriteLine($"Error deserializing deleted channel message: {ex.Message}");
+                // Silently handle deserialization errors
             }
         }));
 
@@ -236,9 +249,9 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
                     OnMessageRead?.Invoke(conversationId, messageId, readBy);
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                Console.WriteLine($"Error processing message read: {ex.Message}");
+                // Silently handle message read processing errors
             }
         }));
 
@@ -325,9 +338,9 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
                     OnDirectMessageReactionToggled?.Invoke(conversationId, messageId, reactions);
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                Console.WriteLine($"Error processing reaction toggled: {ex.Message}");
+                // Silently handle reaction processing errors
             }
         }));
 
@@ -357,9 +370,9 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
                     OnChannelMessageReactionsUpdated?.Invoke(payload.MessageId, payload.Reactions ?? new List<ChannelMessageReactionDto>());
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                Console.WriteLine($"Error deserializing ChannelMessageReactionsUpdated: {ex.Message}");
+                // Silently handle deserialization errors
             }
         }));
 
@@ -383,20 +396,38 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
                     OnAddedToChannel?.Invoke(channel);
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                Console.WriteLine($"Error deserializing AddedToChannel: {ex.Message}");
+                // Silently handle deserialization errors
             }
         }));
     }
 
     public async Task DisconnectAsync()
     {
+        // Unsubscribe from hub message events
         foreach(var subscription in _subscriptions)
         {
             subscription.Dispose();
         }
         _subscriptions.Clear();
+
+        // Unsubscribe from connection lifecycle events
+        if (_reconnectingHandler != null)
+        {
+            hubConnection.Reconnecting -= _reconnectingHandler;
+            _reconnectingHandler = null;
+        }
+        if (_reconnectedHandler != null)
+        {
+            hubConnection.Reconnected -= _reconnectedHandler;
+            _reconnectedHandler = null;
+        }
+        if (_closedHandler != null)
+        {
+            hubConnection.Closed -= _closedHandler;
+            _closedHandler = null;
+        }
 
         await hubConnection.StopAsync();
         IsConnected=false;

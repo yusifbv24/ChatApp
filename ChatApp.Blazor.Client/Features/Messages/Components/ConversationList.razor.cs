@@ -96,16 +96,6 @@ public partial class ConversationList : IAsyncDisposable
     /// </summary>
     [Parameter] public EventCallback OnNewChannel { get; set; }
 
-    /// <summary>
-    /// Conversation data yeniləmə callback-i.
-    /// </summary>
-    [Parameter] public EventCallback OnRefreshData { get; set; }
-
-    /// <summary>
-    /// Conversation bağlanma callback-i.
-    /// </summary>
-    [Parameter] public EventCallback OnCloseConversation { get; set; }
-
     #endregion
 
     #region Private Fields - UI State
@@ -514,9 +504,9 @@ public partial class ConversationList : IAsyncDisposable
                 _conversationMenuRef ??= DotNetObjectReference.Create(this);
                 await JSRuntime.InvokeVoidAsync("setupConversationMenuOutsideClickHandler", itemId, _conversationMenuRef);
             }
-            catch (Exception ex)
+            catch
             {
-                Console.WriteLine($"[ERROR] Failed to setup conversation menu outside click handler: {ex.Message}");
+                // Silently handle JS interop errors
             }
         }
     }
@@ -589,13 +579,14 @@ public partial class ConversationList : IAsyncDisposable
     private static string FormatTime(DateTime dateTime)
     {
         var now = DateTime.UtcNow;
+        var localDateTime = dateTime.ToLocalTime();
         var diff = now - dateTime;
 
         if (diff.TotalMinutes < 1) return "Now";
         if (diff.TotalHours < 1) return $"{(int)diff.TotalMinutes}m";
-        if (diff.TotalHours < 24 && now.Day< dateTime.Day) return dateTime.ToLocalTime().ToString("HH:mm");
-        if (diff.TotalDays < 7) return dateTime.ToLocalTime().ToString("ddd", CultureInfo.InvariantCulture);
-        return dateTime.ToLocalTime().ToString("dd/MM/yy");
+        if (localDateTime.Date == DateTime.Now.Date) return localDateTime.ToString("HH:mm");
+        if (diff.TotalDays < 7) return localDateTime.ToString("ddd", CultureInfo.InvariantCulture);
+        return localDateTime.ToString("dd/MM/yy");
     }
 
 
