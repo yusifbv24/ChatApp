@@ -117,12 +117,12 @@ public partial class Messages
                         await InvokeAsync(() =>
                         {
                             pendingReadReceipts.Remove(realId.Value);
-                            // IsRead statusunu update et
+                            // FIX: IsRead və Status-u birlikdə update et
                             var message = directMessages.FirstOrDefault(m => m.Id == realId.Value);
                             if (message != null)
                             {
                                 var index = directMessages.IndexOf(message);
-                                directMessages[index] = message with { IsRead = true };
+                                directMessages[index] = message with { IsRead = true, Status = MessageStatus.Read };
                                 InvalidateMessageCache();
                                 StateHasChanged();
                             }
@@ -1022,10 +1022,12 @@ public partial class Messages
                         if (message != null)
                         {
                             var index = directMessages.IndexOf(message);
+                            // FIX: Preserve "Read" status if already set (race condition protection)
+                            var newStatus = message.Status == MessageStatus.Read ? MessageStatus.Read : MessageStatus.Sent;
                             var updatedMessage = message with
                             {
                                 Id = realId,
-                                Status = MessageStatus.Sent
+                                Status = newStatus
                                 // Keep TempId - SignalR will clear it when replacing
                             };
                             directMessages[index] = updatedMessage;
@@ -1104,10 +1106,14 @@ public partial class Messages
                         if (message != null)
                         {
                             var index = channelMessages.IndexOf(message);
+                            // FIX: Preserve "Read"/"Delivered" status if already set (race condition protection)
+                            var newStatus = (message.Status == MessageStatus.Read || message.Status == MessageStatus.Delivered)
+                                ? message.Status
+                                : MessageStatus.Sent;
                             var updatedMessage = message with
                             {
                                 Id = realId,
-                                Status = MessageStatus.Sent
+                                Status = newStatus
                                 // Keep TempId - SignalR will clear it when replacing
                             };
                             channelMessages[index] = updatedMessage;

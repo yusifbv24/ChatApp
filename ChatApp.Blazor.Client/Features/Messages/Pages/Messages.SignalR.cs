@@ -131,28 +131,39 @@ public partial class Messages
                 // 2. Check by real ID (already confirmed by retry logic)
                 var existingIndex = directMessages.FindIndex(m => m.Id == message.Id && !m.TempId.HasValue);
 
+                // FIX: Determine correct status based on IsRead (prevents race condition overwrites)
+                var correctStatus = message.IsRead ? MessageStatus.Read : MessageStatus.Sent;
+
                 if (pendingIndex >= 0)
                 {
                     // OPTIMISTIC MESSAGE CONFIRMED - Replace with real message
                     // FLASH FIX: Preserve TempId for stable @key (prevents component re-mount)
                     var oldMessage = directMessages[pendingIndex];
+
+                    // FIX: Keep existing Read status if already set (race condition protection)
+                    var finalStatus = oldMessage.Status == MessageStatus.Read ? MessageStatus.Read : correctStatus;
+
                     directMessages[pendingIndex] = message with
                     {
                         TempId = oldMessage.TempId,  // Keep TempId so @key doesn't change
-                        Status = MessageStatus.Sent
+                        Status = finalStatus
                     };
                     InvalidateMessageCache();
                 }
                 else if (existingIndex >= 0)
                 {
                     // MESSAGE ALREADY EXISTS (without TempId) - Update it
-                    directMessages[existingIndex] = message with { Status = MessageStatus.Sent };
+                    // FIX: Keep existing Read status if already set
+                    var existingMessage = directMessages[existingIndex];
+                    var finalStatus = existingMessage.Status == MessageStatus.Read ? MessageStatus.Read : correctStatus;
+
+                    directMessages[existingIndex] = message with { Status = finalStatus };
                     InvalidateMessageCache();
                 }
                 else
                 {
                     // NEW MESSAGE FROM OTHERS - Add to list
-                    directMessages.Add(message with { Status = MessageStatus.Sent });
+                    directMessages.Add(message with { Status = correctStatus });
                 }
             }
 
@@ -195,12 +206,23 @@ public partial class Messages
                 // Check if current user is mentioned in this message
                 bool hasMention = message.Mentions != null && message.Mentions.Any(m => m.UserId == currentUserId);
 
+                // FIX: Calculate correct status, but preserve existing "Read" status (race condition protection)
+                string? newStatus = null;
+                if (isMyMessage)
+                {
+                    // If already "Read", keep it (read receipt may have arrived first)
+                    if (conversation.LastMessageStatus == "Read")
+                        newStatus = "Read";
+                    else
+                        newStatus = message.IsRead ? "Read" : "Sent";
+                }
+
                 var updatedConversation = conversation with
                 {
                     LastMessageContent = preview,
                     LastMessageAtUtc = message.CreatedAtUtc,
                     LastMessageSenderId = message.SenderId,
-                    LastMessageStatus = isMyMessage ? (message.IsRead ? "Read" : "Sent") : null,
+                    LastMessageStatus = newStatus,
                     // Unread: Notes üçün həmişə 0, aktiv conversation-da 0, öz mesajımız isə dəyişmə, başqasının isə +1
                     UnreadCount = conversation.IsNotes ? 0 : (isCurrentConversation ? 0 : (isMyMessage ? conversation.UnreadCount : conversation.UnreadCount + 1)),
                     // HasUnreadMentions: Notes və aktiv conversation-da false, mention varsa true
@@ -270,22 +292,46 @@ public partial class Messages
                 // 2. Check by real ID (already confirmed by retry logic)
                 var existingIndex = channelMessages.FindIndex(m => m.Id == message.Id && !m.TempId.HasValue);
 
+                // FIX: Calculate correct status based on ReadByCount (prevents race condition overwrites)
+                static MessageStatus CalculateChannelStatus(ChannelMessageDto msg)
+                {
+                    var total = msg.TotalMemberCount;
+                    if (total == 0) return MessageStatus.Sent;
+                    if (msg.ReadByCount >= total) return MessageStatus.Read;
+                    if (msg.ReadByCount > 0) return MessageStatus.Delivered;
+                    return MessageStatus.Sent;
+                }
+
+                var correctStatus = CalculateChannelStatus(message);
+
                 if (pendingIndex >= 0)
                 {
                     // OPTIMISTIC MESSAGE CONFIRMED - Replace with real message
                     // FLASH FIX: Preserve TempId for stable @key (prevents component re-mount)
                     var oldMessage = channelMessages[pendingIndex];
+
+                    // FIX: Keep existing Read/Delivered status if already set (race condition protection)
+                    var finalStatus = (oldMessage.Status == MessageStatus.Read || oldMessage.Status == MessageStatus.Delivered)
+                        ? (correctStatus == MessageStatus.Read ? MessageStatus.Read : oldMessage.Status)
+                        : correctStatus;
+
                     channelMessages[pendingIndex] = message with
                     {
                         TempId = oldMessage.TempId,  // Keep TempId so @key doesn't change
-                        Status = MessageStatus.Sent
+                        Status = finalStatus
                     };
                     InvalidateMessageCache();
                 }
                 else if (existingIndex >= 0)
                 {
                     // MESSAGE ALREADY EXISTS (without TempId) - Update it
-                    channelMessages[existingIndex] = message with { Status = MessageStatus.Sent };
+                    // FIX: Keep existing Read/Delivered status if already set
+                    var existingMessage = channelMessages[existingIndex];
+                    var finalStatus = (existingMessage.Status == MessageStatus.Read || existingMessage.Status == MessageStatus.Delivered)
+                        ? (correctStatus == MessageStatus.Read ? MessageStatus.Read : existingMessage.Status)
+                        : correctStatus;
+
+                    channelMessages[existingIndex] = message with { Status = finalStatus };
                     InvalidateMessageCache();
                 }
                 else
@@ -306,7 +352,7 @@ public partial class Messages
                         }
                     }
 
-                    channelMessages.Add(message with { Status = MessageStatus.Sent });
+                    channelMessages.Add(message with { Status = correctStatus });
                     pendingMessageAdds.Remove(message.Id);
                 }
             }
@@ -319,18 +365,31 @@ public partial class Messages
                 var isMyMessage = message.SenderId == currentUserId;
 
                 // Status hesabla (Sent, Delivered, Read)
+                // FIX: Preserve existing "Read" or "Delivered" status (race condition protection)
                 string? status = null;
                 if (isMyMessage)
                 {
                     var totalMembers = channel.MemberCount - 1; // Sender-i çıxar
+
+                    // Calculate what status should be based on message data
+                    string calculatedStatus;
                     if (totalMembers == 0)
-                        status = "Sent";
+                        calculatedStatus = "Sent";
                     else if (message.ReadByCount >= totalMembers)
-                        status = "Read";
+                        calculatedStatus = "Read";
                     else if (message.ReadByCount > 0)
+                        calculatedStatus = "Delivered";
+                    else
+                        calculatedStatus = "Sent";
+
+                    // FIX: If already "Read", keep it (read receipt may have arrived first)
+                    // If already "Delivered" and calculated is "Sent", keep "Delivered"
+                    if (channel.LastMessageStatus == "Read")
+                        status = "Read";
+                    else if (channel.LastMessageStatus == "Delivered" && calculatedStatus == "Sent")
                         status = "Delivered";
                     else
-                        status = "Sent";
+                        status = calculatedStatus;
                 }
 
                 var preview = GetFilePreview(message);
@@ -714,10 +773,26 @@ public partial class Messages
                         if (!newReadBy.Contains(userId))
                         {
                             newReadBy.Add(userId);
+
+                            // FIX: Calculate and update Status enum based on read count
+                            var newReadByCount = newReadBy.Count;
+                            var totalMembers = message.TotalMemberCount;
+                            MessageStatus newStatus;
+
+                            if (totalMembers == 0)
+                                newStatus = MessageStatus.Sent;
+                            else if (newReadByCount >= totalMembers)
+                                newStatus = MessageStatus.Read;
+                            else if (newReadByCount > 0)
+                                newStatus = MessageStatus.Delivered;
+                            else
+                                newStatus = MessageStatus.Sent;
+
                             updatedList[i] = message with
                             {
                                 ReadBy = newReadBy,
-                                ReadByCount = newReadBy.Count
+                                ReadByCount = newReadByCount,
+                                Status = newStatus
                             };
                             updated = true;
                         }
