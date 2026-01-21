@@ -4381,6 +4381,17 @@
     text-transform: uppercase;
 }
 
+.sidebar-notes-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: #00ace3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
 .sidebar-user-name {
     font-size: 15px;
     font-weight: 600;

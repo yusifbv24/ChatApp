@@ -239,6 +239,12 @@ public partial class Sidebar
     #region Computed Properties - Cached
 
     /// <summary>
+    /// Sound enabled (mute-un əksi).
+    /// Checkbox binding üçün safe boolean.
+    /// </summary>
+    private bool IsSoundEnabled => !IsMuted;
+
+    /// <summary>
     /// Qruplanmış DM favorites - cache-lənmiş.
     /// </summary>
     private List<IGrouping<DateTime, FavoriteDirectMessageDto>> GroupedDirectFavorites
@@ -514,6 +520,7 @@ public partial class Sidebar
     {
         var isEnabled = (bool)(e.Value ?? false);
         await OnMuteToggle.InvokeAsync(!isEnabled);
+        IsMuted = !isEnabled;
     }
 
     /// <summary>

@@ -17,6 +17,7 @@
                           OnChannelSelected="SelectChannel"
                           OnNewConversation="OpenNewConversationDialog"
                           OnNewChannel="OpenNewChannelDialog"
+                          OnConversationMuteToggled="HandleConversationListMuteToggle"
                           OnConversationClosed="CloseConversation"
                           OnChannelClosed="CloseConversation"/>
     </div>
@@ -128,11 +129,13 @@
                              FavoriteCount="@(isDirectMessage ? (sidebarFavoriteDirectMessages?.Count ?? 0) : (sidebarFavoriteChannelMessages?.Count ?? 0))"
                              FileCount="0"
                              LinkCount="0"
+                             IsMuted="@selectedConversationIsMuted"
                              FavoriteDirectMessages="@sidebarFavoriteDirectMessages"
                              FavoriteChannelMessages="@sidebarFavoriteChannelMessages"
                              OnLoadFavorites="LoadSidebarFavorites"
                              OnNavigateToMessage="NavigateToFavoriteMessage"
                              OnRemoveFromFavorites="HandleRemoveFromFavoritesInSidebar"
+                             OnMuteToggle="HandleSidebarMuteToggle"
                              OnViewProfile="OpenProfilePanel"
                              OnClose="CloseSidebar" />
                 </div>

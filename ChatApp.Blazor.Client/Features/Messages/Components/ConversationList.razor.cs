@@ -98,6 +98,12 @@ public partial class ConversationList : IAsyncDisposable
     [Parameter] public EventCallback OnNewChannel { get; set; }
 
     /// <summary>
+    /// Conversation mute toggle edildiyi zaman callback.
+    /// Parameter: (Guid conversationId, bool isMuted)
+    /// </summary>
+    [Parameter] public EventCallback<(Guid, bool)> OnConversationMuteToggled { get; set; }
+
+    /// <summary>
     /// Conversation bağlandığında (hide olduqda) callback.
     /// </summary>
     [Parameter] public EventCallback OnConversationClosed { get; set; }
@@ -697,6 +703,9 @@ public partial class ConversationList : IAsyncDisposable
                     Channels[index] = Channels[index] with { IsMuted = result.Value };
                     InvalidateCache();
                 }
+
+                // Notify parent (Messages.razor) to update selectedConversationIsMuted
+                await OnConversationMuteToggled.InvokeAsync((channelId, result.Value));
             }
             else
             {
@@ -849,6 +858,9 @@ public partial class ConversationList : IAsyncDisposable
                     Conversations[index] = Conversations[index] with { IsMuted = result.Value };
                     InvalidateCache();
                 }
+
+                // Notify parent (Messages.razor) to update selectedConversationIsMuted
+                await OnConversationMuteToggled.InvokeAsync((conversationId, result.Value));
             }
             else
             {

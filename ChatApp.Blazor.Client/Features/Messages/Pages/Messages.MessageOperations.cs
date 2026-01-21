@@ -1156,4 +1156,80 @@ public partial class Messages
     }
 
     #endregion
+
+    #region Mute/Unmute - Səsləndirməni aktiv/deaktiv et
+
+    /// <summary>
+    /// ConversationList-dən mute toggle edildikdə çağrılır.
+    /// Yalnız selectedConversationIsMuted state-ini yenilə (list artıq ConversationList-də yenilənib).
+    /// </summary>
+    private void HandleConversationListMuteToggle((Guid conversationId, bool isMuted) data)
+    {
+        // Əgər hal-hazırda seçilmiş conversation/channel-dursa, state-i yenilə
+        if ((selectedConversationId.HasValue && selectedConversationId.Value == data.conversationId) ||
+            (selectedChannelId.HasValue && selectedChannelId.Value == data.conversationId))
+        {
+            selectedConversationIsMuted = data.isMuted;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Sidebar-dan sound toggle edildikdə çağrılır.
+    /// Conversation/Channel-ı mute/unmute edir.
+    /// selectedConversationIsMuted state-ini və list-i yenilə.
+    /// </summary>
+    private async Task HandleSidebarMuteToggle(bool isMuted)
+    {
+        try
+        {
+            // DM
+            if (isDirectMessage && selectedConversationId.HasValue)
+            {
+                var result = await ConversationService.ToggleMuteConversationAsync(selectedConversationId.Value);
+
+                if (result.IsSuccess)
+                {
+                    // Update state
+                    selectedConversationIsMuted = result.Value;
+
+                    // Update list
+                    var index = directConversations.FindIndex(c => c.Id == selectedConversationId.Value);
+                    if (index >= 0)
+                    {
+                        directConversations[index] = directConversations[index] with { IsMuted = result.Value };
+                        directConversations = new List<DirectConversationDto>(directConversations);
+                    }
+                }
+            }
+            // Channel
+            else if (!isDirectMessage && selectedChannelId.HasValue)
+            {
+                var result = await ChannelService.ToggleMuteChannelAsync(selectedChannelId.Value);
+
+                if (result.IsSuccess)
+                {
+                    // Update state
+                    selectedConversationIsMuted = result.Value;
+
+                    // Update list
+                    var index = channelConversations.FindIndex(c => c.Id == selectedChannelId.Value);
+                    if (index >= 0)
+                    {
+                        channelConversations[index] = channelConversations[index] with { IsMuted = result.Value };
+                        channelConversations = new List<ChannelDto>(channelConversations);
+                    }
+                }
+            }
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error toggling mute: {ex.Message}";
+            StateHasChanged();
+        }
+    }
+
+    #endregion
 }

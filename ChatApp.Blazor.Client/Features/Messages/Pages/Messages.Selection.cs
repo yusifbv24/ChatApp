@@ -591,6 +591,7 @@ public partial class Messages
             selectedChannelId = channel.Id;
             selectedConversationId = null;
             isDirectMessage = false;
+            isNotesConversation = false; // Channel-də Notes yoxdur
             selectedChannelName = channel.Name;
             selectedChannelDescription = channel.Description;
             selectedChannelType = channel.Type;

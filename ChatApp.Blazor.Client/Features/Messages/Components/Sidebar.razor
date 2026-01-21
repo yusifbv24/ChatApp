@@ -247,7 +247,13 @@
                 @if (IsDirectMessage)
                 {
                     <div class="sidebar-avatar-container">
-                        @if (!string.IsNullOrEmpty(RecipientAvatarUrl))
+                        @if (IsNotesConversation)
+                        {
+                            <div class="sidebar-notes-icon">
+                                <MudIcon Icon="@Icons.Material.Filled.Bookmark" Size="Size.Large" />
+                            </div>
+                        }
+                        else if (!string.IsNullOrEmpty(RecipientAvatarUrl))
                         {
                             <img src="@RecipientAvatarUrl" alt="@RecipientName" class="sidebar-avatar" />
                         }
@@ -284,7 +290,7 @@
                         </div>
                         <div class="sidebar-section-right">
                             <label class="toggle-switch">
-                                <input type="checkbox" @(!IsMuted?) checked @onchange="HandleSoundToggle" />
+                                <input type="checkbox" checked="@IsSoundEnabled" @onchange="HandleSoundToggle" />
                                 <span class="toggle-slider"></span>
                             </label>
                         </div>
