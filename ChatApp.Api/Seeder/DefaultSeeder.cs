@@ -19,7 +19,7 @@ namespace ChatApp.Api.Seeder
 				{
 					return;
 				}
-				if (await contextDM.DirectMessages.AnyAsync())
+				if (!await contextDM.DirectConversations.AnyAsync())
 				{
                     var users = await contextID.Users.ToListAsync();
 					foreach (var user in users)
