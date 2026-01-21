@@ -19,6 +19,15 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                     cancellationToken);
         }
 
+        public async Task<List<DirectConversationMember>> GetConversationMembers(
+            Guid conversationId,
+            CancellationToken cancellationToken=default)
+        {
+            return await _context.DirectConversationMembers
+                .Where(m => m.ConversationId == conversationId)
+                .ToListAsync(cancellationToken);
+        }
+
         public async Task AddAsync(DirectConversationMember member, CancellationToken cancellationToken = default)
         {
             await _context.DirectConversationMembers.AddAsync(member, cancellationToken);

@@ -9,6 +9,10 @@ namespace ChatApp.Modules.DirectMessages.Application.Interfaces
             Guid userId,
             CancellationToken cancellationToken = default);
 
+        Task<List<DirectConversationMember>> GetConversationMembers(
+            Guid conversationId,
+            CancellationToken cancellationToken = default);
+
         Task AddAsync(DirectConversationMember member, CancellationToken cancellationToken = default);
 
         Task UpdateAsync(DirectConversationMember member, CancellationToken cancellationToken = default);

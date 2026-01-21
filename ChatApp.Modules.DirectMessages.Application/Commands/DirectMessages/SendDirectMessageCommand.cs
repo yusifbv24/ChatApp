@@ -71,17 +71,15 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectMessages
         {
             try
             {
-                _logger.LogInformation(
+                _logger?.LogInformation(
                     "Sending message in conversation {ConversationId}",
                     request.ConversationId);
 
                 // Get conversation
                 var conversation = await _unitOfWork.Conversations.GetByIdAsync(
                     request.ConversationId,
-                    cancellationToken);
-
-                if (conversation == null)
-                    throw new NotFoundException($"Conversation with ID {request.ConversationId} not found");
+                    cancellationToken) 
+                    ?? throw new NotFoundException($"Conversation with ID {request.ConversationId} not found");
 
                 // Verify sender is participant
                 if (!conversation.IsParticipant(request.SenderId))
@@ -92,14 +90,18 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectMessages
                 // Get receiver ID
                 var receiverId = conversation.GetOtherUserId(request.SenderId);
 
-                // Auto-unhide: When new message arrives, unhide conversation for the receiver
-                var receiverMember = await _unitOfWork.ConversationMembers.GetByConversationAndUserAsync(
+                // Auto-unhide: When new message arrives, unhide conversation for both sender and receiver
+                var conversationMembers =await _unitOfWork.ConversationMembers.GetConversationMembers(
                     request.ConversationId,
-                    receiverId,
                     cancellationToken);
-                if (receiverMember != null && receiverMember.IsHidden)
+                var hiddenMembers=conversationMembers.Where(m=>m.IsActive && m.IsHidden).ToList();
+                foreach (var member in hiddenMembers)
                 {
-                    receiverMember.Unhide();
+                    member.Unhide();
+                }
+                if (hiddenMembers.Count != 0)
+                {
+                    await _unitOfWork.SaveChangesAsync(cancellationToken);
                 }
 
                 // Create message

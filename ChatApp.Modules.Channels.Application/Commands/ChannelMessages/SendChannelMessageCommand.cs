@@ -139,13 +139,13 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMessages
                         request.ChannelId,
                         cancellationToken);
 
-                    // Auto-unhide: When new message arrives, unhide channel for all hidden members
-                    var hiddenMembers = members.Where(m => m.IsActive && m.IsHidden && m.UserId != request.SenderId).ToList();
+                    // Auto-unhide: When new message arrives, unhide channel for all hidden members (including sender)
+                    var hiddenMembers = members.Where(m => m.IsActive && m.IsHidden).ToList();
                     foreach (var hiddenMember in hiddenMembers)
                     {
                         hiddenMember.Unhide();
                     }
-                    if (hiddenMembers.Count > 0)
+                    if (hiddenMembers.Count != 0)
                     {
                         await _unitOfWork.SaveChangesAsync(cancellationToken);
                     }
