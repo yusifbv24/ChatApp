@@ -1,4 +1,4 @@
-<div class="sidebar-panel" @onclick="CloseAllMenus" @onclick:stopPropagation="false">
+<div class="sidebar-panel" @onclick="CloseContextMenu" @onclick:stopPropagation="false">
     @if (showFavoritesPanel)
     {
         <!-- Favorites Panel -->
@@ -200,39 +200,48 @@
                 </div>
                 <div class="sidebar-header-right">
                     <button class="sidebar-menu-btn" @onclick="ToggleContextMenu" @onclick:stopPropagation="true">
-                        <MudIcon Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" />
+                        <MudIcon Icon="@Icons.Material.Outlined.MoreHoriz" Size="Size.Small" />
                     </button>
 
                     @if (showContextMenu)
                     {
                         <div class="sidebar-context-menu" @onclick:stopPropagation="true">
-                            <button class="context-menu-item" @onclick="HandlePin">
-                                <span>Pin</span>
+                            <button class="menu-item" @onclick="HandlePin">
+                                <span>@(IsPinned ? "Unpin" : "Pin")</span>
                             </button>
+                            @if (!IsNotesConversation)
+                            {
+                                <button class="menu-item" @onclick="HandleMute">
+                                    <span>@(IsMuted ? "Unmute" : "Mute")</span>
+                                </button>
+                            }
                             @if (IsDirectMessage)
                             {
-                                <button class="context-menu-item" @onclick="HandleViewProfile">
+                                <button class="menu-item" @onclick="HandleViewProfile">
                                     <span>View profile</span>
                                 </button>
                                 @if (!IsNotesConversation)
                                 {
-                                    <button class="context-menu-item" @onclick="HandleFindChat">
+                                    <button class="menu-item" @onclick="HandleFindChat">
                                         <span>Find chat with this user</span>
                                     </button>
                                 }
                             }
                             else
                             {
-                                <button class="context-menu-item" @onclick="HandleAddMembers">
+                                <button class="menu-item" @onclick="HandleAddMembers">
                                     <span>Add members</span>
                                 </button>
                             }
-                            <button class="context-menu-item" @onclick="HandleHide">
-                                <span>Hide</span>
-                            </button>
+                            @if (LastMessageId.HasValue)
+                            {
+                                <button class="menu-item" @onclick="HandleHide">
+                                    <span>Hide</span>
+                                </button>
+                            }
                             @if (!IsDirectMessage)
                             {
-                                <button class="context-menu-item context-menu-item-danger" @onclick="HandleLeave">
+                                <button class="menu-item delete-item" @onclick="HandleLeave">
                                     <span>Leave</span>
                                 </button>
                             }

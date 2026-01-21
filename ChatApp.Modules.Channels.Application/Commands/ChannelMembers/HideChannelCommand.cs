@@ -50,6 +50,14 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMembers
                 if (member == null)
                     return Result.Failure("User is not a member of this channel");
 
+                // Mesaj yoxdursa hide etmək olmaz
+                var hasMessages = await _unitOfWork.ChannelMessages.HasMessagesAsync(
+                    request.ChannelId,
+                    cancellationToken);
+
+                if (!hasMessages)
+                    return Result.Failure("Cannot hide channel without messages");
+
                 member.Hide();
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 

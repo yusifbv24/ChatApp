@@ -52,6 +52,10 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectConversation
                 if (!conversation.IsParticipant(request.UserId))
                     return Result.Failure("User is not a participant in this conversation");
 
+                // Mesaj yoxdursa hide etmək olmaz
+                if (!conversation.HasMessages)
+                    return Result.Failure("Cannot hide conversation without messages");
+
                 var member = await _unitOfWork.ConversationMembers.GetByConversationAndUserAsync(
                     request.ConversationId,
                     request.UserId,

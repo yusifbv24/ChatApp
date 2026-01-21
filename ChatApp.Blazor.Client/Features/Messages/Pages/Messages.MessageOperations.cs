@@ -1232,4 +1232,142 @@ public partial class Messages
     }
 
     #endregion
+
+    #region Sidebar Context Menu Actions
+
+    /// <summary>
+    /// Sidebar-dan Pin toggle edildikdə çağrılır.
+    /// </summary>
+    private async Task HandleSidebarPinToggle()
+    {
+        try
+        {
+            // DM
+            if (isDirectMessage && selectedConversationId.HasValue)
+            {
+                var result = await ConversationService.TogglePinConversationAsync(selectedConversationId.Value);
+
+                if (result.IsSuccess)
+                {
+                    // Update state
+                    selectedConversationIsPinned = result.Value;
+
+                    // Update list
+                    var index = directConversations.FindIndex(c => c.Id == selectedConversationId.Value);
+                    if (index >= 0)
+                    {
+                        directConversations[index] = directConversations[index] with { IsPinned = result.Value };
+                        directConversations = new List<DirectConversationDto>(directConversations);
+                    }
+                }
+            }
+            // Channel
+            else if (!isDirectMessage && selectedChannelId.HasValue)
+            {
+                var result = await ChannelService.TogglePinChannelAsync(selectedChannelId.Value);
+
+                if (result.IsSuccess)
+                {
+                    // Update state
+                    selectedConversationIsPinned = result.Value;
+
+                    // Update list
+                    var index = channelConversations.FindIndex(c => c.Id == selectedChannelId.Value);
+                    if (index >= 0)
+                    {
+                        channelConversations[index] = channelConversations[index] with { IsPinned = result.Value };
+                        channelConversations = new List<ChannelDto>(channelConversations);
+                    }
+                }
+            }
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error toggling pin: {ex.Message}";
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Sidebar-dan Hide edildikdə çağrılır.
+    /// </summary>
+    private async Task HandleSidebarHide()
+    {
+        try
+        {
+            Result result;
+
+            // DM
+            if (isDirectMessage && selectedConversationId.HasValue)
+            {
+                result = await ConversationService.HideConversationAsync(selectedConversationId.Value);
+
+                if (result.IsSuccess)
+                {
+                    // Close conversation and sidebar
+                    CloseConversation();
+                }
+                else
+                {
+                    errorMessage = result.Error ?? "Failed to hide conversation";
+                    StateHasChanged();
+                }
+            }
+            // Channel
+            else if (!isDirectMessage && selectedChannelId.HasValue)
+            {
+                result = await ChannelService.HideChannelAsync(selectedChannelId.Value);
+
+                if (result.IsSuccess)
+                {
+                    // Close conversation and sidebar
+                    CloseConversation();
+                }
+                else
+                {
+                    errorMessage = result.Error ?? "Failed to hide channel";
+                    StateHasChanged();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error hiding: {ex.Message}";
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Sidebar-dan Leave edildikdə çağrılır (Channel only).
+    /// </summary>
+    private async Task HandleSidebarLeave()
+    {
+        try
+        {
+            if (selectedChannelId.HasValue)
+            {
+                var result = await ChannelService.LeaveChannelAsync(selectedChannelId.Value);
+
+                if (result.IsSuccess)
+                {
+                    // Close conversation and sidebar
+                    CloseConversation();
+                }
+                else
+                {
+                    errorMessage = result.Error ?? "Failed to leave channel";
+                    StateHasChanged();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error leaving channel: {ex.Message}";
+            StateHasChanged();
+        }
+    }
+
+    #endregion
 }

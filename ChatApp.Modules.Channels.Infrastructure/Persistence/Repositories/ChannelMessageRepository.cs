@@ -931,6 +931,12 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
             return readRecords.Count;
         }
 
+        public async Task<bool> HasMessagesAsync(Guid channelId, CancellationToken cancellationToken = default)
+        {
+            return await _context.ChannelMessages
+                .AnyAsync(m => m.ChannelId == channelId, cancellationToken);
+        }
+
         public async Task AddAsync(ChannelMessage message, CancellationToken cancellationToken = default)
         {
             await _context.ChannelMessages.AddAsync(message, cancellationToken);

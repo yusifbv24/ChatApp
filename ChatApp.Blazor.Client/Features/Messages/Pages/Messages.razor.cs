@@ -860,7 +860,6 @@ public partial class Messages : IAsyncDisposable
 
         dotNetReference?.Dispose();
 
-        // Finalizer-i suppress et (performans üçün)
         GC.SuppressFinalize(this);
     }
 

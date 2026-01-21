@@ -230,6 +230,8 @@ public partial class ConversationList : IAsyncDisposable
 
         public string? LastMessageStatus { get; set; }
 
+        public Guid? LastMessageId { get; set; }
+
         public bool IsNotes { get; set; }
 
         public string? LastMessageSenderAvatarUrl { get; set; }
@@ -374,6 +376,7 @@ public partial class ConversationList : IAsyncDisposable
             LastReadLaterMessageId = conv.LastReadLaterMessageId,
             IsMyLastMessage = conv.LastMessageSenderId == UserState.UserId,
             LastMessageStatus = conv.LastMessageStatus,
+            LastMessageId = conv.LastMessageId,
             IsNotes = conv.IsNotes,
             IsPinned = conv.IsPinned,
             IsMuted = conv.IsMuted,
@@ -409,6 +412,7 @@ public partial class ConversationList : IAsyncDisposable
             LastReadLaterMessageId = channel.LastReadLaterMessageId,
             IsMyLastMessage = channel.LastMessageSenderId == UserState.UserId,
             LastMessageStatus = channel.LastMessageStatus,
+            LastMessageId = channel.LastMessageId,
             LastMessageSenderAvatarUrl = channel.LastMessageSenderAvatarUrl,
             IsPinned = channel.IsPinned,
             IsMuted = channel.IsMuted,

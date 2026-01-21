@@ -214,9 +214,12 @@
                                 <button class="menu-item" @onclick="async () => { await ToggleMuteChannel(item.Id); CloseMoreMenu(); }">
                                     <span>@(item.IsMuted ? "Unmute" : "Mute")</span>
                                 </button>
-                                <button class="menu-item" @onclick="async () => { await HideChannel(item.Id); CloseMoreMenu(); }">
-                                    <span>Hide</span>
-                                </button>
+                                @if (item.LastMessageId.HasValue)
+                                {
+                                    <button class="menu-item" @onclick="async () => { await HideChannel(item.Id); CloseMoreMenu(); }">
+                                        <span>Hide</span>
+                                    </button>
+                                }
                                 <button class="menu-item" @onclick="CloseMoreMenu">
                                     <span>Leave</span>
                                 </button>
@@ -354,9 +357,12 @@
                                 </button>
                                 @if (!item.IsNotes)
                                 {
-                                    <button class="menu-item" @onclick="async () => { await HideConversation(item.Id); CloseMoreMenu(); }">
-                                        <span>Hide</span>
-                                    </button>
+                                    @if (item.LastMessageId.HasValue)
+                                    {
+                                        <button class="menu-item" @onclick="async () => { await HideConversation(item.Id); CloseMoreMenu(); }">
+                                            <span>Hide</span>
+                                        </button>
+                                    }
                                     <button class="menu-item" @onclick="CloseMoreMenu">
                                         <span>View profile</span>
                                     </button>

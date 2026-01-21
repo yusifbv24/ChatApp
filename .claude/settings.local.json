@@ -3,7 +3,8 @@
     "allow": [
       "Bash(for proj in ChatApp.Modules.Files.Api ChatApp.Modules.Notifications.Api ChatApp.Modules.Search.Api ChatApp.Modules.Settings.Api)",
       "Bash(timeout:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(dotnet build:*)"
     ],
     "deny": [],
     "ask": []

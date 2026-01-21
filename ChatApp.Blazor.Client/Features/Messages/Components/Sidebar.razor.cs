@@ -81,6 +81,12 @@ public partial class Sidebar
     /// </summary>
     [Parameter] public Guid? ChannelId { get; set; }
 
+    /// <summary>
+    /// Son mesajın ID-si (Hide button görünməsi üçün).
+    /// Əgər null-dursa, deməli mesaj yoxdur və Hide button göstərilməz.
+    /// </summary>
+    [Parameter] public Guid? LastMessageId { get; set; }
+
     #endregion
 
     #region Parameters - Counts
@@ -113,6 +119,34 @@ public partial class Sidebar
     /// Mute toggle callback-i.
     /// </summary>
     [Parameter] public EventCallback<bool> OnMuteToggle { get; set; }
+
+    #endregion
+
+    #region Parameters - Pin
+
+    /// <summary>
+    /// Pin edilib?
+    /// </summary>
+    [Parameter] public bool IsPinned { get; set; }
+
+    /// <summary>
+    /// Pin toggle callback-i.
+    /// </summary>
+    [Parameter] public EventCallback OnPinToggle { get; set; }
+
+    #endregion
+
+    #region Parameters - Hide/Leave
+
+    /// <summary>
+    /// Hide callback-i.
+    /// </summary>
+    [Parameter] public EventCallback OnHide { get; set; }
+
+    /// <summary>
+    /// Leave callback-i (Channel üçün).
+    /// </summary>
+    [Parameter] public EventCallback OnLeave { get; set; }
 
     #endregion
 
@@ -352,6 +386,14 @@ public partial class Sidebar
         }
     }
 
+    /// <summary>
+    /// Context menu-nu bağlayır.
+    /// </summary>
+    private void CloseContextMenu()
+    {
+        showContextMenu = false;
+    }
+
     #endregion
 
     #region Context Menu
@@ -524,12 +566,12 @@ public partial class Sidebar
     }
 
     /// <summary>
-    /// Pin handler (placeholder).
+    /// Pin/Unpin handler.
     /// </summary>
-    private void HandlePin()
+    private async Task HandlePin()
     {
         showContextMenu = false;
-        // TODO: Implement pin functionality
+        await OnPinToggle.InvokeAsync();
     }
 
     /// <summary>
@@ -560,21 +602,31 @@ public partial class Sidebar
     }
 
     /// <summary>
-    /// Hide handler (placeholder).
+    /// Mute/Unmute handler (context menu).
     /// </summary>
-    private void HandleHide()
+    private async Task HandleMute()
     {
         showContextMenu = false;
-        // TODO: Implement hide functionality
+        var newValue = !IsMuted;
+        await OnMuteToggle.InvokeAsync(newValue);
     }
 
     /// <summary>
-    /// Leave handler (placeholder).
+    /// Hide handler.
     /// </summary>
-    private void HandleLeave()
+    private async Task HandleHide()
     {
         showContextMenu = false;
-        // TODO: Implement leave functionality
+        await OnHide.InvokeAsync();
+    }
+
+    /// <summary>
+    /// Leave handler (Channel).
+    /// </summary>
+    private async Task HandleLeave()
+    {
+        showContextMenu = false;
+        await OnLeave.InvokeAsync();
     }
 
     #endregion
