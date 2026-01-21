@@ -2265,12 +2265,12 @@
 
 .submenu-right {
     left: 100%;
-    margin-left: 4px;
+    margin-left: -2px; /* Slight overlap to prevent gap on hover */
 }
 
 .submenu-left {
     right: 100%;
-    margin-right: 4px;
+    margin-right: -2px; /* Slight overlap to prevent gap on hover */
 }
 
 @keyframes fadeIn {
