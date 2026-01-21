@@ -209,12 +209,6 @@
                             <button class="menu-item" @onclick="HandlePin">
                                 <span>@(IsPinned ? "Unpin" : "Pin")</span>
                             </button>
-                            @if (!IsNotesConversation)
-                            {
-                                <button class="menu-item" @onclick="HandleMute">
-                                    <span>@(IsMuted ? "Unmute" : "Mute")</span>
-                                </button>
-                            }
                             @if (IsDirectMessage)
                             {
                                 <button class="menu-item" @onclick="HandleViewProfile">
@@ -232,6 +226,12 @@
                                 <button class="menu-item" @onclick="HandleAddMembers">
                                     <span>Add members</span>
                                 </button>
+                                @if (IsChannelAdminOrOwner)
+                                {
+                                    <button class="menu-item" @onclick="HandleEditChannel">
+                                        <span>Edit</span>
+                                    </button>
+                                }
                             }
                             @if (LastMessageId.HasValue)
                             {
@@ -241,8 +241,14 @@
                             }
                             @if (!IsDirectMessage)
                             {
-                                <button class="menu-item delete-item" @onclick="HandleLeave">
+                                <button class="menu-item @(IsChannelOwner ? "" : "delete-item")" @onclick="HandleLeave">
                                     <span>Leave</span>
+                                </button>
+                            }
+                            @if (!IsDirectMessage && IsChannelOwner)
+                            {
+                                <button class="menu-item delete-item" @onclick="HandleDeleteChannel">
+                                    <span>Delete</span>
                                 </button>
                             }
                         </div>

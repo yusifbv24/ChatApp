@@ -67,6 +67,11 @@ public partial class Sidebar
     /// </summary>
     [Parameter] public int MemberCount { get; set; }
 
+    /// <summary>
+    /// Cari istifadəçinin channel-dakı rolu.
+    /// </summary>
+    [Parameter] public ChannelMemberRole CurrentUserChannelRole { get; set; }
+
     #endregion
 
     #region Parameters - Tracking IDs
@@ -147,6 +152,16 @@ public partial class Sidebar
     /// Leave callback-i (Channel üçün).
     /// </summary>
     [Parameter] public EventCallback OnLeave { get; set; }
+
+    /// <summary>
+    /// Edit channel callback-i (Owner/Admin üçün).
+    /// </summary>
+    [Parameter] public EventCallback OnEditChannel { get; set; }
+
+    /// <summary>
+    /// Delete channel callback-i (Owner üçün).
+    /// </summary>
+    [Parameter] public EventCallback OnDeleteChannel { get; set; }
 
     #endregion
 
@@ -277,6 +292,16 @@ public partial class Sidebar
     /// Checkbox binding üçün safe boolean.
     /// </summary>
     private bool IsSoundEnabled => !IsMuted;
+
+    /// <summary>
+    /// Cari istifadəçi channel owner-dır?
+    /// </summary>
+    private bool IsChannelOwner => CurrentUserChannelRole == ChannelMemberRole.Owner;
+
+    /// <summary>
+    /// Cari istifadəçi channel admin və ya owner-dır?
+    /// </summary>
+    private bool IsChannelAdminOrOwner => CurrentUserChannelRole == ChannelMemberRole.Admin || CurrentUserChannelRole == ChannelMemberRole.Owner;
 
     /// <summary>
     /// Qruplanmış DM favorites - cache-lənmiş.
@@ -602,16 +627,6 @@ public partial class Sidebar
     }
 
     /// <summary>
-    /// Mute/Unmute handler (context menu).
-    /// </summary>
-    private async Task HandleMute()
-    {
-        showContextMenu = false;
-        var newValue = !IsMuted;
-        await OnMuteToggle.InvokeAsync(newValue);
-    }
-
-    /// <summary>
     /// Hide handler.
     /// </summary>
     private async Task HandleHide()
@@ -627,6 +642,24 @@ public partial class Sidebar
     {
         showContextMenu = false;
         await OnLeave.InvokeAsync();
+    }
+
+    /// <summary>
+    /// Edit channel handler (Admin/Owner).
+    /// </summary>
+    private async Task HandleEditChannel()
+    {
+        showContextMenu = false;
+        await OnEditChannel.InvokeAsync();
+    }
+
+    /// <summary>
+    /// Delete channel handler (Owner).
+    /// </summary>
+    private async Task HandleDeleteChannel()
+    {
+        showContextMenu = false;
+        await OnDeleteChannel.InvokeAsync();
     }
 
     #endregion

@@ -1369,5 +1369,25 @@ public partial class Messages
         }
     }
 
+    /// <summary>
+    /// Sidebar-dan Edit edildikdə çağrılır (Channel Owner/Admin only).
+    /// TODO: Channel edit functionality ilə replace ediləcək.
+    /// </summary>
+    private async Task HandleSidebarEditChannel()
+    {
+        // TODO: Implement channel edit functionality
+        await Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Sidebar-dan Delete edildikdə çağrılır (Channel Owner only).
+    /// TODO: Channel delete functionality ilə replace ediləcək.
+    /// </summary>
+    private async Task HandleSidebarDeleteChannel()
+    {
+        // TODO: Implement channel delete functionality
+        await Task.CompletedTask;
+    }
+
     #endregion
 }

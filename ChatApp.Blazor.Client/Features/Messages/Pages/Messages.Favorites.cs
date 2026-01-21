@@ -167,14 +167,6 @@ public partial class Messages
     }
 
     /// <summary>
-    /// Profile panel-ı bağla.
-    /// </summary>
-    private void CloseProfilePanel()
-    {
-        showProfilePanel = false;
-    }
-
-    /// <summary>
     /// Sidebar üçün favori mesajları yüklə.
     /// Sidebar açıldıqda çağrılır.
     /// </summary>

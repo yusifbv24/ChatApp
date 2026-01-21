@@ -124,6 +124,7 @@
                              IsNotesConversation="@isNotesConversation"
                              ChannelName="@selectedChannelName"
                              MemberCount="@selectedChannelMemberCount"
+                             CurrentUserChannelRole="@currentUserChannelRole"
                              ConversationId="@selectedConversationId"
                              ChannelId="@selectedChannelId"
                              LastMessageId="@(isDirectMessage ? directConversations.FirstOrDefault(c => c.Id == selectedConversationId)?.LastMessageId : channelConversations.FirstOrDefault(c => c.Id == selectedChannelId)?.LastMessageId)"
@@ -141,6 +142,8 @@
                              OnPinToggle="HandleSidebarPinToggle"
                              OnHide="HandleSidebarHide"
                              OnLeave="HandleSidebarLeave"
+                             OnEditChannel="HandleSidebarEditChannel"
+                             OnDeleteChannel="HandleSidebarDeleteChannel"
                              OnViewProfile="OpenProfilePanel"
                              OnClose="CloseSidebar" />
                 </div>
