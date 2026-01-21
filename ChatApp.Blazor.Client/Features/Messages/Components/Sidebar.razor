@@ -42,7 +42,7 @@
                         @foreach (var group in GroupedDirectFavorites)
                         {
                             <div class="favorites-date-divider">
-                                <span>@FormatFavoriteDate(group.Key)</span>
+                                <span>@FormatDate(group.Key)</span>
                             </div>
                             @foreach (var message in GetOrderedDirectMessages(group))
                             {
@@ -93,7 +93,7 @@
                         @foreach (var group in GroupedChannelFavorites)
                         {
                             <div class="favorites-date-divider">
-                                <span>@FormatFavoriteDate(group.Key)</span>
+                                <span>@FormatDate(group.Key)</span>
                             </div>
                             @foreach (var message in GetOrderedChannelMessages(group))
                             {
@@ -187,6 +187,58 @@
             </div>
         </div>
     }
+    else if (showChatsWithUserPanel)
+    {
+        <!-- Chats with User Panel -->
+        <div class="sidebar-favorites-panel">
+            <div class="sidebar-header-panel">
+                <div class="sidebar-header">
+                    <div class="sidebar-header-left">
+                        <button class="sidebar-close-btn" @onclick="HandleChatsWithUserPanelClose" @onclick:stopPropagation="true">
+                            <MudIcon Icon="@(chatsWithUserMode == "sidebar" ? Icons.Material.Filled.ArrowBack : Icons.Material.Filled.Close)" Size="Size.Small" />
+                        </button>
+                        <span class="sidebar-title">Chats with user</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar-favorites-content">
+                @if (isLoadingSharedChannels)
+                {
+                    <div class="favorites-loading">
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                    </div>
+                }
+                else if (SharedChannels == null || !SharedChannels.Any())
+                {
+                    <div class="favorites-empty">
+                        <MudIcon Icon="@Icons.Material.Outlined.Forum" Size="Size.Large" Class="favorites-empty-icon" />
+                        <span>No shared channels</span>
+                    </div>
+                }
+                else
+                {
+                    @foreach (var channel in SharedChannels)
+                    {
+                        <div class="shared-channel-item" @onclick="() => NavigateToSharedChannel(channel.Id)">
+                            <div class="shared-channel-avatar">
+                                <div class="shared-channel-avatar-placeholder" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(channel.Id);">
+                                    @StringHelper.GetInitials(channel.Name)
+                                </div>
+                            </div>
+                            <div class="shared-channel-info">
+                                <div class="shared-channel-name">@channel.Name</div>
+                                <div class="shared-channel-type">Group chat</div>
+                            </div>
+                            <div class="shared-channel-time">
+                                @FormatDate(channel.LastMessageAtUtc)
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    }
     else
     {
         <!-- Main Sidebar Content -->
@@ -216,8 +268,8 @@
                                 </button>
                                 @if (!IsNotesConversation)
                                 {
-                                    <button class="menu-item" @onclick="HandleFindChat">
-                                        <span>Find chat with this user</span>
+                                    <button class="menu-item" @onclick="HandleFindChatsWithUser">
+                                        <span>Find chats with this user</span>
                                     </button>
                                 }
                             }

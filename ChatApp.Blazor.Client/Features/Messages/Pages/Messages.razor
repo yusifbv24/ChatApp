@@ -19,7 +19,8 @@
                           OnNewChannel="OpenNewChannelDialog"
                           OnConversationMuteToggled="HandleConversationListMuteToggle"
                           OnConversationClosed="CloseConversation"
-                          OnChannelClosed="CloseConversation"/>
+                          OnChannelClosed="CloseConversation"
+                          OnFindChatsWithUser="HandleFindChatsWithUser"/>
     </div>
 
     <!-- Main Panel: Chat Area -->
@@ -117,7 +118,8 @@
             @if (showSidebar)
             {
                 <div class="messages-sidebar-panel @(showSearchPanel ? "hidden" : "")">
-                    <Sidebar IsDirectMessage="@isDirectMessage"
+                    <Sidebar @ref="sidebarRef"
+                             IsDirectMessage="@isDirectMessage"
                              RecipientId="@recipientUserId"
                              RecipientName="@recipientName"
                              RecipientAvatarUrl="@recipientAvatarUrl"
@@ -135,9 +137,12 @@
                              IsPinned="@selectedConversationIsPinned"
                              FavoriteDirectMessages="@sidebarFavoriteDirectMessages"
                              FavoriteChannelMessages="@sidebarFavoriteChannelMessages"
+                             SharedChannels="@sharedChannels"
                              OnLoadFavorites="LoadSidebarFavorites"
                              OnNavigateToMessage="NavigateToFavoriteMessage"
                              OnRemoveFromFavorites="HandleRemoveFromFavoritesInSidebar"
+                             OnLoadSharedChannels="LoadSharedChannels"
+                             OnNavigateToChannel="NavigateToSharedChannel"
                              OnMuteToggle="HandleSidebarMuteToggle"
                              OnPinToggle="HandleSidebarPinToggle"
                              OnHide="HandleSidebarHide"

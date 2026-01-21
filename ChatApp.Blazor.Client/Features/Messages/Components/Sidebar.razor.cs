@@ -206,6 +206,25 @@ public partial class Sidebar
     /// </summary>
     [Parameter] public EventCallback OnViewProfile { get; set; }
 
+    /// <summary>
+    /// Load shared channels callback-i.
+    /// </summary>
+    [Parameter] public EventCallback OnLoadSharedChannels { get; set; }
+
+    /// <summary>
+    /// Navigate to channel callback-i (shared channel-a klik edildikdə).
+    /// </summary>
+    [Parameter] public EventCallback<Guid> OnNavigateToChannel { get; set; }
+
+    #endregion
+
+    #region Parameters - Shared Channels Data
+
+    /// <summary>
+    /// Ortaq channel-lar (istifadəçi ilə shared channels).
+    /// </summary>
+    [Parameter] public List<ChannelDto>? SharedChannels { get; set; }
+
     #endregion
 
     #region Private Fields - UI State
@@ -231,9 +250,26 @@ public partial class Sidebar
     private bool showFilesPanel;
 
     /// <summary>
+    /// Chats with user panel görünürmü?
+    /// </summary>
+    private bool showChatsWithUserPanel;
+
+    /// <summary>
+    /// Chats with user panel modu.
+    /// "sidebar" = sidebar context menu-dan (geriyə qayıtma butonu)
+    /// "contextMenu" = conversation list more menu-dan (close butonu)
+    /// </summary>
+    private string chatsWithUserMode = "sidebar";
+
+    /// <summary>
     /// Favorites yüklənir?
     /// </summary>
     private bool isLoadingFavorites;
+
+    /// <summary>
+    /// Shared channels yüklənir?
+    /// </summary>
+    private bool isLoadingSharedChannels;
 
     /// <summary>
     /// Hover edilən mesajın ID-si.
@@ -393,6 +429,7 @@ public partial class Sidebar
         showFavoritesPanel = false;
         showLinksPanel = false;
         showFilesPanel = false;
+        showChatsWithUserPanel = false;
         showContextMenu = false;
         activeMenuMessageId = null;
         hoveredMessageId = null;
@@ -532,20 +569,68 @@ public partial class Sidebar
 
     #endregion
 
+    #region Chats With User Panel
+
+    private async Task HandleFindChatsWithUser()
+    {
+        showContextMenu = false;
+        await OpenChatsWithUserPanelInternal("sidebar");
+    }
+
+    public async Task OpenChatsWithUserPanelFromContextMenu()
+    {
+        await OpenChatsWithUserPanelInternal("contextMenu");
+    }
+
+    private async Task OpenChatsWithUserPanelInternal(string mode)
+    {
+        isLoadingSharedChannels = true;
+        showChatsWithUserPanel = true;
+        chatsWithUserMode = mode;
+        StateHasChanged();
+
+        await OnLoadSharedChannels.InvokeAsync();
+
+        isLoadingSharedChannels = false;
+        StateHasChanged();
+    }
+
+    private async Task HandleChatsWithUserPanelClose()
+    {
+        showChatsWithUserPanel = false;
+
+        if (chatsWithUserMode == "contextMenu")
+        {
+            await OnClose.InvokeAsync();
+        }
+    }
+
+    private async Task NavigateToSharedChannel(Guid channelId)
+    {
+        await OnNavigateToChannel.InvokeAsync(channelId);
+    }
+
+    #endregion
+
     #region Formatting
 
     /// <summary>
     /// Favorite tarixini formatlanır.
     /// "Today", "Yesterday", "January 5, 2024"
     /// </summary>
-    private static string FormatFavoriteDate(DateTime date)
+    private static string FormatDate(DateTime? dateTime)
     {
-        var today = DateTime.UtcNow.Date;
-        if (date == today)
-            return "Today";
-        if (date == today.AddDays(-1))
-            return "Yesterday";
-        return date.ToString("MMMM d, yyyy", CultureInfo.InvariantCulture);
+        if(!dateTime.HasValue) return string.Empty;
+
+        var now = DateTime.UtcNow;
+        var localDateTime = dateTime.Value.ToLocalTime();
+        var diff = now - dateTime;
+
+        if (diff.Value.TotalMinutes < 1) return "Now";
+        if (diff.Value.TotalHours < 1) return $"{(int)diff.Value.TotalMinutes}m";
+        if (localDateTime.Date == DateTime.Now.Date) return localDateTime.ToString("HH:mm");
+        if (diff.Value.TotalDays < 7) return localDateTime.ToString("ddd", CultureInfo.InvariantCulture);
+        return localDateTime.ToString("dd/MM/yy");
     }
 
     /// <summary>
@@ -606,15 +691,6 @@ public partial class Sidebar
     {
         showContextMenu = false;
         await OnViewProfile.InvokeAsync();
-    }
-
-    /// <summary>
-    /// Find chat handler (placeholder).
-    /// </summary>
-    private void HandleFindChat()
-    {
-        showContextMenu = false;
-        // TODO: Implement find chat functionality
     }
 
     /// <summary>

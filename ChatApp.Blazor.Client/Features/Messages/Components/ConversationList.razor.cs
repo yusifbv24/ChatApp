@@ -113,6 +113,12 @@ public partial class ConversationList : IAsyncDisposable
     /// </summary>
     [Parameter] public EventCallback OnChannelClosed { get; set; }
 
+    /// <summary>
+    /// "Find chats with this user" butonuna klik edildikdə callback.
+    /// Parameter: Guid conversationId
+    /// </summary>
+    [Parameter] public EventCallback<Guid> OnFindChatsWithUser { get; set; }
+
     #endregion
 
     #region Private Fields - UI State
@@ -1145,6 +1151,15 @@ public partial class ConversationList : IAsyncDisposable
             // Reload on exception
             await OnInitializedAsync();
         }
+    }
+
+    /// <summary>
+    /// "Find chats with this user" handler.
+    /// </summary>
+    private async Task HandleFindChatsWithUser(Guid conversationId)
+    {
+        CloseMoreMenu();
+        await OnFindChatsWithUser.InvokeAsync(conversationId);
     }
 
     #endregion

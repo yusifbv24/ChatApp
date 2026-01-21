@@ -366,7 +366,7 @@
                                     <button class="menu-item" @onclick="CloseMoreMenu">
                                         <span>View profile</span>
                                     </button>
-                                    <button class="menu-item" @onclick="CloseMoreMenu">
+                                    <button class="menu-item" @onclick="() => HandleFindChatsWithUser(item.Id)">
                                         <span>Find chats with this user</span>
                                     </button>
                                 }

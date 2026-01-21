@@ -1,4 +1,5 @@
 using ChatApp.Blazor.Client.Models.Common;
+using ChatApp.Blazor.Client.Models.Messages;
 
 namespace ChatApp.Blazor.Client.Features.Messages.Pages;
 
@@ -253,6 +254,72 @@ public partial class Messages
             errorMessage = $"Error removing from favorites: {ex.Message}";
             StateHasChanged();
         }
+    }
+
+    private async Task LoadSharedChannels()
+    {
+        try
+        {
+            if (!isDirectMessage || recipientUserId == Guid.Empty)
+            {
+                sharedChannels = null;
+                return;
+            }
+
+            // TODO: Backend API əlavə edildikdə buradan istifadə et
+            // var result = await ChannelService.GetSharedChannelsAsync(recipientUserId);
+
+            var shared = new List<ChannelDto>();
+
+            foreach (var channel in channelConversations)
+            {
+                var detailsResult = await ChannelService.GetChannelAsync(channel.Id);
+                if (detailsResult.IsSuccess && detailsResult.Value?.Members != null &&
+                    detailsResult.Value.Members.Any(m => m.UserId == recipientUserId))
+                {
+                    shared.Add(channel);
+                }
+            }
+
+            sharedChannels = shared;
+        }
+        catch
+        {
+            sharedChannels = null;
+        }
+    }
+
+    private async Task NavigateToSharedChannel(Guid channelId)
+    {
+        var channel = channelConversations.FirstOrDefault(c => c.Id == channelId);
+        if (channel != null)
+        {
+            await SelectChannel(channel);
+        }
+    }
+
+    private async Task HandleFindChatsWithUser(Guid conversationId)
+    {
+        var conversation = directConversations.FirstOrDefault(c => c.Id == conversationId);
+        if (conversation == null) return;
+
+        bool isAlreadySelected = selectedConversationId == conversationId && showSidebar;
+
+        if (!isAlreadySelected)
+        {
+            await SelectDirectConversation(conversation);
+            showSidebar = true;
+            StateHasChanged();
+            await Task.Yield();
+        }
+
+        await InvokeAsync(async () =>
+        {
+            if (sidebarRef != null)
+            {
+                await sidebarRef.OpenChatsWithUserPanelFromContextMenu();
+            }
+        });
     }
 
     #endregion

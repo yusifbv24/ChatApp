@@ -1,5 +1,6 @@
 using ChatApp.Blazor.Client.Features.Auth.Services;
 using ChatApp.Blazor.Client.Features.Files.Services;
+using ChatApp.Blazor.Client.Features.Messages.Components;
 using ChatApp.Blazor.Client.Features.Messages.Services;
 using ChatApp.Blazor.Client.Infrastructure.SignalR;
 using ChatApp.Blazor.Client.Models.Auth;
@@ -610,6 +611,16 @@ public partial class Messages : IAsyncDisposable
     /// Sidebar channel favori mesajları.
     /// </summary>
     private List<FavoriteChannelMessageDto>? sidebarFavoriteChannelMessages;
+
+    /// <summary>
+    /// Shared channels (ortaq channel-lar - "Chats with user" paneli üçün).
+    /// </summary>
+    private List<ChannelDto>? sharedChannels;
+
+    /// <summary>
+    /// Sidebar component referansı.
+    /// </summary>
+    private Sidebar? sidebarRef;
 
     #endregion
 
