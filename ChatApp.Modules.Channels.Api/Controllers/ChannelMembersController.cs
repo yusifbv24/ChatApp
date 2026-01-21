@@ -155,10 +155,10 @@ namespace ChatApp.Modules.Channels.Api.Controllers
 
 
         /// <summary>
-        /// Leave a channel (current user)
+        /// Leave a channel (for user)
         /// </summary>
         [HttpPost("leave")]
-        [RequirePermission("Groups.Manage")]
+        [RequirePermission("Groups.Read")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
