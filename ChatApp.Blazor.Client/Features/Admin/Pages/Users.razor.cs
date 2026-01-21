@@ -220,7 +220,7 @@ public partial class Users
                 // Read file into memory immediately to avoid Blazor reference issues
                 using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
                 var buffer = new byte[file.Size];
-                await stream.ReadAsync(buffer);
+                await stream.ReadExactlyAsync(buffer, 0, buffer.Length);
 
                 // Store file data in memory
                 selectedAvatarFileData = buffer;
@@ -417,7 +417,7 @@ public partial class Users
                 // Read file into memory immediately to avoid Blazor reference issues
                 using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
                 var buffer = new byte[file.Size];
-                await stream.ReadAsync(buffer);
+                await stream.ReadExactlyAsync(buffer, 0, buffer.Length);
 
                 // Store file data in memory
                 editAvatarFileData = buffer;

@@ -28,8 +28,7 @@ namespace ChatApp.Modules.Notifications.Application.Commands.MarkNotificationAsR
 
 
     public class MarkNotificationAsReadCommandHandler(
-        IUnitOfWork unitOfWork,
-        ILogger<MarkNotificationAsReadCommandHandler> logger) : IRequestHandler<MarkNotificationAsReadCommand, Result>
+        IUnitOfWork unitOfWork) : IRequestHandler<MarkNotificationAsReadCommand, Result>
     {
         public async Task<Result> Handle(
             MarkNotificationAsReadCommand request,

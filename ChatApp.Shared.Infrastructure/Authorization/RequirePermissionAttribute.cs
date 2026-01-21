@@ -34,6 +34,6 @@ namespace ChatApp.Shared.Infrastructure.Authorization
         /// <summary>
         /// The permissions required for this endpoint
         /// </summary>
-        public string[] Permissions => Policy.Split(',', StringSplitOptions.RemoveEmptyEntries);
+        public string[] Permissions => Policy?.Split(',', StringSplitOptions.RemoveEmptyEntries) ?? [];
     }
 }
