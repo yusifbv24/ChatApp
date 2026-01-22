@@ -623,7 +623,9 @@ public partial class Messages
         if (message.ReadByCount >= otherMembersCount && otherMembersCount > 0)
             return MessageStatus.Read;
 
-        if (message.ReadByCount > 0)
+        // CRITICAL FIX: Only show Delivered if there are other members to deliver to
+        // If channel has only 1 member (sender), keep status as Sent
+        if (message.ReadByCount > 0 && otherMembersCount > 0)
             return MessageStatus.Delivered;
 
         return MessageStatus.Sent;

@@ -1292,6 +1292,7 @@ public partial class Messages
 
     /// <summary>
     /// Sidebar-dan Hide edildikdə çağrılır.
+    /// CRITICAL FIX: Hide olduqdan sonra conversation/channel list-dən silinir.
     /// </summary>
     private async Task HandleSidebarHide()
     {
@@ -1302,10 +1303,19 @@ public partial class Messages
             // DM
             if (isDirectMessage && selectedConversationId.HasValue)
             {
-                result = await ConversationService.HideConversationAsync(selectedConversationId.Value);
+                var conversationId = selectedConversationId.Value;
+                result = await ConversationService.HideConversationAsync(conversationId);
 
                 if (result.IsSuccess)
                 {
+                    // CRITICAL FIX: Remove from list before closing
+                    var index = directConversations.FindIndex(c => c.Id == conversationId);
+                    if (index >= 0)
+                    {
+                        directConversations.RemoveAt(index);
+                        directConversations = new List<DirectConversationDto>(directConversations);
+                    }
+
                     // Close conversation and sidebar
                     CloseConversation();
                 }
@@ -1318,10 +1328,19 @@ public partial class Messages
             // Channel
             else if (!isDirectMessage && selectedChannelId.HasValue)
             {
-                result = await ChannelService.HideChannelAsync(selectedChannelId.Value);
+                var channelId = selectedChannelId.Value;
+                result = await ChannelService.HideChannelAsync(channelId);
 
                 if (result.IsSuccess)
                 {
+                    // CRITICAL FIX: Remove from list before closing
+                    var index = channelConversations.FindIndex(c => c.Id == channelId);
+                    if (index >= 0)
+                    {
+                        channelConversations.RemoveAt(index);
+                        channelConversations = new List<ChannelDto>(channelConversations);
+                    }
+
                     // Close conversation and sidebar
                     CloseConversation();
                 }
