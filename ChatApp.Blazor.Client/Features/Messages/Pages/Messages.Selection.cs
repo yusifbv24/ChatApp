@@ -65,6 +65,9 @@ public partial class Messages
         directMessages.Clear();
         channelMessages.Clear();
 
+        // Close sidebar if open
+        showSidebar = false;
+
         StateHasChanged();
     }
 
