@@ -275,11 +275,11 @@
                             }
                             else
                             {
-                                <button class="menu-item" @onclick="HandleAddMembers">
-                                    <span>Add members</span>
-                                </button>
                                 @if (IsChannelAdminOrOwner)
                                 {
+                                    <button class="menu-item" @onclick="HandleAddMembers">
+                                        <span>Add members</span>
+                                    </button>
                                     <button class="menu-item" @onclick="HandleEditChannel">
                                         <span>Edit</span>
                                     </button>
