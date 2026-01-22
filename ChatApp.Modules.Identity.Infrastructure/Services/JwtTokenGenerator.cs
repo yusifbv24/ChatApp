@@ -17,19 +17,20 @@ namespace ChatApp.Modules.Identity.Infrastructure.Services
             var secret = jwtSettings["Secret"] ?? throw new InvalidOperationException("JWT Secret not configured");
             var issuer = jwtSettings["Issuer"] ?? "ChatApp";
             var audience = jwtSettings["Audience"] ?? "ChatApp";
-            var expirationHours = int.Parse(jwtSettings["AccessTokenExpirationHours"] ?? "8");
+            var expirationMinutes = int.Parse(jwtSettings["AccessTokenExpirationMinutes"] ?? "30");
 
             var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
             var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
             var claims = new List<Claim>
             {
-                new(JwtRegisteredClaimNames.Sub,user.Id.ToString()),
-                new(JwtRegisteredClaimNames.UniqueName,user.Username),
-                new(JwtRegisteredClaimNames.GivenName,user.DisplayName),
-                new(JwtRegisteredClaimNames.Email,user.Email),
-                new(JwtRegisteredClaimNames.Jti,Guid.NewGuid().ToString()),
-                new("isAdmin",user.IsAdmin.ToString())
+                new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+                new(JwtRegisteredClaimNames.Email, user.Email),
+                new(JwtRegisteredClaimNames.GivenName, user.FirstName),
+                new(JwtRegisteredClaimNames.FamilyName, user.LastName),
+                new(JwtRegisteredClaimNames.Name, user.FullName),
+                new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                new("role", user.Role.ToString())
             };
 
             if (permissions is not null)
@@ -48,7 +49,7 @@ namespace ChatApp.Modules.Identity.Infrastructure.Services
                 issuer: issuer,
                 audience: audience,
                 claims: claims,
-                expires: DateTime.UtcNow.AddHours(expirationHours),
+                expires: DateTime.UtcNow.AddMinutes(expirationMinutes),
                 signingCredentials: credentials);
 
             return new JwtSecurityTokenHandler().WriteToken(token);

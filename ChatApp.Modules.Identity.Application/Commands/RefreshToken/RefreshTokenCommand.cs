@@ -1,5 +1,8 @@
-﻿using ChatApp.Modules.Identity.Application.DTOs.Responses;
+using ChatApp.Modules.Identity.Application.DTOs.Responses;
 using ChatApp.Modules.Identity.Application.Interfaces;
+using ChatApp.Modules.Identity.Domain.Constants;
+using ChatApp.Modules.Identity.Domain.Entities;
+using ChatApp.Modules.Identity.Domain.Enums;
 using ChatApp.Modules.Identity.Domain.Services;
 using ChatApp.Shared.Kernel.Common;
 using MediatR;
@@ -9,91 +12,119 @@ using Microsoft.Extensions.Logging;
 
 namespace ChatApp.Modules.Identity.Application.Commands.RefreshToken
 {
-    public record RefreshTokenCommand(
-        string RefreshToken
-    ) : IRequest<Result<RefreshTokenResponse>>;
-
-
+    public record RefreshTokenCommand(string RefreshToken) : IRequest<Result<RefreshTokenResponse>>;
 
     public class RefreshTokenCommandHandler(
         IUnitOfWork unitOfWork,
         ITokenGenerator tokenGenerator,
         ILogger<RefreshTokenCommand> logger,
-        IConfiguration configuration) : IRequestHandler<RefreshTokenCommand,Result<RefreshTokenResponse>>
+        IConfiguration configuration) : IRequestHandler<RefreshTokenCommand, Result<RefreshTokenResponse>>
     {
+        private const int DefaultAccessTokenExpirationMinutes = 30;
+        private const int DefaultRefreshTokenExpirationDays = 30;
+
         public async Task<Result<RefreshTokenResponse>> Handle(
             RefreshTokenCommand request,
             CancellationToken cancellationToken = default)
         {
             try
             {
-                logger?.LogInformation("Refresh token request received");
+                logger.LogInformation("Refresh token request received");
 
                 var refreshToken = await unitOfWork.RefreshTokens
-                   .FirstOrDefaultAsync(
-                    x=>x.Token==request.RefreshToken,
-                    cancellationToken);
+                    .FirstOrDefaultAsync(rt => rt.Token == request.RefreshToken, cancellationToken);
 
-                if(refreshToken==null || !refreshToken.IsValid())
+                if (refreshToken is null || !refreshToken.IsValid())
                 {
-                    logger?.LogInformation("Invalid or expired refresh token");
+                    logger?.LogWarning("Invalid or expired refresh token");
                     return Result.Failure<RefreshTokenResponse>("Invalid or expired refresh token");
                 }
 
-                var user = await unitOfWork.Users
-                    .Include(u => u.UserRoles)
-                    .FirstOrDefaultAsync(r => r.Id == refreshToken.UserId, cancellationToken);
+                var user = await FindUserWithPermissionsAsync(refreshToken.UserId, cancellationToken);
 
-                if(user==null || !user.IsActive)
+                if (user is null || !user.IsActive)
                 {
-                    logger?.LogWarning("User not found or inactive for refresh token");
+                    logger.LogWarning("User {UserId} not found or inactive", refreshToken.UserId);
                     return Result.Failure<RefreshTokenResponse>("User not found or inactive");
                 }
 
-                // Get ONLY role-based permissions (no more direct user permissions)
-                var permissions = await unitOfWork.UserRoles
-                    .Where(ur => ur.UserId == user.Id)
-                    .Include(ur => ur.Role)
-                        .ThenInclude(r => r.RolePermissions)
-                            .ThenInclude(rp => rp.Permission)
-                    .SelectMany(ur => ur.Role.RolePermissions.Select(rp => rp.Permission.Name))
-                    .Distinct()
-                    .ToListAsync(cancellationToken);
+                var permissions = await GetUserPermissionsAsync(user, cancellationToken);
 
-                // Get token expiration settings from configuration
-                var accessTokenExpirationMinutes = configuration.GetValue<int>("JwtSettings:AccessTokenExpirationMinutes", 30);
+                var (newAccessToken, newRefreshToken) = await RegenerateTokensAsync(
+                    user,
+                    permissions,
+                    refreshToken,
+                    cancellationToken);
 
-                // Generate new tokens
-                var newAccessToken = tokenGenerator.GenerateAccessToken(user, permissions);
-                var newRefreshToken = tokenGenerator.GenerateRefreshToken();
+                var accessTokenExpiration = GetAccessTokenExpirationMinutes();
 
-                // Revoke old refresh token
-                refreshToken.Revoke();
-                unitOfWork.RefreshTokens.Update(refreshToken);
+                logger?.LogInformation("Tokens refreshed successfully for user {UserId}", user.Id);
 
-                // Save new refresh token with the same expiration as the old one
-                var newRefreshTokenEntity = new Domain.Entities.RefreshToken(
-                    user.Id,
-                    newRefreshToken,
-                    refreshToken.ExpiresAtUtc);
-
-                await unitOfWork.RefreshTokens.AddAsync(newRefreshTokenEntity, cancellationToken);
-                await unitOfWork.SaveChangesAsync(cancellationToken);
-
-                logger?.LogInformation("Tokens refreshed succesfully for user {UserId}", user.Id);
-
-                return Result.Success(new RefreshTokenResponse
-                (
+                return Result.Success(new RefreshTokenResponse(
                     newAccessToken,
                     newRefreshToken,
-                    accessTokenExpirationMinutes * 60 // Convert minutes to seconds
-               ));
+                    accessTokenExpiration * 60)); // Convert to seconds
             }
             catch (Exception ex)
             {
-                logger?.LogError(ex, "Error during token refresh");
-                return Result.Failure<RefreshTokenResponse>("An error occurred during token refresh");
+                logger.LogError(ex, "Error refreshing token");
+                return Result.Failure<RefreshTokenResponse>("An error occurred while refreshing the token");
             }
         }
+
+        private async Task<User?> FindUserWithPermissionsAsync(
+            Guid userId,
+            CancellationToken cancellationToken)
+        {
+            return await unitOfWork.Users
+                .Include(u => u.UserPermissions)
+                .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+        }
+
+        private Task<List<string>> GetUserPermissionsAsync(
+            User user,
+            CancellationToken cancellationToken)
+        {
+            // Administrators have ALL permissions
+            if (user.Role == Role.Administrator)
+            {
+                return Task.FromResult(Permissions.GetAll().ToList());
+            }
+
+            // Regular users have only their individual permissions
+            return Task.FromResult(user.UserPermissions
+                .Select(up => up.PermissionName)
+                .ToList());
+        }
+
+        private async Task<(string AccessToken, string RefreshToken)> RegenerateTokensAsync(
+            User user,
+            List<string> permissions,
+            Domain.Entities.RefreshToken oldRefreshToken,
+            CancellationToken cancellationToken)
+        {
+            var newAccessToken = tokenGenerator.GenerateAccessToken(user, permissions);
+            var newRefreshTokenValue = tokenGenerator.GenerateRefreshToken();
+
+            // Revoke old token
+            oldRefreshToken.Revoke();
+
+            // Create new refresh token
+            var newRefreshToken = new Domain.Entities.RefreshToken(
+                user.Id,
+                newRefreshTokenValue,
+                DateTime.UtcNow.AddDays(GetRefreshTokenExpirationDays()));
+
+            await unitOfWork.RefreshTokens.AddAsync(newRefreshToken, cancellationToken);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+
+            return (newAccessToken, newRefreshTokenValue);
+        }
+
+        private int GetAccessTokenExpirationMinutes() =>
+            configuration.GetValue("JwtSettings:AccessTokenExpirationMinutes", DefaultAccessTokenExpirationMinutes);
+
+        private int GetRefreshTokenExpirationDays() =>
+            configuration.GetValue("JwtSettings:RefreshTokenExpirationDays", DefaultRefreshTokenExpirationDays);
     }
 }

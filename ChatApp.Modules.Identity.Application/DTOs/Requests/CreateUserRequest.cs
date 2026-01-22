@@ -1,13 +1,18 @@
-﻿namespace ChatApp.Modules.Identity.Application.DTOs.Requests
+using ChatApp.Modules.Identity.Domain.Enums;
+
+namespace ChatApp.Modules.Identity.Application.DTOs.Requests
 {
     public record CreateUserRequest(
-        string Username,
+        string FirstName,
+        string LastName,
         string Email,
         string Password,
-        string DisplayName,
-        Guid CreatedBy,
-        List<Guid> RoleIds,
-        string? AvatarUrl,
-        string? Notes
+        Role Role = Role.User,
+        Guid? PositionId = null,
+        string? AvatarUrl = null,
+        string? AboutMe = null,
+        DateTime? DateOfBirth = null,
+        string? WorkPhone = null,
+        DateTime? HiringDate = null
     );
 }

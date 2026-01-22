@@ -43,18 +43,17 @@ namespace ChatApp.Modules.Identity.Api.Controllers
             [FromBody] LoginRequest request,
             CancellationToken cancellationToken)
         {
-            _logger?.LogInformation("Login request for username: {Username}", request.Username);
+            _logger?.LogInformation("Login request for email: {Email}", request.Email);
 
-            var command = new LoginCommand(request.Username, request.Password);
+            var command = new LoginCommand(request.Email, request.Password, request.RememberMe);
             var result = await _mediator.Send(command, cancellationToken);
 
             if (result.IsFailure)
                 return BadRequest(new { error = result.Error });
 
             // Set HttpOnly cookies for tokens (XSS-proof)
-            SetAuthCookies(result.Value!.AccessToken, result.Value.RefreshToken, result.Value.ExpiresIn);
+            SetAuthCookies(result.Value!.AccessToken, result.Value.RefreshToken, result.Value.ExpiresIn, result.Value.RememberMe);
 
-            _logger?.LogInformation("User {Username} logged in successfully", request.Username);
             return Ok(new { success = true, message = "Login successful" });
         }
 
@@ -78,7 +77,8 @@ namespace ChatApp.Modules.Identity.Api.Controllers
                 return BadRequest(new { error = result.Error });
 
             // Set new HttpOnly cookies with rotated tokens
-            SetAuthCookies(result.Value!.AccessToken, result.Value.RefreshToken, result.Value.ExpiresIn);
+            // Use rememberMe=true for refresh operations to maintain persistent session
+            SetAuthCookies(result.Value!.AccessToken, result.Value.RefreshToken, result.Value.ExpiresIn, rememberMe: true);
 
             return Ok(new { message = "Token refreshed successfully" });
         }
@@ -87,7 +87,7 @@ namespace ChatApp.Modules.Identity.Api.Controllers
 
         [HttpGet("me")]
         [Authorize]
-        [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(UserDetailDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> GetCurrentUser(CancellationToken cancellationToken)
         {
@@ -163,7 +163,7 @@ namespace ChatApp.Modules.Identity.Api.Controllers
         /// <summary>
         /// Sets HttpOnly authentication cookies (XSS-proof)
         /// </summary>
-        private void SetAuthCookies(string accessToken, string refreshToken, int expiresIn)
+        private void SetAuthCookies(string accessToken, string refreshToken, int expiresIn, bool rememberMe)
         {
             var isProduction = !_isDevelopment;
             var refreshTokenExpirationDays = _configuration.GetValue<int>("JwtSettings:RefreshTokenExpirationDays", 30);
@@ -181,12 +181,14 @@ namespace ChatApp.Modules.Identity.Api.Controllers
             Response.Cookies.Append("accessToken", accessToken, accessTokenOptions);
 
             // Set refresh token cookie
+            // If RememberMe is true, cookie persists for configured days
+            // If RememberMe is false, cookie is session-only (expires when browser closes)
             var refreshTokenOptions = new CookieOptions
             {
                 HttpOnly = true,
                 Secure = isProduction,
                 SameSite = isProduction ? SameSiteMode.None : SameSiteMode.Lax,
-                Expires = DateTimeOffset.UtcNow.AddDays(refreshTokenExpirationDays),
+                Expires = rememberMe ? DateTimeOffset.UtcNow.AddDays(refreshTokenExpirationDays) : null,
                 Path = "/"
             };
 

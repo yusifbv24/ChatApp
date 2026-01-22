@@ -1,4 +1,5 @@
-﻿using ChatApp.Modules.Identity.Application.Interfaces;
+using ChatApp.Modules.Identity.Application.Interfaces;
+using ChatApp.Modules.Identity.Domain.Enums;
 using ChatApp.Shared.Kernel.Common;
 using ChatApp.Shared.Kernel.Exceptions;
 using FluentValidation;
@@ -10,50 +11,75 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
 {
     public record UpdateUserCommand(
         Guid UserId,
+        string? FirstName,
+        string? LastName,
         string? Email,
-        string? DisplayName,
-        string? Notes,
-        string? AvatarUrl
+        Role? Role,
+        Guid? PositionId,
+        string? AvatarUrl,
+        string? AboutMe,
+        DateTime? DateOfBirth,
+        string? WorkPhone,
+        DateTime? HiringDate
     ) : IRequest<Result>;
-
-
 
     public class UpdateUserCommandValidator : AbstractValidator<UpdateUserCommand>
     {
         public UpdateUserCommandValidator()
         {
             RuleFor(x => x.UserId)
-                .NotEmpty().WithMessage("User ID is required to update user");
+                .NotEmpty().WithMessage("User ID is required");
 
-            When(x => !string.IsNullOrWhiteSpace(x.DisplayName), () =>
+            When(x => !string.IsNullOrWhiteSpace(x.FirstName), () =>
             {
-                RuleFor(x => x.DisplayName)
-                    .MinimumLength(2).WithMessage("Display name must be at least 2 characters")
-                    .MaximumLength(100).WithMessage("Display name must not exceed 100 chacters");
+                RuleFor(x => x.FirstName)
+                    .MinimumLength(2).WithMessage("First name must be at least 2 characters")
+                    .MaximumLength(100).WithMessage("First name must not exceed 100 characters");
+            });
+
+            When(x => !string.IsNullOrWhiteSpace(x.LastName), () =>
+            {
+                RuleFor(x => x.LastName)
+                    .MinimumLength(2).WithMessage("Last name must be at least 2 characters")
+                    .MaximumLength(100).WithMessage("Last name must not exceed 100 characters");
             });
 
             When(x => !string.IsNullOrWhiteSpace(x.Email), () =>
             {
                 RuleFor(x => x.Email)
-                    .NotEmpty().WithMessage("Email is required")
-                    .MaximumLength(255).WithMessage("Email must not exceed 255 characters")
-                    .EmailAddress().WithMessage("Invalid email format");
+                    .EmailAddress().WithMessage("Invalid email format")
+                    .MaximumLength(255).WithMessage("Email must not exceed 255 characters");
             });
 
-            When(x => !string.IsNullOrWhiteSpace(x.Notes), () =>
+            When(x => x.Role.HasValue, () =>
             {
-                RuleFor(x => x.Notes)
-                    .MaximumLength(1000).WithMessage("Notes must not exceed 1000 characters");
+                RuleFor(x => x.Role)
+                    .IsInEnum().WithMessage("Invalid role");
+            });
+
+            When(x => !string.IsNullOrWhiteSpace(x.AboutMe), () =>
+            {
+                RuleFor(x => x.AboutMe)
+                    .MaximumLength(2000).WithMessage("About me must not exceed 2000 characters");
+            });
+
+            When(x => !string.IsNullOrWhiteSpace(x.AvatarUrl), () =>
+            {
+                RuleFor(x => x.AvatarUrl)
+                    .MaximumLength(500).WithMessage("Avatar URL must not exceed 500 characters");
+            });
+
+            When(x => !string.IsNullOrWhiteSpace(x.WorkPhone), () =>
+            {
+                RuleFor(x => x.WorkPhone)
+                    .MaximumLength(50).WithMessage("Work phone must not exceed 50 characters");
             });
         }
     }
 
-
-
-
     public class UpdateUserCommandHandler(
         IUnitOfWork unitOfWork,
-        ILogger<UpdateUserCommand> logger) : IRequestHandler<UpdateUserCommand,Result>
+        ILogger<UpdateUserCommand> logger) : IRequestHandler<UpdateUserCommand, Result>
     {
         public async Task<Result> Handle(
             UpdateUserCommand request,
@@ -61,70 +87,93 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
         {
             try
             {
-                logger?.LogInformation("Updating user {UserId}", request.UserId);
+                logger.LogInformation("Updating user {UserId}", request.UserId);
 
                 var user = await unitOfWork.Users
-                    .FirstOrDefaultAsync(r=>r.Id==request.UserId, cancellationToken) 
-                        ?? throw new NotFoundException($"User with ID {request.UserId} not found");
+                    .FirstOrDefaultAsync(u => u.Id == request.UserId, cancellationToken);
 
-
-                // Check if user is trying to update email and if it's already taken by another user
-                if (!string.IsNullOrWhiteSpace(request.Email) && request.Email != user.Email)
+                if (user is null)
                 {
-                    var emailExists= await unitOfWork.Users.AnyAsync(
-                        u => u.Email == request.Email && u.Id != request.UserId,
-                        cancellationToken);
-
-                    if (emailExists)
-                    {
-                        logger?.LogWarning("Email {Email} is already taken by another user ", request.Email);
-                        return Result.Failure("Email is already in use by another user");
-                    }
-
-                    user.UpdateEmail(request.Email);
-                    logger?.LogInformation("User {UserId} updated email to {Email}", request.UserId, request.Email);
+                    logger.LogWarning("User {UserId} not found", request.UserId);
+                    throw new NotFoundException($"User with ID {request.UserId} not found");
                 }
 
-                // Check if display name is already taken by another user
-                if (!string.IsNullOrWhiteSpace(request.DisplayName) && request.DisplayName != user.DisplayName)
-                {
-                    var displayNameExists = await unitOfWork.Users.AnyAsync(
-                        u => u.DisplayName == request.DisplayName && u.Id != request.UserId,
-                        cancellationToken);
+                await ValidateAndUpdateEmailAsync(user, request.Email, request.UserId, cancellationToken);
+                UpdateUserFields(user, request);
 
-                    if (displayNameExists)
-                    {
-                        logger?.LogWarning("Display name {DisplayName} is already taken by another user", request.DisplayName);
-                        return Result.Failure("Display name is already in use by another user");
-                    }
-
-                    user.ChangeDisplayName(request.DisplayName);
-                    logger?.LogInformation("User {UserId} updated display name to {DisplayName}", request.UserId, request.DisplayName);
-                }
-
-
-                // Always update notes, even if empty/null (to allow clearing notes)
-                user.UpdateNotes(request.Notes);
-
-                // Update avatar URL (allow null to clear avatar)
-                user.UpdateAvatarUrl(request.AvatarUrl);
-
-                unitOfWork.Users.Update(user);
                 await unitOfWork.SaveChangesAsync(cancellationToken);
 
-                logger?.LogInformation("User {UserId} updated successfully", request.UserId);
+                logger.LogInformation("User {UserId} updated successfully", request.UserId);
                 return Result.Success();
             }
-            catch (NotFoundException ex)
+            catch (NotFoundException)
             {
-                logger?.LogError(ex, "User {UserId} not found", request.UserId);
-                return Result.Failure(ex.Message);
+                throw;
             }
             catch (Exception ex)
             {
-                logger?.LogError(ex, "Error updating user {UserId}", request.UserId);
-                return Result.Failure(ex.Message);
+                logger.LogError(ex, "Error updating user {UserId}", request.UserId);
+                return Result.Failure("An error occurred while updating the user");
             }
+        }
+
+        private async Task ValidateAndUpdateEmailAsync(
+            Domain.Entities.User user,
+            string? newEmail,
+            Guid userId,
+            CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(newEmail) || newEmail == user.Email)
+                return;
+
+            var emailExists = await unitOfWork.Users.AnyAsync(
+                u => u.Email == newEmail && u.Id != userId,
+                cancellationToken);
+
+            if (emailExists)
+            {
+                logger.LogWarning("Email {Email} is already taken by another user", newEmail);
+                throw new InvalidOperationException($"Email {newEmail} is already in use");
+            }
+
+            user.UpdateEmail(newEmail);
+        }
+
+        private static void UpdateUserFields(Domain.Entities.User user, UpdateUserCommand request)
+        {
+            if (!string.IsNullOrWhiteSpace(request.FirstName) && !string.IsNullOrWhiteSpace(request.LastName))
+            {
+                user.UpdateName(request.FirstName, request.LastName);
+            }
+            else if (!string.IsNullOrWhiteSpace(request.FirstName))
+            {
+                user.UpdateName(request.FirstName, user.LastName);
+            }
+            else if (!string.IsNullOrWhiteSpace(request.LastName))
+            {
+                user.UpdateName(user.FirstName, request.LastName);
+            }
+
+            if (request.Role.HasValue)
+                user.ChangeRole(request.Role.Value);
+
+            if (request.PositionId.HasValue)
+                user.AssignToPosition(request.PositionId);
+
+            if (request.AvatarUrl is not null)
+                user.UpdateAvatarUrl(request.AvatarUrl);
+
+            if (request.AboutMe is not null)
+                user.UpdateAboutMe(request.AboutMe);
+
+            if (request.DateOfBirth.HasValue)
+                user.UpdateDateOfBirth(request.DateOfBirth);
+
+            if (request.WorkPhone is not null)
+                user.UpdateWorkPhone(request.WorkPhone);
+
+            if (request.HiringDate.HasValue)
+                user.UpdateHiringDate(request.HiringDate);
         }
     }
 }

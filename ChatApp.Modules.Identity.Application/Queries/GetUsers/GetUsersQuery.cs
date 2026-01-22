@@ -1,4 +1,4 @@
-﻿using ChatApp.Modules.Identity.Application.DTOs.Responses;
+using ChatApp.Modules.Identity.Application.DTOs.Responses;
 using ChatApp.Modules.Identity.Application.Interfaces;
 using ChatApp.Shared.Kernel.Common;
 using MediatR;
@@ -7,59 +7,50 @@ using Microsoft.Extensions.Logging;
 
 namespace ChatApp.Modules.Identity.Application.Queries.GetUsers
 {
-    public record GetUsersQuery(
-        int PageNumber,
-        int PageSize
-    ):IRequest<Result<List<UserDto>>>;
-
+    public record GetUsersQuery(int PageNumber, int PageSize) : IRequest<Result<List<UserListItemDto>>>;
 
     public class GetUsersQueryHandler(
         IUnitOfWork unitOfWork,
-        ILogger<GetUsersQueryHandler> logger) : IRequestHandler<GetUsersQuery, Result<List<UserDto>>>
+        ILogger<GetUsersQueryHandler> logger) : IRequestHandler<GetUsersQuery, Result<List<UserListItemDto>>>
     {
-        public async Task<Result<List<UserDto>>> Handle(
+        private const int MaxPageSize = 100;
+
+        public async Task<Result<List<UserListItemDto>>> Handle(
             GetUsersQuery query,
             CancellationToken cancellationToken = default)
         {
             try
             {
+                var pageSize = Math.Min(query.PageSize, MaxPageSize);
+                var skip = (query.PageNumber - 1) * pageSize;
+
                 var users = await unitOfWork.Users
-                    .Include(u=>u.UserRoles)
-                        .ThenInclude(u=>u.Role)
-                    .Skip((query.PageNumber-1)*query.PageSize)
-                    .Take(query.PageSize)
+                    .Include(u => u.Department)
+                    .Include(u => u.Position)
+                    .OrderByDescending(u => u.CreatedAtUtc)
+                    .Skip(skip)
+                    .Take(pageSize)
+                    .Select(u => new UserListItemDto(
+                        u.Id,
+                        u.FirstName,
+                        u.LastName,
+                        u.Email,
+                        u.Role.ToString(),
+                        u.Position != null ? u.Position.Name : null,
+                        u.AvatarUrl,
+                        u.IsActive,
+                        u.Position != null && u.Position.Name == "CEO",
+                        u.Department != null ? u.Department.Name : null,
+                        u.CreatedAtUtc))
                     .AsNoTracking()
                     .ToListAsync(cancellationToken);
 
-                var userDtos = users.Select(u => new UserDto(
-                        u.Id,
-                        u.Username,
-                        u.Email,
-                        u.DisplayName,
-                        u.AvatarUrl,
-                        u.Notes,
-                        u.CreatedBy,
-                        u.IsActive,
-                        u.IsAdmin,
-                        u.CreatedAtUtc,
-                        u.UserRoles.Select(ur=>new RoleDto(
-                            ur.Role.Id,
-                            ur.Role.Name,
-                            ur.Role.Description,
-                            ur.Role.IsSystemRole,
-                            [],
-                            0,
-                            ur.Role.CreatedAtUtc
-                        )).ToList()
-                    ))
-                    .ToList();
-
-                return Result.Success(userDtos);
+                return Result.Success(users);
             }
             catch (Exception ex)
             {
-                logger?.LogError(ex, "Error retrieving users");
-                return Result.Failure<List<UserDto>>("An error occurred while retrieving users");
+                logger.LogError(ex, "Error retrieving users page {PageNumber}", query.PageNumber);
+                return Result.Failure<List<UserListItemDto>>("An error occurred while retrieving users");
             }
         }
     }

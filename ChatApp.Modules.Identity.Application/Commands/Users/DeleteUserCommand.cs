@@ -46,9 +46,9 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
                 unitOfWork.Users.Remove(user);
                 await unitOfWork.SaveChangesAsync(cancellationToken);
 
-                await eventBus.PublishAsync(new UserDeletedEvent(user.Id, user.Username), cancellationToken);
+                await eventBus.PublishAsync(new UserDeletedEvent(user.Id, user.Email), cancellationToken);
 
-                logger?.LogInformation("User {UserId} deleted successfully", request.UserId);
+                logger?.LogInformation("User {Email} deleted successfully", user.Email);
 
                 return Result.Success();
             }

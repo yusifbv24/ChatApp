@@ -51,14 +51,17 @@ namespace ChatApp.Modules.Identity.Api.Controllers
 
             // Create a new command
             var command = new CreateUserCommand(
-                request.Username,
+                request.FirstName,
+                request.LastName,
                 request.Email,
                 request.Password,
-                request.DisplayName,
-                request.CreatedBy,
-                request.RoleIds,
+                request.Role,
+                request.PositionId,
                 request.AvatarUrl,
-                request.Notes);
+                request.AboutMe,
+                request.DateOfBirth,
+                request.WorkPhone,
+                request.HiringDate);
 
             var result = await _mediator.Send(command, cancellationToken);
 
@@ -79,7 +82,7 @@ namespace ChatApp.Modules.Identity.Api.Controllers
         /// Any authenticated user can search for other users (for messaging purposes)
         /// </summary>
         [HttpGet("search")]
-        [ProducesResponseType(typeof(List<UserDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(List<UserSearchResultDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> SearchUsers(
@@ -88,7 +91,7 @@ namespace ChatApp.Modules.Identity.Api.Controllers
         {
             if (string.IsNullOrWhiteSpace(searchTerm) || searchTerm.Length < 2)
             {
-                return Ok(new List<UserDto>());
+                return Ok(new List<UserSearchResultDto>());
             }
 
             var result = await _mediator.Send(new SearchUsersQuery(searchTerm), cancellationToken);
@@ -98,7 +101,7 @@ namespace ChatApp.Modules.Identity.Api.Controllers
 
             // Exclude current user from results
             var currentUserId = GetCurrentUserId();
-            var filteredUsers = result.Value?.Where(u => u.Id != currentUserId).ToList() ?? new List<UserDto>();
+            var filteredUsers = result.Value?.Where(u => u.Id != currentUserId).ToList() ?? new List<UserSearchResultDto>();
 
             return Ok(filteredUsers);
         }
@@ -109,7 +112,7 @@ namespace ChatApp.Modules.Identity.Api.Controllers
         /// This endpoint does not require any permissions - any authenticated user can view their own profile
         /// </summary>
         [HttpGet("me")]
-        [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(UserDetailDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> GetCurrentUser(CancellationToken cancellationToken)
@@ -153,10 +156,16 @@ namespace ChatApp.Modules.Identity.Api.Controllers
 
             var command = new UpdateUserCommand(
                 userId,
+                request.FirstName,
+                request.LastName,
                 request.Email,
-                request.DisplayName,
-                request.Notes,
-                request.AvatarUrl);
+                request.Role,
+                request.PositionId,
+                request.AvatarUrl,
+                request.AboutMe,
+                request.DateOfBirth,
+                request.WorkPhone,
+                request.HiringDate);
 
             var result = await _mediator.Send(command, cancellationToken);
 
@@ -243,7 +252,7 @@ namespace ChatApp.Modules.Identity.Api.Controllers
         /// </summary>
         [HttpGet("{userId:guid}")]
         [RequirePermission("Users.Read")]
-        [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(UserDetailDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -269,7 +278,7 @@ namespace ChatApp.Modules.Identity.Api.Controllers
         /// </summary>
         [HttpGet]
         [RequirePermission("Users.Read")]
-        [ProducesResponseType(typeof(List<UserDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(List<UserListItemDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -311,10 +320,16 @@ namespace ChatApp.Modules.Identity.Api.Controllers
         {
             var command = new UpdateUserCommand(
                 userId,
+                request.FirstName,
+                request.LastName,
                 request.Email,
-                request.DisplayName,
-                request.Notes,
-                request.AvatarUrl);
+                request.Role,
+                request.PositionId,
+                request.AvatarUrl,
+                request.AboutMe,
+                request.DateOfBirth,
+                request.WorkPhone,
+                request.HiringDate);
 
             var result = await _mediator.Send(command, cancellationToken);
 
@@ -401,68 +416,6 @@ namespace ChatApp.Modules.Identity.Api.Controllers
             return Ok(new { message = "User deleted successfully" });
         }
 
-
-
-
-        /// <summary>
-        /// Assigns a role to a user
-        /// </summary>
-        [HttpPost("{userId:guid}/roles/{roleId:guid}")]
-        [RequirePermission("Users.Update")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        public async Task<IActionResult> AssignRole(
-            [FromRoute] Guid userId,
-            [FromRoute] Guid roleId,
-            CancellationToken cancellationToken)
-        {
-            _logger?.LogInformation("Assigning role {RoleId} to user {UserId}", roleId, userId);
-
-            var assignedBy = GetCurrentUserId();
-            if (assignedBy == Guid.Empty)
-                return Unauthorized();
-
-            var result = await _mediator.Send(
-                new AssignRoleCommand(userId, roleId, assignedBy),
-                cancellationToken);
-
-            if (result.IsFailure)
-                return BadRequest(new { error = result.Error });
-
-            return Ok(new { message = "Role assigned successfully" });
-        }
-
-
-
-        /// <summary>
-        /// Removes a role from a user
-        /// </summary>
-        [HttpDelete("{userId:guid}/roles/{roleId:guid}")]
-        [RequirePermission("Users.Update")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        public async Task<IActionResult> RemoveRole(
-            [FromRoute] Guid userId,
-            [FromRoute] Guid roleId,
-            CancellationToken cancellationToken)
-        {
-            _logger?.LogInformation("Removing role {RoleId} from user {UserId}", roleId, userId);
-
-            var result = await _mediator.Send(
-                new RemoveRoleCommand(userId, roleId),
-                cancellationToken);
-
-            if (result.IsFailure)
-                return BadRequest(new { error = result.Error });
-
-            return Ok(new { message = "Role removed successfully" });
-        }
 
 
 

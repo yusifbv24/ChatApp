@@ -1,16 +1,16 @@
-﻿using ChatApp.Shared.Kernel.Common;
+using ChatApp.Shared.Kernel.Common;
 
 namespace ChatApp.Modules.Identity.Domain.Events
 {
-    public record UserDeletedEvent:DomainEvent
+    public record UserDeletedEvent : DomainEvent
     {
         public Guid UserId { get; }
-        public string UserName { get; }
+        public string Email { get; }
 
-        public UserDeletedEvent(Guid userId,string username)
+        public UserDeletedEvent(Guid userId, string email)
         {
-            UserId= userId;
-            UserName= username;
+            UserId = userId;
+            Email = email;
         }
     }
 }

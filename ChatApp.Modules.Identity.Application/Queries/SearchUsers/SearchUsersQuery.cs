@@ -7,13 +7,15 @@ using Microsoft.Extensions.Logging;
 
 namespace ChatApp.Modules.Identity.Application.Queries.SearchUsers;
 
-public record SearchUsersQuery(string SearchTerm) : IRequest<Result<List<UserDto>>>;
+public record SearchUsersQuery(string SearchTerm) : IRequest<Result<List<UserSearchResultDto>>>;
 
 public class SearchUsersQueryHandler(
     IUnitOfWork unitOfWork,
-    ILogger<SearchUsersQueryHandler> logger) : IRequestHandler<SearchUsersQuery, Result<List<UserDto>>>
+    ILogger<SearchUsersQueryHandler> logger) : IRequestHandler<SearchUsersQuery, Result<List<UserSearchResultDto>>>
 {
-    public async Task<Result<List<UserDto>>> Handle(
+    private const int MaxResults = 20;
+
+    public async Task<Result<List<UserSearchResultDto>>> Handle(
         SearchUsersQuery query,
         CancellationToken cancellationToken = default)
     {
@@ -21,40 +23,33 @@ public class SearchUsersQueryHandler(
         {
             if (string.IsNullOrWhiteSpace(query.SearchTerm) || query.SearchTerm.Length < 2)
             {
-                return Result.Success(new List<UserDto>());
+                return Result.Success(new List<UserSearchResultDto>());
             }
 
             var searchTerm = query.SearchTerm.ToLower();
 
             var users = await unitOfWork.Users
                 .Where(u => u.IsActive &&
-                    (u.Username.ToLower().Contains(searchTerm) ||
-                     u.DisplayName.ToLower().Contains(searchTerm)))
-                .Take(20)
+                    (u.FirstName.ToLower().Contains(searchTerm) ||
+                     u.LastName.ToLower().Contains(searchTerm) ||
+                     u.Email.ToLower().Contains(searchTerm)))
+                .Select(u => new UserSearchResultDto(
+                    u.Id,
+                    u.FirstName,
+                    u.LastName,
+                    u.Email,
+                    u.AvatarUrl,
+                    u.Position != null ? u.Position.Name : null))
+                .Take(MaxResults)
                 .AsNoTracking()
                 .ToListAsync(cancellationToken);
 
-            var userDtos = users.Select(u => new UserDto(
-                    u.Id,
-                    u.Username,
-                    u.Email,
-                    u.DisplayName,
-                    u.AvatarUrl,
-                    u.Notes,
-                    u.CreatedBy,
-                    u.IsActive,
-                    u.IsAdmin,
-                    u.CreatedAtUtc,
-                    []
-                ))
-                .ToList();
-
-            return Result.Success(userDtos);
+            return Result.Success(users);
         }
         catch (Exception ex)
         {
-            logger?.LogError(ex, "Error searching users with term: {SearchTerm}", query.SearchTerm);
-            return Result.Failure<List<UserDto>>("An error occurred while searching users");
+            logger.LogError(ex, "Error searching users with term: {SearchTerm}", query.SearchTerm);
+            return Result.Failure<List<UserSearchResultDto>>("An error occurred while searching users");
         }
     }
 }
