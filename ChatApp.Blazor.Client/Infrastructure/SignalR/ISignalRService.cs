@@ -48,6 +48,7 @@ public interface ISignalRService
 
     // Channel membership events
     event Action<ChannelDto>? OnAddedToChannel;
+    event Action<Guid, Guid, string>? OnMemberLeftChannel;  // channelId, leftUserId, leftUserDisplayName
 
 
     // Connection management

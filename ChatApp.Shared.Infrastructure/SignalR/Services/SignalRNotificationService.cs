@@ -367,6 +367,25 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Services
             }
         }
 
+        public async Task NotifyMemberLeftChannelAsync(Guid channelId, Guid leftUserId, string leftUserDisplayName)
+        {
+            _logger?.LogDebug("Broadcasting member left to channel {ChannelId} group. Left user: {LeftUserId}",
+                channelId, leftUserId);
+
+            var notification = new
+            {
+                channelId,
+                leftUserId,
+                leftUserDisplayName
+            };
+
+            // Send only to channel group (no hybrid pattern needed)
+            // Members who left the group won't need this notification
+            await _hubContext.Clients
+                .Group($"channel_{channelId}")
+                .SendAsync("MemberLeftChannel", notification);
+        }
+
 
         public async Task NotifyUserTypingInChannelToMembersAsync(Guid channelId, List<Guid> memberUserIds, Guid typingUserId, string displayName, bool isTyping)
         {

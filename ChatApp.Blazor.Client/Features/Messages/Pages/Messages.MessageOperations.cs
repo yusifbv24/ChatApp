@@ -1340,32 +1340,45 @@ public partial class Messages
     }
 
     /// <summary>
-    /// Sidebar-dan Leave edildikdə çağrılır (Channel only).
+    /// Channel-dan leave edilir (More Menu və ya Sidebar).
     /// </summary>
-    private async Task HandleSidebarLeave()
+    private async Task HandleChannelLeave(Guid channelId)
     {
         try
         {
-            if (selectedChannelId.HasValue)
-            {
-                var result = await ChannelService.LeaveChannelAsync(selectedChannelId.Value);
+            var result = await ChannelService.LeaveChannelAsync(channelId);
 
-                if (result.IsSuccess)
+            if (result.IsSuccess)
+            {
+                // Əgər ayrılan channel hal-hazırda seçilibsə, bağla
+                if (selectedChannelId.HasValue && selectedChannelId.Value == channelId)
                 {
-                    // Close conversation and sidebar
                     CloseConversation();
                 }
-                else
-                {
-                    errorMessage = result.Error ?? "Failed to leave channel";
-                    StateHasChanged();
-                }
+
+                // Channel list-dən silmə SignalR tərəfindən handle olunur (HandleMemberLeftChannel)
+            }
+            else
+            {
+                errorMessage = result.Error ?? "Failed to leave channel";
+                StateHasChanged();
             }
         }
         catch (Exception ex)
         {
             errorMessage = $"Error leaving channel: {ex.Message}";
             StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Sidebar-dan Leave edildikdə çağrılır (Channel only).
+    /// </summary>
+    private async Task HandleSidebarLeave()
+    {
+        if (selectedChannelId.HasValue)
+        {
+            await HandleChannelLeave(selectedChannelId.Value);
         }
     }
 

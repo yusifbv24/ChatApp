@@ -62,6 +62,7 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
 
     // Channel membership events
     public event Action<ChannelDto>? OnAddedToChannel;
+    public event Action<Guid, Guid, string>? OnMemberLeftChannel;
 
     public async Task InitializeAsync()
     {
@@ -395,6 +396,27 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
                 {
                     OnAddedToChannel?.Invoke(channel);
                 }
+            }
+            catch
+            {
+                // Silently handle deserialization errors
+            }
+        }));
+
+        // Channel membership - when a member leaves a channel
+        _subscriptions.Add(hubConnection.On<object>("MemberLeftChannel", notificationObj =>
+        {
+            try
+            {
+                var json = JsonSerializer.Serialize(notificationObj);
+                using var doc = JsonDocument.Parse(json);
+                var root = doc.RootElement;
+
+                var channelId = root.GetProperty("channelId").GetGuid();
+                var leftUserId = root.GetProperty("leftUserId").GetGuid();
+                var leftUserDisplayName = root.GetProperty("leftUserDisplayName").GetString() ?? "";
+
+                OnMemberLeftChannel?.Invoke(channelId, leftUserId, leftUserDisplayName);
             }
             catch
             {

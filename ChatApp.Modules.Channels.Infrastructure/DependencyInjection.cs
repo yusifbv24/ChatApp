@@ -1,5 +1,6 @@
 ﻿using ChatApp.Modules.Channels.Application.Behaviors;
 using ChatApp.Modules.Channels.Application.Commands.Channels;
+using ChatApp.Modules.Channels.Application.Events;
 using ChatApp.Modules.Channels.Application.Interfaces;
 using ChatApp.Modules.Channels.Infrastructure.Persistence;
 using ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories;
@@ -50,6 +51,9 @@ namespace ChatApp.Modules.Channels.Infrastructure
 
             // Add validation behavior to MediatR pipeline
             services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+
+            // Register event handlers
+            services.AddScoped<MemberRemovedEventHandler>();
 
             return services;
         }

@@ -119,6 +119,12 @@ public partial class ConversationList : IAsyncDisposable
     /// </summary>
     [Parameter] public EventCallback<Guid> OnFindChatsWithUser { get; set; }
 
+    /// <summary>
+    /// Channel leave edildiyi zaman callback (More menu Leave button).
+    /// Parameter: Guid channelId
+    /// </summary>
+    [Parameter] public EventCallback<Guid> OnChannelLeave { get; set; }
+
     #endregion
 
     #region Private Fields - UI State

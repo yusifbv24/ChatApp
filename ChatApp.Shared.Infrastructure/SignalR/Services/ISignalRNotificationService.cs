@@ -123,6 +123,12 @@
         /// </summary>
         Task NotifyMemberAddedToChannelAsync(Guid userId, object channelDto);
 
+        /// <summary>
+        /// Notify channel members that a member has left the channel
+        /// Sends only to channel group (no hybrid pattern needed)
+        /// </summary>
+        Task NotifyMemberLeftChannelAsync(Guid channelId, Guid leftUserId, string leftUserDisplayName);
+
 
         /// <summary>
         /// Notify channel members about typing indicator (hybrid: group + direct connections)

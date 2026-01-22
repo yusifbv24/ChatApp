@@ -49,7 +49,8 @@ public partial class Messages
         SignalRService.OnUserOffline += HandleUserOffline; // İstifadəçi offline oldu
 
         // Channel membership event-ləri
-        SignalRService.OnAddedToChannel += HandleAddedToChannel; // Sizi channel-ə əlavə etdilər
+        SignalRService.OnAddedToChannel += HandleAddedToChannel;       // Sizi channel-ə əlavə etdilər
+        SignalRService.OnMemberLeftChannel += HandleMemberLeftChannel; // Member channel-dan ayrıldı
 
         // KRITIK: Bağlantı kəsildikdən sonra yenidən qoşulduqda group-lara rejoin olmaq lazımdır
         SignalRService.OnReconnected += HandleSignalRReconnected;
@@ -79,6 +80,7 @@ public partial class Messages
         SignalRService.OnChannelMessageReactionsUpdated -= HandleReactionToggledChannel;
         SignalRService.OnChannelMessagesRead -= HandleChannelMessagesRead;
         SignalRService.OnAddedToChannel -= HandleAddedToChannel;
+        SignalRService.OnMemberLeftChannel -= HandleMemberLeftChannel;
         SignalRService.OnReconnected -= HandleSignalRReconnected;
     }
 
@@ -1082,6 +1084,58 @@ public partial class Messages
                 newList.AddRange(channelConversations);
                 channelConversations = newList;
                 StateHasChanged();
+            }
+        });
+    }
+
+    /// <summary>
+    /// Bir member channel-dan ayrıldıqda çağrılır (leave və ya remove).
+    /// Channel list-dən channel silinir və aktiv seçim varsa bağlanır.
+    /// </summary>
+    private void HandleMemberLeftChannel(Guid channelId, Guid leftUserId, string leftUserDisplayName)
+    {
+        InvokeAsync(() =>
+        {
+            // Ayrılan user özümüzsə - channel list-dən siləcəyik
+            if (leftUserId == currentUserId)
+            {
+                // Channel list-dən sil
+                var channelIndex = channelConversations.FindIndex(c => c.Id == channelId);
+                if (channelIndex >= 0)
+                {
+                    channelConversations.RemoveAt(channelIndex);
+                    // Yeni list yaradırıq ki cache invalidate olsun
+                    channelConversations = new List<ChannelDto>(channelConversations);
+                }
+
+                // Əgər hal-hazırda bu channel seçilibsə, bağla
+                if (selectedChannelId.HasValue && selectedChannelId.Value == channelId)
+                {
+                    CloseConversation(); // Bu method sidebar-ı da bağlayacaq
+                }
+
+                StateHasChanged();
+            }
+            else
+            {
+                // Başqa member ayrılıbsa, member count-u azalt
+                var channelIndex = channelConversations.FindIndex(c => c.Id == channelId);
+                if (channelIndex >= 0)
+                {
+                    var channel = channelConversations[channelIndex];
+                    var newMemberCount = Math.Max(0, channel.MemberCount - 1);
+                    channelConversations[channelIndex] = channel with { MemberCount = newMemberCount };
+                    // Yeni list yaradırıq ki cache invalidate olsun
+                    channelConversations = new List<ChannelDto>(channelConversations);
+
+                    // Əgər bu channel hal-hazırda seçilibsə, selectedChannelMemberCount-u da yenilə
+                    if (selectedChannelId.HasValue && selectedChannelId.Value == channelId)
+                    {
+                        selectedChannelMemberCount = newMemberCount;
+                    }
+
+                    StateHasChanged();
+                }
             }
         });
     }

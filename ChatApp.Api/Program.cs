@@ -1,5 +1,7 @@
 using ChatApp.Api.Seeder;
 using ChatApp.Modules.Channels.Api.Controllers;
+using ChatApp.Modules.Channels.Application.Events;
+using ChatApp.Modules.Channels.Domain.Events;
 using ChatApp.Modules.Channels.Infrastructure;
 using ChatApp.Modules.Channels.Infrastructure.Persistence;
 using ChatApp.Modules.DirectMessages.Api.Controllers;
@@ -305,7 +307,15 @@ using (var scope = app.Services.CreateScope())
         {
             using var handlerScope = app.Services.CreateScope();
             var handler = handlerScope.ServiceProvider.GetRequiredService<UserCreatedEventHandler>();
-            await handler.HandleAsync(@event); 
+            await handler.HandleAsync(@event);
+        });
+
+        // Subscribe MemberRemovedEvent to notify channel members via SignalR
+        eventBus.Subscribe<MemberRemovedEvent>(async (@event) =>
+        {
+            using var handlerScope = app.Services.CreateScope();
+            var handler = handlerScope.ServiceProvider.GetRequiredService<MemberRemovedEventHandler>();
+            await handler.HandleAsync(@event);
         });
 
         logger.LogInformation("Event subscriptions registered successfully");

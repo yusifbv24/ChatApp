@@ -220,7 +220,7 @@
                                         <span>Hide</span>
                                     </button>
                                 }
-                                <button class="menu-item" @onclick="CloseMoreMenu">
+                                <button class="menu-item" @onclick="async () => { await OnChannelLeave.InvokeAsync(item.Id); CloseMoreMenu(); }">
                                     <span>Leave</span>
                                 </button>
                             </div>
