@@ -295,16 +295,10 @@ public partial class Messages
                 var existingIndex = channelMessages.FindIndex(m => m.Id == message.Id && !m.TempId.HasValue);
 
                 // FIX: Calculate correct status based on ReadByCount (prevents race condition overwrites)
-                static MessageStatus CalculateChannelStatus(ChannelMessageDto msg)
-                {
-                    var total = msg.TotalMemberCount;
-                    if (total == 0) return MessageStatus.Sent;
-                    if (msg.ReadByCount >= total) return MessageStatus.Read;
-                    if (msg.ReadByCount > 0) return MessageStatus.Delivered;
-                    return MessageStatus.Sent;
-                }
-
-                var correctStatus = CalculateChannelStatus(message);
+                // CRITICAL FIX: Use real-time member count (consolidated with CalculateChannelMessageStatus)
+                var currentChannel = channelConversations.FirstOrDefault(c => c.Id == message.ChannelId);
+                var realTimeMemberCount = currentChannel?.MemberCount;
+                var correctStatus = CalculateChannelMessageStatus(message, realTimeMemberCount);
 
                 if (pendingIndex >= 0)
                 {
@@ -788,9 +782,11 @@ public partial class Messages
                         {
                             newReadBy.Add(userId);
 
-                            // FIX: Calculate and update Status enum based on read count
+                            // FIX: Calculate Status using real-time channel member count instead of static TotalMemberCount
+                            // TotalMemberCount is snapshot from backend, but member count changes when users leave
                             var newReadByCount = newReadBy.Count;
-                            var totalMembers = message.TotalMemberCount;
+                            var currentChannel = channelConversations.FirstOrDefault(c => c.Id == channelId);
+                            var totalMembers = currentChannel != null ? currentChannel.MemberCount - 1 : message.TotalMemberCount;
                             MessageStatus newStatus;
 
                             if (totalMembers == 0)

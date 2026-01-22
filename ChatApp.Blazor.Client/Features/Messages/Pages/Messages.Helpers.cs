@@ -602,8 +602,9 @@ public partial class Messages
     /// <summary>
     /// Channel message üçün status hesabla.
     /// CRITICAL FIX: Status initial load-da hesablanmalıdır.
+    /// CRITICAL FIX: Real-time channel member count istifadə edilir (TotalMemberCount snapshot-dır və dəyişməz).
     /// </summary>
-    private MessageStatus CalculateChannelMessageStatus(ChannelMessageDto message)
+    private MessageStatus CalculateChannelMessageStatus(ChannelMessageDto message, int? realTimeMemberCount = null)
     {
         // Başqası göndəribsə - status göstərilmir
         if (message.SenderId != currentUserId)
@@ -613,8 +614,11 @@ public partial class Messages
         if (message.ReadByCount == 0)
             return MessageStatus.Sent;
 
-        // TotalMemberCount-1 çünki özümü saymamalıyıq
-        var otherMembersCount = message.TotalMemberCount > 0 ? message.TotalMemberCount - 1 : 0;
+        // CRITICAL FIX: Use real-time member count if available (fixes "Read → Delivered" bug when members leave)
+        // TotalMemberCount is a snapshot from when message was sent and doesn't update if members leave
+        // Real-time count from channelConversations reflects current member count
+        var totalMembers = realTimeMemberCount ?? message.TotalMemberCount;
+        var otherMembersCount = totalMembers > 0 ? totalMembers - 1 : 0;
 
         if (message.ReadByCount >= otherMembersCount && otherMembersCount > 0)
             return MessageStatus.Read;
@@ -647,13 +651,26 @@ public partial class Messages
     /// <summary>
     /// Channel messages list-də hər bir mesajın status-unu hesabla və təyin et.
     /// CRITICAL FIX: API-dən gələn mesajlarda status olmur, hesablamalıyıq.
+    /// CRITICAL FIX: Real-time channel member count istifadə edilir (member leave problemi).
     /// </summary>
     private void CalculateChannelMessageStatuses(List<ChannelMessageDto> messages)
     {
+        // CRITICAL FIX: Get real-time member count for selected channel
+        // This ensures status is calculated correctly even if members have left since message was sent
+        int? realTimeMemberCount = null;
+        if (selectedChannelId.HasValue)
+        {
+            var currentChannel = channelConversations.FirstOrDefault(c => c.Id == selectedChannelId.Value);
+            if (currentChannel != null)
+            {
+                realTimeMemberCount = currentChannel.MemberCount;
+            }
+        }
+
         for (int i = 0; i < messages.Count; i++)
         {
             var message = messages[i];
-            var calculatedStatus = CalculateChannelMessageStatus(message);
+            var calculatedStatus = CalculateChannelMessageStatus(message, realTimeMemberCount);
 
             // Əgər status default value-dan fərqlidirsə, yenilə
             if (message.Status != calculatedStatus)
