@@ -84,7 +84,7 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence
         }
 
         /// <summary>
-        /// Creates the initial default users (System Administrator)
+        /// Creates the initial default users (CEO and System Administrator)
         /// These are essential for initial system access
         /// </summary>
         private static async Task SeedDefaultUsersAsync(IdentityDbContext context, IPasswordHasher passwordHasher, ILogger logger)
@@ -97,8 +97,39 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence
 
             logger?.LogInformation("Seeding default users...");
 
-            // 1. System Administrator (no specific position)
-            var adminUserId = Guid.Parse("00000000-0000-0000-0000-000000000001");
+            // Get CEO position
+            var ceoPosition = await context.Positions.FirstOrDefaultAsync(p => p.Name == "CEO");
+            if (ceoPosition == null)
+            {
+                logger?.LogError("CEO position not found. Cannot create CEO user.");
+                throw new InvalidOperationException("CEO position must be seeded before users");
+            }
+
+            // 1. CEO User
+            var ceoUserId = Guid.Parse("00000000-0000-0000-0000-000000000001");
+            var ceoUser = new User(
+                firstName: "Yusif",
+                lastName: "Baghiyev",
+                email: "ceo@chatapp.com",
+                passwordHash: passwordHasher.Hash("Yusif2000+"),
+                role: Role.Administrator,
+                avatarUrl: null,
+                aboutMe: "Chief Executive Officer",
+                dateOfBirth: new DateTime(2000, 1, 1),
+                workPhone: null,
+                hiringDate: DateTime.UtcNow
+            )
+            {
+                Id = ceoUserId
+            };
+
+            // Assign CEO position
+            ceoUser.AssignToPosition(ceoPosition.Id);
+
+            await context.Users.AddAsync(ceoUser);
+
+            // 2. System Administrator (no specific position)
+            var adminUserId = Guid.Parse("00000000-0000-0000-0000-000000000002");
             var adminUser = new User(
                 firstName: "System",
                 lastName: "Administrator",
@@ -117,9 +148,10 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence
 
             await context.Users.AddAsync(adminUser);
 
-            logger?.LogInformation("Seeded 1 default user:");
+            logger?.LogInformation("Seeded 2 default users:");
+            logger?.LogInformation("  - CEO: ceo@chatapp.com");
             logger?.LogInformation("  - System Administrator: admin@chatapp.com");
-            logger?.LogWarning("SECURITY: Remember to change default password after first login!");
+            logger?.LogWarning("SECURITY: Remember to change default passwords after first login!");
         }
     }
 }

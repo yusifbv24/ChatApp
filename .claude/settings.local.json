@@ -1,15 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(for proj in ChatApp.Modules.Files.Api ChatApp.Modules.Notifications.Api ChatApp.Modules.Search.Api ChatApp.Modules.Settings.Api)",
-      "Bash(timeout:*)",
-      "Bash(curl:*)",
-      "Bash(dotnet build:*)",
-      "Bash(dotnet ef migrations add:*)",
-      "Bash(dotnet ef database update:*)",
-      "Bash(dotnet run:*)",
-      "Bash(dotnet ef dbcontext info:*)",
-      "Bash(dotnet ef migrations:*)"
+      "Bash(Stop-Process -Force)",
+      "Bash(taskkill:*)",
+      "Bash(nul)"
     ],
     "deny": [],
     "ask": []
