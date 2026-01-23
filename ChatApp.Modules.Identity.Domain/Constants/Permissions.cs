@@ -1,4 +1,5 @@
 using System.Reflection;
+using ChatApp.Modules.Identity.Domain.Enums;
 
 namespace ChatApp.Modules.Identity.Domain.Constants
 {
@@ -36,12 +37,6 @@ namespace ChatApp.Modules.Identity.Domain.Constants
         public const string ChannelsManage = "Channels.Manage";
         public const string ChannelsDelete = "Channels.Delete";
 
-        // Departments Module
-        public const string DepartmentsCreate = "Departments.Create";
-        public const string DepartmentsRead = "Departments.Read";
-        public const string DepartmentsUpdate = "Departments.Update";
-        public const string DepartmentsDelete = "Departments.Delete";
-
         /// <summary>
         /// Gets all available permissions in the system
         /// </summary>
@@ -62,6 +57,35 @@ namespace ChatApp.Modules.Identity.Domain.Constants
             return GetAll()
                 .GroupBy(p => p.Split('.')[0])
                 .ToDictionary(g => g.Key, g => g.ToList());
+        }
+
+        /// <summary>
+        /// Gets default permissions for a specific role.
+        /// Administrator gets all permissions, User gets basic permissions.
+        /// </summary>
+        public static IEnumerable<string> GetDefaultForRole(Role role)
+        {
+            return role switch
+            {
+                Role.Administrator => GetAll(),
+                Role.User => new[]
+                {
+                    // Basic user permissions
+                    UsersRead,
+                    // Messaging permissions
+                    MessagesSend,
+                    MessagesRead,
+                    MessagesEdit,
+                    MessagesDelete,
+                    // File permissions
+                    FilesUpload,
+                    FilesDelete,
+                    FilesDownload,
+                    // Channel permissions
+                    ChannelsRead
+                },
+                _ => []
+            };
         }
     }
 }

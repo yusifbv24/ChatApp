@@ -1,3 +1,4 @@
+using ChatApp.Modules.Identity.Domain.Constants;
 using ChatApp.Modules.Identity.Domain.Enums;
 using ChatApp.Shared.Kernel.Common;
 
@@ -71,6 +72,22 @@ namespace ChatApp.Modules.Identity.Domain.Entities
             Role = role;
             AvatarUrl = avatarUrl;
             IsActive = true;
+
+            // Auto-assign default permissions based on role
+            AssignDefaultPermissions();
+        }
+
+        /// <summary>
+        /// Assigns default permissions based on the user's role.
+        /// Called automatically during user creation.
+        /// </summary>
+        private void AssignDefaultPermissions()
+        {
+            var defaultPermissions = Permissions.GetDefaultForRole(Role);
+            foreach (var permissionName in defaultPermissions)
+            {
+                _userPermissions.Add(new UserPermission(Id, permissionName));
+            }
         }
 
         #region Update Methods
