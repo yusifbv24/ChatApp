@@ -13,7 +13,6 @@ namespace ChatApp.Modules.Identity.Application.DTOs.Responses
         string? Position,
         string? AvatarUrl,
         bool IsActive,
-        bool IsCEO,
         string? DepartmentName,
         DateTime CreatedAtUtc)
     {

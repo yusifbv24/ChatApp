@@ -37,7 +37,6 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetUsers
                         u.Employee != null && u.Employee.Position != null ? u.Employee.Position.Name : null,
                         u.AvatarUrl,
                         u.IsActive,
-                        u.Employee != null && u.Employee.Position != null && u.Employee.Position.Name == "CEO",
                         u.Employee != null && u.Employee.Department != null ? u.Employee.Department.Name : null,
                         u.CreatedAtUtc))
                     .AsNoTracking()

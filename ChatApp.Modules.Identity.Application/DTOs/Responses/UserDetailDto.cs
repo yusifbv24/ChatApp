@@ -18,7 +18,6 @@ namespace ChatApp.Modules.Identity.Application.DTOs.Responses
         DateTime? HiringDate,
         DateTime? LastVisit,
         bool IsActive,
-        bool IsCEO,
         Guid? DepartmentId,
         string? DepartmentName,
         Guid? SupervisorId,

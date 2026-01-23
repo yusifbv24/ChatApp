@@ -64,7 +64,6 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetUser
                 user.Employee?.HiringDate,
                 user.LastVisit,
                 user.IsActive,
-                user.IsCEO,
                 user.Employee?.DepartmentId,
                 user.Employee?.Department?.Name,
                 user.Employee?.SupervisorId,

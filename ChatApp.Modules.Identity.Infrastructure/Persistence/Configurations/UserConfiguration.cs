@@ -71,7 +71,6 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence.Configurations
             // Computed properties (not stored in database)
             builder.Ignore(u => u.FullName);
             builder.Ignore(u => u.IsAdmin);
-            builder.Ignore(u => u.IsCEO);
 
             // Indexes
             builder.HasIndex(u => u.Email)

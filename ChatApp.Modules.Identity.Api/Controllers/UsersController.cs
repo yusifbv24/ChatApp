@@ -57,6 +57,7 @@ namespace ChatApp.Modules.Identity.Api.Controllers
                 request.Email,
                 request.Password,
                 request.Role,
+                request.DepartmentId,
                 request.PositionId,
                 request.AvatarUrl,
                 request.AboutMe,

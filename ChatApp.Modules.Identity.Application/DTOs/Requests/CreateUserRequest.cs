@@ -7,6 +7,7 @@ namespace ChatApp.Modules.Identity.Application.DTOs.Requests
         string LastName,
         string Email,
         string Password,
+        Guid DepartmentId,
         Role Role = Role.User,
         Guid? PositionId = null,
         string? AvatarUrl = null,

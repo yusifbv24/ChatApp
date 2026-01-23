@@ -40,9 +40,6 @@ namespace ChatApp.Modules.Identity.Domain.Entities
         private readonly List<Employee> _subordinates = [];
         public IReadOnlyCollection<Employee> Subordinates => _subordinates.AsReadOnly();
 
-        // Computed properties
-        public bool IsCEO => Position?.Name == "CEO";
-
         // Private constructor for EF Core
         private Employee() : base() { }
 

@@ -36,7 +36,6 @@ namespace ChatApp.Modules.Identity.Domain.Entities
         // Computed properties
         public string FullName => $"{FirstName} {LastName}";
         public bool IsAdmin => Role == Role.Administrator;
-        public bool IsCEO => Employee?.IsCEO == true;
 
         // Private constructor for EF Core
         private User() : base() { }

@@ -18,6 +18,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
         string Email,
         string Password,
         Role Role,
+        Guid DepartmentId,
         Guid? PositionId,
         string? AvatarUrl,
         string? AboutMe,
@@ -55,6 +56,9 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
 
             RuleFor(x => x.Role)
                 .IsInEnum().WithMessage("Invalid role");
+
+            RuleFor(x => x.DepartmentId)
+                .NotEmpty().WithMessage("Department is required");
 
             When(x => !string.IsNullOrWhiteSpace(x.AboutMe), () =>
             {
@@ -120,6 +124,10 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
                     command.AboutMe,
                     command.HiringDate);
 
+                // Assign to department (required)
+                employee.AssignToDepartment(command.DepartmentId);
+
+                // Assign to position (optional)
                 if (command.PositionId.HasValue)
                 {
                     employee.AssignToPosition(command.PositionId.Value);

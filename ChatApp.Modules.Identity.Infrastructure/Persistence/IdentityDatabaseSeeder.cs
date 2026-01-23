@@ -36,10 +36,16 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence
 
                 try
                 {
-                    await SeedPositionsAsync(context, logger);
-                    await SeedDefaultUsersAsync(context, passwordHasher, logger);
+                    // Step 1: Seed departments first
+                    var departments = await SeedDepartmentsAsync(context, logger);
+                    await context.SaveChangesAsync();
 
-                    // Save all changes to the database
+                    // Step 2: Seed positions (needs IT department for .NET Developer)
+                    var positions = await SeedPositionsAsync(context, departments, logger);
+                    await context.SaveChangesAsync();
+
+                    // Step 3: Seed users and employees
+                    await SeedDefaultUsersAsync(context, passwordHasher, departments, positions, logger);
                     await context.SaveChangesAsync();
 
                     // Commit the transaction - everything succeeded
@@ -52,7 +58,7 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence
                     // Something went wrong - rollback the transaction
                     logger.LogError(ex, "Error during database seeding. Rolling back transaction");
                     await transaction.RollbackAsync();
-                    throw; // Re-throw to be caught by the outer handler
+                    throw;
                 }
             }
             catch (Exception ex)
@@ -63,31 +69,94 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence
         }
 
         /// <summary>
-        /// Creates the CEO position
+        /// Creates the default departments
         /// </summary>
-        private static async Task SeedPositionsAsync(IdentityDbContext context, ILogger logger)
+        private static async Task<Dictionary<string, Department>> SeedDepartmentsAsync(
+            IdentityDbContext context,
+            ILogger logger)
+        {
+            if (await context.Departments.AnyAsync())
+            {
+                logger?.LogInformation("Departments already exist, skipping department seeding");
+                return new Dictionary<string, Department>();
+            }
+
+            logger?.LogInformation("Seeding default departments...");
+
+            var departments = new Dictionary<string, Department>
+            {
+                ["CEO"] = new Department("CEO"),
+                ["ASSISTANT OF CEO"] = new Department("ASSISTANT OF CEO"),
+                ["IT"] = new Department("IT"),
+                ["FINANCE"] = new Department("FINANCE"),
+                ["ACCOUNTING"] = new Department("ACCOUNTING")
+            };
+
+            foreach (var dept in departments.Values)
+            {
+                await context.Departments.AddAsync(dept);
+            }
+
+            logger?.LogInformation("Seeded {Count} default departments:", departments.Count);
+            foreach (var name in departments.Keys)
+            {
+                logger?.LogInformation("  - {Name}", name);
+            }
+
+            return departments;
+        }
+
+        /// <summary>
+        /// Creates the default positions
+        /// </summary>
+        private static async Task<Dictionary<string, Position>> SeedPositionsAsync(
+            IdentityDbContext context,
+            Dictionary<string, Department> departments,
+            ILogger logger)
         {
             if (await context.Positions.AnyAsync())
             {
                 logger?.LogInformation("Positions already exist, skipping position seeding");
-                return;
+                return new Dictionary<string, Position>();
             }
 
             logger?.LogInformation("Seeding default positions...");
 
-            // CEO Position (DepartmentId = null)
-            var ceoPosition = new Position("CEO", null, "Chief Executive Officer");
-            await context.Positions.AddAsync(ceoPosition);
+            // Get IT department from local tracker or database
+            var itDepartment = departments.TryGetValue("IT", out var itDept)
+                ? itDept
+                : context.Departments.Local.FirstOrDefault(d => d.Name == "IT")
+                  ?? await context.Departments.FirstOrDefaultAsync(d => d.Name == "IT");
 
-            logger?.LogInformation("Seeded 1 default position:");
-            logger?.LogInformation("  - CEO");
+            var positions = new Dictionary<string, Position>
+            {
+                [".NET Developer"] = new Position(".NET Developer", itDepartment?.Id, ".NET development specialist")
+            };
+
+            foreach (var position in positions.Values)
+            {
+                await context.Positions.AddAsync(position);
+            }
+
+            logger?.LogInformation("Seeded {Count} default position(s):", positions.Count);
+            foreach (var name in positions.Keys)
+            {
+                logger?.LogInformation("  - {Name}", name);
+            }
+
+            return positions;
         }
 
         /// <summary>
         /// Creates the initial default users (CEO and System Administrator)
         /// These are essential for initial system access
         /// </summary>
-        private static async Task SeedDefaultUsersAsync(IdentityDbContext context, IPasswordHasher passwordHasher, ILogger logger)
+        private static async Task SeedDefaultUsersAsync(
+            IdentityDbContext context,
+            IPasswordHasher passwordHasher,
+            Dictionary<string, Department> departments,
+            Dictionary<string, Position> positions,
+            ILogger logger)
         {
             if (await context.Users.AnyAsync())
             {
@@ -97,22 +166,30 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence
 
             logger?.LogInformation("Seeding default users...");
 
-            // Get CEO position (check local change tracker first, then database)
-            var ceoPosition = context.Positions.Local.FirstOrDefault(p => p.Name == "CEO")
-                ?? await context.Positions.FirstOrDefaultAsync(p => p.Name == "CEO");
-            if (ceoPosition == null)
-            {
-                logger?.LogError("CEO position not found. Cannot create CEO user.");
-                throw new InvalidOperationException("CEO position must be seeded before users");
-            }
+            // Get departments from local tracker or provided dictionary
+            var ceoDepartment = departments.TryGetValue("CEO", out var ceoDept)
+                ? ceoDept
+                : context.Departments.Local.FirstOrDefault(d => d.Name == "CEO")
+                  ?? throw new InvalidOperationException("CEO department must be seeded before users");
 
-            // 1. CEO User (Authentication & Basic Profile)
+            var itDepartment = departments.TryGetValue("IT", out var itDept)
+                ? itDept
+                : context.Departments.Local.FirstOrDefault(d => d.Name == "IT")
+                  ?? throw new InvalidOperationException("IT department must be seeded before users");
+
+            // Get .NET Developer position
+            var dotNetDevPosition = positions.TryGetValue(".NET Developer", out var pos)
+                ? pos
+                : context.Positions.Local.FirstOrDefault(p => p.Name == ".NET Developer")
+                  ?? throw new InvalidOperationException(".NET Developer position must be seeded before users");
+
+            // ========== 1. CEO User - Aqil Zeynalov ==========
             var ceoUserId = Guid.Parse("00000000-0000-0000-0000-000000000001");
             var ceoUser = new User(
-                firstName: "Yusif",
-                lastName: "Baghiyev",
+                firstName: "Aqil",
+                lastName: "Zeynalov",
                 email: "ceo@chatapp.com",
-                passwordHash: passwordHasher.Hash("Yusif2000+"),
+                passwordHash: passwordHasher.Hash("Ceo2000+"),
                 role: Role.Administrator,
                 avatarUrl: null)
             {
@@ -121,22 +198,26 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence
 
             await context.Users.AddAsync(ceoUser);
 
-            // 1.1 CEO Employee (Organizational & Sensitive Data)
+            // CEO Employee - NO position, assigned to CEO department
             var ceoEmployee = new Employee(
                 userId: ceoUserId,
-                dateOfBirth: new DateTime(2000, 1, 1),
+                dateOfBirth: null,
                 workPhone: null,
                 aboutMe: "Chief Executive Officer",
                 hiringDate: DateTime.UtcNow);
 
-            ceoEmployee.AssignToPosition(ceoPosition.Id);
+            ceoEmployee.AssignToDepartment(ceoDepartment.Id);
+            // No position for CEO
             await context.Employees.AddAsync(ceoEmployee);
 
-            // 2. System Administrator User
+            // Set CEO as Head of CEO Department
+            ceoDepartment.AssignHead(ceoUserId);
+
+            // ========== 2. System Administrator - Yusif Baghiyev ==========
             var adminUserId = Guid.Parse("00000000-0000-0000-0000-000000000002");
             var adminUser = new User(
-                firstName: "System",
-                lastName: "Administrator",
+                firstName: "Yusif",
+                lastName: "Baghiyev",
                 email: "admin@chatapp.com",
                 passwordHash: passwordHasher.Hash("Yusif2000+"),
                 role: Role.Administrator,
@@ -147,19 +228,21 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence
 
             await context.Users.AddAsync(adminUser);
 
-            // 2.1 Admin Employee (no specific position)
+            // Admin Employee - .NET Developer position, IT department
             var adminEmployee = new Employee(
                 userId: adminUserId,
-                dateOfBirth: null,
+                dateOfBirth: new DateTime(2000, 1, 1),
                 workPhone: null,
-                aboutMe: "System administrator account created during initial setup",
+                aboutMe: ".NET Developer and System Administrator",
                 hiringDate: DateTime.UtcNow);
 
+            adminEmployee.AssignToDepartment(itDepartment.Id);
+            adminEmployee.AssignToPosition(dotNetDevPosition.Id);
             await context.Employees.AddAsync(adminEmployee);
 
             logger?.LogInformation("Seeded 2 default users with employee records:");
-            logger?.LogInformation("  - CEO: ceo@chatapp.com (Position: CEO)");
-            logger?.LogInformation("  - System Administrator: admin@chatapp.com");
+            logger?.LogInformation("  - CEO: Aqil Zeynalov (ceo@chatapp.com) - Department: CEO, Head of Department");
+            logger?.LogInformation("  - Admin: Yusif Baghiyev (admin@chatapp.com) - Department: IT, Position: .NET Developer");
             logger?.LogWarning("SECURITY: Remember to change default passwords after first login!");
         }
     }
