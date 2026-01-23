@@ -21,9 +21,9 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetUser
             {
                 var user = await unitOfWork.Users
                     .Include(u => u.UserPermissions)
-                    .Include(u => u.Position)
-                    .Include(u => u.Department)
-                    .Include(u => u.Supervisor)
+                    .Include(u => u.Employee!.Position)
+                    .Include(u => u.Employee!.Department)
+                    .Include(u => u.Employee!.Supervisor!.User)
                     .AsNoTracking()
                     .FirstOrDefaultAsync(u => u.Id == query.UserId, cancellationToken);
 
@@ -56,19 +56,19 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetUser
                 user.LastName,
                 user.Email,
                 user.Role.ToString(),
-                user.Position?.Name,
+                user.Employee?.Position?.Name,
                 user.AvatarUrl,
-                user.AboutMe,
-                user.DateOfBirth,
-                user.WorkPhone,
-                user.HiringDate,
+                user.Employee?.AboutMe,
+                user.Employee?.DateOfBirth,
+                user.Employee?.WorkPhone,
+                user.Employee?.HiringDate,
                 user.LastVisit,
                 user.IsActive,
                 user.IsCEO,
-                user.DepartmentId,
-                user.Department?.Name,
-                user.SupervisorId,
-                user.Supervisor?.FullName,
+                user.Employee?.DepartmentId,
+                user.Employee?.Department?.Name,
+                user.Employee?.SupervisorId,
+                user.Employee?.Supervisor?.User?.FullName,
                 permissions,
                 user.CreatedAtUtc,
                 user.UpdatedAtUtc);

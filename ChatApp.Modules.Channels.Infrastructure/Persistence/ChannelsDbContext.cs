@@ -1,6 +1,7 @@
 ﻿using ChatApp.Modules.Channels.Application.DTOs.Responses;
 using ChatApp.Modules.Channels.Domain.Entities;
 using ChatApp.Modules.Channels.Infrastructure.Persistence.Configurations;
+using ChatApp.Modules.Files.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace ChatApp.Modules.Channels.Infrastructure.Persistence
@@ -40,9 +41,12 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence
                 entity.ToTable("users"); // Identity module's table
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Id).HasColumnName("id");
-                entity.Property(e => e.Username).HasColumnName("username");
-                entity.Property(e => e.DisplayName).HasColumnName("display_name");
+                entity.Property(e => e.FirstName).HasColumnName("first_name");
+                entity.Property(e => e.LastName).HasColumnName("last_name");
                 entity.Property(e => e.AvatarUrl).HasColumnName("avatar_url");
+
+                // Ignore computed property
+                entity.Ignore(e => e.FullName);
 
                 // Mark as query-only (no tracking, no inserts/updates)
                 entity.ToTable(tb => tb.ExcludeFromMigrations());
@@ -50,7 +54,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence
 
             // Map Files module's file_metadata table (read-only for queries)
             // This allows us to join with files without creating dependency on Files module
-            modelBuilder.Entity<ChatApp.Modules.Files.Domain.Entities.FileMetadata>(entity =>
+            modelBuilder.Entity<FileMetadata>(entity =>
             {
                 entity.ToTable("file_metadata"); // Files module's table
                 entity.HasKey(e => e.Id);

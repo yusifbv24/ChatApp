@@ -12,8 +12,7 @@ namespace ChatApp.Modules.Notifications.Application.DTOs
         string Message,
         string? ActionUrl,
         Guid? SenderId,
-        string? SenderUsername,
-        string? SenderDisplayName,
+        string? SenderFullName,
         DateTime CreatedAtUtc,
         DateTime? SentAtUtc,
         DateTime? ReadAtUtc);

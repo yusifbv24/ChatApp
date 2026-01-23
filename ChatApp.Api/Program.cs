@@ -15,6 +15,7 @@ using ChatApp.Modules.Identity.Api.Controllers;
 using ChatApp.Modules.Identity.Domain.Events;
 using ChatApp.Modules.Identity.Domain.Services;
 using ChatApp.Modules.Identity.Infrastructure;
+using ChatApp.Modules.Identity.Infrastructure.Middleware;
 using ChatApp.Modules.Identity.Infrastructure.Persistence;
 using ChatApp.Modules.Notifications.Api.Controllers;
 using ChatApp.Modules.Notifications.Infrastructure;
@@ -365,6 +366,7 @@ else
 
 app.UseRouting();
 app.UseAuthentication();
+app.UseMiddleware<UpdateLastVisitMiddleware>();
 app.UseAuthorization();
 
 // Map controllers

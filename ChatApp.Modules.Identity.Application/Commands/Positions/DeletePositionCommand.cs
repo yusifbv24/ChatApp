@@ -19,15 +19,15 @@ namespace ChatApp.Modules.Identity.Application.Commands.Positions
             try
             {
                 var position = await unitOfWork.Positions
-                    .Include(p => p.Users)
+                    .Include(p => p.Employees)
                     .FirstOrDefaultAsync(p => p.Id == command.PositionId, cancellationToken);
 
                 if (position == null)
                     return Result.Failure("Position not found");
 
-                // Check if any users are assigned to this position
-                if (position.Users.Any())
-                    return Result.Failure($"Cannot delete position. {position.Users.Count} user(s) are currently assigned to this position");
+                // Check if any employees are assigned to this position
+                if (position.Employees.Any())
+                    return Result.Failure($"Cannot delete position. {position.Employees.Count} employee(s) are currently assigned to this position");
 
                 unitOfWork.Positions.Remove(position);
                 await unitOfWork.SaveChangesAsync(cancellationToken);

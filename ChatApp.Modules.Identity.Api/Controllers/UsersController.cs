@@ -1,4 +1,5 @@
-﻿using ChatApp.Modules.Identity.Application.Commands.Users;
+﻿using ChatApp.Modules.Identity.Application.Commands.Employees;
+using ChatApp.Modules.Identity.Application.Commands.Users;
 using ChatApp.Modules.Identity.Application.DTOs.Requests;
 using ChatApp.Modules.Identity.Application.DTOs.Responses;
 using ChatApp.Modules.Identity.Application.Queries.GetUser;
@@ -414,6 +415,171 @@ namespace ChatApp.Modules.Identity.Api.Controllers
                 return BadRequest(new { error = result.Error });
 
             return Ok(new { message = "User deleted successfully" });
+        }
+
+
+
+
+        /// <summary>
+        /// Assigns a permission to a user
+        /// </summary>
+        [HttpPost("{userId:guid}/permissions")]
+        [RequirePermission("Permissions.Assign")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<IActionResult> AssignPermissionToUser(
+            [FromRoute] Guid userId,
+            [FromBody] AssignPermissionToUserRequest request,
+            CancellationToken cancellationToken)
+        {
+            var command = new AssignPermissionToUserCommand(userId, request.PermissionName);
+            var result = await _mediator.Send(command, cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return Ok(new { message = "Permission assigned successfully" });
+        }
+
+
+
+
+        /// <summary>
+        /// Removes a permission from a user
+        /// </summary>
+        [HttpDelete("{userId:guid}/permissions/{permissionName}")]
+        [RequirePermission("Permissions.Revoke")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<IActionResult> RemovePermissionFromUser(
+            [FromRoute] Guid userId,
+            [FromRoute] string permissionName,
+            CancellationToken cancellationToken)
+        {
+            var command = new RemovePermissionFromUserCommand(userId, permissionName);
+            var result = await _mediator.Send(command, cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return Ok(new { message = "Permission removed successfully" });
+        }
+
+
+
+
+        /// <summary>
+        /// Assigns an employee to a department
+        /// </summary>
+        [HttpPost("{userId:guid}/department")]
+        [RequirePermission("Users.Update")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<IActionResult> AssignEmployeeToDepartment(
+            [FromRoute] Guid userId,
+            [FromBody] AssignEmployeeToDepartmentRequest request,
+            CancellationToken cancellationToken)
+        {
+            var command = new AssignEmployeeToDepartmentCommand(
+                userId,
+                request.DepartmentId,
+                request.SupervisorId,
+                request.HeadOfDepartmentId);
+
+            var result = await _mediator.Send(command, cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return Ok(new { message = "Employee assigned to department successfully" });
+        }
+
+
+
+
+        /// <summary>
+        /// Removes an employee from their department
+        /// </summary>
+        [HttpDelete("{userId:guid}/department")]
+        [RequirePermission("Users.Update")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<IActionResult> RemoveEmployeeFromDepartment(
+            [FromRoute] Guid userId,
+            CancellationToken cancellationToken)
+        {
+            var command = new RemoveEmployeeFromDepartmentCommand(userId);
+            var result = await _mediator.Send(command, cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return Ok(new { message = "Employee removed from department successfully" });
+        }
+
+
+
+
+        /// <summary>
+        /// Assigns a supervisor to an employee
+        /// </summary>
+        [HttpPost("{userId:guid}/supervisor")]
+        [RequirePermission("Users.Update")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<IActionResult> AssignSupervisorToEmployee(
+            [FromRoute] Guid userId,
+            [FromBody] AssignSupervisorToEmployeeRequest request,
+            CancellationToken cancellationToken)
+        {
+            var command = new AssignSupervisorToEmployeeCommand(userId, request.SupervisorId);
+            var result = await _mediator.Send(command, cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return Ok(new { message = "Supervisor assigned successfully" });
+        }
+
+
+
+
+        /// <summary>
+        /// Removes a supervisor from an employee
+        /// </summary>
+        [HttpDelete("{userId:guid}/supervisor")]
+        [RequirePermission("Users.Update")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<IActionResult> RemoveSupervisorFromEmployee(
+            [FromRoute] Guid userId,
+            CancellationToken cancellationToken)
+        {
+            var command = new RemoveSupervisorFromEmployeeCommand(userId);
+            var result = await _mediator.Send(command, cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return Ok(new { message = "Supervisor removed successfully" });
         }
 
 

@@ -10,6 +10,7 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence.Repositories
         private IDbContextTransaction? _transaction;
 
         public DbSet<User> Users => context.Users;
+        public DbSet<Employee> Employees => context.Employees;
         public DbSet<Department> Departments => context.Departments;
         public DbSet<Position> Positions => context.Positions;
         public DbSet<UserPermission> UserPermissions => context.UserPermissions;

@@ -20,8 +20,6 @@ namespace ChatApp.Modules.Identity.Application.Queries.Departments
             try
             {
                 var department = await unitOfWork.Departments
-                    .Include(d => d.ParentDepartment)
-                    .Include(d => d.HeadOfDepartment)
                     .Where(d => d.Id == query.DepartmentId)
                     .Select(d => new DepartmentDto(
                         d.Id,
@@ -31,6 +29,7 @@ namespace ChatApp.Modules.Identity.Application.Queries.Departments
                         d.HeadOfDepartmentId,
                         d.HeadOfDepartment != null ? d.HeadOfDepartment.FullName : null,
                         d.CreatedAtUtc))
+                    .AsNoTracking()
                     .FirstOrDefaultAsync(cancellationToken);
 
                 if (department == null)

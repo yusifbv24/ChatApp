@@ -20,7 +20,6 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetPositions
             try
             {
                 var positions = await unitOfWork.Positions
-                    .Include(p => p.Department)
                     .OrderBy(p => p.Name)
                     .Select(p => new PositionDto(
                         p.Id,

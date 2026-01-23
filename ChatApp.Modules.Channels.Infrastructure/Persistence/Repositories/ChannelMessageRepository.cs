@@ -47,8 +47,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                             message.Id,
                             message.ChannelId,
                             message.SenderId,
-                            user.Username,
-                            user.DisplayName,
+                            user.FullName,
                             user.AvatarUrl,
                             message.Content,
                             message.FileId,
@@ -65,7 +64,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                             message.ReplyToMessageId,
                             ReplyToContent = repliedMessage != null && !repliedMessage.IsDeleted ? repliedMessage.Content : null,
                             ReplyToIsDeleted = repliedMessage != null && repliedMessage.IsDeleted,
-                            ReplyToSenderName = repliedSender != null ? repliedSender.DisplayName : null,
+                            ReplyToSenderName = repliedSender != null ? repliedSender.FullName : null,
                             ReplyToFileId = repliedMessage != null ? repliedMessage.FileId : null,
                             ReplyToFileName = repliedFile != null ? repliedFile.OriginalFileName : null,
                             ReplyToFileContentType = repliedFile != null ? repliedFile.ContentType : null,
@@ -101,7 +100,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                                       g.Key,
                                       g.Count(),
                                       g.Select(x => x.reaction.UserId).ToList(),
-                                      g.Select(x => x.reactionUser.DisplayName).ToList(),
+                                      g.Select(x => x.reactionUser.FullName).ToList(),
                                       g.Select(x => x.reactionUser.AvatarUrl).ToList()
                                   )).ToListAsync(cancellationToken);
 
@@ -120,8 +119,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 result.Id,
                 result.ChannelId,
                 result.SenderId,
-                result.Username,
-                result.DisplayName,
+                result.FullName,
+                result.FullName,
                 result.AvatarUrl,
                 result.IsDeleted ? "This message was deleted" : result.Content, // SECURITY: Sanitize deleted content
                 result.FileId,
@@ -174,8 +173,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                             message.Id,
                             message.ChannelId,
                             message.SenderId,
-                            user.Username,
-                            user.DisplayName,
+                            user.FullName,
                             user.AvatarUrl,
                             message.Content,
                             message.FileId,
@@ -192,7 +190,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                             message.ReplyToMessageId,
                             ReplyToContent = repliedMessage != null && !repliedMessage.IsDeleted ? repliedMessage.Content : null,
                             ReplyToIsDeleted = repliedMessage != null && repliedMessage.IsDeleted,
-                            ReplyToSenderName = repliedSender != null ? repliedSender.DisplayName : null,
+                            ReplyToSenderName = repliedSender != null ? repliedSender.FullName : null,
                             ReplyToFileId = repliedMessage != null ? repliedMessage.FileId : null,
                             ReplyToFileName = repliedFile != null ? repliedFile.OriginalFileName : null,
                             ReplyToFileContentType = repliedFile != null ? repliedFile.ContentType : null,
@@ -212,7 +210,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                                             g.Key,
                                             g.Count(),
                                             g.Select(x => x.reaction.UserId).ToList(),
-                                            g.Select(x => x.reactionUser.DisplayName).ToList(),
+                                            g.Select(x => x.reactionUser.FullName).ToList(),
                                             g.Select(x => x.reactionUser.AvatarUrl).ToList()
                                         ))
                                 .ToList()
@@ -283,8 +281,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                     r.Id,
                     r.ChannelId,
                     r.SenderId,
-                    r.Username,
-                    r.DisplayName,
+                    r.FullName,
+                    r.FullName,
                     r.AvatarUrl,
                     r.IsDeleted ? "This message was deleted" : r.Content, // SECURITY: Sanitize deleted content
                     r.FileId,
@@ -350,8 +348,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                                message.Id,
                                message.ChannelId,
                                message.SenderId,
-                               user.Username,
-                               user.DisplayName,
+                               user.FullName,
                                user.AvatarUrl,
                                message.Content,
                                message.FileId,
@@ -368,7 +365,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                                message.ReplyToMessageId,
                                ReplyToContent = repliedMessage != null && !repliedMessage.IsDeleted ? repliedMessage.Content : null,
                                ReplyToIsDeleted = repliedMessage != null && repliedMessage.IsDeleted,
-                               ReplyToSenderName = repliedSender != null ? repliedSender.DisplayName : null,
+                               ReplyToSenderName = repliedSender != null ? repliedSender.FullName : null,
                                ReplyToFileId = repliedMessage != null ? repliedMessage.FileId : null,
                                ReplyToFileName = repliedFile != null ? repliedFile.OriginalFileName : null,
                                ReplyToFileContentType = repliedFile != null ? repliedFile.ContentType : null,
@@ -386,7 +383,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                                                g.Key,
                                                g.Count(),
                                                g.Select(x => x.reaction.UserId).ToList(),
-                                               g.Select(x => x.reactionUser.DisplayName).ToList(),
+                                               g.Select(x => x.reactionUser.FullName).ToList(),
                                                g.Select(x => x.reactionUser.AvatarUrl).ToList()
                                            )).ToList()
                            };
@@ -465,8 +462,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                     r.Id,
                     r.ChannelId,
                     r.SenderId,
-                    r.Username,
-                    r.DisplayName,
+                    r.FullName,
+                    r.FullName,
                     r.AvatarUrl,
                     r.IsDeleted ? "This message was deleted" : r.Content,
                     r.FileId,
@@ -521,8 +518,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                             message.Id,
                             message.ChannelId,
                             message.SenderId,
-                            user.Username,
-                            user.DisplayName,
+                            user.FullName,
                             user.AvatarUrl,
                             message.Content,
                             message.FileId,
@@ -539,7 +535,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                             message.ReplyToMessageId,
                             ReplyToContent = repliedMessage != null && !repliedMessage.IsDeleted ? repliedMessage.Content : null,
                             ReplyToIsDeleted = repliedMessage != null && repliedMessage.IsDeleted,
-                            ReplyToSenderName = repliedSender != null ? repliedSender.DisplayName : null,
+                            ReplyToSenderName = repliedSender != null ? repliedSender.FullName : null,
                             ReplyToFileId = repliedMessage != null ? repliedMessage.FileId : null,
                             ReplyToFileName = repliedFile != null ? repliedFile.OriginalFileName : null,
                             ReplyToFileContentType = repliedFile != null ? repliedFile.ContentType : null,
@@ -557,7 +553,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                                             g.Key,
                                             g.Count(),
                                             g.Select(x => x.reaction.UserId).ToList(),
-                                            g.Select(x => x.reactionUser.DisplayName).ToList(),
+                                            g.Select(x => x.reactionUser.FullName).ToList(),
                                             g.Select(x => x.reactionUser.AvatarUrl).ToList()
                                         ))
                                 .ToList()
@@ -623,8 +619,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                     r.Id,
                     r.ChannelId,
                     r.SenderId,
-                    r.Username,
-                    r.DisplayName,
+                    r.FullName,
+                    r.FullName,
                     r.AvatarUrl,
                     r.IsDeleted ? "This message was deleted" : r.Content,
                     r.FileId,
@@ -679,8 +675,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                             message.Id,
                             message.ChannelId,
                             message.SenderId,
-                            user.Username,
-                            user.DisplayName,
+                            user.FullName,
                             user.AvatarUrl,
                             message.Content,
                             message.FileId,
@@ -697,7 +692,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                             message.ReplyToMessageId,
                             ReplyToContent = repliedMessage != null && !repliedMessage.IsDeleted ? repliedMessage.Content : null,
                             ReplyToIsDeleted = repliedMessage != null && repliedMessage.IsDeleted,
-                            ReplyToSenderName = repliedSender != null ? repliedSender.DisplayName : null,
+                            ReplyToSenderName = repliedSender != null ? repliedSender.FullName : null,
                             ReplyToFileId = repliedMessage != null ? repliedMessage.FileId : null,
                             ReplyToFileName = repliedFile != null ? repliedFile.OriginalFileName : null,
                             ReplyToFileContentType = repliedFile != null ? repliedFile.ContentType : null,
@@ -715,7 +710,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                                             g.Key,
                                             g.Count(),
                                             g.Select(x => x.reaction.UserId).ToList(),
-                                            g.Select(x => x.reactionUser.DisplayName).ToList(),
+                                            g.Select(x => x.reactionUser.FullName).ToList(),
                                             g.Select(x => x.reactionUser.AvatarUrl).ToList()
                                         ))
                                 .ToList()
@@ -781,8 +776,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                     r.Id,
                     r.ChannelId,
                     r.SenderId,
-                    r.Username,
-                    r.DisplayName,
+                    r.FullName,
+                    r.FullName,
                     r.AvatarUrl,
                     r.IsDeleted ? "This message was deleted" : r.Content,
                     r.FileId,
@@ -834,8 +829,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                               message.Id,
                               message.ChannelId,
                               message.SenderId,
-                              user.Username,
-                              user.DisplayName,
+                              user.FullName,
+                              user.FullName,
                               user.AvatarUrl,
                               message.Content, // Pinned messages are not deleted, no sanitization needed
                               message.FileId,
@@ -851,7 +846,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                               message.PinnedAtUtc,
                               message.ReplyToMessageId,
                               repliedMessage != null && !repliedMessage.IsDeleted ? repliedMessage.Content : "This message was deleted", // SECURITY: Sanitize deleted reply content
-                              repliedSender != null ? repliedSender.DisplayName : null,
+                              repliedSender != null ? repliedSender.FullName : null,
                               repliedMessage != null ? repliedMessage.FileId : null,
                               repliedFile != null ? repliedFile.OriginalFileName : null,
                               repliedFile != null ? repliedFile.ContentType : null,
@@ -875,7 +870,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                                    g.Key,
                                    g.Count(),
                                    g.Select(x => x.reaction.UserId).ToList(),
-                                   g.Select(x => x.reactionUser.DisplayName).ToList(),
+                                   g.Select(x => x.reactionUser.FullName).ToList(),
                                    g.Select(x => x.reactionUser.AvatarUrl).ToList()
                                   ))
                                   .ToList(),

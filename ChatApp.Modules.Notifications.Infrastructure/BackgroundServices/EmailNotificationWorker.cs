@@ -77,7 +77,7 @@ namespace ChatApp.Modules.Notifications.Infrastructure.BackgroundServices
 
                     var sent = await emailService.SendEmailAsync(
                         user.Email,
-                        user.DisplayName,
+                        user.FullName,
                         notification.Title,
                         htmlBody,
                         cancellationToken);
@@ -109,7 +109,7 @@ namespace ChatApp.Modules.Notifications.Infrastructure.BackgroundServices
             _logger.LogInformation("Finished processing email notifications");
         }
 
-        private async Task<(string Email, string DisplayName)> GetUserEmailAsync(
+        private async Task<(string Email, string FullName)> GetUserEmailAsync(
             IUnitOfWork unitOfWork,
             Guid userId,
             CancellationToken cancellationToken)
@@ -120,7 +120,7 @@ namespace ChatApp.Modules.Notifications.Infrastructure.BackgroundServices
             var user = await context.Set<UserReadModel>()
                 .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
 
-            return (user?.Email ?? "", user?.DisplayName ?? "User");
+            return (user?.Email ?? "", user?.FullName ?? "User");
         }
 
         private string BuildEmailBody(string title, string message, string? actionUrl)

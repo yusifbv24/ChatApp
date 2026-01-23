@@ -1,4 +1,5 @@
 using ChatApp.Modules.Identity.Application.Interfaces;
+using ChatApp.Modules.Identity.Domain.Entities;
 using ChatApp.Modules.Identity.Domain.Enums;
 using ChatApp.Shared.Kernel.Common;
 using ChatApp.Shared.Kernel.Exceptions;
@@ -87,23 +88,31 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
         {
             try
             {
-                logger.LogInformation("Updating user {UserId}", request.UserId);
+                logger?.LogInformation("Updating user {UserId}", request.UserId);
 
+                // Load User with Employee
                 var user = await unitOfWork.Users
+                    .Include(u => u.Employee)
                     .FirstOrDefaultAsync(u => u.Id == request.UserId, cancellationToken);
 
                 if (user is null)
                 {
-                    logger.LogWarning("User {UserId} not found", request.UserId);
+                    logger?.LogWarning("User {UserId} not found", request.UserId);
                     throw new NotFoundException($"User with ID {request.UserId} not found");
                 }
 
+                if (user.Employee is null)
+                {
+                    logger?.LogError("Employee record not found for User {UserId}", request.UserId);
+                    throw new NotFoundException($"Employee record not found for User {request.UserId}");
+                }
+
                 await ValidateAndUpdateEmailAsync(user, request.Email, request.UserId, cancellationToken);
-                UpdateUserFields(user, request);
+                UpdateUserFields(user, user.Employee, request);
 
                 await unitOfWork.SaveChangesAsync(cancellationToken);
 
-                logger.LogInformation("User {UserId} updated successfully", request.UserId);
+                logger?.LogInformation("User {UserId} updated successfully", request.UserId);
                 return Result.Success();
             }
             catch (NotFoundException)
@@ -118,7 +127,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
         }
 
         private async Task ValidateAndUpdateEmailAsync(
-            Domain.Entities.User user,
+            User user,
             string? newEmail,
             Guid userId,
             CancellationToken cancellationToken)
@@ -139,8 +148,12 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
             user.UpdateEmail(newEmail);
         }
 
-        private static void UpdateUserFields(Domain.Entities.User user, UpdateUserCommand request)
+        private static void UpdateUserFields(
+            User user,
+            Employee employee,
+            UpdateUserCommand request)
         {
+            // Update User fields (Authentication & Basic Profile)
             if (!string.IsNullOrWhiteSpace(request.FirstName) && !string.IsNullOrWhiteSpace(request.LastName))
             {
                 user.UpdateName(request.FirstName, request.LastName);
@@ -157,23 +170,24 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
             if (request.Role.HasValue)
                 user.ChangeRole(request.Role.Value);
 
-            if (request.PositionId.HasValue)
-                user.AssignToPosition(request.PositionId);
-
             if (request.AvatarUrl is not null)
                 user.UpdateAvatarUrl(request.AvatarUrl);
 
+            // Update Employee fields (Organizational & Sensitive Data)
+            if (request.PositionId.HasValue)
+                employee.AssignToPosition(request.PositionId);
+
             if (request.AboutMe is not null)
-                user.UpdateAboutMe(request.AboutMe);
+                employee.UpdateAboutMe(request.AboutMe);
 
             if (request.DateOfBirth.HasValue)
-                user.UpdateDateOfBirth(request.DateOfBirth);
+                employee.UpdateDateOfBirth(request.DateOfBirth);
 
             if (request.WorkPhone is not null)
-                user.UpdateWorkPhone(request.WorkPhone);
+                employee.UpdateWorkPhone(request.WorkPhone);
 
             if (request.HiringDate.HasValue)
-                user.UpdateHiringDate(request.HiringDate);
+                employee.UpdateHiringDate(request.HiringDate);
         }
     }
 }

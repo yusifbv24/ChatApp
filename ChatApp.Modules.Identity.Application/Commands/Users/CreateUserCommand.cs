@@ -99,24 +99,33 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
                 }
 
                 var passwordHash = passwordHasher.Hash(command.Password);
+
+                // Create User (Authentication & Basic Profile)
                 var user = new User(
                     command.FirstName,
                     command.LastName,
                     command.Email,
                     passwordHash,
                     command.Role,
-                    command.AvatarUrl,
-                    command.AboutMe,
+                    command.AvatarUrl);
+
+                await unitOfWork.Users.AddAsync(user, cancellationToken);
+
+                // Create Employee (Organizational & Sensitive Data)
+                // Every user must have an employee record (1:1 mandatory)
+                var employee = new Employee(
+                    user.Id,
                     command.DateOfBirth,
                     command.WorkPhone,
+                    command.AboutMe,
                     command.HiringDate);
 
                 if (command.PositionId.HasValue)
                 {
-                    user.AssignToPosition(command.PositionId.Value);
+                    employee.AssignToPosition(command.PositionId.Value);
                 }
 
-                await unitOfWork.Users.AddAsync(user, cancellationToken);
+                await unitOfWork.Employees.AddAsync(employee, cancellationToken);
                 await unitOfWork.SaveChangesAsync(cancellationToken);
 
                 // Publish event

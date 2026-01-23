@@ -30,16 +30,16 @@ public class SearchUsersQueryHandler(
 
             var users = await unitOfWork.Users
                 .Where(u => u.IsActive &&
-                    (u.FirstName.ToLower().Contains(searchTerm) ||
-                     u.LastName.ToLower().Contains(searchTerm) ||
-                     u.Email.ToLower().Contains(searchTerm)))
+                    (u.FirstName.Contains(searchTerm, StringComparison.CurrentCultureIgnoreCase) ||
+                     u.LastName.Contains(searchTerm, StringComparison.CurrentCultureIgnoreCase) ||
+                     u.Email.Contains(searchTerm, StringComparison.CurrentCultureIgnoreCase)))
                 .Select(u => new UserSearchResultDto(
                     u.Id,
                     u.FirstName,
                     u.LastName,
                     u.Email,
                     u.AvatarUrl,
-                    u.Position != null ? u.Position.Name : null))
+                    u.Employee != null && u.Employee.Position != null ? u.Employee.Position.Name : null))
                 .Take(MaxResults)
                 .AsNoTracking()
                 .ToListAsync(cancellationToken);

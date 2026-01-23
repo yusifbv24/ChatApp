@@ -42,7 +42,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                                                 channel.Description,
                                                 channel.Type,
                                                 channel.CreatedBy,
-                                                CreatorUsername = creator.Username,
+                                                CreatorUsername = creator.FullName,
                                                 channel.IsArchived,
                                                 channel.CreatedAtUtc
                                             })
@@ -60,8 +60,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                                      member.Id,
                                      member.ChannelId,
                                      member.UserId,
-                                     user.Username,
-                                     user.DisplayName,
+                                     user.FullName,
+                                     user.FullName,
                                      user.AvatarUrl,
                                      member.Role,
                                      member.JoinedAtUtc,

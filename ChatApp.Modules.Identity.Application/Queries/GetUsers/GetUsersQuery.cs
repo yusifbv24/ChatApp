@@ -25,8 +25,6 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetUsers
                 var skip = (query.PageNumber - 1) * pageSize;
 
                 var users = await unitOfWork.Users
-                    .Include(u => u.Department)
-                    .Include(u => u.Position)
                     .OrderByDescending(u => u.CreatedAtUtc)
                     .Skip(skip)
                     .Take(pageSize)
@@ -36,11 +34,11 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetUsers
                         u.LastName,
                         u.Email,
                         u.Role.ToString(),
-                        u.Position != null ? u.Position.Name : null,
+                        u.Employee != null && u.Employee.Position != null ? u.Employee.Position.Name : null,
                         u.AvatarUrl,
                         u.IsActive,
-                        u.Position != null && u.Position.Name == "CEO",
-                        u.Department != null ? u.Department.Name : null,
+                        u.Employee != null && u.Employee.Position != null && u.Employee.Position.Name == "CEO",
+                        u.Employee != null && u.Employee.Department != null ? u.Employee.Department.Name : null,
                         u.CreatedAtUtc))
                     .AsNoTracking()
                     .ToListAsync(cancellationToken);

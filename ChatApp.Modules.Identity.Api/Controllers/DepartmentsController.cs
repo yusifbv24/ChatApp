@@ -125,5 +125,48 @@ namespace ChatApp.Modules.Identity.Api.Controllers
 
             return Ok(new { message = "Department deleted successfully" });
         }
+
+        /// <summary>
+        /// Assign a user as department head
+        /// </summary>
+        [HttpPost("{departmentId:guid}/assign-head")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> AssignDepartmentHead(
+            [FromRoute] Guid departmentId,
+            [FromBody] AssignDepartmentHeadRequest request,
+            CancellationToken cancellationToken)
+        {
+            var command = new AssignDepartmentHeadCommand(departmentId, request.UserId);
+            var result = await mediator.Send(command, cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return Ok(new { message = "Department head assigned successfully" });
+        }
+
+        /// <summary>
+        /// Remove department head
+        /// </summary>
+        [HttpDelete("{departmentId:guid}/remove-head")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> RemoveDepartmentHead(
+            [FromRoute] Guid departmentId,
+            CancellationToken cancellationToken)
+        {
+            var command = new RemoveDepartmentHeadCommand(departmentId);
+            var result = await mediator.Send(command, cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return Ok(new { message = "Department head removed successfully" });
+        }
     }
 }

@@ -20,8 +20,8 @@ namespace ChatApp.Modules.Identity.Domain.Entities
         public Department? Department { get; private set; }
 
         // Navigation properties
-        private readonly List<User> _users = [];
-        public IReadOnlyCollection<User> Users => _users.AsReadOnly();
+        private readonly List<Employee> _employees = [];
+        public IReadOnlyCollection<Employee> Employees => _employees.AsReadOnly();
 
         // Private constructor for EF Core
         private Position() : base() { }
@@ -47,21 +47,6 @@ namespace ChatApp.Modules.Identity.Domain.Entities
             Name = name;
             DepartmentId = departmentId;
             Description = description;
-            UpdateTimestamp();
-        }
-
-        public void AssignToDepartment(Guid departmentId)
-        {
-            if (departmentId == Guid.Empty)
-                throw new ArgumentException("Department ID cannot be empty", nameof(departmentId));
-
-            DepartmentId = departmentId;
-            UpdateTimestamp();
-        }
-
-        public void RemoveFromDepartment()
-        {
-            DepartmentId = null;
             UpdateTimestamp();
         }
     }

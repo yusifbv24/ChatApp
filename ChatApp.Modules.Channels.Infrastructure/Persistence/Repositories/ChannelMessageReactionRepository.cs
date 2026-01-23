@@ -50,7 +50,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                     g.Key,
                     g.Count(),
                     g.Select(x => x.reaction.UserId).ToList(),
-                    g.Select(x => x.user.DisplayName).ToList(),
+                    g.Select(x => x.user.FullName).ToList(),
                     g.Select(x => x.user.AvatarUrl).ToList()
                 ))
                 .ToListAsync(cancellationToken);

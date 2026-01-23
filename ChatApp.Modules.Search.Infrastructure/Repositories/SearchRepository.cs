@@ -50,8 +50,8 @@ namespace ChatApp.Modules.Search.Infrastructure.Repositories
                             MessageCreatedAtUtc = message.CreatedAtUtc,
                             MessageChannelId = message.ChannelId,
                             SenderId = sender.Id,
-                            SenderUsername = sender.Username,
-                            SenderDisplayName = sender.DisplayName,
+                            SenderFirstName = sender.FirstName,
+                            SenderLastName = sender.LastName,
                             SenderAvatarUrl = sender.AvatarUrl,
                             ChannelName = channel.Name
                         };
@@ -81,8 +81,8 @@ namespace ChatApp.Modules.Search.Infrastructure.Repositories
                 r.MessageContent,
                 HighlightSearchTerm(r.MessageContent, searchTerm),
                 r.SenderId,
-                r.SenderUsername,
-                r.SenderDisplayName,
+                r.SenderFirstName,
+                r.SenderLastName,
                 r.SenderAvatarUrl,
                 r.MessageCreatedAtUtc,
                 r.MessageChannelId,
@@ -162,16 +162,16 @@ namespace ChatApp.Modules.Search.Infrastructure.Repositories
                     item.Message.Content,
                     HighlightSearchTerm(item.Message.Content, searchTerm),
                     item.Sender.Id,
-                    item.Sender.Username,
-                    item.Sender.DisplayName,
+                    item.Sender.FirstName,
+                    item.Sender.LastName,
                     item.Sender.AvatarUrl,
                     item.Message.CreatedAtUtc,
                     null,
                     null,
                     item.Conversation.Id,
                     otherUser?.Id,
-                    otherUser?.Username,
-                    otherUser?.DisplayName
+                    otherUser?.FirstName,
+                    otherUser?.LastName
                 ));
             }
 

@@ -26,8 +26,9 @@ namespace ChatApp.Modules.Files.Infrastructure.Persistence
                 entity.ToTable("users");
                 entity.HasKey(x => x.Id);
                 entity.Property(x => x.Id).HasColumnName("id");
-                entity.Property(x => x.Username).HasColumnName("username");
-                entity.Property(x => x.DisplayName).HasColumnName("display_name");
+                entity.Property(x => x.FirstName).HasColumnName("first_name");
+                entity.Property(x => x.LastName).HasColumnName("last_name");
+                entity.Ignore(x => x.FullName);
 
                 // Mark as query only
                 entity.ToTable(tb => tb.ExcludeFromMigrations());

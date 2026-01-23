@@ -37,8 +37,7 @@ namespace ChatApp.Modules.Notifications.Infrastructure.Repositories
                             notification.Message,
                             notification.ActionUrl,
                             sender != null ? sender.Id : null,
-                            sender != null ? sender.Username : null,
-                            sender != null ? sender.DisplayName : null,
+                            sender != null ? sender.FullName : null,
                             notification.CreatedAtUtc,
                             notification.SentAtUtc,
                             notification.ReadAtUtc

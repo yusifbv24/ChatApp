@@ -6,6 +6,7 @@ namespace ChatApp.Modules.Identity.Application.Interfaces
     public interface IUnitOfWork : IDisposable
     {
         DbSet<User> Users { get; }
+        DbSet<Employee> Employees { get; }
         DbSet<Department> Departments { get; }
         DbSet<Position> Positions { get; }
         DbSet<UserPermission> UserPermissions { get; }

@@ -8,8 +8,8 @@ namespace ChatApp.Modules.Search.Application.DTOs.Requests
         string Content,
         string HighlightedContent, // Content with search term highlighted
         Guid SenderId,
-        string SenderUsername,
-        string SenderDisplayName,
+        string SenderFirstName,
+        string SenderLastName,
         string? SenderAvatarUrl,
         DateTime CreatedAtUtc,
 
@@ -20,7 +20,14 @@ namespace ChatApp.Modules.Search.Application.DTOs.Requests
         // For direct messages
         Guid? ConversationId,
         Guid? OtherUserId,
-        string? OtherUsername,
-        string? OtherDisplayName
-    );
+        string? OtherFirstName,
+        string? OtherLastName
+    )
+    {
+        // Computed properties
+        public string SenderFullName => $"{SenderFirstName} {SenderLastName}";
+        public string? OtherFullName => OtherFirstName != null && OtherLastName != null
+            ? $"{OtherFirstName} {OtherLastName}"
+            : null;
+    };
 }

@@ -20,11 +20,11 @@ namespace ChatApp.Modules.Identity.Domain.Entities
 
         // Navigation Properties
         private readonly List<Department> _subdepartments = [];
-        private readonly List<User> _employees = [];
+        private readonly List<Employee> _employees = [];
         private readonly List<Position> _positions = [];
 
         public IReadOnlyCollection<Department> Subdepartments => _subdepartments.AsReadOnly();
-        public IReadOnlyCollection<User> Employees => _employees.AsReadOnly();
+        public IReadOnlyCollection<Employee> Employees => _employees.AsReadOnly();
         public IReadOnlyCollection<Position> Positions => _positions.AsReadOnly();
 
         // Private constructor for EF Core

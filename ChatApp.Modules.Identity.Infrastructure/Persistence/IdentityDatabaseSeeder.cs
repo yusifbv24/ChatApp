@@ -97,15 +97,16 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence
 
             logger?.LogInformation("Seeding default users...");
 
-            // Get CEO position
-            var ceoPosition = await context.Positions.FirstOrDefaultAsync(p => p.Name == "CEO");
+            // Get CEO position (check local change tracker first, then database)
+            var ceoPosition = context.Positions.Local.FirstOrDefault(p => p.Name == "CEO")
+                ?? await context.Positions.FirstOrDefaultAsync(p => p.Name == "CEO");
             if (ceoPosition == null)
             {
                 logger?.LogError("CEO position not found. Cannot create CEO user.");
                 throw new InvalidOperationException("CEO position must be seeded before users");
             }
 
-            // 1. CEO User
+            // 1. CEO User (Authentication & Basic Profile)
             var ceoUserId = Guid.Parse("00000000-0000-0000-0000-000000000001");
             var ceoUser = new User(
                 firstName: "Yusif",
@@ -113,22 +114,25 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence
                 email: "ceo@chatapp.com",
                 passwordHash: passwordHasher.Hash("Yusif2000+"),
                 role: Role.Administrator,
-                avatarUrl: null,
-                aboutMe: "Chief Executive Officer",
-                dateOfBirth: new DateTime(2000, 1, 1),
-                workPhone: null,
-                hiringDate: DateTime.UtcNow
-            )
+                avatarUrl: null)
             {
                 Id = ceoUserId
             };
 
-            // Assign CEO position
-            ceoUser.AssignToPosition(ceoPosition.Id);
-
             await context.Users.AddAsync(ceoUser);
 
-            // 2. System Administrator (no specific position)
+            // 1.1 CEO Employee (Organizational & Sensitive Data)
+            var ceoEmployee = new Employee(
+                userId: ceoUserId,
+                dateOfBirth: new DateTime(2000, 1, 1),
+                workPhone: null,
+                aboutMe: "Chief Executive Officer",
+                hiringDate: DateTime.UtcNow);
+
+            ceoEmployee.AssignToPosition(ceoPosition.Id);
+            await context.Employees.AddAsync(ceoEmployee);
+
+            // 2. System Administrator User
             var adminUserId = Guid.Parse("00000000-0000-0000-0000-000000000002");
             var adminUser = new User(
                 firstName: "System",
@@ -136,20 +140,25 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence
                 email: "admin@chatapp.com",
                 passwordHash: passwordHasher.Hash("Yusif2000+"),
                 role: Role.Administrator,
-                avatarUrl: null,
-                aboutMe: "System administrator account created during initial setup",
-                dateOfBirth: null,
-                workPhone: null,
-                hiringDate: DateTime.UtcNow
-            )
+                avatarUrl: null)
             {
                 Id = adminUserId
             };
 
             await context.Users.AddAsync(adminUser);
 
-            logger?.LogInformation("Seeded 2 default users:");
-            logger?.LogInformation("  - CEO: ceo@chatapp.com");
+            // 2.1 Admin Employee (no specific position)
+            var adminEmployee = new Employee(
+                userId: adminUserId,
+                dateOfBirth: null,
+                workPhone: null,
+                aboutMe: "System administrator account created during initial setup",
+                hiringDate: DateTime.UtcNow);
+
+            await context.Employees.AddAsync(adminEmployee);
+
+            logger?.LogInformation("Seeded 2 default users with employee records:");
+            logger?.LogInformation("  - CEO: ceo@chatapp.com (Position: CEO)");
             logger?.LogInformation("  - System Administrator: admin@chatapp.com");
             logger?.LogWarning("SECURITY: Remember to change default passwords after first login!");
         }

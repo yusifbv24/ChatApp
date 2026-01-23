@@ -65,6 +65,75 @@ namespace ChatApp.Modules.Identity.Infrastructure.Migrations
                     b.ToTable("departments", (string)null);
                 });
 
+            modelBuilder.Entity("ChatApp.Modules.Identity.Domain.Entities.Employee", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AboutMe")
+                        .HasColumnType("text")
+                        .HasColumnName("about_me");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<string>("DateOfBirth")
+                        .HasColumnType("text")
+                        .HasColumnName("date_of_birth");
+
+                    b.Property<Guid?>("DepartmentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("department_id");
+
+                    b.Property<Guid?>("HeadOfDepartmentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("head_of_department_id");
+
+                    b.Property<DateTime?>("HiringDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("hiring_date");
+
+                    b.Property<Guid?>("PositionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("position_id");
+
+                    b.Property<Guid?>("SupervisorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("supervisor_id");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<string>("WorkPhone")
+                        .HasMaxLength(500)
+                        .HasColumnType("text")
+                        .HasColumnName("work_phone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DepartmentId")
+                        .HasDatabaseName("ix_employees_department_id");
+
+                    b.HasIndex("PositionId")
+                        .HasDatabaseName("ix_employees_position_id");
+
+                    b.HasIndex("SupervisorId")
+                        .HasDatabaseName("ix_employees_supervisor_id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_employees_user_id");
+
+                    b.ToTable("employees", (string)null);
+                });
+
             modelBuilder.Entity("ChatApp.Modules.Identity.Domain.Entities.Position", b =>
                 {
                     b.Property<Guid>("Id")
@@ -159,11 +228,6 @@ namespace ChatApp.Modules.Identity.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
-                    b.Property<string>("AboutMe")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)")
-                        .HasColumnName("about_me");
-
                     b.Property<string>("AvatarUrl")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)")
@@ -172,14 +236,6 @@ namespace ChatApp.Modules.Identity.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at_utc");
-
-                    b.Property<DateTime?>("DateOfBirth")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("date_of_birth");
-
-                    b.Property<Guid?>("DepartmentId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("department_id");
 
                     b.Property<string>("Email")
                         .IsRequired()
@@ -192,14 +248,6 @@ namespace ChatApp.Modules.Identity.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")
                         .HasColumnName("first_name");
-
-                    b.Property<Guid?>("HeadOfDepartmentId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("head_of_department_id");
-
-                    b.Property<DateTime?>("HiringDate")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("hiring_date");
 
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
@@ -223,43 +271,21 @@ namespace ChatApp.Modules.Identity.Infrastructure.Migrations
                         .HasColumnType("character varying(255)")
                         .HasColumnName("password_hash");
 
-                    b.Property<Guid?>("PositionId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("position_id");
-
                     b.Property<int>("Role")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
                         .HasDefaultValue(0)
                         .HasColumnName("role");
 
-                    b.Property<Guid?>("SupervisorId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("supervisor_id");
-
                     b.Property<DateTime>("UpdatedAtUtc")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at_utc");
 
-                    b.Property<string>("WorkPhone")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("work_phone");
-
                     b.HasKey("Id");
-
-                    b.HasIndex("DepartmentId")
-                        .HasDatabaseName("ix_users_department_id");
 
                     b.HasIndex("Email")
                         .IsUnique()
                         .HasDatabaseName("ix_users_email");
-
-                    b.HasIndex("PositionId")
-                        .HasDatabaseName("ix_users_position_id");
-
-                    b.HasIndex("SupervisorId")
-                        .HasDatabaseName("ix_users_supervisor_id");
 
                     b.ToTable("users", (string)null);
                 });
@@ -318,6 +344,38 @@ namespace ChatApp.Modules.Identity.Infrastructure.Migrations
                     b.Navigation("ParentDepartment");
                 });
 
+            modelBuilder.Entity("ChatApp.Modules.Identity.Domain.Entities.Employee", b =>
+                {
+                    b.HasOne("ChatApp.Modules.Identity.Domain.Entities.Department", "Department")
+                        .WithMany("Employees")
+                        .HasForeignKey("DepartmentId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("ChatApp.Modules.Identity.Domain.Entities.Position", "Position")
+                        .WithMany("Employees")
+                        .HasForeignKey("PositionId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("ChatApp.Modules.Identity.Domain.Entities.Employee", "Supervisor")
+                        .WithMany("Subordinates")
+                        .HasForeignKey("SupervisorId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("ChatApp.Modules.Identity.Domain.Entities.User", "User")
+                        .WithOne("Employee")
+                        .HasForeignKey("ChatApp.Modules.Identity.Domain.Entities.Employee", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Department");
+
+                    b.Navigation("Position");
+
+                    b.Navigation("Supervisor");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("ChatApp.Modules.Identity.Domain.Entities.Position", b =>
                 {
                     b.HasOne("ChatApp.Modules.Identity.Domain.Entities.Department", "Department")
@@ -337,30 +395,6 @@ namespace ChatApp.Modules.Identity.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("ChatApp.Modules.Identity.Domain.Entities.User", b =>
-                {
-                    b.HasOne("ChatApp.Modules.Identity.Domain.Entities.Department", "Department")
-                        .WithMany("Employees")
-                        .HasForeignKey("DepartmentId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("ChatApp.Modules.Identity.Domain.Entities.Position", "Position")
-                        .WithMany("Users")
-                        .HasForeignKey("PositionId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("ChatApp.Modules.Identity.Domain.Entities.User", "Supervisor")
-                        .WithMany("Subordinates")
-                        .HasForeignKey("SupervisorId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("Department");
-
-                    b.Navigation("Position");
-
-                    b.Navigation("Supervisor");
                 });
 
             modelBuilder.Entity("ChatApp.Modules.Identity.Domain.Entities.UserPermission", b =>
@@ -383,16 +417,21 @@ namespace ChatApp.Modules.Identity.Infrastructure.Migrations
                     b.Navigation("Subdepartments");
                 });
 
+            modelBuilder.Entity("ChatApp.Modules.Identity.Domain.Entities.Employee", b =>
+                {
+                    b.Navigation("Subordinates");
+                });
+
             modelBuilder.Entity("ChatApp.Modules.Identity.Domain.Entities.Position", b =>
                 {
-                    b.Navigation("Users");
+                    b.Navigation("Employees");
                 });
 
             modelBuilder.Entity("ChatApp.Modules.Identity.Domain.Entities.User", b =>
                 {
-                    b.Navigation("ManagedDepartments");
+                    b.Navigation("Employee");
 
-                    b.Navigation("Subordinates");
+                    b.Navigation("ManagedDepartments");
 
                     b.Navigation("UserPermissions");
                 });

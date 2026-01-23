@@ -49,42 +49,13 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence.Configurations
                 .HasDefaultValue(Role.User);
 
             // Optional fields
-            builder.Property(u => u.DateOfBirth)
-                .HasColumnName("date_of_birth")
-                .HasColumnType("timestamp with time zone");
-
             builder.Property(u => u.AvatarUrl)
                 .HasColumnName("avatar_url")
                 .HasMaxLength(500);
 
-            builder.Property(u => u.WorkPhone)
-                .HasColumnName("work_phone")
-                .HasMaxLength(50);
-
-            builder.Property(u => u.HiringDate)
-                .HasColumnName("hiring_date")
-                .HasColumnType("timestamp with time zone");
-
             builder.Property(u => u.LastVisit)
                 .HasColumnName("last_visit")
                 .HasColumnType("timestamp with time zone");
-
-            builder.Property(u => u.AboutMe)
-                .HasColumnName("about_me")
-                .HasMaxLength(2000);
-
-            // Organizational structure
-            builder.Property(u => u.PositionId)
-                .HasColumnName("position_id");
-
-            builder.Property(u => u.DepartmentId)
-                .HasColumnName("department_id");
-
-            builder.Property(u => u.SupervisorId)
-                .HasColumnName("supervisor_id");
-
-            builder.Property(u => u.HeadOfDepartmentId)
-                .HasColumnName("head_of_department_id");
 
             // Timestamps
             builder.Property(u => u.CreatedAtUtc)
@@ -107,34 +78,10 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence.Configurations
                 .IsUnique()
                 .HasDatabaseName("ix_users_email");
 
-            builder.HasIndex(u => u.PositionId)
-                .HasDatabaseName("ix_users_position_id");
-
-            builder.HasIndex(u => u.DepartmentId)
-                .HasDatabaseName("ix_users_department_id");
-
-            builder.HasIndex(u => u.SupervisorId)
-                .HasDatabaseName("ix_users_supervisor_id");
-
             // Relationships
 
-            // Position
-            builder.HasOne(u => u.Position)
-                .WithMany(p => p.Users)
-                .HasForeignKey(u => u.PositionId)
-                .OnDelete(DeleteBehavior.SetNull);
-
-            // Department
-            builder.HasOne(u => u.Department)
-                .WithMany(d => d.Employees)
-                .HasForeignKey(u => u.DepartmentId)
-                .OnDelete(DeleteBehavior.SetNull);
-
-            // Supervisor (self-referencing)
-            builder.HasOne(u => u.Supervisor)
-                .WithMany(u => u.Subordinates)
-                .HasForeignKey(u => u.SupervisorId)
-                .OnDelete(DeleteBehavior.SetNull);
+            // Employee (1:1 relationship, configured from Employee side)
+            // Navigation property will be populated by Employee.User relationship
 
             // Managed Departments (User as Head of Department)
             builder.HasMany(u => u.ManagedDepartments)

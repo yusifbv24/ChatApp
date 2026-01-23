@@ -23,7 +23,7 @@ namespace ChatApp.Modules.Identity.Infrastructure
                 options.UseNpgsql(connectionString, npgsqlOptions =>
                 {
                     npgsqlOptions.MigrationsAssembly(typeof(IdentityDbContext).Assembly.FullName);
-                    npgsqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+                    npgsqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SingleQuery);
                 }));
 
             // Repositories
@@ -32,6 +32,8 @@ namespace ChatApp.Modules.Identity.Infrastructure
             // Services
             services.AddScoped<IPasswordHasher, PasswordHasher>();
             services.AddScoped<ITokenGenerator, JwtTokenGenerator>();
+            services.AddSingleton<IEncryptionService, AesEncryptionService>();
+
             return services;
         }
 

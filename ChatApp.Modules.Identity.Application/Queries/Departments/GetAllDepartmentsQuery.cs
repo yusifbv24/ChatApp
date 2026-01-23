@@ -20,8 +20,6 @@ namespace ChatApp.Modules.Identity.Application.Queries.Departments
             try
             {
                 var departments = await unitOfWork.Departments
-                    .Include(d => d.ParentDepartment)
-                    .Include(d => d.HeadOfDepartment)
                     .Select(d => new DepartmentDto(
                         d.Id,
                         d.Name,
@@ -30,6 +28,7 @@ namespace ChatApp.Modules.Identity.Application.Queries.Departments
                         d.HeadOfDepartmentId,
                         d.HeadOfDepartment != null ? d.HeadOfDepartment.FullName : null,
                         d.CreatedAtUtc))
+                    .AsNoTracking()
                     .ToListAsync(cancellationToken);
 
                 return Result.Success<IEnumerable<DepartmentDto>>(departments);

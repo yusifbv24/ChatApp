@@ -21,9 +21,10 @@ namespace ChatApp.Modules.Notifications.Infrastructure.Persistence
                 entity.ToTable("users");
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Id).HasColumnName("id");
-                entity.Property(e => e.Username).HasColumnName("username");
-                entity.Property(e => e.DisplayName).HasColumnName("display_name");
+                entity.Property(e => e.FirstName).HasColumnName("first_name");
+                entity.Property(e => e.LastName).HasColumnName("last_name");
                 entity.Property(e => e.Email).HasColumnName("email");
+                entity.Ignore(e => e.FullName);
                 entity.ToTable(tb => tb.ExcludeFromMigrations());
             });
         }
