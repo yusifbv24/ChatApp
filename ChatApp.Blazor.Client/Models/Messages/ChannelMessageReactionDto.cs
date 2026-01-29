@@ -4,7 +4,7 @@ namespace ChatApp.Blazor.Client.Models.Messages
         string Emoji,
         int Count,
         List<Guid> UserIds,
-        List<string> UserDisplayNames,
+        List<string> UserFullNames,
         List<string?> UserAvatarUrls
     );
 }

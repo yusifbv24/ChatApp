@@ -6,16 +6,16 @@ namespace ChatApp.Blazor.Client.Models.Search
         string Content,
         string HighlightedContent,
         Guid SenderId,
-        string SenderUsername,
-        string SenderDisplayName,
+        string SenderEmail,
+        string SenderFullName,
         string? SenderAvatarUrl,
         DateTime CreatedAtUtc,
         Guid? ChannelId,
         string? ChannelName,
         Guid? ConversationId,
         Guid? OtherUserId,
-        string? OtherUsername,
-        string? OtherDisplayName);
+        string? OtherEmail,
+        string? OtherFullName);
 
     public record SearchResultsDto(
         List<SearchResultDto> Results,

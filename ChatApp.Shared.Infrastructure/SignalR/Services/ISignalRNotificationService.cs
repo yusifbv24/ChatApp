@@ -127,7 +127,7 @@
         /// Notify channel members that a member has left the channel
         /// Sends only to channel group (no hybrid pattern needed)
         /// </summary>
-        Task NotifyMemberLeftChannelAsync(Guid channelId, Guid leftUserId, string leftUserDisplayName);
+        Task NotifyMemberLeftChannelAsync(Guid channelId, Guid leftUserId, string leftUserFullName);
 
 
         /// <summary>
@@ -135,7 +135,7 @@
         /// Sends typing indicator to channel group AND each member's connections directly
         /// This allows typing indicators to work with lazy loading (user doesn't need to JOIN channel)
         /// </summary>
-        Task NotifyUserTypingInChannelToMembersAsync(Guid channelId, List<Guid> memberUserIds, Guid typingUserId, string displayName, bool isTyping);
+        Task NotifyUserTypingInChannelToMembersAsync(Guid channelId, List<Guid> memberUserIds, Guid typingUserId, string fullName, bool isTyping);
 
         /// <summary>
         /// Notify conversation members about typing indicator (hybrid: group + direct connections)

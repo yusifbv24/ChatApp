@@ -146,7 +146,7 @@ public partial class Messages : IAsyncDisposable
     /// <summary>
     /// Pending conversation-un istifadəçisi.
     /// </summary>
-    private UserDto? pendingUser;
+    private UserSearchResultDto? pendingUser;
 
     #endregion
 
@@ -185,7 +185,7 @@ public partial class Messages : IAsyncDisposable
     /// <summary>
     /// Cari istifadəçinin channel-dakı rolu.
     /// </summary>
-    private ChannelMemberRole currentUserChannelRole;
+    private MemberRole currentUserChannelRole;
 
     /// <summary>
     /// Seçilmiş conversation/channel pinlənmişdir?
@@ -209,7 +209,7 @@ public partial class Messages : IAsyncDisposable
     /// <summary>
     /// Üzv axtarışı nəticələri.
     /// </summary>
-    private List<UserDto> memberSearchResults = [];
+    private List<UserSearchResultDto> memberSearchResults = [];
 
     /// <summary>
     /// Üzv axtarışı davam edir?
@@ -313,7 +313,7 @@ public partial class Messages : IAsyncDisposable
 
     /// <summary>
     /// Hər channel üçün yazan istifadəçilər.
-    /// channelId -> [displayName1, displayName2, ...]
+    /// channelId -> [fullName1, fullName2, ...]
     /// </summary>
     private Dictionary<Guid, List<string>> channelTypingUsers = [];
 
@@ -430,7 +430,7 @@ public partial class Messages : IAsyncDisposable
     /// <summary>
     /// İstifadəçi axtarış nəticələri.
     /// </summary>
-    private List<UserDto> userSearchResults = [];
+    private List<UserSearchResultDto> userSearchResults = [];
 
     /// <summary>
     /// Axtarış cancellation token source.
@@ -696,7 +696,7 @@ public partial class Messages : IAsyncDisposable
 
     /// <summary>
     /// Mention-a klik edildikdə JS-dən çağrılır.
-    /// Username-ə əsasən conversation açır.
+    /// Email-ə əsasən conversation açır.
     /// </summary>
     [JSInvokable]
     public async Task HandleMentionClick(string username)
@@ -705,8 +705,8 @@ public partial class Messages : IAsyncDisposable
         {
             // FIX: Self-mention check - Əgər öz adına mention edirsə, birbaşa Notes aç
             if (UserState.CurrentUser != null &&
-                (username.Equals(UserState.Username, StringComparison.OrdinalIgnoreCase) ||
-                 username.Equals(UserState.DisplayName, StringComparison.OrdinalIgnoreCase)))
+                (username.Equals(UserState.Email, StringComparison.OrdinalIgnoreCase) ||
+                 username.Equals(UserState.FullName, StringComparison.OrdinalIgnoreCase)))
             {
                 var notesConversation = directConversations.FirstOrDefault(c => c.IsNotes);
                 if (notesConversation != null)
@@ -717,15 +717,15 @@ public partial class Messages : IAsyncDisposable
                 return;
             }
 
-            // Username ilə user search et (other users üçün)
+            // Email və ya ad ilə user search et (other users üçün)
             var searchResult = await UserService.SearchUsersAsync(username);
 
             if (searchResult.IsSuccess && searchResult.Value != null && searchResult.Value.Count > 0)
             {
                 // İlk uyğun user-i tap (exact match)
                 var user = searchResult.Value.FirstOrDefault(u =>
-                    u.DisplayName.Equals(username, StringComparison.OrdinalIgnoreCase) ||
-                    u.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
+                    u.FullName.Equals(username, StringComparison.OrdinalIgnoreCase) ||
+                    u.Email.Equals(username, StringComparison.OrdinalIgnoreCase));
 
                 if (user != null)
                 {

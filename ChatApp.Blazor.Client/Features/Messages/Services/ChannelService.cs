@@ -256,7 +256,7 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
         }
 
 
-        public async Task<Result> UpdateMemberRoleAsync(Guid channelId, Guid userId, ChannelMemberRole newRole)
+        public async Task<Result> UpdateMemberRoleAsync(Guid channelId, Guid userId, MemberRole newRole)
         {
             return await apiClient.PutAsync(
                 $"/api/channels/{channelId}/members/{userId}/role",

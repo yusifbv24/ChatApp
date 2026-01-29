@@ -4,7 +4,7 @@ namespace ChatApp.Modules.Channels.Application.DTOs.Responses
         string Emoji,
         int Count,
         List<Guid> UserIds,
-        List<string> UserDisplayNames,
+        List<string> UserFullNames,
         List<string?> UserAvatarUrls
     );
 }

@@ -31,18 +31,18 @@
                             <div class="profile-avatar-large">
                                 @if (!string.IsNullOrEmpty(UserState.CurrentUser.AvatarUrl))
                                 {
-                                    <img src="@UserState.CurrentUser.AvatarUrl" alt="@UserState.CurrentUser.DisplayName" />
+                                    <img src="@UserState.CurrentUser.AvatarUrl" alt="@UserState.CurrentUser.FullName" />
                                 }
                                 else
                                 {
                                     <div class="profile-avatar-placeholder" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(UserState.CurrentUser.Id);">
-                                        @StringHelper.GetInitials(UserState.CurrentUser.DisplayName)
+                                        @StringHelper.GetInitials(UserState.CurrentUser.FullName)
                                     </div>
                                 }
                             </div>
                             <div class="profile-avatar-info">
-                                <h4>@UserState.CurrentUser.DisplayName</h4>
-                                <p class="profile-username">@("@" + UserState.CurrentUser.Username)</p>
+                                <h4>@UserState.CurrentUser.FullName</h4>
+                                <p class="profile-username">@("@" + UserState.CurrentUser.Email)</p>
                                 <p class="profile-role">
                                     <MudIcon Icon="@Icons.Material.Filled.Shield" Size="Size.Small" />
                                     @(UserState.CurrentUser.IsAdmin ? "Administrator" : "User")
@@ -90,21 +90,30 @@
                             <DataAnnotationsValidator />
 
                             <div class="profile-form-group">
-                                <label class="profile-label">Display Name</label>
+                                <label class="profile-label">First Name</label>
                                 <div class="profile-input-wrapper">
                                     <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Class="profile-input-icon" />
-                                    <InputText @bind-Value="editModel.DisplayName" class="profile-input" placeholder="Enter your display name" />
+                                    <InputText @bind-Value="editModel.FirstName" class="profile-input" placeholder="Enter your first name" />
                                 </div>
-                                <ValidationMessage For="@(() => editModel.DisplayName)" class="profile-validation-message" />
+                                <ValidationMessage For="@(() => editModel.FirstName)" class="profile-validation-message" />
                             </div>
 
                             <div class="profile-form-group">
-                                <label class="profile-label">Username</label>
+                                <label class="profile-label">Last Name</label>
+                                <div class="profile-input-wrapper">
+                                    <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Class="profile-input-icon" />
+                                    <InputText @bind-Value="editModel.LastName" class="profile-input" placeholder="Enter your last name" />
+                                </div>
+                                <ValidationMessage For="@(() => editModel.LastName)" class="profile-validation-message" />
+                            </div>
+
+                            <div class="profile-form-group">
+                                <label class="profile-label">Email</label>
                                 <div class="profile-info-value">
                                     <MudIcon Icon="@Icons.Material.Filled.AlternateEmail" Size="Size.Small" />
-                                    <span>@(UserState.CurrentUser?.Username ?? "")</span>
+                                    <span>@(UserState.CurrentUser?.Email ?? "")</span>
                                 </div>
-                                <p class="profile-field-hint">Username cannot be changed</p>
+                                <p class="profile-field-hint">Email cannot be changed</p>
                             </div>
 
                             <div class="profile-form-group">
@@ -120,9 +129,9 @@
                                 <label class="profile-label">About Me</label>
                                 <div class="profile-input-wrapper">
                                     <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small" Class="profile-input-icon textarea-icon" />
-                                    <InputTextArea @bind-Value="editModel.Notes" class="profile-textarea" placeholder="Tell us about yourself..." rows="4" />
+                                    <InputTextArea @bind-Value="editModel.AboutMe" class="profile-textarea" placeholder="Tell us about yourself..." rows="4" />
                                 </div>
-                                <ValidationMessage For="@(() => editModel.Notes)" class="profile-validation-message" />
+                                <ValidationMessage For="@(() => editModel.AboutMe)" class="profile-validation-message" />
                             </div>
 
                             @if (!string.IsNullOrEmpty(updateMessage))
@@ -260,9 +269,10 @@
                 // Initialize edit model with fresh user data
                 editModel = new UpdateUserRequest
                 {
-                    DisplayName = userResult.Value.DisplayName,
+                    FirstName = userResult.Value.FirstName,
+                    LastName = userResult.Value.LastName,
                     Email = userResult.Value.Email,
-                    Notes = userResult.Value.Notes
+                    AboutMe = userResult.Value.AboutMe
                 };
             }
 

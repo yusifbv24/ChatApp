@@ -376,7 +376,7 @@ public partial class ConversationList : IAsyncDisposable
         {
             Id = conv.Id,
             OtherUserId = conv.OtherUserId, // Avatar rəngi üçün qarşı tərəfin ID-si
-            Name = conv.IsNotes ? "Notes" : conv.OtherUserDisplayName,
+            Name = conv.IsNotes ? "Notes" : conv.OtherUserFullName,
             AvatarUrl = conv.OtherUserAvatarUrl,
             LastMessage = conv.LastMessageContent,
             LastActivityTime = conv.LastMessageAtUtc,

@@ -8,7 +8,7 @@ namespace ChatApp.Shared.Infrastructure.Authorization
     /// 
     /// This is needed because we can't pre-register all possible permission combinations as policies.
     /// When a [RequirePermission] attribute is encountered, ASP.NET Core asks this provider for a policy
-    /// with the name matching the permissions (e.g., "Groups.Create" or "Groups.Create,Groups.Manage").
+    /// with the name matching the permissions (e.g., "Channels.Create" or "Channels.Create,Channels.Manage").
     /// 
     /// This provider creates a policy on-the-fly that includes all the specified permission requirements.
     /// </summary>

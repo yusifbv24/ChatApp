@@ -566,7 +566,7 @@ public partial class Messages
                 return result.Value.Select(u => new MentionUserDto
                 {
                     Id = u.Id,
-                    Name = u.DisplayName,
+                    Name = u.FullName,
                     AvatarUrl = u.AvatarUrl,
                     IsMember = false, // User search-də member yoxdur
                     IsAll = false

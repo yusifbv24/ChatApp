@@ -7,11 +7,11 @@ namespace ChatApp.Blazor.Client.State;
 /// </summary>
 public class UserState
 {
-    private UserDto? _currentUser;
+    private UserDetailDto? _currentUser;
 
     public event Action? OnChange;
 
-    public UserDto? CurrentUser
+    public UserDetailDto? CurrentUser
     {
         get => _currentUser;
         set
@@ -27,28 +27,21 @@ public class UserState
 
     public Guid? UserId => _currentUser?.Id;
 
-    public string? Username => _currentUser?.Username;
+    public string? FirstName => _currentUser?.FirstName;
 
-    public string? DisplayName => _currentUser?.DisplayName;
+    public string? LastName => _currentUser?.LastName;
+
+    public string? FullName => _currentUser?.FullName;
+
+    public string? Email => _currentUser?.Email;
 
     public string? AvatarUrl => _currentUser?.AvatarUrl;
 
-    public List<string> Permissions
-    {
-        get
-        {
-            if (_currentUser == null)
-            {
-                return [];
-            }
+    public string? Position => _currentUser?.Position;
 
-            return _currentUser.Roles
-                .SelectMany(r => r.Permissions)
-                .Select(p => p.Name ?? "")
-                .Distinct()
-                .ToList();
-        }
-    }
+    public string? DepartmentName => _currentUser?.DepartmentName;
+
+    public List<string> Permissions => _currentUser?.Permissions ?? [];
 
     public bool HasPermission(string permission)
     {

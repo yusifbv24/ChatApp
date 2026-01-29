@@ -37,7 +37,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         /// Creates a new channel
         /// </summary>
         [HttpPost]
-        [RequirePermission("Groups.Create")]
+        [RequirePermission("Channels.Create")]
         [ProducesResponseType(typeof(Guid), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -69,7 +69,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         /// Gets a specific channel by ID with full details
         /// </summary>
         [HttpGet("{channelId:guid}")]
-        [RequirePermission("Groups.Read")]
+        [RequirePermission("Channels.Read")]
         [ProducesResponseType(typeof(ChannelDetailsDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -101,7 +101,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         /// Gets all channels the current user is a member of
         /// </summary>
         [HttpGet("my-channels")]
-        [RequirePermission("Groups.Read")]
+        [RequirePermission("Channels.Read")]
         [ProducesResponseType(typeof(List<ChannelDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -127,7 +127,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         /// Gets all public channels
         /// </summary>
         [HttpGet("public")]
-        [RequirePermission("Groups.Read")]
+        [RequirePermission("Channels.Read")]
         [ProducesResponseType(typeof(List<ChannelDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -147,7 +147,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         /// Searches channels by name or description
         /// </summary>
         [HttpGet("search")]
-        [RequirePermission("Groups.Read")]
+        [RequirePermission("Channels.Read")]
         [ProducesResponseType(typeof(List<ChannelDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -178,7 +178,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         /// Updates channel information (name, description, type)
         /// </summary>
         [HttpPut("{channelId:guid}")]
-        [RequirePermission("Groups.Manage")]
+        [RequirePermission("Channels.Manage")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -214,7 +214,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         /// Deletes (archives) a channel - only owner can delete
         /// </summary>
         [HttpDelete("{channelId:guid}")]
-        [RequirePermission("Groups.Manage")]
+        [RequirePermission("Channels.Manage")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -244,7 +244,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         /// Toggle pin status for a channel
         /// </summary>
         [HttpPost("{channelId:guid}/toggle-pin")]
-        [RequirePermission("Groups.Read")]
+        [RequirePermission("Channels.Read")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -272,7 +272,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         /// Toggle mute status for a channel
         /// </summary>
         [HttpPost("{channelId:guid}/toggle-mute")]
-        [RequirePermission("Groups.Read")]
+        [RequirePermission("Channels.Read")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -300,7 +300,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         /// Hide a channel from conversation list
         /// </summary>
         [HttpPost("{channelId:guid}/hide")]
-        [RequirePermission("Groups.Read")]
+        [RequirePermission("Channels.Read")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -328,7 +328,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         /// Toggle mark as read later for a channel
         /// </summary>
         [HttpPost("{channelId:guid}/toggle-read-later")]
-        [RequirePermission("Groups.Read")]
+        [RequirePermission("Channels.Read")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -355,7 +355,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         /// Unmark channel as read later (clears both conversation-level and message-level marks)
         /// </summary>
         [HttpDelete("{channelId:guid}/read-later")]
-        [RequirePermission("Groups.Read")]
+        [RequirePermission("Channels.Read")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -382,7 +382,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         /// Mark all unread channel messages as read and clear all read later flags
         /// </summary>
         [HttpPost("{channelId:guid}/messages/mark-all-read")]
-        [RequirePermission("Groups.Read")]
+        [RequirePermission("Channels.Read")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]

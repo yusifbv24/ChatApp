@@ -166,9 +166,9 @@
                                                      @onclick:stopPropagation="true"
                                                      @onmouseenter="CancelHideReactionUsers"
                                                      @onmouseleave="ScheduleHideReactionUsers">
-                                                    @for (int i = 0; i < reaction.UserDisplayNames.Count; i++)
+                                                    @for (int i = 0; i < reaction.UserFullNames.Count; i++)
                                                     {
-                                                        var displayName = reaction.UserDisplayNames[i];
+                                                        var displayName = reaction.UserFullNames[i];
                                                         var avatarUrl = reaction.UserAvatarUrls[i];
                                                         <div class="reaction-user-item">
                                                             <div class="reaction-user-avatar">

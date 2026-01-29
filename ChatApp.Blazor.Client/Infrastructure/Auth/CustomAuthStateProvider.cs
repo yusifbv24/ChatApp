@@ -43,16 +43,16 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
     /// <summary>
     /// Tries to get current user, auto-refreshing token if RememberMe was set
     /// </summary>
-    private async Task<UserDto?> TryGetCurrentUserAsync()
+    private async Task<UserDetailDto?> TryGetCurrentUserAsync()
     {
         try
         {
             // First try to get user with current access token
-            var response = await _httpClient.GetAsync("/api/auth/me");
+            var response = await _httpClient.GetAsync("/api/users/me");
 
             if (response.IsSuccessStatusCode)
             {
-                return await response.Content.ReadFromJsonAsync<UserDto>();
+                return await response.Content.ReadFromJsonAsync<UserDetailDto>();
             }
 
             // Access token expired or missing - check if RememberMe was set
@@ -68,11 +68,11 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
                     if (refreshResponse.IsSuccessStatusCode)
                     {
                         // Refresh succeeded - retry getting user info
-                        var retryResponse = await _httpClient.GetAsync("/api/auth/me");
+                        var retryResponse = await _httpClient.GetAsync("/api/users/me");
 
                         if (retryResponse.IsSuccessStatusCode)
                         {
-                            return await retryResponse.Content.ReadFromJsonAsync<UserDto>();
+                            return await retryResponse.Content.ReadFromJsonAsync<UserDetailDto>();
                         }
                     }
                 }
@@ -106,14 +106,13 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
     /// <summary>
     /// Creates authenticated state from user DTO
     /// </summary>
-    private AuthenticationState CreateAuthenticatedState(UserDto user)
+    private AuthenticationState CreateAuthenticatedState(UserDetailDto user)
     {
         var claims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new(ClaimTypes.Name, user.Username),
+            new(ClaimTypes.Name, user.FullName),
             new(ClaimTypes.Email, user.Email),
-            new("DisplayName", user.DisplayName ?? user.Username),
             new("IsAdmin", user.IsAdmin.ToString())
         };
 
@@ -159,11 +158,11 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
     /// <summary>
     /// Gets the current user information from the API (cookie-based)
     /// </summary>
-    public async Task<UserDto?> GetCurrentUserAsync()
+    public async Task<UserDetailDto?> GetCurrentUserAsync()
     {
         try
         {
-            return await _httpClient.GetFromJsonAsync<UserDto>("/api/auth/me");
+            return await _httpClient.GetFromJsonAsync<UserDetailDto>("/api/users/me");
         }
         catch
         {
@@ -189,7 +188,7 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
             return true;
         }
 
-        // Check specific permission in user's roles
-        return user.Roles.Any(r => r.Permissions.Any(p => p.Name == permission));
+        // Check specific permission in user's permissions list
+        return user.Permissions.Contains(permission);
     }
 }

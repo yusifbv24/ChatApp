@@ -79,8 +79,8 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectMessages
                     Id: message.Id,
                     ConversationId: message.ConversationId,
                     SenderId: senderId,
-                    SenderUsername: string.Empty, // Will be populated by frontend from user cache
-                    SenderDisplayName: string.Empty, // Will be populated by frontend from user cache
+                    SenderEmail: string.Empty, // Will be populated by frontend from user cache
+                    SenderFullName: string.Empty, // Will be populated by frontend from user cache
                     SenderAvatarUrl: null, // Will be populated by frontend from user cache
                     ReceiverId: receiverId,
                     Content: message.Content, // Content preserved in backend but shown as "deleted" in frontend

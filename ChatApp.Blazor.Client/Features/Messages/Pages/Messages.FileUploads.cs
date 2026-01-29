@@ -174,8 +174,8 @@ public partial class Messages
                     messageId,
                     selectedConversationId.Value,
                     currentUserId,
-                    UserState.CurrentUser?.Username ?? "",
-                    UserState.CurrentUser?.DisplayName ?? "",
+                    UserState.CurrentUser?.Email ?? "",
+                    UserState.CurrentUser?.FullName ?? "",
                     UserState.CurrentUser?.AvatarUrl,
                     recipientUserId,
                     content,
@@ -224,8 +224,8 @@ public partial class Messages
                     messageIds[messageIds.Count - 1],
                     selectedConversationId.Value,
                     currentUserId,
-                    UserState.CurrentUser?.Username ?? "",
-                    UserState.CurrentUser?.DisplayName ?? "",
+                    UserState.CurrentUser?.Email ?? "",
+                    UserState.CurrentUser?.FullName ?? "",
                     UserState.CurrentUser?.AvatarUrl,
                     recipientUserId,
                     lastContent,
@@ -301,8 +301,8 @@ public partial class Messages
                         messageId,
                         selectedChannelId.Value,
                         currentUserId,
-                        UserState.CurrentUser?.Username ?? "",
-                        UserState.CurrentUser?.DisplayName ?? "",
+                        UserState.CurrentUser?.Email ?? "",
+                        UserState.CurrentUser?.FullName ?? "",
                         UserState.CurrentUser?.AvatarUrl,
                         content,
                         fileId,                                     // FileId
@@ -354,7 +354,7 @@ public partial class Messages
                     {
                         preview = content;
                     }
-                    UpdateChannelLocally(selectedChannelId.Value, preview, messageTime, UserState.CurrentUser?.DisplayName);
+                    UpdateChannelLocally(selectedChannelId.Value, preview, messageTime, UserState.CurrentUser?.FullName);
                 }
             }
             else

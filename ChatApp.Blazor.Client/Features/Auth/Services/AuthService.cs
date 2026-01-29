@@ -88,7 +88,7 @@ public class AuthService : IAuthService
     /// <summary>
     /// Gets current authenticated user information
     /// </summary>
-    public async Task<UserDto?> GetCurrentUserAsync()
+    public async Task<UserDetailDto?> GetCurrentUserAsync()
     {
         return await _authStateProvider.GetCurrentUserAsync();
     }

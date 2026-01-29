@@ -3,7 +3,7 @@
     <div class="conversation-list-header">
         <h2>Chats</h2>
         <div class="new-chat-wrapper">
-            @if(UserState.HasPermission("Messages.Send") || UserState.HasPermission("Groups.Create"))
+            @if(UserState.HasPermission("Messages.Send") || UserState.HasPermission("Channels.Create"))
             {
                 <button class="new-chat-btn" @onclick="ToggleNewMenu">
                     <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" />
@@ -25,7 +25,7 @@
                         </button>
                     }
                     
-                    @if (UserState.HasPermission("Groups.Create"))
+                    @if (UserState.HasPermission("Channels.Create"))
                     {
                         <button class="new-menu-item" @onclick="OnNewChannelClick">
                             <MudIcon Icon="@Icons.Material.Filled.Group" Size="Size.Small" />

@@ -7,15 +7,28 @@ namespace ChatApp.Blazor.Client.Models.Auth;
 /// </summary>
 public class UpdateUserRequest
 {
-    [StringLength(50, MinimumLength = 3, ErrorMessage = "Username must be between 3 and 50 characters")]
-    public string? Username { get; set; }
+    [StringLength(50, MinimumLength = 2, ErrorMessage = "First name must be between 2 and 50 characters")]
+    public string? FirstName { get; set; }
+
+    [StringLength(50, MinimumLength = 2, ErrorMessage = "Last name must be between 2 and 50 characters")]
+    public string? LastName { get; set; }
 
     [EmailAddress(ErrorMessage = "Invalid email address")]
     public string? Email { get; set; }
 
-    [StringLength(100, MinimumLength = 2, ErrorMessage = "Display name must be between 2 and 100 characters")]
-    public string? DisplayName { get; set; }
+    public Role? Role { get; set; }
+
+    public Guid? PositionId { get; set; }
 
     public string? AvatarUrl { get; set; }
-    public string? Notes { get; set; }
+
+    [StringLength(500, ErrorMessage = "About me must not exceed 500 characters")]
+    public string? AboutMe { get; set; }
+
+    public DateTime? DateOfBirth { get; set; }
+
+    [Phone(ErrorMessage = "Invalid phone number")]
+    public string? WorkPhone { get; set; }
+
+    public DateTime? HiringDate { get; set; }
 }

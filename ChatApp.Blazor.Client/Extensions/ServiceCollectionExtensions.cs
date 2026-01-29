@@ -21,8 +21,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUserService, UserService>();
 
         // Admin Services
-        services.AddScoped<IRoleService, RoleService>();
-        services.AddScoped<IPermissionService, PermissionService>();
+        services.AddScoped<IDepartmentService, DepartmentService>();
+        services.AddScoped<IPositionService, PositionService>();
 
         // File Services
         services.AddScoped<IFileService, FileService>();

@@ -70,7 +70,7 @@ public partial class Sidebar
     /// <summary>
     /// Cari istifadəçinin channel-dakı rolu.
     /// </summary>
-    [Parameter] public ChannelMemberRole CurrentUserChannelRole { get; set; }
+    [Parameter] public MemberRole CurrentUserChannelRole { get; set; }
 
     #endregion
 
@@ -332,12 +332,12 @@ public partial class Sidebar
     /// <summary>
     /// Cari istifadəçi channel owner-dır?
     /// </summary>
-    private bool IsChannelOwner => CurrentUserChannelRole == ChannelMemberRole.Owner;
+    private bool IsChannelOwner => CurrentUserChannelRole == MemberRole.Owner;
 
     /// <summary>
     /// Cari istifadəçi channel admin və ya owner-dır?
     /// </summary>
-    private bool IsChannelAdminOrOwner => CurrentUserChannelRole == ChannelMemberRole.Admin || CurrentUserChannelRole == ChannelMemberRole.Owner;
+    private bool IsChannelAdminOrOwner => CurrentUserChannelRole == MemberRole.Admin || CurrentUserChannelRole == MemberRole.Owner;
 
     /// <summary>
     /// Qruplanmış DM favorites - cache-lənmiş.

@@ -64,19 +64,19 @@
                     <div class="user-avatar">
                         @if (!string.IsNullOrEmpty(UserState.CurrentUser.AvatarUrl))
                         {
-                            <img src="@UserState.CurrentUser.AvatarUrl" alt="@UserState.CurrentUser.DisplayName" />
+                            <img src="@UserState.CurrentUser.AvatarUrl" alt="@UserState.CurrentUser.FullName" />
                         }
                         else
                         {
                             <div class="user-avatar-placeholder">
-                                @StringHelper.GetInitials(UserState.CurrentUser.DisplayName)
+                                @StringHelper.GetInitials(UserState.CurrentUser.FullName)
                             </div>
                         }
                         <span class="user-status @(UserState.CurrentUser.IsActive ? "status-active" : "status-inactive")"></span>
                     </div>
                     <div class="user-info">
-                        <div class="user-display-name">@UserState.CurrentUser.DisplayName</div>
-                        <div class="user-username">@("@" + UserState.CurrentUser.Username)</div>
+                        <div class="user-display-name">@UserState.CurrentUser.FullName</div>
+                        <div class="user-username">@("@" + UserState.CurrentUser.Email)</div>
                     </div>
                 }
                 else
@@ -84,12 +84,12 @@
                     <div class="user-avatar-small">
                         @if (!string.IsNullOrEmpty(UserState.CurrentUser.AvatarUrl))
                         {
-                            <img src="@UserState.CurrentUser.AvatarUrl" alt="@UserState.CurrentUser.DisplayName" />
+                            <img src="@UserState.CurrentUser.AvatarUrl" alt="@UserState.CurrentUser.FullName" />
                         }
                         else
                         {
                             <div class="user-avatar-placeholder">
-                                @StringHelper.GetInitials(UserState.CurrentUser.DisplayName)
+                                @StringHelper.GetInitials(UserState.CurrentUser.FullName)
                             </div>
                         }
                         <span class="user-status @(UserState.CurrentUser.IsActive ? "status-active" : "status-inactive")"></span>
@@ -140,11 +140,18 @@
                         <span>Users</span>
                     }
                 </a>
-                <a href="/admin/roles" class="nav-item @(IsActive("/admin/roles"))">
-                    <MudIcon Icon="@Icons.Material.Filled.AdminPanelSettings" />
+                <a href="/admin/departments" class="nav-item @(IsActive("/admin/departments"))">
+                    <MudIcon Icon="@Icons.Material.Filled.Business" />
                     @if (isSidebarOpen)
                     {
-                        <span>Roles</span>
+                        <span>Departments</span>
+                    }
+                </a>
+                <a href="/admin/positions" class="nav-item @(IsActive("/admin/positions"))">
+                    <MudIcon Icon="@Icons.Material.Filled.Work" />
+                    @if (isSidebarOpen)
+                    {
+                        <span>Positions</span>
                     }
                 </a>
             }
@@ -200,12 +207,12 @@
                         {
                             @if (!string.IsNullOrEmpty(UserState.CurrentUser.AvatarUrl))
                             {
-                                <img src="@UserState.CurrentUser.AvatarUrl" alt="@UserState.CurrentUser.DisplayName" class="user-menu-avatar" />
+                                <img src="@UserState.CurrentUser.AvatarUrl" alt="@UserState.CurrentUser.FullName" class="user-menu-avatar" />
                             }
                             else
                             {
                                 <div class="user-menu-avatar-placeholder">
-                                    @StringHelper.GetInitials(UserState.CurrentUser.DisplayName)
+                                    @StringHelper.GetInitials(UserState.CurrentUser.FullName)
                                 </div>
                             }
                         }
@@ -216,7 +223,7 @@
                     {
                         <div class="user-menu-dropdown" @onclick:stopPropagation="true">
                             <div class="user-menu-header">
-                                <div class="user-menu-name">@UserState.CurrentUser?.DisplayName</div>
+                                <div class="user-menu-name">@UserState.CurrentUser?.FullName</div>
                                 <div class="user-menu-email">@UserState.CurrentUser?.Email</div>
                             </div>
                             <div class="user-menu-divider"></div>

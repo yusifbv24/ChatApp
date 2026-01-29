@@ -3,8 +3,8 @@
     public record DirectConversationDto(
         Guid Id,
         Guid OtherUserId,
-        string OtherUserUsername,
-        string OtherUserDisplayName,
+        string OtherUserEmail,
+        string OtherUserFullName,
         string? OtherUserAvatarUrl,
         string? LastMessageContent,
         DateTime LastMessageAtUtc,

@@ -52,15 +52,15 @@
                                     <div class="favorites-message-avatar">
                                         @if (!string.IsNullOrEmpty(message.SenderAvatarUrl))
                                         {
-                                            <img src="@message.SenderAvatarUrl" alt="@message.SenderDisplayName" />
+                                            <img src="@message.SenderAvatarUrl" alt="@message.SenderFullName" />
                                         }
                                         else
                                         {
-                                            <div class="favorites-avatar-placeholder" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(message.SenderId);">@StringHelper.GetInitials(message.SenderDisplayName)</div>
+                                            <div class="favorites-avatar-placeholder" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(message.SenderId);">@StringHelper.GetInitials(message.SenderFullName)</div>
                                         }
                                     </div>
                                     <div class="favorites-message-content" @onclick="() => NavigateToMessage(message.Id)">
-                                        <div class="favorites-sender-name">@message.SenderDisplayName</div>
+                                        <div class="favorites-sender-name">@message.SenderFullName</div>
                                         <div class="favorites-message-text @(message.IsDeleted ? "deleted" : "")">
                                             @GetFilePreview(message)
                                         </div>
@@ -103,15 +103,15 @@
                                     <div class="favorites-message-avatar">
                                         @if (!string.IsNullOrEmpty(message.SenderAvatarUrl))
                                         {
-                                            <img src="@message.SenderAvatarUrl" alt="@message.SenderDisplayName" />
+                                            <img src="@message.SenderAvatarUrl" alt="@message.SenderFullName" />
                                         }
                                         else
                                         {
-                                            <div class="favorites-avatar-placeholder" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(message.SenderId);">@StringHelper.GetInitials(message.SenderDisplayName)</div>
+                                            <div class="favorites-avatar-placeholder" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(message.SenderId);">@StringHelper.GetInitials(message.SenderFullName)</div>
                                         }
                                     </div>
                                     <div class="favorites-message-content" @onclick="() => NavigateToMessage(message.Id)">
-                                        <div class="favorites-sender-name">@message.SenderDisplayName</div>
+                                        <div class="favorites-sender-name">@message.SenderFullName</div>
                                         <div class="favorites-message-text @(message.IsDeleted ? "deleted" : "")">
                                             @GetFilePreview(message)
                                         </div>

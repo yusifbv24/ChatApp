@@ -17,19 +17,19 @@
             <DataAnnotationsValidator />
 
             <div class="login-form-group">
-                <label class="login-label">Username</label>
+                <label class="login-label">Email</label>
                 <div class="login-input-wrapper">
                     <span class="login-input-icon">
                         <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" />
                     </span>
                     <input type="text"
-                           value="@loginModel.Username"
-                           @oninput="@(e => { loginModel.Username = e.Value?.ToString() ?? string.Empty; ClearErrorMessage(); })"
+                           value="@loginModel.Email"
+                           @oninput="@(e => { loginModel.Email = e.Value?.ToString() ?? string.Empty; ClearErrorMessage(); })"
                            class="login-input"
-                           placeholder="Enter your username"
-                           autocomplete="username" />
+                           placeholder="Enter your email address"
+                           autocomplete="email" />
                 </div>
-                <ValidationMessage For="@(() => loginModel.Username)" class="login-validation-message" />
+                <ValidationMessage For="@(() => loginModel.Email)" class="login-validation-message" />
             </div>
 
             <div class="login-form-group">
@@ -96,10 +96,10 @@
         // Load saved username from localStorage if exists
         try
         {
-            var savedUsername = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "rememberedUsername");
+            var savedUsername = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "rememberedEmail");
             if (!string.IsNullOrEmpty(savedUsername))
             {
-                loginModel.Username = savedUsername;
+                loginModel.Email = savedUsername;
                 loginModel.RememberMe = true;
             }
         }
@@ -135,12 +135,12 @@
                 // Save or clear username and rememberMe preference based on RememberMe checkbox
                 if (loginModel.RememberMe)
                 {
-                    await JSRuntime.InvokeVoidAsync("localStorage.setItem", "rememberedUsername", loginModel.Username);
+                    await JSRuntime.InvokeVoidAsync("localStorage.setItem", "rememberedEmail", loginModel.Email);
                     await JSRuntime.InvokeVoidAsync("localStorage.setItem", "rememberMe", "true");
                 }
                 else
                 {
-                    await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "rememberedUsername");
+                    await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "rememberedEmail");
                     await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "rememberMe");
                 }
 
@@ -148,7 +148,7 @@
             }
             else
             {
-                errorMessage = result.Error ?? "Invalid username or password. Please try again.";
+                errorMessage = result.Error ?? "Invalid email or password. Please try again.";
             }
         }
         catch (Exception)

@@ -267,7 +267,7 @@ public partial class Messages
             selectedChannelId = null;
             isDirectMessage = true;
 
-            recipientName = conversation.IsNotes ? "Notes" : conversation.OtherUserDisplayName;
+            recipientName = conversation.IsNotes ? "Notes" : conversation.OtherUserFullName;
             recipientAvatarUrl = conversation.OtherUserAvatarUrl;
             recipientUserId = conversation.OtherUserId;
             isNotesConversation = conversation.IsNotes;
@@ -281,7 +281,7 @@ public partial class Messages
             currentConversationPartner = new MentionUserDto
             {
                 Id = conversation.OtherUserId,
-                Name = conversation.OtherUserDisplayName,
+                Name = conversation.OtherUserFullName,
                 AvatarUrl = conversation.OtherUserAvatarUrl,
                 IsMember = true,
                 IsAll = false
@@ -387,7 +387,7 @@ public partial class Messages
         isDirectMessage = true;
 
         recipientUserId = user.Id;
-        recipientName = user.DisplayName;
+        recipientName = user.FullName;
         recipientAvatarUrl = user.AvatarUrl;
         isRecipientOnline = await SignalRService.IsUserOnlineAsync(user.Id);
 
@@ -395,7 +395,7 @@ public partial class Messages
         currentConversationPartner = new MentionUserDto
         {
             Id = user.Id,
-            Name = user.DisplayName,
+            Name = user.FullName,
             AvatarUrl = user.AvatarUrl,
             IsMember = true,
             IsAll = false
@@ -611,7 +611,7 @@ public partial class Messages
             // ADMIN YOXLAMASI və MENTION DATA
             // Channel yaradıcısı avtomatik admin-dir
             isChannelAdmin = channel.CreatedBy == currentUserId;
-            currentUserChannelRole = isChannelAdmin ? ChannelMemberRole.Owner : ChannelMemberRole.Member;
+            currentUserChannelRole = isChannelAdmin ? MemberRole.Owner : MemberRole.Member;
 
             // Mention data: Channel üçün member-lər (@All MessageInput-da dinamik əlavə olunur)
             currentConversationPartner = null; // Channel-da conversation partner yoxdur
@@ -628,8 +628,8 @@ public partial class Messages
                     if (currentMember != null)
                     {
                         currentUserChannelRole = currentMember.Role;
-                        isChannelAdmin = currentMember.Role == ChannelMemberRole.Admin ||
-                                        currentMember.Role == ChannelMemberRole.Owner;
+                        isChannelAdmin = currentMember.Role == MemberRole.Admin ||
+                                        currentMember.Role == MemberRole.Owner;
                     }
                 }
 
@@ -639,7 +639,7 @@ public partial class Messages
                     .Select(m => new MentionUserDto
                     {
                         Id = m.UserId,
-                        Name = m.DisplayName,
+                        Name = m.FullName,
                         AvatarUrl = m.AvatarUrl,
                         IsMember = true,
                         IsAll = false
@@ -1321,7 +1321,7 @@ public partial class Messages
     /// Channel-ə üzv əlavə edir.
     /// Role verilə bilər (Member və ya Admin).
     /// </summary>
-    private async Task AddMemberToChannel((Guid userId, ChannelMemberRole role) memberData)
+    private async Task AddMemberToChannel((Guid userId, MemberRole role) memberData)
     {
         if (!selectedChannelId.HasValue) return;
 
@@ -1335,7 +1335,7 @@ public partial class Messages
             }
 
             // Role Admin-dirsə, role-u yenilə
-            if (memberData.role == ChannelMemberRole.Admin)
+            if (memberData.role == MemberRole.Admin)
             {
                 var roleResult = await ChannelService.UpdateMemberRoleAsync(
                     selectedChannelId.Value,

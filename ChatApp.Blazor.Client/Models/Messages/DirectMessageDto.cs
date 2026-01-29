@@ -6,8 +6,8 @@ namespace ChatApp.Blazor.Client.Models.Messages
         Guid Id,
         Guid ConversationId,
         Guid SenderId,
-        string SenderUsername,
-        string SenderDisplayName,
+        string SenderEmail,
+        string SenderFullName,
         string? SenderAvatarUrl,
         Guid ReceiverId,
         string Content,
@@ -42,5 +42,5 @@ namespace ChatApp.Blazor.Client.Models.Messages
 
     public record MessageMentionDto(
         Guid UserId,
-        string UserName);
+        string UserFullName);
 }

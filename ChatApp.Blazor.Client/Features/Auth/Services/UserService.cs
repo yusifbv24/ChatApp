@@ -21,9 +21,9 @@ public class UserService : IUserService
     /// <summary>
     /// Gets current user profile - GET /api/users/me
     /// </summary>
-    public async Task<Result<UserDto>> GetCurrentUserAsync()
+    public async Task<Result<UserDetailDto>> GetCurrentUserAsync()
     {
-        return await _apiClient.GetAsync<UserDto>("/api/users/me");
+        return await _apiClient.GetAsync<UserDetailDto>("/api/users/me");
     }
 
 
@@ -49,9 +49,9 @@ public class UserService : IUserService
     /// Gets user by ID - GET /api/users/{userId}
     /// Requires: Users.Read permission
     /// </summary>
-    public async Task<Result<UserDto>> GetUserByIdAsync(Guid userId)
+    public async Task<Result<UserDetailDto>> GetUserByIdAsync(Guid userId)
     {
-        return await _apiClient.GetAsync<UserDto>($"/api/users/{userId}");
+        return await _apiClient.GetAsync<UserDetailDto>($"/api/users/{userId}");
     }
 
 
@@ -59,9 +59,9 @@ public class UserService : IUserService
     /// Gets paginated list of users - GET /api/users
     /// Requires: Users.Read permission
     /// </summary>
-    public async Task<Result<List<UserDto>>> GetUsersAsync(int pageNumber = 1, int pageSize = 10)
+    public async Task<Result<List<UserListItemDto>>> GetUsersAsync(int pageNumber = 1, int pageSize = 10)
     {
-        return await _apiClient.GetAsync<List<UserDto>>($"/api/users?pageNumber={pageNumber}&pageSize={pageSize}");
+        return await _apiClient.GetAsync<List<UserListItemDto>>($"/api/users?pageNumber={pageNumber}&pageSize={pageSize}");
     }
 
 
@@ -126,35 +126,75 @@ public class UserService : IUserService
 
 
     /// <summary>
-    /// Assigns a role to user - POST /api/users/{userId}/roles/{roleId}
-    /// Requires: Users.Update permission
+    /// Assigns a permission to user - POST /api/users/{userId}/permissions/{permissionName}
+    /// Requires: Permissions.Assign permission
     /// </summary>
-    public async Task<Result> AssignRoleAsync(Guid userId, Guid roleId)
+    public async Task<Result> AssignPermissionAsync(Guid userId, string permissionName)
     {
-        return await _apiClient.PostAsync($"/api/users/{userId}/roles/{roleId}");
+        return await _apiClient.PostAsync($"/api/users/{userId}/permissions/{Uri.EscapeDataString(permissionName)}");
     }
 
 
     /// <summary>
-    /// Removes a role from user - DELETE /api/users/{userId}/roles/{roleId}
-    /// Requires: Users.Update permission
+    /// Removes a permission from user - DELETE /api/users/{userId}/permissions/{permissionName}
+    /// Requires: Permissions.Revoke permission
     /// </summary>
-    public async Task<Result> RemoveRoleAsync(Guid userId, Guid roleId)
+    public async Task<Result> RemovePermissionAsync(Guid userId, string permissionName)
     {
-        return await _apiClient.DeleteAsync($"/api/users/{userId}/roles/{roleId}");
+        return await _apiClient.DeleteAsync($"/api/users/{userId}/permissions/{Uri.EscapeDataString(permissionName)}");
     }
 
 
     /// <summary>
-    /// Searches users by username or display name - GET /api/users/search
+    /// Assigns employee to department - POST /api/users/{userId}/department
+    /// Requires: Users.Update permission
+    /// </summary>
+    public async Task<Result> AssignToDepartmentAsync(Guid userId, Guid departmentId)
+    {
+        return await _apiClient.PostAsync($"/api/users/{userId}/department", new { DepartmentId = departmentId });
+    }
+
+
+    /// <summary>
+    /// Removes employee from department - DELETE /api/users/{userId}/department
+    /// Requires: Users.Update permission
+    /// </summary>
+    public async Task<Result> RemoveFromDepartmentAsync(Guid userId)
+    {
+        return await _apiClient.DeleteAsync($"/api/users/{userId}/department");
+    }
+
+
+    /// <summary>
+    /// Assigns supervisor to employee - POST /api/users/{userId}/supervisor
+    /// Requires: Users.Update permission
+    /// </summary>
+    public async Task<Result> AssignSupervisorAsync(Guid userId, Guid supervisorId)
+    {
+        return await _apiClient.PostAsync($"/api/users/{userId}/supervisor", new { SupervisorId = supervisorId });
+    }
+
+
+    /// <summary>
+    /// Removes supervisor from employee - DELETE /api/users/{userId}/supervisor
+    /// Requires: Users.Update permission
+    /// </summary>
+    public async Task<Result> RemoveSupervisorAsync(Guid userId)
+    {
+        return await _apiClient.DeleteAsync($"/api/users/{userId}/supervisor");
+    }
+
+
+    /// <summary>
+    /// Searches users by first name, last name, or email - GET /api/users/search
     /// Any authenticated user can search for other users
     /// </summary>
-    public async Task<Result<List<UserDto>>> SearchUsersAsync(string searchTerm)
+    public async Task<Result<List<UserSearchResultDto>>> SearchUsersAsync(string searchTerm)
     {
         if (string.IsNullOrWhiteSpace(searchTerm) || searchTerm.Length < 2)
         {
-            return Result<List<UserDto>>.Success(new List<UserDto>());
+            return Result<List<UserSearchResultDto>>.Success(new List<UserSearchResultDto>());
         }
-        return await _apiClient.GetAsync<List<UserDto>>($"/api/users/search?q={Uri.EscapeDataString(searchTerm)}");
+        return await _apiClient.GetAsync<List<UserSearchResultDto>>($"/api/users/search?q={Uri.EscapeDataString(searchTerm)}");
     }
 }

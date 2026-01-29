@@ -6,7 +6,20 @@
       "Bash(nul)",
       "Bash(python3:*)",
       "Bash(psql:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(del \"C:\\Users\\ybaghiyev\\Desktop\\ChatApp\\ChatApp.Blazor.Client\\Features\\Admin\\Services\\IRoleService.cs\" \"C:\\Users\\ybaghiyev\\Desktop\\ChatApp\\ChatApp.Blazor.Client\\Features\\Admin\\Services\\RoleService.cs\" \"C:\\Users\\ybaghiyev\\Desktop\\ChatApp\\ChatApp.Blazor.Client\\Models\\Auth\\CreateRoleRequest.cs\" \"C:\\Users\\ybaghiyev\\Desktop\\ChatApp\\ChatApp.Blazor.Client\\Models\\Auth\\RoleDto.cs\" \"C:\\Users\\ybaghiyev\\Desktop\\ChatApp\\ChatApp.Blazor.Client\\Models\\Auth\\UpdateRoleRequest.cs\" \"C:\\Users\\ybaghiyev\\Desktop\\ChatApp\\ChatApp.Blazor.Client\\Features\\Admin\\Services\\IPermissionService.cs\" \"C:\\Users\\ybaghiyev\\Desktop\\ChatApp\\ChatApp.Blazor.Client\\Features\\Admin\\Services\\PermissionService.cs\")",
+      "Bash(rm:*)",
+      "Bash(dotnet build:*)",
+      "Bash(xargs sed:*)",
+      "Bash(git checkout:*)",
+      "Bash(Select-Object -Last 15)",
+      "Bash(find:*)",
+      "Bash(xargs cat:*)",
+      "Bash(powershell -Command \"Stop-Process -Id 54036 -Force\")",
+      "Bash(perl:*)",
+      "Bash(Stop-Process -Id 28532 -Force)",
+      "Bash(powershell -Command \"Stop-Process -Id 28532 -Force\")",
+      "Bash(del \"C:\\Users\\ybaghiyev\\Desktop\\ChatApp\\ChatApp.Modules.Channels.Application\\DTOs\\Responses\\MessageReactionDto.cs\")"
     ],
     "deny": [],
     "ask": []

@@ -47,7 +47,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                               member.Id,
                               member.ChannelId,
                               member.UserId,
-                              user.FullName,
+                              user.Email,
                               user.FullName,
                               user.AvatarUrl,
                               member.Role,

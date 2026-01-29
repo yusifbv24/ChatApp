@@ -11,7 +11,7 @@ namespace ChatApp.Modules.Identity.Domain.Enums
         Administrator = 1,
 
         /// <summary>
-        /// Operator role - has elevated permissions including Groups.Manage, Groups.Delete, Files.Delete
+        /// Operator role - has elevated permissions including Channels.Manage, Channels.Delete, Files.Delete
         /// Plus all User role permissions
         /// </summary>
         Operator = 2,

@@ -23,13 +23,13 @@ namespace ChatApp.Modules.Channels.Application.Events
                 // Get the display name of the user who left
                 // (We need to fetch user info - for now use UserId as placeholder)
                 // TODO: Add user service reference or include display name in event
-                var leftUserDisplayName = @event.UserId.ToString(); // Placeholder
+                var leftUserFullName = @event.UserId.ToString(); // Placeholder
 
                 // Notify channel group via SignalR (only to members who are in the group)
                 await signalRNotificationService.NotifyMemberLeftChannelAsync(
                     @event.ChannelId,
                     @event.UserId,
-                    leftUserDisplayName);
+                    leftUserFullName);
 
                 logger.LogInformation(
                     "Notified channel {ChannelId} group about user {UserId} leaving",

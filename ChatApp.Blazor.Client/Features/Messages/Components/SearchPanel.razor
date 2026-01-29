@@ -42,15 +42,15 @@
                             <div class="search-result-avatar">
                                 @if (!string.IsNullOrEmpty(result.SenderAvatarUrl))
                                 {
-                                    <img src="@result.SenderAvatarUrl" alt="@result.SenderDisplayName" />
+                                    <img src="@result.SenderAvatarUrl" alt="@result.SenderFullName" />
                                 }
                                 else
                                 {
-                                    <div class="avatar-placeholder">@StringHelper.GetInitials(result.SenderDisplayName)</div>
+                                    <div class="avatar-placeholder">@StringHelper.GetInitials(result.SenderFullName)</div>
                                 }
                             </div>
                             <div class="search-result-content">
-                                <span class="search-result-sender">@result.SenderDisplayName</span>
+                                <span class="search-result-sender">@result.SenderFullName</span>
                                 <div class="search-result-text">@((MarkupString)result.HighlightedContent)</div>
                             </div>
                         </div>

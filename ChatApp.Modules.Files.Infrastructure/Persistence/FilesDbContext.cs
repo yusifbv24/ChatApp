@@ -28,6 +28,7 @@ namespace ChatApp.Modules.Files.Infrastructure.Persistence
                 entity.Property(x => x.Id).HasColumnName("id");
                 entity.Property(x => x.FirstName).HasColumnName("first_name");
                 entity.Property(x => x.LastName).HasColumnName("last_name");
+                entity.Property(x => x.Email).HasColumnName("email");
                 entity.Ignore(x => x.FullName);
 
                 // Mark as query only

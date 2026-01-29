@@ -77,7 +77,7 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Hubs
             if (userId == Guid.Empty)
                 return;
 
-            var displayName = GetDisplayName();
+            var fullName = GetUsername(); // ClaimTypes.Name now contains FullName
 
             // Get channel members from cache
             var memberUserIds = await _channelMemberCache.GetChannelMemberIdsAsync(channelId);
@@ -93,7 +93,7 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Hubs
                     channelId,
                     recipientUserIds,
                     userId,
-                    displayName,
+                    fullName,
                     isTyping);
             }
             else
@@ -104,7 +104,7 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Hubs
                     "UserTypingInChannel",
                     channelId,
                     userId,
-                    displayName,
+                    fullName,
                     isTyping);
             }
         }
@@ -210,11 +210,6 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Hubs
         private string GetUsername()
         {
             return Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Someone";
-        }
-
-        private string GetDisplayName()
-        {
-            return Context.User?.FindFirst(ClaimTypes.GivenName)?.Value ?? GetUsername();
         }
     }
 }

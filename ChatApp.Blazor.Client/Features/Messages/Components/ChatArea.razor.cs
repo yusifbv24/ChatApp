@@ -326,7 +326,7 @@ public partial class ChatArea : IAsyncDisposable
     /// <summary>
     /// Channel-a üzv əlavə etmə callback-i.
     /// </summary>
-    [Parameter] public EventCallback<(Guid userId, ChannelMemberRole role)> OnAddMember { get; set; }
+    [Parameter] public EventCallback<(Guid userId, MemberRole role)> OnAddMember { get; set; }
 
     /// <summary>
     /// İstifadəçi axtarışı callback-i (Add Member dialog üçün).
@@ -336,7 +336,7 @@ public partial class ChatArea : IAsyncDisposable
     /// <summary>
     /// İstifadəçi axtarış nəticələri (parent-dən gəlir).
     /// </summary>
-    [Parameter] public List<UserDto> UserSearchResults { get; set; } = [];
+    [Parameter] public List<UserSearchResultDto> UserSearchResults { get; set; } = [];
 
     /// <summary>
     /// İstifadəçi axtarış statusu.
@@ -633,7 +633,7 @@ public partial class ChatArea : IAsyncDisposable
     /// <summary>
     /// Üzv axtarış nəticələri (local copy).
     /// </summary>
-    private List<UserDto> memberSearchResults = [];
+    private List<UserSearchResultDto> memberSearchResults = [];
 
     /// <summary>
     /// Üzv axtarışı davam edirmi?
@@ -664,7 +664,7 @@ public partial class ChatArea : IAsyncDisposable
     /// <summary>
     /// Hər istifadəçi üçün seçilmiş rol.
     /// </summary>
-    private readonly Dictionary<Guid, ChannelMemberRole> selectedRoleForUser = [];
+    private readonly Dictionary<Guid, MemberRole> selectedRoleForUser = [];
 
     /// <summary>
     /// Axtarış əməliyyatını ləğv etmək üçün CancellationToken.
@@ -1612,7 +1612,7 @@ public partial class ChatArea : IAsyncDisposable
             {
                 if (!selectedRoleForUser.ContainsKey(user.Id))
                 {
-                    selectedRoleForUser[user.Id] = ChannelMemberRole.Member;
+                    selectedRoleForUser[user.Id] = MemberRole.Member;
                 }
             }
         }
@@ -1645,14 +1645,14 @@ public partial class ChatArea : IAsyncDisposable
 
         try
         {
-            var role = selectedRoleForUser.GetValueOrDefault(userId, ChannelMemberRole.Member);
+            var role = selectedRoleForUser.GetValueOrDefault(userId, MemberRole.Member);
             await OnAddMember.InvokeAsync((userId, role));
 
             // Uğurlu əlavədən sonra nəticələrdən çıxar
             var user = memberSearchResults.FirstOrDefault(u => u.Id == userId);
             if (user != null)
             {
-                addMemberSuccess = $"{user.DisplayName} added successfully";
+                addMemberSuccess = $"{user.FullName} added successfully";
                 memberSearchResults.Remove(user);
                 selectedRoleForUser.Remove(userId);
             }

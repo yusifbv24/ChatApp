@@ -566,7 +566,7 @@ public partial class MessageBubble : IAsyncDisposable
             {
                 foreach (var m in dmMentions)
                 {
-                    mentionNames[m.UserName] = m.UserId;
+                    mentionNames[m.UserFullName] = m.UserId;
                 }
             }
 
@@ -577,13 +577,13 @@ public partial class MessageBubble : IAsyncDisposable
                 {
                     if (m.UserId.HasValue)
                     {
-                        mentionNames[m.UserName] = m.UserId.Value;
+                        mentionNames[m.UserFullName] = m.UserId.Value;
                     }
                     else
                     {
                         // @All mention (UserId = null)
                         // Guid.Empty istifadə edirik ki, render olunsun, lakin klik disabled olsun
-                        mentionNames[m.UserName] = Guid.Empty;
+                        mentionNames[m.UserFullName] = Guid.Empty;
                     }
                 }
             }

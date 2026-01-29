@@ -91,8 +91,8 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                                            conv.Id,
                                            conv.IsNotes,
                                            OtherUserId=otherUserId,
-                                           Username = user.FullName,
-                                           DisplayName = user.FullName,
+                                           OtherUserEmail = user.Email,
+                                           FullName = user.FullName,
                                            user.AvatarUrl,
                                            LastMessage = lastMessageInfo == null ? null :
                                                lastMessageInfo.IsDeleted ? "This message was deleted" :
@@ -173,8 +173,8 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 return new DirectConversationDto(
                     c.Id,
                     c.OtherUserId,
-                    c.Username,
-                    c.DisplayName,
+                    c.OtherUserEmail,
+                    c.FullName,
                     c.AvatarUrl,
                     c.LastMessage,
                     c.LastMessageAtUtc,

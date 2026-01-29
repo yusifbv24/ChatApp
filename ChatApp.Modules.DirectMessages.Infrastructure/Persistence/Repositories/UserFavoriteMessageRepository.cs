@@ -43,7 +43,7 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                     message.Id,
                     message.ConversationId,
                     message.SenderId,
-                    sender.FullName,
+                    sender.Email,
                     sender.FullName,
                     sender.AvatarUrl,
                     message.IsDeleted ? "This message was deleted" : message.Content,

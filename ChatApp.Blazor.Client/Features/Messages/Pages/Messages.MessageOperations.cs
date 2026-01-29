@@ -63,8 +63,8 @@ public partial class Messages
                     tempId,
                     conversationId,
                     currentUserId,
-                    UserState.CurrentUser?.Username ?? "",
-                    UserState.CurrentUser?.DisplayName ?? "",
+                    UserState.CurrentUser?.Email ?? "",
+                    UserState.CurrentUser?.FullName ?? "",
                     UserState.CurrentUser?.AvatarUrl,
                     recipientUserId,
                     content,
@@ -150,8 +150,8 @@ public partial class Messages
                     tempId,
                     channelId,
                     currentUserId,
-                    UserState.CurrentUser?.Username ?? "",
-                    UserState.CurrentUser?.DisplayName ?? "",
+                    UserState.CurrentUser?.Email ?? "",
+                    UserState.CurrentUser?.FullName ?? "",
                     UserState.CurrentUser?.AvatarUrl,
                     content,
                     null,                                       // FileId
@@ -185,7 +185,7 @@ public partial class Messages
                 // DUPLICATE FIX: Track pending message by TempId
                 pendingChannelMessages[tempId] = pendingMessage;
 
-                UpdateChannelLocally(channelId, content, messageTime, UserState.CurrentUser?.DisplayName);
+                UpdateChannelLocally(channelId, content, messageTime, UserState.CurrentUser?.FullName);
                 StateHasChanged();
 
                 // 2. BACKGROUND SEND - Retry logic ilə (fire and forget)
@@ -280,7 +280,7 @@ public partial class Messages
 
                         if (IsLastMessageInChannel(selectedChannelId.Value, updatedMessage.Id))
                         {
-                            UpdateChannelLastMessage(selectedChannelId.Value, edit.content, message.SenderDisplayName);
+                            UpdateChannelLastMessage(selectedChannelId.Value, edit.content, message.SenderFullName);
                         }
                         StateHasChanged();
                     }
@@ -361,7 +361,7 @@ public partial class Messages
 
                         if (IsLastMessageInChannel(selectedChannelId.Value, deletedMessage.Id))
                         {
-                            UpdateChannelLastMessage(selectedChannelId.Value, "This message was deleted", message.SenderDisplayName);
+                            UpdateChannelLastMessage(selectedChannelId.Value, "This message was deleted", message.SenderFullName);
                         }
                         StateHasChanged();
                     }

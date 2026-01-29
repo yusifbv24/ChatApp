@@ -93,8 +93,8 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMessages
                     Id: message.Id,
                     ChannelId: message.ChannelId,
                     SenderId: senderId,
-                    SenderUsername: string.Empty, // Will be populated by frontend from user cache
-                    SenderDisplayName: string.Empty, // Will be populated by frontend from user cache
+                    SenderEmail: string.Empty, // Will be populated by frontend from user cache
+                    SenderFullName: string.Empty, // Will be populated by frontend from user cache
                     SenderAvatarUrl: null, // Will be populated by frontend from user cache
                     Content: message.Content, // Content preserved in backend but shown as "deleted" in frontend
                     FileId: message.FileId,

@@ -192,7 +192,7 @@
                         <label>Search users</label>
                         <input type="text"
                                class="form-input"
-                               placeholder="Type a username..."
+                               placeholder="Type an email or name..."
                                value="@userSearchQuery"
                                @oninput="OnUserSearchInput" />
                     </div>
@@ -211,15 +211,15 @@
                                 <div class="user-result-item" @onclick="()=>StartConversationWithUser(user.Id)">
                                     @if (!string.IsNullOrEmpty(user.AvatarUrl))
                                     {
-                                        <img src="@user.AvatarUrl" alt="@user.DisplayName" class="user-result-avatar" />
+                                        <img src="@user.AvatarUrl" alt="@user.FullName" class="user-result-avatar" />
                                     }
                                     else
                                     {
-                                        <div class="user-result-avatar-placeholder">@StringHelper.GetInitials(user.DisplayName)</div>
+                                        <div class="user-result-avatar-placeholder">@StringHelper.GetInitials(user.FullName)</div>
                                     }
                                     <div class="user-result-info">
-                                        <span class="user-result-name">@user.DisplayName</span>
-                                        <span class="user-result-username">@@@user.Username</span>
+                                        <span class="user-result-name">@user.FullName</span>
+                                        <span class="user-result-username">@@@user.Email</span>
                                     </div>
                                 </div>
                             }

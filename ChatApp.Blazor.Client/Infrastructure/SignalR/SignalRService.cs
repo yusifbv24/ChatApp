@@ -259,9 +259,9 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
 
         // Typing indicators
         _subscriptions.Add(hubConnection.On<Guid, Guid, string, bool>("UserTypingInChannel",
-            (channelId, userId, displayName, isTyping) =>
+            (channelId, userId, fullName, isTyping) =>
             {
-                OnUserTypingInChannel?.Invoke(channelId, userId, displayName, isTyping);
+                OnUserTypingInChannel?.Invoke(channelId, userId, fullName, isTyping);
             }));
 
         _subscriptions.Add(hubConnection.On<Guid, Guid, bool>("UserTypingInConversation",
@@ -295,7 +295,7 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
                             var emoji = reactionElement.GetProperty("emoji").GetString() ?? "";
                             var count = reactionElement.GetProperty("count").GetInt32();
                             var userIds = new List<Guid>();
-                            var userDisplayNames = new List<string>();
+                            var userFullNames = new List<string>();
                             var userAvatarUrls = new List<string?>();
 
                             if (reactionElement.TryGetProperty("userIds", out var userIdsProp) &&
@@ -307,12 +307,12 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
                                 }
                             }
 
-                            if (reactionElement.TryGetProperty("userDisplayNames", out var displayNamesProp) &&
-                                displayNamesProp.ValueKind == JsonValueKind.Array)
+                            if (reactionElement.TryGetProperty("userFullNames", out var fullNamesProp) &&
+                                fullNamesProp.ValueKind == JsonValueKind.Array)
                             {
-                                foreach (var nameElement in displayNamesProp.EnumerateArray())
+                                foreach (var nameElement in fullNamesProp.EnumerateArray())
                                 {
-                                    userDisplayNames.Add(nameElement.GetString() ?? "");
+                                    userFullNames.Add(nameElement.GetString() ?? "");
                                 }
                             }
 
@@ -330,7 +330,7 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
                                 Emoji = emoji,
                                 Count = count,
                                 UserIds = userIds,
-                                UserDisplayNames = userDisplayNames,
+                                UserFullNames = userFullNames,
                                 UserAvatarUrls = userAvatarUrls
                             });
                         }
@@ -414,9 +414,9 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
 
                 var channelId = root.GetProperty("channelId").GetGuid();
                 var leftUserId = root.GetProperty("leftUserId").GetGuid();
-                var leftUserDisplayName = root.GetProperty("leftUserDisplayName").GetString() ?? "";
+                var leftUserFullName = root.GetProperty("leftUserFullName").GetString() ?? "";
 
-                OnMemberLeftChannel?.Invoke(channelId, leftUserId, leftUserDisplayName);
+                OnMemberLeftChannel?.Invoke(channelId, leftUserId, leftUserFullName);
             }
             catch
             {

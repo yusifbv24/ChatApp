@@ -130,7 +130,7 @@
                                     <span class="pinned-title">Pinned messages</span>
                                     var currentPinned = IsDirectMessage ? GetCurrentPinnedDirectMessage() : null;
                                     var currentChannelPinned = !IsDirectMessage ? GetCurrentPinnedChannelMessage() : null;
-                                    var senderName = currentPinned?.SenderDisplayName ?? currentChannelPinned?.SenderDisplayName;
+                                    var senderName = currentPinned?.SenderFullName ?? currentChannelPinned?.SenderFullName;
                                     var messageContent = currentPinned != null ? GetFilePreview(currentPinned) : (currentChannelPinned != null ? GetFilePreview(currentChannelPinned) : "");
 
                                     if (!string.IsNullOrEmpty(senderName))
@@ -174,15 +174,15 @@
                                         <div class="pinned-item-avatar">
                                             @if (!string.IsNullOrEmpty(message.SenderAvatarUrl))
                                             {
-                                                <img src="@message.SenderAvatarUrl" alt="@message.SenderDisplayName" />
+                                                <img src="@message.SenderAvatarUrl" alt="@message.SenderFullName" />
                                             }
                                             else
                                             {
-                                                <div class="avatar-placeholder">@StringHelper.GetInitials(message.SenderDisplayName)</div>
+                                                <div class="avatar-placeholder">@StringHelper.GetInitials(message.SenderFullName)</div>
                                             }
                                         </div>
                                         <div class="pinned-item-content">
-                                            <span class="pinned-item-sender">@message.SenderDisplayName</span>
+                                            <span class="pinned-item-sender">@message.SenderFullName</span>
                                             <span class="pinned-item-text">@StringHelper.TruncateText(GetFilePreview(message), 60)</span>
                                         </div>
                                         <button class="unpin-btn" @onclick="() => HandleUnpinMessage(message.Id)" @onclick:stopPropagation="true" title="Unpin">
@@ -199,15 +199,15 @@
                                         <div class="pinned-item-avatar">
                                             @if (!string.IsNullOrEmpty(message.SenderAvatarUrl))
                                             {
-                                                <img src="@message.SenderAvatarUrl" alt="@message.SenderDisplayName" />
+                                                <img src="@message.SenderAvatarUrl" alt="@message.SenderFullName" />
                                             }
                                             else
                                             {
-                                                <div class="avatar-placeholder">@StringHelper.GetInitials(message.SenderDisplayName)</div>
+                                                <div class="avatar-placeholder">@StringHelper.GetInitials(message.SenderFullName)</div>
                                             }
                                         </div>
                                         <div class="pinned-item-content">
-                                            <span class="pinned-item-sender">@message.SenderDisplayName</span>
+                                            <span class="pinned-item-sender">@message.SenderFullName</span>
                                             <span class="pinned-item-text">@StringHelper.TruncateText(GetFilePreview(message), 60)</span>
                                         </div>
                                         <button class="unpin-btn" @onclick="() => HandleUnpinChannelMessage(message.Id)" @onclick:stopPropagation="true" title="Unpin">
@@ -278,7 +278,7 @@
                                        FileName="@message.FileName"
                                        FileContentType="@message.FileContentType"
                                        FileSizeInBytes="@message.FileSizeInBytes"
-                                       SenderName="@message.SenderDisplayName"
+                                       SenderName="@message.SenderFullName"
                                        AvatarUrl="@message.SenderAvatarUrl"
                                        CreatedAt="@message.CreatedAtUtc"
                                        IsOwn="@(message.SenderId==CurrentUserId)"
@@ -368,7 +368,7 @@
                                        FileName="@message.FileName"
                                        FileContentType="@message.FileContentType"
                                        FileSizeInBytes="@message.FileSizeInBytes"
-                                       SenderName="@message.SenderDisplayName"
+                                       SenderName="@message.SenderFullName"
                                        AvatarUrl="@message.SenderAvatarUrl"
                                        CreatedAt="@message.CreatedAtUtc"
                                        IsOwn="@(message.SenderId == CurrentUserId)"
@@ -525,21 +525,21 @@
                                     <div class="member-avatar">
                                         @if (!string.IsNullOrEmpty(user.AvatarUrl))
                                         {
-                                            <img src="@user.AvatarUrl" alt="@user.DisplayName" />
+                                            <img src="@user.AvatarUrl" alt="@user.FullName" />
                                         }
                                         else
                                         {
-                                            <div class="avatar-placeholder">@StringHelper.GetInitials(user.DisplayName)</div>
+                                            <div class="avatar-placeholder">@StringHelper.GetInitials(user.FullName)</div>
                                         }
                                     </div>
                                     <div class="member-info">
-                                        <span class="member-name">@user.DisplayName</span>
-                                        <span class="member-username">@@@user.Username</span>
+                                        <span class="member-name">@user.FullName</span>
+                                        <span class="member-username">@@@user.Email</span>
                                     </div>
                                     <div class="member-actions">
                                         <select class="role-select" @bind="selectedRoleForUser[user.Id]">
-                                            <option value="@ChannelMemberRole.Member">Member</option>
-                                            <option value="@ChannelMemberRole.Admin">Admin</option>
+                                            <option value="@MemberRole.Member">Member</option>
+                                            <option value="@MemberRole.Admin">Admin</option>
                                         </select>
                                         <button class="add-member-btn" @onclick="() => AddMemberToChannel(user.Id)" disabled="@isAddingMember">
                                             @if (isAddingMember && addingUserId == user.Id)

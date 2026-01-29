@@ -7,7 +7,7 @@ namespace ChatApp.Shared.Infrastructure.Authorization
     /// This attribute can be applied to controller actions to enforce permission-based access control
     /// 
     /// Usage example:
-    /// [RequirePermission("Groups.Create")]
+    /// [RequirePermission("Channels.Create")]
     /// public async Task<IActionResult> CreateChannel(...)
     /// 
     /// Multiple permissions can be specified if needed:

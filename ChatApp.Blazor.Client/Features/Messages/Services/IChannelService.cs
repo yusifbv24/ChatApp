@@ -82,7 +82,7 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
         Task<Result> AddMemberAsync(Guid channelId, Guid userId);
 
 
-        Task<Result> UpdateMemberRoleAsync(Guid channelId, Guid userId, ChannelMemberRole newRole);
+        Task<Result> UpdateMemberRoleAsync(Guid channelId, Guid userId, MemberRole newRole);
 
 
         Task<Result> RemoveMemberAsync(Guid channelId, Guid userId);

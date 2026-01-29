@@ -9,7 +9,7 @@
         string? Description,
         ChannelType Type,
         Guid CreatedBy,
-        string CreatedByUsername,
+        string CreatedByEmail,
         bool IsArchived,
         int MemberCount,
         List<ChannelMemberDto> Members,
@@ -21,17 +21,19 @@
     /// DTO representing a channel member
     /// </summary>
     public record ChannelMemberDto(
+        Guid Id,
+        Guid ChannelId,
         Guid UserId,
-        string Username,
-        string DisplayName,
+        string Email,
+        string FullName,
         string? AvatarUrl,
-        ChannelMemberRole Role,
+        MemberRole Role,
         DateTime JoinedAtUtc,
         bool IsActive,
         Guid? LastReadLaterMessageId);
 
 
-    public enum ChannelMemberRole
+    public enum MemberRole
     {
         Member=1,
         Admin=2,

@@ -6,8 +6,8 @@ namespace ChatApp.Modules.DirectMessages.Application.DTOs.Response
         Guid Id,
         Guid ConversationId,
         Guid SenderId,
-        string SenderUsername,
-        string SenderDisplayName,
+        string SenderEmail,
+        string SenderFullName,
         string? SenderAvatarUrl,
         Guid ReceiverId,
         string Content,
@@ -42,5 +42,5 @@ namespace ChatApp.Modules.DirectMessages.Application.DTOs.Response
 
     public record MessageMentionDto(
         Guid UserId,
-        string UserName);
+        string UserFullName);
 }

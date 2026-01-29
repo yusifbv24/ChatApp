@@ -2,6 +2,7 @@ using ChatApp.Blazor.Client.Features.Admin.Services;
 using ChatApp.Blazor.Client.Features.Auth.Services;
 using ChatApp.Blazor.Client.Features.Files.Services;
 using ChatApp.Blazor.Client.Models.Auth;
+using ChatApp.Blazor.Client.Models.Organization;
 using ChatApp.Blazor.Client.State;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
@@ -11,25 +12,26 @@ namespace ChatApp.Blazor.Client.Features.Admin.Pages;
 public partial class Users
 {
     [Inject] private IUserService UserService { get; set; } = default!;
-    [Inject] private IRoleService RoleService { get; set; } = default!;
+    [Inject] private IDepartmentService DepartmentService { get; set; } = default!;
+    [Inject] private IPositionService PositionService { get; set; } = default!;
     [Inject] private IFileService FileService { get; set; } = default!;
     [Inject] private UserState UserState { get; set; } = default!;
 
     // User list state
-    private List<UserDto> users = [];
-    private List<UserDto> filteredUsers = [];
+    private List<UserListItemDto> users = [];
+    private List<UserListItemDto> filteredUsers = [];
     private string searchTerm = "";
     private string statusFilter = "all";
     private bool isLoading = true;
     private string? errorMessage;
 
-    // Available roles
-    private List<RoleDto> availableRoles = [];
+    // Available departments and positions
+    private List<DepartmentDto> availableDepartments = [];
+    private List<PositionDto> availablePositions = [];
 
     // Create User Dialog
     private bool showCreateUserDialog = false;
     private CreateUserRequest createUserModel = new();
-    private List<Guid> createUserSelectedRoleIds = [];
     private bool isCreatingUser = false;
     private string? createUserMessage;
     private bool createUserSuccess = false;
@@ -42,7 +44,7 @@ public partial class Users
 
     // Edit User Dialog
     private bool showEditUserDialog = false;
-    private UserDto? editingUser;
+    private UserDetailDto? editingUser;
     private UpdateUserRequest editUserModel = new();
     private bool isUpdatingUser = false;
     private string? editUserMessage;
@@ -53,17 +55,9 @@ public partial class Users
     private long editAvatarFileSize;
     private string? editAvatarPreviewUrl;
 
-    // Manage Roles Dialog
-    private bool showManageRolesDialog = false;
-    private UserDto? managingRolesUser;
-    private List<Guid> selectedRoleIds = [];
-    private bool isUpdatingRoles = false;
-    private string? rolesMessage;
-    private bool rolesSuccess = false;
-
     // Change Password Dialog
     private bool showChangePasswordDialog = false;
-    private UserDto? changingPasswordUser;
+    private UserDetailDto? changingPasswordUser;
     private AdminChangePasswordRequest changePasswordModel = new();
     private bool isChangingPassword = false;
     private string? changePasswordMessage;
@@ -71,7 +65,7 @@ public partial class Users
 
     // Delete User Dialog
     private bool showDeleteUserDialog = false;
-    private UserDto? deletingUser;
+    private UserDetailDto? deletingUser;
     private bool isDeletingUser = false;
     private string? deleteUserMessage;
 
@@ -79,7 +73,8 @@ public partial class Users
     {
         await Task.WhenAll(
             LoadUsers(),
-            LoadRoles()
+            LoadDepartments(),
+            LoadPositions()
         );
     }
 
@@ -90,7 +85,7 @@ public partial class Users
 
         try
         {
-            var result = await UserService.GetUsersAsync();
+            var result = await UserService.GetUsersAsync(1, 1000);
 
             if (result.IsSuccess && result.Value != null)
             {
@@ -112,23 +107,30 @@ public partial class Users
         }
     }
 
-    private async Task LoadRoles()
+    private async Task LoadDepartments()
     {
-        var result = await RoleService.GetRolesAsync();
+        var result = await DepartmentService.GetAllDepartmentsAsync();
         if (result.IsSuccess && result.Value != null)
         {
-            availableRoles = result.Value;
+            availableDepartments = result.Value;
         }
     }
 
+    private async Task LoadPositions()
+    {
+        var result = await PositionService.GetAllPositionsAsync();
+        if (result.IsSuccess && result.Value != null)
+        {
+            availablePositions = result.Value;
+        }
+    }
 
     private void ApplyFilters()
     {
         filteredUsers = users.Where(u =>
         {
             bool matchesSearch = string.IsNullOrEmpty(searchTerm) ||
-                u.DisplayName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
-                u.Username.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                u.FullName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
                 u.Email.Contains(searchTerm, StringComparison.OrdinalIgnoreCase);
 
             bool matchesStatus = statusFilter == "all" ||
@@ -164,7 +166,6 @@ public partial class Users
     private void OpenCreateUserDialog()
     {
         createUserModel = new CreateUserRequest();
-        createUserSelectedRoleIds = new();
         createUserMessage = null;
         createUserSuccess = false;
         selectedAvatarFileData = null;
@@ -217,12 +218,10 @@ public partial class Users
 
             try
             {
-                // Read file into memory immediately to avoid Blazor reference issues
                 using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
                 var buffer = new byte[file.Size];
                 await stream.ReadExactlyAsync(buffer, 0, buffer.Length);
 
-                // Store file data in memory
                 selectedAvatarFileData = buffer;
                 selectedAvatarFileName = file.Name;
                 selectedAvatarContentType = file.ContentType;
@@ -256,29 +255,6 @@ public partial class Users
         StateHasChanged();
     }
 
-    private void ToggleCreateUserRole(Guid roleId)
-    {
-        var administratorRoleId = Guid.Parse("11111111-1111-1111-1111-111111111111");
-
-        if (!createUserSelectedRoleIds.Remove(roleId))
-        {
-            // Administrator exclusivity check
-            if (roleId == administratorRoleId)
-            {
-                // If selecting Administrator, clear all other roles
-                createUserSelectedRoleIds.Clear();
-                createUserSelectedRoleIds.Add(roleId);
-            }
-            else
-            {
-                // If Administrator is already selected, remove it before adding other role
-                createUserSelectedRoleIds.Remove(administratorRoleId);
-                createUserSelectedRoleIds.Add(roleId);
-            }
-        }
-        StateHasChanged();
-    }
-
     private async Task HandleCreateUser()
     {
         isCreatingUser = true;
@@ -287,10 +263,7 @@ public partial class Users
 
         try
         {
-            // Create user first without avatar
-            createUserModel.CreatedBy = UserState.CurrentUser?.Id ?? Guid.Empty;
-            createUserModel.RoleIds = createUserSelectedRoleIds;
-            createUserModel.AvatarUrl = null; // Clear avatar URL, will set it after upload
+            createUserModel.AvatarUrl = null;
 
             var result = await UserService.CreateUserAsync(createUserModel);
 
@@ -305,7 +278,7 @@ public partial class Users
 
             var newUserId = result.Value.UserId;
 
-            // Upload avatar to the new user's folder if selected
+            // Upload avatar if selected
             if (selectedAvatarFileData != null && !string.IsNullOrEmpty(selectedAvatarFileName) && !string.IsNullOrEmpty(selectedAvatarContentType))
             {
                 isUploadingAvatar = true;
@@ -315,25 +288,21 @@ public partial class Users
                     selectedAvatarFileData,
                     selectedAvatarFileName,
                     selectedAvatarContentType,
-                    newUserId); // Upload to the new user's folder
+                    newUserId);
 
                 if (uploadResult.IsSuccess && uploadResult.Value != null)
                 {
-                    // Update user with avatar URL
                     var avatarUrl = uploadResult.Value.ThumbnailUrl ?? uploadResult.Value.DownloadUrl;
                     var updateRequest = new UpdateUserRequest
                     {
+                        FirstName = createUserModel.FirstName,
+                        LastName = createUserModel.LastName,
                         Email = createUserModel.Email,
-                        DisplayName = createUserModel.DisplayName,
-                        Notes = createUserModel.Notes,
                         AvatarUrl = avatarUrl
                     };
 
-                    var updateResult = await UserService.UpdateUserAsync(newUserId, updateRequest);
-
-                    // Silently continue if avatar update failed - user was created
+                    await UserService.UpdateUserAsync(newUserId, updateRequest);
                 }
-                // Silently continue if avatar upload failed - user was created
 
                 isUploadingAvatar = false;
             }
@@ -341,10 +310,8 @@ public partial class Users
             createUserSuccess = true;
             createUserMessage = result.Value.Message ?? "User created successfully!";
 
-            // Load users first
             await LoadUsers();
 
-            // Then show success message and close dialog
             StateHasChanged();
             await Task.Delay(1500);
             showCreateUserDialog = false;
@@ -365,23 +332,40 @@ public partial class Users
     }
 
     // Edit User Methods
-    private void OpenEditUserDialog(UserDto user)
+    private async Task OpenEditUserDialog(Guid userId)
     {
-        editingUser = user;
-        editUserModel = new UpdateUserRequest
+        try
         {
-            Email = user.Email,
-            DisplayName = user.DisplayName,
-            AvatarUrl = user.AvatarUrl,
-            Notes = user.Notes
-        };
-        editUserMessage = null;
-        editAvatarFileData = null;
-        editAvatarFileName = null;
-        editAvatarContentType = null;
-        editAvatarFileSize = 0;
-        editAvatarPreviewUrl = null;
-        showEditUserDialog = true;
+            var result = await UserService.GetUserByIdAsync(userId);
+            if (result.IsSuccess && result.Value != null)
+            {
+                editingUser = result.Value;
+                editUserModel = new UpdateUserRequest
+                {
+                    FirstName = editingUser.FirstName,
+                    LastName = editingUser.LastName,
+                    Email = editingUser.Email,
+                    Role = Enum.Parse<Role>(editingUser.Role),
+                    PositionId = editingUser.DepartmentId,
+                    AvatarUrl = editingUser.AvatarUrl,
+                    AboutMe = editingUser.AboutMe,
+                    DateOfBirth = editingUser.DateOfBirth,
+                    WorkPhone = editingUser.WorkPhone,
+                    HiringDate = editingUser.HiringDate
+                };
+                editUserMessage = null;
+                editAvatarFileData = null;
+                editAvatarFileName = null;
+                editAvatarContentType = null;
+                editAvatarFileSize = 0;
+                editAvatarPreviewUrl = null;
+                showEditUserDialog = true;
+            }
+        }
+        catch
+        {
+            // Handle error
+        }
     }
 
     private void CloseEditUserDialog() => showEditUserDialog = false;
@@ -394,7 +378,6 @@ public partial class Users
 
         if (file != null)
         {
-            // Validate file type
             if (!file.ContentType.StartsWith("image/"))
             {
                 editUserMessage = "Only image files are allowed for profile pictures";
@@ -403,7 +386,6 @@ public partial class Users
                 return;
             }
 
-            // Validate file size (10MB)
             if (file.Size > 10 * 1024 * 1024)
             {
                 editUserMessage = "File size must be less than 10 MB";
@@ -414,12 +396,10 @@ public partial class Users
 
             try
             {
-                // Read file into memory immediately to avoid Blazor reference issues
                 using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
                 var buffer = new byte[file.Size];
                 await stream.ReadExactlyAsync(buffer, 0, buffer.Length);
 
-                // Store file data in memory
                 editAvatarFileData = buffer;
                 editAvatarFileName = file.Name;
                 editAvatarContentType = file.ContentType;
@@ -462,19 +442,16 @@ public partial class Users
 
         try
         {
-            // Upload avatar first if a new one is selected
             if (editAvatarFileData != null && !string.IsNullOrEmpty(editAvatarFileName) && !string.IsNullOrEmpty(editAvatarContentType))
             {
-                // Upload to the target user's folder (editingUser.Id)
                 var uploadResult = await FileService.UploadProfilePictureAsync(
                     editAvatarFileData,
                     editAvatarFileName,
                     editAvatarContentType,
-                    editingUser.Id); // Pass target user ID to upload to their folder
+                    editingUser.Id);
 
                 if (uploadResult.IsSuccess && uploadResult.Value != null)
                 {
-                    // Use thumbnail URL for performance, fall back to download URL if no thumbnail
                     editUserModel.AvatarUrl = uploadResult.Value.ThumbnailUrl ?? uploadResult.Value.DownloadUrl;
                 }
                 else
@@ -494,7 +471,7 @@ public partial class Users
             {
                 editUserSuccess = true;
                 editUserMessage = "User updated successfully!";
-                StateHasChanged(); // Force UI update to show success message
+                StateHasChanged();
                 await Task.Delay(1500);
                 showEditUserDialog = false;
                 await LoadUsers();
@@ -503,107 +480,40 @@ public partial class Users
             {
                 editUserSuccess = false;
                 editUserMessage = result.Error ?? "Failed to update user";
-                StateHasChanged(); // Force UI update to show error message
+                StateHasChanged();
             }
         }
         catch
         {
             editUserSuccess = false;
             editUserMessage = "An error occurred while updating the user";
-            StateHasChanged(); // Force UI update to show error message
+            StateHasChanged();
         }
         finally
         {
             isUpdatingUser = false;
-            StateHasChanged(); // Force UI update to re-enable button
-        }
-    }
-
-    // Manage Roles Methods
-    private void OpenManageRolesDialog(UserDto user)
-    {
-        managingRolesUser = user;
-        selectedRoleIds = user.Roles.Select(r => r.Id).ToList();
-        rolesMessage = null;
-        showManageRolesDialog = true;
-    }
-
-    private void CloseManageRolesDialog() => showManageRolesDialog = false;
-
-    private void ToggleRole(Guid roleId)
-    {
-        var administratorRoleId = Guid.Parse("11111111-1111-1111-1111-111111111111");
-
-        if (selectedRoleIds.Contains(roleId))
-        {
-            selectedRoleIds.Remove(roleId);
-        }
-        else
-        {
-            // Administrator exclusivity check
-            if (roleId == administratorRoleId)
-            {
-                // If selecting Administrator, clear all other roles
-                selectedRoleIds.Clear();
-                selectedRoleIds.Add(roleId);
-            }
-            else
-            {
-                // If Administrator is already selected, remove it before adding other role
-                if (selectedRoleIds.Contains(administratorRoleId))
-                {
-                    selectedRoleIds.Remove(administratorRoleId);
-                }
-                selectedRoleIds.Add(roleId);
-            }
-        }
-    }
-
-    private async Task SaveRoles()
-    {
-        if (managingRolesUser == null) return;
-
-        isUpdatingRoles = true;
-        rolesMessage = null;
-
-        try
-        {
-            var currentRoleIds = managingRolesUser.Roles.Select(r => r.Id).ToHashSet();
-            var rolesToAdd = selectedRoleIds.Except(currentRoleIds).ToList();
-            var rolesToRemove = currentRoleIds.Except(selectedRoleIds).ToList();
-
-            // Paralel olaraq bütün rol dəyişikliklərini tətbiq et
-            var addTasks = rolesToAdd.Select(roleId => UserService.AssignRoleAsync(managingRolesUser.Id, roleId));
-            var removeTasks = rolesToRemove.Select(roleId => UserService.RemoveRoleAsync(managingRolesUser.Id, roleId));
-            await Task.WhenAll(addTasks.Concat(removeTasks));
-
-            rolesSuccess = true;
-            rolesMessage = "Roles updated successfully!";
-            StateHasChanged(); // Force UI update to show success message
-            await Task.Delay(1500);
-            showManageRolesDialog = false;
-            await LoadUsers();
-        }
-        catch
-        {
-            rolesSuccess = false;
-            rolesMessage = "An error occurred while updating roles";
-            StateHasChanged(); // Force UI update to show error message
-        }
-        finally
-        {
-            isUpdatingRoles = false;
-            StateHasChanged(); // Force UI update to re-enable button
+            StateHasChanged();
         }
     }
 
     // Change Password Methods
-    private void OpenChangePasswordDialog(UserDto user)
+    private async Task OpenChangePasswordDialog(Guid userId)
     {
-        changingPasswordUser = user;
-        changePasswordModel = new AdminChangePasswordRequest();
-        changePasswordMessage = null;
-        showChangePasswordDialog = true;
+        try
+        {
+            var result = await UserService.GetUserByIdAsync(userId);
+            if (result.IsSuccess && result.Value != null)
+            {
+                changingPasswordUser = result.Value;
+                changePasswordModel = new AdminChangePasswordRequest();
+                changePasswordMessage = null;
+                showChangePasswordDialog = true;
+            }
+        }
+        catch
+        {
+            // Handle error
+        }
     }
 
     private void CloseChangePasswordDialog() => showChangePasswordDialog = false;
@@ -617,7 +527,6 @@ public partial class Users
 
         try
         {
-            // Set the user ID before sending the request
             changePasswordModel.Id = changingPasswordUser.Id;
 
             var result = await UserService.ChangeUserPasswordAsync(changePasswordModel);
@@ -626,11 +535,7 @@ public partial class Users
             {
                 changePasswordSuccess = true;
                 changePasswordMessage = "Password changed successfully!";
-
-                // Force UI update to show success message immediately
                 StateHasChanged();
-
-                // Wait 2.5 seconds so user can see the success message
                 await Task.Delay(2500);
                 showChangePasswordDialog = false;
             }
@@ -653,11 +558,22 @@ public partial class Users
     }
 
     // Delete User Methods
-    private void OpenDeleteUserDialog(UserDto user)
+    private async Task OpenDeleteUserDialog(Guid userId)
     {
-        deletingUser = user;
-        deleteUserMessage = null;
-        showDeleteUserDialog = true;
+        try
+        {
+            var result = await UserService.GetUserByIdAsync(userId);
+            if (result.IsSuccess && result.Value != null)
+            {
+                deletingUser = result.Value;
+                deleteUserMessage = null;
+                showDeleteUserDialog = true;
+            }
+        }
+        catch
+        {
+            // Handle error
+        }
     }
 
     private void CloseDeleteUserDialog() => showDeleteUserDialog = false;
@@ -694,18 +610,18 @@ public partial class Users
     }
 
     // Activate/Deactivate Methods
-    private async Task ActivateUser(UserDto user)
+    private async Task ActivateUser(Guid userId)
     {
-        var result = await UserService.ActivateUserAsync(user.Id);
+        var result = await UserService.ActivateUserAsync(userId);
         if (result.IsSuccess)
         {
             await LoadUsers();
         }
     }
 
-    private async Task DeactivateUser(UserDto user)
+    private async Task DeactivateUser(Guid userId)
     {
-        var result = await UserService.DeactivateUserAsync(user.Id);
+        var result = await UserService.DeactivateUserAsync(userId);
         if (result.IsSuccess)
         {
             await LoadUsers();

@@ -85,8 +85,8 @@ public partial class Messages
                         messageId,
                         conversationId,
                         currentUserId,
-                        UserState.CurrentUser?.Username ?? "",
-                        UserState.CurrentUser?.DisplayName ?? "",
+                        UserState.CurrentUser?.Email ?? "",
+                        UserState.CurrentUser?.FullName ?? "",
                         UserState.CurrentUser?.AvatarUrl,
                         conversation?.OtherUserId ?? Guid.Empty,
                         content,
@@ -176,8 +176,8 @@ public partial class Messages
                         messageId,
                         channelId,
                         currentUserId,
-                        UserState.CurrentUser?.Username ?? "",
-                        UserState.CurrentUser?.DisplayName ?? "",
+                        UserState.CurrentUser?.Email ?? "",
+                        UserState.CurrentUser?.FullName ?? "",
                         UserState.CurrentUser?.AvatarUrl,
                         content,
                         null,                                       // FileId
@@ -212,7 +212,7 @@ public partial class Messages
                 }
 
                 // Forward olunanda file attachment-lər transfer olunmur, ona görə preview sadəcə content-dir
-                UpdateChannelLocally(channelId, content, messageTime, UserState.CurrentUser?.DisplayName);
+                UpdateChannelLocally(channelId, content, messageTime, UserState.CurrentUser?.FullName);
 
                 if (isSelectingMessageBuble)
                 {
@@ -259,7 +259,7 @@ public partial class Messages
 
             items.Add(new ForwardItem(
                 conv.Id,
-                conv.OtherUserDisplayName,
+                conv.OtherUserFullName,
                 conv.OtherUserAvatarUrl,
                 IsChannel: false,
                 IsPrivate: false,
@@ -325,7 +325,7 @@ public partial class Messages
             {
                 isReplying = true;
                 replyToMessageId = messageId;
-                replyToSenderName = message.SenderDisplayName;
+                replyToSenderName = message.SenderFullName;
                 replyToContent = message.Content;
                 replyToFileId = message.FileId;
                 replyToFileName = message.FileName;
@@ -340,7 +340,7 @@ public partial class Messages
             {
                 isReplying = true;
                 replyToMessageId = messageId;
-                replyToSenderName = message.SenderDisplayName;
+                replyToSenderName = message.SenderFullName;
                 replyToContent = message.Content;
                 replyToFileId = message.FileId;
                 replyToFileName = message.FileName;

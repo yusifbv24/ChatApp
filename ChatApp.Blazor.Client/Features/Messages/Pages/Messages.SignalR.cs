@@ -603,7 +603,7 @@ public partial class Messages
                         if (IsLastMessageInChannel(editedMessage.ChannelId, updatedMessage.Id))
                         {
                             var preview = GetFilePreview(updatedMessage);
-                            UpdateChannelLastMessage(editedMessage.ChannelId, preview, message.SenderDisplayName);
+                            UpdateChannelLastMessage(editedMessage.ChannelId, preview, message.SenderFullName);
                         }
                     }
 
@@ -630,7 +630,7 @@ public partial class Messages
                 if (channel != null && IsLastMessageInChannel(editedMessage.ChannelId, editedMessage.Id))
                 {
                     var preview = GetFilePreview(editedMessage);
-                    UpdateChannelLastMessage(editedMessage.ChannelId, preview, editedMessage.SenderDisplayName);
+                    UpdateChannelLastMessage(editedMessage.ChannelId, preview, editedMessage.SenderFullName);
                     needsStateUpdate = true;
                 }
 
@@ -688,7 +688,7 @@ public partial class Messages
                 var channel = channelConversations.FirstOrDefault(c => c.Id == deletedMessage.ChannelId);
                 if (channel != null && IsLastMessageInChannel(deletedMessage.ChannelId, deletedMessage.Id))
                 {
-                    UpdateChannelLastMessage(deletedMessage.ChannelId, "This message was deleted", deletedMessage.SenderDisplayName);
+                    UpdateChannelLastMessage(deletedMessage.ChannelId, "This message was deleted", deletedMessage.SenderFullName);
                     needsStateUpdate = true;
                 }
 
@@ -907,9 +907,9 @@ public partial class Messages
 
     /// <summary>
     /// Channel-də kimsə yazdıqda/dayandıqda çağrılır.
-    /// DM-dən fərqi: displayName göstərilir (channel-də bir neçə adam ola bilər)
+    /// DM-dən fərqi: fullName göstərilir (channel-də bir neçə adam ola bilər)
     /// </summary>
-    private void HandleTypingInChannel(Guid channelId, Guid userId, string displayName, bool isTyping)
+    private void HandleTypingInChannel(Guid channelId, Guid userId, string fullName, bool isTyping)
     {
         if (userId != currentUserId)
         {
@@ -917,22 +917,22 @@ public partial class Messages
             {
                 if (isTyping)
                 {
-                    // DisplayName-ləri track et
+                    // FullName-ləri track et
                     if (!channelTypingUsers.TryGetValue(channelId, out List<string>? value))
                     {
                         value = [];
                         channelTypingUsers[channelId] = value;
                     }
-                    if (!value.Contains(displayName))
+                    if (!value.Contains(fullName))
                     {
-                        value.Add(displayName);
+                        value.Add(fullName);
                     }
                 }
                 else
                 {
                     if (channelTypingUsers.TryGetValue(channelId, out List<string>? value))
                     {
-                        value.Remove(displayName);
+                        value.Remove(fullName);
                         if (channelTypingUsers[channelId].Count == 0)
                         {
                             channelTypingUsers.Remove(channelId);
@@ -945,14 +945,14 @@ public partial class Messages
                 {
                     if (isTyping)
                     {
-                        if (!typingUsers.Contains(displayName))
+                        if (!typingUsers.Contains(fullName))
                         {
-                            typingUsers.Add(displayName);
+                            typingUsers.Add(fullName);
                         }
                     }
                     else
                     {
-                        typingUsers = typingUsers.Where(u => u != displayName).ToList();
+                        typingUsers = typingUsers.Where(u => u != fullName).ToList();
                     }
                 }
 
@@ -1088,7 +1088,7 @@ public partial class Messages
     /// Bir member channel-dan ayrıldıqda çağrılır (leave və ya remove).
     /// Channel list-dən channel silinir və aktiv seçim varsa bağlanır.
     /// </summary>
-    private void HandleMemberLeftChannel(Guid channelId, Guid leftUserId, string leftUserDisplayName)
+    private void HandleMemberLeftChannel(Guid channelId, Guid leftUserId, string leftUserFullName)
     {
         InvokeAsync(() =>
         {

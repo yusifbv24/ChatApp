@@ -9,7 +9,7 @@ namespace ChatApp.Shared.Infrastructure.Authorization
     public class PermissionRequirement:IAuthorizationRequirement
     {
         /// <summary>
-        /// The name of the permission required (e.g., "Groups.Create", "Messages.Send")
+        /// The name of the permission required (e.g., "Channels.Create", "Messages.Send")
         /// </summary>
         public string PermissionName { get; }
 

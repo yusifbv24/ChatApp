@@ -61,7 +61,7 @@
                         <tr>
                             <th>User</th>
                             <th>Email</th>
-                            <th>Roles</th>
+                            <th>Role</th>
                             <th>Status</th>
                             <th>Created</th>
                             <th class="admin-table-actions-header">Actions</th>
@@ -76,16 +76,16 @@
                                         <div class="admin-user-avatar">
                                             @if (!string.IsNullOrEmpty(user.AvatarUrl))
                                             {
-                                                <img src="@user.AvatarUrl" alt="@user.DisplayName" />
+                                                <img src="@user.AvatarUrl" alt="@user.FullName" />
                                             }
                                             else
                                             {
-                                                <div class="admin-user-avatar-placeholder">@StringHelper.GetInitials(user.DisplayName)</div>
+                                                <div class="admin-user-avatar-placeholder">@StringHelper.GetInitials(user.FullName)</div>
                                             }
                                         </div>
                                         <div class="admin-user-info">
-                                            <span class="admin-user-name">@user.DisplayName</span>
-                                            <span class="admin-user-username">@("@" + user.Username)</span>
+                                            <span class="admin-user-name">@user.FullName</span>
+                                            <span class="admin-user-username">@("@" + user.Email)</span>
                                         </div>
                                     </div>
                                 </td>
@@ -96,16 +96,12 @@
                                         {
                                             <span class="admin-badge admin-badge-admin">
                                                 <MudIcon Icon="@Icons.Material.Filled.Shield" Size="Size.Small" />
-                                                Admin
+                                                Administrator
                                             </span>
                                         }
-                                        @foreach (var role in user.Roles.Take(2))
+                                        else
                                         {
-                                            <span class="admin-badge admin-badge-role">@role.Name</span>
-                                        }
-                                        @if (user.Roles.Count > 2)
-                                        {
-                                            <span class="admin-badge admin-badge-more">+@(user.Roles.Count - 2)</span>
+                                            <span class="admin-badge admin-badge-role">User</span>
                                         }
                                     </div>
                                 </td>
@@ -117,28 +113,25 @@
                                 <td class="admin-table-date">@user.CreatedAtUtc.ToString("MMM dd, yyyy")</td>
                                 <td>
                                     <div class="admin-table-actions">
-                                        <button class="admin-action-btn" title="Manage Roles" @onclick="() => OpenManageRolesDialog(user)">
-                                            <MudIcon Icon="@Icons.Material.Filled.AdminPanelSettings" Size="Size.Small" />
-                                        </button>
-                                        <button class="admin-action-btn" title="Edit User" @onclick="() => OpenEditUserDialog(user)">
+                                        <button class="admin-action-btn" title="Edit User" @onclick="() => OpenEditUserDialog(user.Id)">
                                             <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" />
                                         </button>
-                                        <button class="admin-action-btn" title="Change Password" @onclick="() => OpenChangePasswordDialog(user)">
+                                        <button class="admin-action-btn" title="Change Password" @onclick="() => OpenChangePasswordDialog(user.Id)">
                                             <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" />
                                         </button>
                                         @if (user.IsActive)
                                         {
-                                            <button class="admin-action-btn admin-action-warning" title="Deactivate" @onclick="() => DeactivateUser(user)">
+                                            <button class="admin-action-btn admin-action-warning" title="Deactivate" @onclick="() => DeactivateUser(user.Id)">
                                                 <MudIcon Icon="@Icons.Material.Filled.Block" Size="Size.Small" />
                                             </button>
                                         }
                                         else
                                         {
-                                            <button class="admin-action-btn admin-action-success" title="Activate" @onclick="() => ActivateUser(user)">
+                                            <button class="admin-action-btn admin-action-success" title="Activate" @onclick="() => ActivateUser(user.Id)">
                                                 <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" />
                                             </button>
                                         }
-                                        <button class="admin-action-btn admin-action-danger" title="Delete User" @onclick="() => OpenDeleteUserDialog(user)">
+                                        <button class="admin-action-btn admin-action-danger" title="Delete User" @onclick="() => OpenDeleteUserDialog(user.Id)">
                                             <MudIcon Icon="@Icons.Material.Filled.Delete" Size="Size.Small" />
                                         </button>
                                     </div>
@@ -178,22 +171,22 @@
 
                     <div class="admin-form-row">
                         <div class="admin-form-group">
-                            <label>Username *</label>
-                            <InputText @bind-Value="createUserModel.Username" class="admin-input" placeholder="Enter username" />
-                            <ValidationMessage For="@(() => createUserModel.Username)" />
+                            <label>First Name *</label>
+                            <InputText @bind-Value="createUserModel.FirstName" class="admin-input" placeholder="Enter first name" />
+                            <ValidationMessage For="@(() => createUserModel.FirstName)" />
                         </div>
                         <div class="admin-form-group">
-                            <label>Email *</label>
-                            <InputText @bind-Value="createUserModel.Email" type="email" class="admin-input" placeholder="Enter email" />
-                            <ValidationMessage For="@(() => createUserModel.Email)" />
+                            <label>Last Name *</label>
+                            <InputText @bind-Value="createUserModel.LastName" class="admin-input" placeholder="Enter last name" />
+                            <ValidationMessage For="@(() => createUserModel.LastName)" />
                         </div>
                     </div>
 
                     <div class="admin-form-row">
                         <div class="admin-form-group">
-                            <label>Display Name *</label>
-                            <InputText @bind-Value="createUserModel.DisplayName" class="admin-input" placeholder="Enter display name" />
-                            <ValidationMessage For="@(() => createUserModel.DisplayName)" />
+                            <label>Email *</label>
+                            <InputText @bind-Value="createUserModel.Email" type="email" class="admin-input" placeholder="Enter email" />
+                            <ValidationMessage For="@(() => createUserModel.Email)" />
                         </div>
                         <div class="admin-form-group">
                             <label>Password *</label>
@@ -235,31 +228,8 @@
                     </div>
 
                     <div class="admin-form-group">
-                        <label>Notes (Optional)</label>
-                        <InputTextArea @bind-Value="createUserModel.Notes" class="admin-textarea" placeholder="Additional notes about the user..." rows="3" />
-                    </div>
-
-                    <div class="admin-form-group">
-                        <label>Roles *</label>
-                        <div class="admin-roles-list">
-                            @foreach (var role in availableRoles)
-                            {
-                                <label class="admin-role-item">
-                                    <input type="checkbox"
-                                           checked="@createUserSelectedRoleIds.Contains(role.Id)"
-                                           @onchange="() => ToggleCreateUserRole(role.Id)"
-                                           class="admin-checkbox" />
-                                    <div class="admin-role-info">
-                                        <span class="admin-role-name">@role.Name</span>
-                                        <span class="admin-role-description">@role.Description</span>
-                                    </div>
-                                </label>
-                            }
-                        </div>
-                        @if (createUserSelectedRoleIds.Count == 0)
-                        {
-                            <small class="text-danger">At least one role must be selected</small>
-                        }
+                        <label>About Me (Optional)</label>
+                        <InputTextArea @bind-Value="createUserModel.AboutMe" class="admin-textarea" placeholder="Tell us about yourself..." rows="3" />
                     </div>
 
                     @if (!string.IsNullOrEmpty(createUserMessage))
@@ -318,15 +288,21 @@
 
                     <div class="admin-form-row">
                         <div class="admin-form-group">
-                            <label>Display Name *</label>
-                            <InputText @bind-Value="editUserModel.DisplayName" class="admin-input" placeholder="Enter display name" />
-                            <ValidationMessage For="@(() => editUserModel.DisplayName)" />
+                            <label>First Name</label>
+                            <InputText @bind-Value="editUserModel.FirstName" class="admin-input" placeholder="Enter first name" />
+                            <ValidationMessage For="@(() => editUserModel.FirstName)" />
                         </div>
                         <div class="admin-form-group">
-                            <label>Email *</label>
-                            <InputText @bind-Value="editUserModel.Email" type="email" class="admin-input" placeholder="Enter email" />
-                            <ValidationMessage For="@(() => editUserModel.Email)" />
+                            <label>Last Name</label>
+                            <InputText @bind-Value="editUserModel.LastName" class="admin-input" placeholder="Enter last name" />
+                            <ValidationMessage For="@(() => editUserModel.LastName)" />
                         </div>
+                    </div>
+
+                    <div class="admin-form-group">
+                        <label>Email</label>
+                        <InputText @bind-Value="editUserModel.Email" type="email" class="admin-input" placeholder="Enter email" />
+                        <ValidationMessage For="@(() => editUserModel.Email)" />
                     </div>
 
                     <div class="admin-form-group">
@@ -377,8 +353,8 @@
                     </div>
 
                     <div class="admin-form-group">
-                        <label>Notes (Optional)</label>
-                        <InputTextArea @bind-Value="editUserModel.Notes" class="admin-textarea" placeholder="Additional notes about the user..." rows="3" />
+                        <label>About Me (Optional)</label>
+                        <InputTextArea @bind-Value="editUserModel.AboutMe" class="admin-textarea" placeholder="Tell us about yourself..." rows="3" />
                     </div>
 
                     @if (!string.IsNullOrEmpty(editUserMessage))
@@ -412,66 +388,6 @@
     </div>
 }
 
-@* Manage Roles Dialog *@
-
-
-@if (showManageRolesDialog)
-{
-    <div class="admin-dialog-overlay" @onclick="CloseManageRolesDialog">
-        <div class="admin-dialog" @onclick:stopPropagation="true">
-            <div class="admin-dialog-header">
-                <h2>Manage Roles - @managingRolesUser?.DisplayName</h2>
-                <button class="admin-dialog-close" @onclick="CloseManageRolesDialog">
-                    <MudIcon Icon="@Icons.Material.Filled.Close" />
-                </button>
-            </div>
-            <div class="admin-dialog-content">
-                <div class="admin-roles-list">
-                    @foreach (var role in availableRoles)
-                    {
-                        <label class="admin-role-item">
-                            <input type="checkbox"
-                                   checked="@selectedRoleIds.Contains(role.Id)"
-                                   @onchange="() => ToggleRole(role.Id)"
-                                   class="admin-checkbox" />
-                            <div class="admin-role-info">
-                                <span class="admin-role-name">@role.Name</span>
-                                <span class="admin-role-description">@role.Description</span>
-                            </div>
-                        </label>
-                    }
-                </div>
-
-                @if (!string.IsNullOrEmpty(rolesMessage))
-                {
-                    <div class="admin-message @(rolesSuccess ? "success" : "error")">
-                        <MudIcon Icon="@(rolesSuccess ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Error)" Size="Size.Small" />
-                        <span>@rolesMessage</span>
-                    </div>
-                }
-
-                <div class="admin-dialog-actions">
-                    <button type="button" class="admin-btn admin-btn-secondary" @onclick="CloseManageRolesDialog" disabled="@isUpdatingRoles">
-                        Cancel
-                    </button>
-                    <button type="button" class="admin-btn admin-btn-primary" @onclick="SaveRoles" disabled="@isUpdatingRoles">
-                        @if (isUpdatingRoles)
-                        {
-                            <span class="admin-btn-spinner"></span>
-                            <span>Saving...</span>
-                        }
-                        else
-                        {
-                            <MudIcon Icon="@Icons.Material.Filled.Save" Size="Size.Small" />
-                            <span>Save Roles</span>
-                        }
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-}
-
 @* Change Password Dialog *@
 
 
@@ -480,7 +396,7 @@
     <div class="admin-dialog-overlay" @onclick="CloseChangePasswordDialog">
         <div class="admin-dialog" @onclick:stopPropagation="true">
             <div class="admin-dialog-header">
-                <h2>Change Password - @changingPasswordUser?.DisplayName</h2>
+                <h2>Change Password - @changingPasswordUser?.FullName</h2>
                 <button class="admin-dialog-close" @onclick="CloseChangePasswordDialog">
                     <MudIcon Icon="@Icons.Material.Filled.Close" />
                 </button>
@@ -551,7 +467,7 @@
                     <h3>Are you sure?</h3>
                     <p>You are about to delete the user:</p>
                     <div class="admin-delete-user-info">
-                        <strong>@deletingUser?.DisplayName</strong>
+                        <strong>@deletingUser?.FullName</strong>
                         <span>@deletingUser?.Email</span>
                     </div>
                     <p class="admin-delete-note">This action cannot be undone. All user data will be permanently deleted.</p>
