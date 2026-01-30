@@ -133,25 +133,11 @@
                         <span>Admin Panel</span>
                     }
                 </div>
-                <a href="/admin/users" class="nav-item @(IsActive("/admin/users"))">
-                    <MudIcon Icon="@Icons.Material.Filled.People" />
+                <a href="/admin/organization" class="nav-item @(IsActive("/admin/organization"))">
+                    <MudIcon Icon="@Icons.Material.Filled.AccountTree" />
                     @if (isSidebarOpen)
                     {
-                        <span>Users</span>
-                    }
-                </a>
-                <a href="/admin/departments" class="nav-item @(IsActive("/admin/departments"))">
-                    <MudIcon Icon="@Icons.Material.Filled.Business" />
-                    @if (isSidebarOpen)
-                    {
-                        <span>Departments</span>
-                    }
-                </a>
-                <a href="/admin/positions" class="nav-item @(IsActive("/admin/positions"))">
-                    <MudIcon Icon="@Icons.Material.Filled.Work" />
-                    @if (isSidebarOpen)
-                    {
-                        <span>Positions</span>
+                        <span>Organization</span>
                     }
                 </a>
             }

@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace ChatApp.Modules.DirectMessages.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialDirectMessages : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -19,18 +19,8 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Migrations
                     user1_id = table.Column<Guid>(type: "uuid", nullable: false),
                     user2_id = table.Column<Guid>(type: "uuid", nullable: false),
                     last_message_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    is_user1_active = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
-                    is_user2_active = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
                     initiated_by_user_id = table.Column<Guid>(type: "uuid", nullable: false),
                     has_messages = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
-                    user1_last_read_later_message_id = table.Column<Guid>(type: "uuid", nullable: true),
-                    user2_last_read_later_message_id = table.Column<Guid>(type: "uuid", nullable: true),
-                    user1_is_pinned = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
-                    user2_is_pinned = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
-                    user1_is_muted = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
-                    user2_is_muted = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
-                    user1_is_marked_read_later = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
-                    user2_is_marked_read_later = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
                     is_notes = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
                     created_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     updated_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
@@ -38,6 +28,33 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_direct_conversations", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "direct_conversation_members",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    ConversationId = table.Column<Guid>(type: "uuid", nullable: false),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
+                    LastReadLaterMessageId = table.Column<Guid>(type: "uuid", nullable: true),
+                    IsPinned = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    IsMuted = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    IsMarkedReadLater = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    IsHidden = table.Column<bool>(type: "boolean", nullable: false),
+                    CreatedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_direct_conversation_members", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_direct_conversation_members_direct_conversations_Conversati~",
+                        column: x => x.ConversationId,
+                        principalTable: "direct_conversations",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -141,6 +158,22 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_direct_conversation_members_ConversationId_UserId",
+                table: "direct_conversation_members",
+                columns: new[] { "ConversationId", "UserId" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_direct_conversation_members_UserId",
+                table: "direct_conversation_members",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_direct_conversation_members_UserId_IsActive",
+                table: "direct_conversation_members",
+                columns: new[] { "UserId", "IsActive" });
+
+            migrationBuilder.CreateIndex(
                 name: "ix_direct_conversations_last_message",
                 table: "direct_conversations",
                 column: "last_message_at_utc");
@@ -227,6 +260,9 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "direct_conversation_members");
+
             migrationBuilder.DropTable(
                 name: "direct_message_mentions");
 

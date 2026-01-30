@@ -632,6 +632,23 @@
     min-height: 80px;
 }
 
+.admin-input-readonly {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 0.875rem;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    color: #6b7280;
+    cursor: not-allowed;
+}
+
+.admin-input-readonly .mud-icon-root {
+    color: #6366f1;
+}
+
 .admin-checkbox-label {
     display: flex;
     align-items: center;

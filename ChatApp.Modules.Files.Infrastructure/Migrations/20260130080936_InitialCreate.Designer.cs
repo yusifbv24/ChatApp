@@ -12,15 +12,15 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ChatApp.Modules.Files.Infrastructure.Migrations
 {
     [DbContext(typeof(FilesDbContext))]
-    [Migration("20251105112549_InitialFileSchema")]
-    partial class InitialFileSchema
+    [Migration("20260130080936_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.10")
+                .HasAnnotation("ProductVersion", "10.0.2")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -32,15 +32,20 @@ namespace ChatApp.Modules.Files.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
-                    b.Property<string>("DisplayName")
+                    b.Property<string>("Email")
                         .IsRequired()
                         .HasColumnType("text")
-                        .HasColumnName("display_name");
+                        .HasColumnName("email");
 
-                    b.Property<string>("Username")
+                    b.Property<string>("FirstName")
                         .IsRequired()
                         .HasColumnType("text")
-                        .HasColumnName("username");
+                        .HasColumnName("first_name");
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("last_name");
 
                     b.HasKey("Id");
 
@@ -83,7 +88,8 @@ namespace ChatApp.Modules.Files.Infrastructure.Migrations
                         .HasColumnName("filename");
 
                     b.Property<long>("FileSizeInBytes")
-                        .HasColumnType("bigint");
+                        .HasColumnType("bigint")
+                        .HasColumnName("file_size_in_bytes");
 
                     b.Property<string>("FileType")
                         .IsRequired()
@@ -114,8 +120,8 @@ namespace ChatApp.Modules.Files.Infrastructure.Migrations
                         .HasColumnName("storage_path");
 
                     b.Property<string>("ThumbnailPath")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
                         .HasColumnName("thumbnail_path");
 
                     b.Property<DateTime>("UpdatedAtUtc")

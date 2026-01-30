@@ -23,6 +23,7 @@ public static class ServiceCollectionExtensions
         // Admin Services
         services.AddScoped<IDepartmentService, DepartmentService>();
         services.AddScoped<IPositionService, PositionService>();
+        services.AddScoped<IOrganizationService, OrganizationService>();
 
         // File Services
         services.AddScoped<IFileService, FileService>();

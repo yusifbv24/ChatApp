@@ -12,6 +12,27 @@ namespace ChatApp.Modules.Identity.Infrastructure.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
+                name: "users",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    first_name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    last_name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    email = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
+                    password_hash = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
+                    is_active = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
+                    role = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    avatar_url = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    last_visit = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    created_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_users", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "departments",
                 columns: table => new
                 {
@@ -31,72 +52,9 @@ namespace ChatApp.Modules.Identity.Infrastructure.Migrations
                         principalTable: "departments",
                         principalColumn: "id",
                         onDelete: ReferentialAction.SetNull);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "positions",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "uuid", nullable: false),
-                    name = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: false),
-                    description = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
-                    department_id = table.Column<Guid>(type: "uuid", nullable: true),
-                    created_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    updated_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_positions", x => x.id);
                     table.ForeignKey(
-                        name: "FK_positions_departments_department_id",
-                        column: x => x.department_id,
-                        principalTable: "departments",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "users",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "uuid", nullable: false),
-                    first_name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    last_name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    email = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
-                    password_hash = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
-                    is_active = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
-                    role = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
-                    date_of_birth = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    avatar_url = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
-                    work_phone = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
-                    hiring_date = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    last_visit = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    about_me = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
-                    position_id = table.Column<Guid>(type: "uuid", nullable: true),
-                    department_id = table.Column<Guid>(type: "uuid", nullable: true),
-                    supervisor_id = table.Column<Guid>(type: "uuid", nullable: true),
-                    head_of_department_id = table.Column<Guid>(type: "uuid", nullable: true),
-                    created_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    updated_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_users", x => x.id);
-                    table.ForeignKey(
-                        name: "FK_users_departments_department_id",
-                        column: x => x.department_id,
-                        principalTable: "departments",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
-                        name: "FK_users_positions_position_id",
-                        column: x => x.position_id,
-                        principalTable: "positions",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
-                        name: "FK_users_users_supervisor_id",
-                        column: x => x.supervisor_id,
+                        name: "FK_departments_users_head_of_department_id",
+                        column: x => x.head_of_department_id,
                         principalTable: "users",
                         principalColumn: "id",
                         onDelete: ReferentialAction.SetNull);
@@ -147,6 +105,74 @@ namespace ChatApp.Modules.Identity.Infrastructure.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "positions",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    name = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: false),
+                    description = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    department_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    created_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_positions", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_positions_departments_department_id",
+                        column: x => x.department_id,
+                        principalTable: "departments",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "employees",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    user_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    date_of_birth = table.Column<string>(type: "text", nullable: true),
+                    work_phone = table.Column<string>(type: "text", maxLength: 500, nullable: true),
+                    about_me = table.Column<string>(type: "text", nullable: true),
+                    position_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    department_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    supervisor_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    head_of_department_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    hiring_date = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    created_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_employees", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_employees_departments_department_id",
+                        column: x => x.department_id,
+                        principalTable: "departments",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_employees_employees_supervisor_id",
+                        column: x => x.supervisor_id,
+                        principalTable: "employees",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_employees_positions_position_id",
+                        column: x => x.position_id,
+                        principalTable: "positions",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_employees_users_user_id",
+                        column: x => x.user_id,
+                        principalTable: "users",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
             migrationBuilder.CreateIndex(
                 name: "ix_departments_head_of_department_id",
                 table: "departments",
@@ -161,6 +187,27 @@ namespace ChatApp.Modules.Identity.Infrastructure.Migrations
                 name: "ix_departments_parent_department_id",
                 table: "departments",
                 column: "parent_department_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_employees_department_id",
+                table: "employees",
+                column: "department_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_employees_position_id",
+                table: "employees",
+                column: "position_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_employees_supervisor_id",
+                table: "employees",
+                column: "supervisor_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_employees_user_id",
+                table: "employees",
+                column: "user_id",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "ix_positions_department_id",
@@ -195,41 +242,17 @@ namespace ChatApp.Modules.Identity.Infrastructure.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "ix_users_department_id",
-                table: "users",
-                column: "department_id");
-
-            migrationBuilder.CreateIndex(
                 name: "ix_users_email",
                 table: "users",
                 column: "email",
                 unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "ix_users_position_id",
-                table: "users",
-                column: "position_id");
-
-            migrationBuilder.CreateIndex(
-                name: "ix_users_supervisor_id",
-                table: "users",
-                column: "supervisor_id");
-
-            migrationBuilder.AddForeignKey(
-                name: "FK_departments_users_head_of_department_id",
-                table: "departments",
-                column: "head_of_department_id",
-                principalTable: "users",
-                principalColumn: "id",
-                onDelete: ReferentialAction.SetNull);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropForeignKey(
-                name: "FK_departments_users_head_of_department_id",
-                table: "departments");
+            migrationBuilder.DropTable(
+                name: "employees");
 
             migrationBuilder.DropTable(
                 name: "refresh_tokens");
@@ -238,13 +261,13 @@ namespace ChatApp.Modules.Identity.Infrastructure.Migrations
                 name: "user_permissions");
 
             migrationBuilder.DropTable(
-                name: "users");
-
-            migrationBuilder.DropTable(
                 name: "positions");
 
             migrationBuilder.DropTable(
                 name: "departments");
+
+            migrationBuilder.DropTable(
+                name: "users");
         }
     }
 }

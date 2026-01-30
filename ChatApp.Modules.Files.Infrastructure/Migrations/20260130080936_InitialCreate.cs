@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace ChatApp.Modules.Files.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialFileSchema : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -19,7 +19,7 @@ namespace ChatApp.Modules.Files.Infrastructure.Migrations
                     filename = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
                     original_file_name = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
                     content_type = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
-                    FileSizeInBytes = table.Column<long>(type: "bigint", nullable: false),
+                    file_size_in_bytes = table.Column<long>(type: "bigint", nullable: false),
                     file_type = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     storage_path = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: false),
                     uploaded_by = table.Column<Guid>(type: "uuid", nullable: false),
@@ -28,7 +28,7 @@ namespace ChatApp.Modules.Files.Infrastructure.Migrations
                     deleted_by = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
                     width = table.Column<int>(type: "integer", nullable: true),
                     height = table.Column<int>(type: "integer", nullable: true),
-                    thumbnail_path = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    thumbnail_path = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
                     created_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     updated_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },

@@ -2,10 +2,10 @@
 
 #nullable disable
 
-namespace ChatApp.Modules.DirectMessages.Infrastructure.Migrations
+namespace ChatApp.Modules.Search.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class RenameDirectConversationMembersTable : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

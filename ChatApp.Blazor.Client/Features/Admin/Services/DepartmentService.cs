@@ -36,9 +36,9 @@ public class DepartmentService : IDepartmentService
     /// <summary>
     /// Creates a new department - POST /api/identity/departments
     /// </summary>
-    public async Task<Result<Guid>> CreateDepartmentAsync(CreateDepartmentRequest request)
+    public async Task<Result<CreateDepartmentResponse>> CreateDepartmentAsync(CreateDepartmentRequest request)
     {
-        return await _apiClient.PostAsync<Guid>("/api/identity/departments", request);
+        return await _apiClient.PostAsync<CreateDepartmentResponse>("/api/identity/departments", request);
     }
 
     /// <summary>

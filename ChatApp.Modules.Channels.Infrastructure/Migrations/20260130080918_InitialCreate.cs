@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace ChatApp.Modules.Channels.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialChannels : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -45,6 +45,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Migrations
                     is_pinned = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
                     is_muted = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
                     is_marked_read_later = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    IsHidden = table.Column<bool>(type: "boolean", nullable: false),
                     created_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     updated_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },

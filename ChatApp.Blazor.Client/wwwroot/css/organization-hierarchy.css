@@ -1,0 +1,437 @@
+/* ===================================
+   Organization Hierarchy Styles
+   =================================== */
+
+/* Statistics Dashboard */
+.org-stats-dashboard {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.org-stat-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.25rem;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    transition: all 0.2s ease;
+}
+
+.org-stat-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+}
+
+.org-stat-icon {
+    width: 56px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    flex-shrink: 0;
+}
+
+.org-stat-icon.dept {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    color: white;
+}
+
+.org-stat-icon.user {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+}
+
+.org-stat-icon.active {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+}
+
+.org-stat-icon.depth {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+}
+
+.org-stat-icon .mud-icon-root {
+    font-size: 1.75rem;
+}
+
+.org-stat-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.org-stat-value {
+    font-size: 1.875rem;
+    font-weight: 700;
+    color: #111827;
+    line-height: 1;
+}
+
+.org-stat-label {
+    font-size: 0.875rem;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+/* Tree Container */
+.org-tree-container {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 1.5rem;
+    min-height: 400px;
+}
+
+/* Tree Node Base */
+.org-tree-node {
+    margin-bottom: 0.5rem;
+    animation: fadeIn 0.2s ease-in-out;
+}
+
+/* Department Node */
+.org-dept-node {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.875rem 1rem;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.org-dept-node:hover {
+    background: #f3f4f6;
+    border-color: #6366f1;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.1);
+}
+
+.org-dept-node.highlight {
+    background: #fef3c7;
+    border-color: #f59e0b;
+}
+
+/* User Node */
+.org-user-node {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.org-user-node:hover {
+    background: #f9fafb;
+    border-color: #d1d5db;
+}
+
+.org-user-node.highlight {
+    background: #fef3c7;
+    border-color: #f59e0b;
+}
+
+/* Expand Button */
+.org-expand-btn {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+}
+
+.org-expand-btn:hover {
+    background: #e5e7eb;
+    color: #111827;
+}
+
+.org-expand-btn .mud-icon-root {
+    font-size: 1.25rem;
+    transition: transform 0.2s ease;
+}
+
+.org-expand-placeholder {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+}
+
+/* Department Icon */
+.org-dept-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    border-radius: 8px;
+    color: white;
+    flex-shrink: 0;
+}
+
+.org-dept-icon .mud-icon-root {
+    font-size: 1.25rem;
+}
+
+/* Department Info */
+.org-dept-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.org-dept-name {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #111827;
+    white-space: nowrap;
+}
+
+.org-dept-head {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.8125rem;
+    color: #f59e0b;
+    font-weight: 500;
+    padding: 0.25rem 0.625rem;
+    background: #fef3c7;
+    border-radius: 4px;
+}
+
+.org-dept-head .mud-icon-root {
+    font-size: 0.875rem;
+}
+
+.org-user-count {
+    font-size: 0.8125rem;
+    color: #6b7280;
+    padding: 0.25rem 0.625rem;
+    background: #e5e7eb;
+    border-radius: 4px;
+}
+
+/* User Avatar */
+.org-user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+    border: 2px solid #e5e7eb;
+}
+
+.org-user-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.org-user-avatar-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    color: white;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+/* User Info */
+.org-user-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.org-user-name {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: #111827;
+}
+
+.org-user-position {
+    font-size: 0.8125rem;
+    color: #6366f1;
+    font-weight: 500;
+}
+
+.org-user-email {
+    font-size: 0.8125rem;
+    color: #6b7280;
+}
+
+/* Node Status */
+.org-node-status {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+/* Node Actions */
+.org-node-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: auto;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.org-dept-node:hover .org-node-actions,
+.org-user-node:hover .org-node-actions {
+    opacity: 1;
+}
+
+.org-action-btn {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    color: #6b7280;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 0;
+}
+
+.org-action-btn:hover {
+    background: #6366f1;
+    border-color: #6366f1;
+    color: white;
+    transform: scale(1.05);
+}
+
+.org-action-btn .mud-icon-root {
+    font-size: 1rem;
+}
+
+/* Context Info Badge */
+.org-context-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.875rem;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+}
+
+.org-context-info .mud-icon-root {
+    font-size: 1.25rem;
+    color: #3b82f6;
+}
+
+.org-context-info span {
+    font-size: 0.875rem;
+    color: #1e40af;
+}
+
+.org-context-info strong {
+    color: #1e3a8a;
+}
+
+/* Utility Classes */
+.admin-text-muted {
+    color: #9ca3af;
+}
+
+.admin-description {
+    font-size: 0.875rem;
+    color: #6b7280;
+    max-width: 400px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.admin-position-name,
+.admin-dept-name {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
+    color: #111827;
+}
+
+.admin-position-name .mud-icon-root,
+.admin-dept-name .mud-icon-root {
+    color: #6366f1;
+}
+
+.admin-user-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.875rem;
+    color: #374151;
+}
+
+.admin-user-badge .mud-icon-root {
+    font-size: 1rem;
+    color: #6b7280;
+}
+
+.admin-confirm-message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    text-align: center;
+    padding: 1rem 0;
+}
+
+.admin-confirm-message .mud-icon-root {
+    font-size: 3rem;
+}
+
+.admin-confirm-message p {
+    margin: 0;
+    font-size: 0.9375rem;
+    color: #374151;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .org-stats-dashboard {
+        grid-template-columns: 1fr;
+    }
+
+    .org-dept-info {
+        flex-wrap: wrap;
+    }
+
+    .org-dept-name {
+        flex-basis: 100%;
+    }
+
+    .org-node-actions {
+        opacity: 1;
+    }
+}

@@ -1,0 +1,694 @@
+@page "/admin/organization"
+@attribute [Authorize]
+@using ChatApp.Blazor.Client.Helpers
+@using ChatApp.Blazor.Client.Models.Organization
+@using ChatApp.Blazor.Client.Models.Auth
+
+<PageTitle>Organization Hierarchy - ChatApp</PageTitle>
+
+<div class="admin-page">
+    <div class="admin-page-header">
+        <div class="admin-page-title-section">
+            <h1 class="admin-page-title">
+                <MudIcon Icon="@Icons.Material.Filled.AccountTree" />
+                Organization Hierarchy
+            </h1>
+            <p class="admin-page-subtitle">Manage departments and users in tree structure</p>
+        </div>
+        <div class="admin-page-actions">
+            <button class="admin-btn admin-btn-secondary" @onclick="CollapseAll">
+                <MudIcon Icon="@Icons.Material.Filled.UnfoldLess" Size="Size.Small" />
+                <span>Collapse All</span>
+            </button>
+            <button class="admin-btn admin-btn-secondary" @onclick="ExpandAll">
+                <MudIcon Icon="@Icons.Material.Filled.UnfoldMore" Size="Size.Small" />
+                <span>Expand All</span>
+            </button>
+            <button class="admin-btn admin-btn-primary" @onclick="() => OpenCreateDepartmentDialog(null, null)">
+                <MudIcon Icon="@Icons.Material.Filled.BusinessCenter" Size="Size.Small" />
+                <span>New Department</span>
+            </button>
+            <button class="admin-btn admin-btn-primary" @onclick="() => OpenCreateUserDialog(null, null)">
+                <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Size="Size.Small" />
+                <span>New User</span>
+            </button>
+        </div>
+    </div>
+
+    @* Statistics Dashboard *@
+    <div class="org-stats-dashboard">
+        <div class="org-stat-card">
+            <div class="org-stat-icon dept">
+                <MudIcon Icon="@Icons.Material.Filled.BusinessCenter" />
+            </div>
+            <div class="org-stat-info">
+                <span class="org-stat-value">@totalDepartments</span>
+                <span class="org-stat-label">Departments</span>
+            </div>
+        </div>
+        <div class="org-stat-card">
+            <div class="org-stat-icon user">
+                <MudIcon Icon="@Icons.Material.Filled.People" />
+            </div>
+            <div class="org-stat-info">
+                <span class="org-stat-value">@totalUsers</span>
+                <span class="org-stat-label">Total Users</span>
+            </div>
+        </div>
+        <div class="org-stat-card">
+            <div class="org-stat-icon active">
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" />
+            </div>
+            <div class="org-stat-info">
+                <span class="org-stat-value">@activeUsers</span>
+                <span class="org-stat-label">Active Users</span>
+            </div>
+        </div>
+        <div class="org-stat-card">
+            <div class="org-stat-icon depth">
+                <MudIcon Icon="@Icons.Material.Filled.AccountTree" />
+            </div>
+            <div class="org-stat-info">
+                <span class="org-stat-value">@maxDepth</span>
+                <span class="org-stat-label">Org Depth</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="admin-page-content">
+        <div class="admin-search-bar">
+            <div class="admin-search-input-wrapper">
+                <MudIcon Icon="@Icons.Material.Filled.Search" Class="admin-search-icon" />
+                <input type="text" class="admin-search-input" placeholder="Search departments and users..." @bind="searchTerm" @bind:event="oninput" @onkeyup="HandleSearch" />
+                @if (!string.IsNullOrEmpty(searchTerm))
+                {
+                    <button class="admin-search-clear" @onclick="ClearSearch">
+                        <MudIcon Icon="@Icons.Material.Filled.Clear" Size="Size.Small" />
+                    </button>
+                }
+            </div>
+        </div>
+
+        @if (isLoading)
+        {
+            <div class="admin-loading">
+                <div class="admin-loading-spinner"></div>
+                <p>Loading organization hierarchy...</p>
+            </div>
+        }
+        else if (errorMessage != null)
+        {
+            <div class="admin-error">
+                <MudIcon Icon="@Icons.Material.Filled.Error" />
+                <span>@errorMessage</span>
+            </div>
+        }
+        else
+        {
+            <div class="org-tree-container">
+                @foreach (var node in hierarchyRoots.Where(n => n.IsVisible))
+                {
+                    @RenderTreeNode(node)
+                }
+
+                @if (!hierarchyRoots.Any() || !hierarchyRoots.Any(n => n.IsVisible))
+                {
+                    <div class="admin-empty-state">
+                        <MudIcon Icon="@Icons.Material.Filled.AccountTree" />
+                        <h3>No organization data found</h3>
+                        <p>@(string.IsNullOrEmpty(searchTerm) ? "Start by creating departments and users." : "No results match your search criteria.")</p>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@* Create User Dialog (Context-Aware) *@
+@if (showCreateUserDialog)
+{
+    <div class="admin-dialog-overlay" @onclick="CloseCreateUserDialog">
+        <div class="admin-dialog" @onclick:stopPropagation="true">
+            <div class="admin-dialog-header">
+                <h2>Create New User</h2>
+                <button class="admin-dialog-close" @onclick="CloseCreateUserDialog">
+                    <MudIcon Icon="@Icons.Material.Filled.Close" />
+                </button>
+            </div>
+            <div class="admin-dialog-content">
+                @if (createUserInDepartmentId.HasValue)
+                {
+                    <div class="org-context-info">
+                        <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Info" />
+                        <span>Creating user in department: <strong>@createUserInDepartmentName</strong></span>
+                    </div>
+                }
+
+                <EditForm Model="@createUserModel" OnValidSubmit="HandleCreateUser">
+                    <DataAnnotationsValidator />
+
+                    <div class="admin-form-row">
+                        <div class="admin-form-group">
+                            <label>First Name *</label>
+                            <InputText @bind-Value="createUserModel.FirstName" class="admin-input" placeholder="Enter first name" />
+                            <ValidationMessage For="@(() => createUserModel.FirstName)" />
+                        </div>
+                        <div class="admin-form-group">
+                            <label>Last Name *</label>
+                            <InputText @bind-Value="createUserModel.LastName" class="admin-input" placeholder="Enter last name" />
+                            <ValidationMessage For="@(() => createUserModel.LastName)" />
+                        </div>
+                    </div>
+
+                    <div class="admin-form-row">
+                        <div class="admin-form-group">
+                            <label>Email *</label>
+                            <InputText @bind-Value="createUserModel.Email" type="email" class="admin-input" placeholder="Enter email" />
+                            <ValidationMessage For="@(() => createUserModel.Email)" />
+                        </div>
+                        <div class="admin-form-group">
+                            <label>Password *</label>
+                            <InputText @bind-Value="createUserModel.Password" type="password" class="admin-input" placeholder="Enter password" />
+                            <ValidationMessage For="@(() => createUserModel.Password)" />
+                        </div>
+                    </div>
+
+                    <div class="admin-form-row">
+                        <div class="admin-form-group">
+                            <label>Department *</label>
+                            @if (createUserInDepartmentId.HasValue && !string.IsNullOrEmpty(createUserInDepartmentName))
+                            {
+                                <div class="admin-input admin-input-readonly">
+                                    <MudIcon Icon="@Icons.Material.Filled.Business" Size="Size.Small" />
+                                    <span>@createUserInDepartmentName</span>
+                                </div>
+                            }
+                            else
+                            {
+                                <InputSelect @bind-Value="createUserModel.DepartmentId" class="admin-input">
+                                    <option value="@Guid.Empty">Select Department</option>
+                                    @foreach (var dept in allDepartments)
+                                    {
+                                        <option value="@dept.Id">@dept.Name</option>
+                                    }
+                                </InputSelect>
+                                <ValidationMessage For="@(() => createUserModel.DepartmentId)" />
+                            }
+                        </div>
+                        <div class="admin-form-group">
+                            <label>Position (Optional)</label>
+                            <InputSelect @bind-Value="createUserModel.PositionId" class="admin-input">
+                                <option value="">No Position</option>
+                                @foreach (var pos in allPositions)
+                                {
+                                    <option value="@pos.Id">@pos.Name</option>
+                                }
+                            </InputSelect>
+                        </div>
+                    </div>
+
+                    <div class="admin-form-row">
+                        <div class="admin-form-group">
+                            <label>Work Phone (Optional)</label>
+                            <InputText @bind-Value="createUserModel.WorkPhone" type="tel" class="admin-input" placeholder="Enter work phone" />
+                            <ValidationMessage For="@(() => createUserModel.WorkPhone)" />
+                        </div>
+                        <div class="admin-form-group">
+                            <label>Date of Birth (Optional)</label>
+                            <InputDate @bind-Value="createUserModel.DateOfBirth" class="admin-input" />
+                        </div>
+                    </div>
+
+                    <div class="admin-form-row">
+                        <div class="admin-form-group">
+                            <label>Hiring Date (Optional)</label>
+                            <InputDate @bind-Value="createUserModel.HiringDate" class="admin-input" />
+                        </div>
+                        <div class="admin-form-group">
+                            <label>Role</label>
+                            <InputSelect @bind-Value="createUserModel.Role" class="admin-input">
+                                <option value="@Role.User">User</option>
+                                <option value="@Role.Administrator">Administrator</option>
+                            </InputSelect>
+                        </div>
+                    </div>
+
+                    <div class="admin-form-group">
+                        <label>About Me (Optional)</label>
+                        <textarea @bind="createUserModel.AboutMe" class="admin-input admin-textarea" rows="3" placeholder="Brief description about the employee" maxlength="500"></textarea>
+                        <ValidationMessage For="@(() => createUserModel.AboutMe)" />
+                    </div>
+
+                    <div class="admin-form-group">
+                        <label>Profile Avatar (Optional)</label>
+                        <div class="admin-file-upload">
+                            @if (selectedAvatarFileData != null && !string.IsNullOrEmpty(avatarPreviewUrl))
+                            {
+                                <div class="admin-file-selected">
+                                    <div class="admin-file-icon">
+                                        <MudIcon Icon="@Icons.Material.Filled.Image" />
+                                    </div>
+                                    <div class="admin-file-info">
+                                        <span class="admin-file-name">@selectedAvatarFileName</span>
+                                        <span class="admin-file-size">@FormatFileSize(selectedAvatarFileSize)</span>
+                                    </div>
+                                    <button type="button" class="admin-file-remove-btn" @onclick="RemoveAvatar">
+                                        <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" />
+                                    </button>
+                                </div>
+                            }
+                            else
+                            {
+                                <label class="admin-file-input-label">
+                                    <InputFile OnChange="OnAvatarFileSelected" accept="image/*" class="admin-file-input" />
+                                    <div class="admin-file-placeholder">
+                                        <MudIcon Icon="@Icons.Material.Filled.CloudUpload" />
+                                        <span>Click to upload or drag and drop</span>
+                                        <small>PNG, JPG, GIF up to 10MB</small>
+                                    </div>
+                                </label>
+                            }
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(createUserMessage))
+                    {
+                        <div class="admin-message @(createUserSuccess ? "success" : "error")">
+                            <MudIcon Icon="@(createUserSuccess ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Error)" Size="Size.Small" />
+                            <span>@createUserMessage</span>
+                        </div>
+                    }
+
+                    <div class="admin-dialog-actions">
+                        <button type="button" class="admin-btn admin-btn-secondary" @onclick="CloseCreateUserDialog" disabled="@isCreatingUser">
+                            Cancel
+                        </button>
+                        <button type="submit" class="admin-btn admin-btn-primary" disabled="@(isCreatingUser || isUploadingAvatar)">
+                            @if (isUploadingAvatar)
+                            {
+                                <span class="admin-btn-spinner"></span>
+                                <span>Uploading Avatar...</span>
+                            }
+                            else if (isCreatingUser)
+                            {
+                                <span class="admin-btn-spinner"></span>
+                                <span>Creating User...</span>
+                            }
+                            else
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Size="Size.Small" />
+                                <span>Create User</span>
+                            }
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@* Create Department Dialog (Context-Aware) *@
+@if (showCreateDepartmentDialog)
+{
+    <div class="admin-dialog-overlay" @onclick="CloseCreateDepartmentDialog">
+        <div class="admin-dialog" @onclick:stopPropagation="true">
+            <div class="admin-dialog-header">
+                <h2>Create New Department</h2>
+                <button class="admin-dialog-close" @onclick="CloseCreateDepartmentDialog">
+                    <MudIcon Icon="@Icons.Material.Filled.Close" />
+                </button>
+            </div>
+            <div class="admin-dialog-content">
+                @if (createDepartmentParentId.HasValue)
+                {
+                    <div class="org-context-info">
+                        <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Info" />
+                        <span>Creating sub-department under: <strong>@createDepartmentParentName</strong></span>
+                    </div>
+                }
+
+                <EditForm Model="@createDepartmentModel" OnValidSubmit="HandleCreateDepartment">
+                    <DataAnnotationsValidator />
+
+                    <div class="admin-form-group">
+                        <label>Department Name *</label>
+                        <InputText @bind-Value="createDepartmentModel.Name" class="admin-input" placeholder="Enter department name" />
+                        <ValidationMessage For="@(() => createDepartmentModel.Name)" />
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(createDepartmentMessage))
+                    {
+                        <div class="admin-message @(createDepartmentSuccess ? "success" : "error")">
+                            <MudIcon Icon="@(createDepartmentSuccess ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Error)" Size="Size.Small" />
+                            <span>@createDepartmentMessage</span>
+                        </div>
+                    }
+
+                    <div class="admin-dialog-actions">
+                        <button type="button" class="admin-btn admin-btn-secondary" @onclick="CloseCreateDepartmentDialog" disabled="@isCreatingDepartment">
+                            Cancel
+                        </button>
+                        <button type="submit" class="admin-btn admin-btn-primary" disabled="@isCreatingDepartment">
+                            @if (isCreatingDepartment)
+                            {
+                                <span class="admin-btn-spinner"></span>
+                                <span>Creating...</span>
+                            }
+                            else
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" />
+                                <span>Create Department</span>
+                            }
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@* Edit Department Dialog *@
+@if (showEditDepartmentDialog && editingDepartmentNode != null)
+{
+    <div class="admin-dialog-overlay" @onclick="CloseEditDepartmentDialog">
+        <div class="admin-dialog" @onclick:stopPropagation="true">
+            <div class="admin-dialog-header">
+                <h2>Edit Department</h2>
+                <button class="admin-dialog-close" @onclick="CloseEditDepartmentDialog">
+                    <MudIcon Icon="@Icons.Material.Filled.Close" />
+                </button>
+            </div>
+            <div class="admin-dialog-content">
+                <EditForm Model="@editDepartmentModel" OnValidSubmit="HandleEditDepartment">
+                    <DataAnnotationsValidator />
+
+                    <div class="admin-form-group">
+                        <label>Department Name</label>
+                        <InputText @bind-Value="editDepartmentModel.Name" class="admin-input" placeholder="Enter department name" />
+                        <ValidationMessage For="@(() => editDepartmentModel.Name)" />
+                    </div>
+
+                    <div class="admin-form-group">
+                        <label>Parent Department (Optional)</label>
+                        <InputSelect @bind-Value="editDepartmentModel.ParentDepartmentId" class="admin-select">
+                            <option value="">-- Root Department --</option>
+                            @foreach (var dept in allDepartments.Where(d => d.Id != editingDepartmentNode.Id))
+                            {
+                                <option value="@dept.Id">@dept.Name</option>
+                            }
+                        </InputSelect>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(editDepartmentMessage))
+                    {
+                        <div class="admin-message @(editDepartmentSuccess ? "success" : "error")">
+                            <MudIcon Icon="@(editDepartmentSuccess ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Error)" Size="Size.Small" />
+                            <span>@editDepartmentMessage</span>
+                        </div>
+                    }
+
+                    <div class="admin-dialog-actions">
+                        <button type="button" class="admin-btn admin-btn-secondary" @onclick="CloseEditDepartmentDialog" disabled="@isUpdatingDepartment">
+                            Cancel
+                        </button>
+                        <button type="submit" class="admin-btn admin-btn-primary" disabled="@isUpdatingDepartment">
+                            @if (isUpdatingDepartment)
+                            {
+                                <span class="admin-btn-spinner"></span>
+                                <span>Updating...</span>
+                            }
+                            else
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.Save" Size="Size.Small" />
+                                <span>Update Department</span>
+                            }
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@* Delete Department Dialog *@
+@if (showDeleteDepartmentDialog && deletingDepartmentNode != null)
+{
+    <div class="admin-dialog-overlay" @onclick="CloseDeleteDepartmentDialog">
+        <div class="admin-dialog admin-dialog-sm" @onclick:stopPropagation="true">
+            <div class="admin-dialog-header">
+                <h2>Delete Department</h2>
+                <button class="admin-dialog-close" @onclick="CloseDeleteDepartmentDialog">
+                    <MudIcon Icon="@Icons.Material.Filled.Close" />
+                </button>
+            </div>
+            <div class="admin-dialog-content">
+                <div class="admin-confirm-message">
+                    <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" />
+                    <p>Are you sure you want to delete the department <strong>@deletingDepartmentNode.Name</strong>?</p>
+                    <p class="admin-text-muted">This action cannot be undone.</p>
+                </div>
+
+                @if (!string.IsNullOrEmpty(deleteDepartmentMessage))
+                {
+                    <div class="admin-message error">
+                        <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Small" />
+                        <span>@deleteDepartmentMessage</span>
+                    </div>
+                }
+
+                <div class="admin-dialog-actions">
+                    <button type="button" class="admin-btn admin-btn-secondary" @onclick="CloseDeleteDepartmentDialog" disabled="@isDeletingDepartment">
+                        Cancel
+                    </button>
+                    <button type="button" class="admin-btn admin-btn-danger" @onclick="HandleDeleteDepartment" disabled="@isDeletingDepartment">
+                        @if (isDeletingDepartment)
+                        {
+                            <span class="admin-btn-spinner"></span>
+                            <span>Deleting...</span>
+                        }
+                        else
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.Delete" Size="Size.Small" />
+                            <span>Delete Department</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* Edit User Dialog *@
+@if (showEditUserDialog && editingUserNode != null)
+{
+    <div class="admin-dialog-overlay" @onclick="CloseEditUserDialog">
+        <div class="admin-dialog" @onclick:stopPropagation="true">
+            <div class="admin-dialog-header">
+                <h2>Edit User</h2>
+                <button class="admin-dialog-close" @onclick="CloseEditUserDialog">
+                    <MudIcon Icon="@Icons.Material.Filled.Close" />
+                </button>
+            </div>
+            <div class="admin-dialog-content">
+                <EditForm Model="@editUserModel" OnValidSubmit="HandleEditUser">
+                    <DataAnnotationsValidator />
+
+                    <div class="admin-form-row">
+                        <div class="admin-form-group">
+                            <label>First Name</label>
+                            <InputText @bind-Value="editUserModel.FirstName" class="admin-input" placeholder="Enter first name" />
+                            <ValidationMessage For="@(() => editUserModel.FirstName)" />
+                        </div>
+                        <div class="admin-form-group">
+                            <label>Last Name</label>
+                            <InputText @bind-Value="editUserModel.LastName" class="admin-input" placeholder="Enter last name" />
+                            <ValidationMessage For="@(() => editUserModel.LastName)" />
+                        </div>
+                    </div>
+
+                    <div class="admin-form-group">
+                        <label>Email</label>
+                        <InputText @bind-Value="editUserModel.Email" type="email" class="admin-input" placeholder="Enter email" />
+                        <ValidationMessage For="@(() => editUserModel.Email)" />
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(editUserMessage))
+                    {
+                        <div class="admin-message @(editUserSuccess ? "success" : "error")">
+                            <MudIcon Icon="@(editUserSuccess ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Error)" Size="Size.Small" />
+                            <span>@editUserMessage</span>
+                        </div>
+                    }
+
+                    <div class="admin-dialog-actions">
+                        <button type="button" class="admin-btn admin-btn-secondary" @onclick="CloseEditUserDialog" disabled="@isUpdatingUser">
+                            Cancel
+                        </button>
+                        <button type="submit" class="admin-btn admin-btn-primary" disabled="@isUpdatingUser">
+                            @if (isUpdatingUser)
+                            {
+                                <span class="admin-btn-spinner"></span>
+                                <span>Updating...</span>
+                            }
+                            else
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.Save" Size="Size.Small" />
+                                <span>Update User</span>
+                            }
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@* Delete User Dialog *@
+@if (showDeleteUserDialog && deletingUserNode != null)
+{
+    <div class="admin-dialog-overlay" @onclick="CloseDeleteUserDialog">
+        <div class="admin-dialog admin-dialog-sm" @onclick:stopPropagation="true">
+            <div class="admin-dialog-header">
+                <h2>Delete User</h2>
+                <button class="admin-dialog-close" @onclick="CloseDeleteUserDialog">
+                    <MudIcon Icon="@Icons.Material.Filled.Close" />
+                </button>
+            </div>
+            <div class="admin-dialog-content">
+                <div class="admin-confirm-message">
+                    <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" />
+                    <p>Are you sure you want to delete the user <strong>@deletingUserNode.Name</strong>?</p>
+                    <p class="admin-text-muted">This action cannot be undone.</p>
+                </div>
+
+                @if (!string.IsNullOrEmpty(deleteUserMessage))
+                {
+                    <div class="admin-message error">
+                        <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Small" />
+                        <span>@deleteUserMessage</span>
+                        </div>
+                }
+
+                <div class="admin-dialog-actions">
+                    <button type="button" class="admin-btn admin-btn-secondary" @onclick="CloseDeleteUserDialog" disabled="@isDeletingUser">
+                        Cancel
+                    </button>
+                    <button type="button" class="admin-btn admin-btn-danger" @onclick="HandleDeleteUser" disabled="@isDeletingUser">
+                        @if (isDeletingUser)
+                        {
+                            <span class="admin-btn-spinner"></span>
+                            <span>Deleting...</span>
+                        }
+                        else
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.Delete" Size="Size.Small" />
+                            <span>Delete User</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    // Recursive Tree Node Renderer
+    private RenderFragment RenderTreeNode(OrganizationHierarchyNode node) => __builder =>
+    {
+        if (!node.IsVisible) return;
+
+        <div class="org-tree-node" style="margin-left: @(node.Level * 24)px">
+            @if (node.Type == NodeType.Department)
+            {
+                <div class="org-dept-node @(node.MatchesSearch && !string.IsNullOrEmpty(searchTerm) ? "highlight" : "")">
+                    <button class="org-expand-btn" @onclick="() => ToggleNode(node)">
+                        @if (node.Children.Any(c => c.IsVisible))
+                        {
+                            <MudIcon Icon="@(node.IsExpanded ? Icons.Material.Filled.ExpandMore : Icons.Material.Filled.ChevronRight)" Size="Size.Small" />
+                        }
+                        else
+                        {
+                            <span class="org-expand-placeholder"></span>
+                        }
+                    </button>
+                    <div class="org-dept-icon">
+                        <MudIcon Icon="@Icons.Material.Filled.BusinessCenter" Size="Size.Small" />
+                    </div>
+                    <div class="org-dept-info">
+                        <strong class="org-dept-name">@node.Name</strong>
+                        @if (!string.IsNullOrEmpty(node.HeadOfDepartmentName))
+                        {
+                            <span class="org-dept-head">
+                                <MudIcon Icon="@Icons.Material.Filled.Star" Size="Size.Small" />
+                                @node.HeadOfDepartmentName
+                            </span>
+                        }
+                        @if (node.UserCount > 0)
+                        {
+                            <span class="org-user-count">@node.UserCount users</span>
+                        }
+                    </div>
+                    <div class="org-node-actions">
+                        <button class="org-action-btn" title="Add User to this Department" @onclick="() => OpenCreateUserDialog(node.Id, node.Name)">
+                            <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Size="Size.Small" />
+                        </button>
+                        <button class="org-action-btn" title="Add Sub-Department" @onclick="() => OpenCreateDepartmentDialog(node.Id, node.Name)">
+                            <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" />
+                        </button>
+                        <button class="org-action-btn" title="Edit Department" @onclick="() => OpenEditDepartmentDialog(node)">
+                            <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" />
+                        </button>
+                        <button class="org-action-btn admin-action-danger" title="Delete Department" @onclick="() => OpenDeleteDepartmentDialog(node)">
+                            <MudIcon Icon="@Icons.Material.Filled.Delete" Size="Size.Small" />
+                        </button>
+                    </div>
+                </div>
+
+                @if (node.IsExpanded)
+                {
+                    foreach (var child in node.Children.Where(c => c.IsVisible))
+                    {
+                        @RenderTreeNode(child)
+                    }
+                }
+            }
+            else if (node.Type == NodeType.User)
+            {
+                <div class="org-user-node @(node.MatchesSearch && !string.IsNullOrEmpty(searchTerm) ? "highlight" : "")">
+                    <span class="org-expand-placeholder"></span>
+                    <div class="org-user-avatar">
+                        @if (!string.IsNullOrEmpty(node.AvatarUrl))
+                        {
+                            <img src="@node.AvatarUrl" alt="@node.Name" />
+                        }
+                        else
+                        {
+                            <div class="org-user-avatar-placeholder">@StringHelper.GetInitials(node.Name)</div>
+                        }
+                    </div>
+                    <div class="org-user-info">
+                        <strong class="org-user-name">@node.Name</strong>
+                        @if (!string.IsNullOrEmpty(node.PositionName))
+                        {
+                            <span class="org-user-position">@node.PositionName</span>
+                        }
+                        <span class="org-user-email">@node.Email</span>
+                    </div>
+                    <div class="org-node-status">
+                        <span class="admin-status @(node.IsActive ? "active" : "inactive")">
+                            @(node.IsActive ? "Active" : "Inactive")
+                        </span>
+                    </div>
+                    <div class="org-node-actions">
+                        <button class="org-action-btn" title="Edit User" @onclick="() => OpenEditUserDialog(node)">
+                            <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" />
+                        </button>
+                        <button class="org-action-btn admin-action-danger" title="Delete User" @onclick="() => OpenDeleteUserDialog(node)">
+                            <MudIcon Icon="@Icons.Material.Filled.Delete" Size="Size.Small" />
+                        </button>
+                    </div>
+                </div>
+            }
+        </div>
+    };
+}

@@ -1,5 +1,6 @@
 using ChatApp.Modules.Identity.Application.Commands.Departments;
 using ChatApp.Modules.Identity.Application.DTOs.Requests;
+using ChatApp.Modules.Identity.Application.DTOs.Responses;
 using ChatApp.Modules.Identity.Application.Queries.Departments;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -73,10 +74,12 @@ namespace ChatApp.Modules.Identity.Api.Controllers
             if (result.IsFailure)
                 return BadRequest(new { error = result.Error });
 
+            var response = new CreateDepartmentResponse(result.Value);
+
             return CreatedAtAction(
                 nameof(GetDepartmentById),
                 new { departmentId = result.Value },
-                new { id = result.Value });
+                response);
         }
 
         /// <summary>

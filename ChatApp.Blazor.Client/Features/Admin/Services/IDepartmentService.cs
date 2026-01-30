@@ -10,7 +10,7 @@ public interface IDepartmentService
 {
     Task<Result<List<DepartmentDto>>> GetAllDepartmentsAsync();
     Task<Result<DepartmentDto>> GetDepartmentByIdAsync(Guid departmentId);
-    Task<Result<Guid>> CreateDepartmentAsync(CreateDepartmentRequest request);
+    Task<Result<CreateDepartmentResponse>> CreateDepartmentAsync(CreateDepartmentRequest request);
     Task<Result> UpdateDepartmentAsync(Guid departmentId, UpdateDepartmentRequest request);
     Task<Result> DeleteDepartmentAsync(Guid departmentId);
     Task<Result> AssignDepartmentHeadAsync(Guid departmentId, Guid userId);
