@@ -31,6 +31,7 @@ using ChatApp.Shared.Infrastructure.Logging;
 using ChatApp.Shared.Infrastructure.Middleware;
 using ChatApp.Shared.Infrastructure.SignalR.Hubs;
 using ChatApp.Shared.Infrastructure.SignalR.Services;
+using ChatApp.Shared.Infrastructure.Session;
 using ChatApp.Shared.Kernel.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -110,8 +111,11 @@ builder.Services.AddSettingsInfrastructure(builder.Configuration);
 // Register event bus for inter-module communication
 builder.Services.AddSingleton<IEventBus, InMemoryEventBus>();
 
-// Register Memory Cache (required for ChannelMemberCache)
+// Register Memory Cache (required for ChannelMemberCache and SessionStore)
 builder.Services.AddMemoryCache();
+
+// Register BFF Session Store (opaque session ID → JWT mapping)
+builder.Services.AddSingleton<ISessionStore, InMemorySessionStore>();
 
 // Register SignalR services
 builder.Services.AddSingleton<IConnectionManager,ConnectionManager>();
@@ -156,28 +160,25 @@ builder.Services.AddAuthentication(options =>
         ClockSkew = TimeSpan.Zero
     };
 
-    // Configure JWT to read from cookies (XSS-proof) and SignalR
+    // Configure JWT to read from session store (BFF pattern) and SignalR
     options.Events = new JwtBearerEvents
     {
         OnMessageReceived = context =>
         {
-            // Priority 1: Read token from HttpOnly cookie (secure, XSS-proof)
-            var accessToken = context.Request.Cookies["accessToken"];
+            string? accessToken = null;
 
-            // Priority 2: For SignalR, read from query string (cookies not available in SignalR handshake)
+            // Priority 1: Read opaque session ID from cookie, resolve real JWT from session store
+            var sessionId = context.Request.Cookies["_sid"];
+            if (!string.IsNullOrEmpty(sessionId))
+            {
+                var sessionStore = context.HttpContext.RequestServices.GetRequiredService<ChatApp.Shared.Kernel.Interfaces.ISessionStore>();
+                accessToken = sessionStore.GetAccessToken(sessionId);
+            }
+
+            // Priority 2: For SignalR, read from query string (cookies not available in WebSocket handshake)
             if (string.IsNullOrEmpty(accessToken))
             {
                 accessToken = context.Request.Query["access_token"];
-            }
-
-            // Priority 3: Fall back to Authorization header (for backward compatibility)
-            if (string.IsNullOrEmpty(accessToken))
-            {
-                var authHeader = context.Request.Headers["Authorization"].ToString();
-                if (authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-                {
-                    accessToken = authHeader.Substring("Bearer ".Length).Trim();
-                }
             }
 
             if (!string.IsNullOrEmpty(accessToken))

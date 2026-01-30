@@ -1,5 +1,4 @@
-﻿using ChatApp.Modules.Channels.Application.Interfaces;
-using ChatApp.Modules.DirectMessages.Domain.Entities;
+﻿using ChatApp.Modules.DirectMessages.Domain.Entities;
 using ChatApp.Modules.DirectMessages.Infrastructure.Persistence;
 using ChatApp.Modules.Identity.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;

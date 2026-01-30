@@ -3,6 +3,7 @@ using ChatApp.Modules.Identity.Application.Commands.RefreshToken;
 using ChatApp.Modules.Identity.Application.DTOs.Requests;
 using ChatApp.Modules.Identity.Application.DTOs.Responses;
 using ChatApp.Modules.Identity.Application.Queries.GetUser;
+using ChatApp.Shared.Kernel.Interfaces;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -21,15 +22,20 @@ namespace ChatApp.Modules.Identity.Api.Controllers
         private readonly ILogger<AuthController> _logger;
         private readonly bool _isDevelopment;
         private readonly IConfiguration _configuration;
+        private readonly ISessionStore _sessionStore;
+
+        private const string SessionCookieName = "_sid";
 
         public AuthController(
             IMediator mediator,
             ILogger<AuthController> logger,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            ISessionStore sessionStore)
         {
             _mediator = mediator;
             _logger = logger;
             _configuration = configuration;
+            _sessionStore = sessionStore;
             _isDevelopment = configuration["ASPNETCORE_ENVIRONMENT"] == "Development";
         }
 
@@ -51,8 +57,25 @@ namespace ChatApp.Modules.Identity.Api.Controllers
             if (result.IsFailure)
                 return BadRequest(new { error = result.Error });
 
-            // Set HttpOnly cookies for tokens (XSS-proof)
-            SetAuthCookies(result.Value!.AccessToken, result.Value.RefreshToken, result.Value.ExpiresIn, result.Value.RememberMe);
+            var loginResponse = result.Value!;
+
+            // Parse userId from JWT for session tracking
+            var userId = GetUserIdFromLoginResponse(loginResponse);
+
+            // Create opaque session — real tokens stay server-side only
+            var accessTokenLifetime = TimeSpan.FromSeconds(loginResponse.ExpiresIn);
+            var refreshTokenDays = _configuration.GetValue("JwtSettings:RefreshTokenExpirationDays", 30);
+            var refreshTokenLifetime = TimeSpan.FromDays(refreshTokenDays);
+
+            var sessionId = _sessionStore.CreateSession(
+                userId,
+                loginResponse.AccessToken,
+                loginResponse.RefreshToken,
+                accessTokenLifetime,
+                refreshTokenLifetime);
+
+            // Only opaque session ID goes to the cookie — no tokens exposed
+            SetSessionCookie(sessionId, loginResponse.RememberMe, refreshTokenLifetime);
 
             return Ok(new { success = true, message = "Login successful" });
         }
@@ -65,20 +88,35 @@ namespace ChatApp.Modules.Identity.Api.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> RefreshToken(CancellationToken cancellationToken)
         {
-            // Read refresh token from HttpOnly cookie
-            var refreshToken = Request.Cookies["refreshToken"];
+            var sessionId = Request.Cookies[SessionCookieName];
+
+            if (string.IsNullOrEmpty(sessionId))
+                return BadRequest(new { error = "No session found" });
+
+            // Get refresh token from server-side session store
+            var refreshToken = _sessionStore.GetRefreshToken(sessionId);
 
             if (string.IsNullOrEmpty(refreshToken))
-                return BadRequest(new { error = "No refresh token found" });
+                return BadRequest(new { error = "Session expired" });
 
             var result = await _mediator.Send(new RefreshTokenCommand(refreshToken), cancellationToken);
 
             if (result.IsFailure)
+            {
+                // Session is invalid — clear it
+                _sessionStore.RemoveSession(sessionId);
+                ClearSessionCookie();
                 return BadRequest(new { error = result.Error });
+            }
 
-            // Set new HttpOnly cookies with rotated tokens
-            // Use rememberMe=true for refresh operations to maintain persistent session
-            SetAuthCookies(result.Value!.AccessToken, result.Value.RefreshToken, result.Value.ExpiresIn, rememberMe: true);
+            var refreshResponse = result.Value!;
+
+            // Update session with new tokens — cookie stays the same (same opaque ID)
+            var accessTokenLifetime = TimeSpan.FromSeconds(refreshResponse.ExpiresIn);
+            var refreshTokenDays = _configuration.GetValue("JwtSettings:RefreshTokenExpirationDays", 30);
+            var refreshTokenLifetime = TimeSpan.FromDays(refreshTokenDays);
+
+            _sessionStore.UpdateTokens(sessionId, refreshResponse.AccessToken, refreshResponse.RefreshToken, accessTokenLifetime, refreshTokenLifetime);
 
             return Ok(new { message = "Token refreshed successfully" });
         }
@@ -108,7 +146,7 @@ namespace ChatApp.Modules.Identity.Api.Controllers
 
         /// <summary>
         /// Returns the access token for SignalR connection (required because WebSocket doesn't send cookies)
-        /// This endpoint requires authentication via cookie, so it's secure - the token is only returned
+        /// This endpoint requires authentication via cookie, so it's secure — the token is only returned
         /// to authenticated users for establishing SignalR connections.
         /// </summary>
         [HttpGet("signalr-token")]
@@ -117,10 +155,15 @@ namespace ChatApp.Modules.Identity.Api.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public IActionResult GetSignalRToken()
         {
-            var accessToken = Request.Cookies["accessToken"];
+            var sessionId = Request.Cookies[SessionCookieName];
+
+            if (string.IsNullOrEmpty(sessionId))
+                return Unauthorized(new { error = "No session found" });
+
+            var accessToken = _sessionStore.GetAccessToken(sessionId);
 
             if (string.IsNullOrEmpty(accessToken))
-                return Unauthorized(new { error = "No access token found" });
+                return Unauthorized(new { error = "Session expired" });
 
             return Ok(new { token = accessToken });
         }
@@ -141,10 +184,17 @@ namespace ChatApp.Modules.Identity.Api.Controllers
                 return BadRequest(result);
             }
 
-            // Clear authentication cookies
-            ClearAuthCookies();
+            // Remove server-side session
+            var sessionId = Request.Cookies[SessionCookieName];
+            if (!string.IsNullOrEmpty(sessionId))
+            {
+                _sessionStore.RemoveSession(sessionId);
+            }
 
-            _logger?.LogInformation("User {UserId} logged out succesfully", userId);
+            // Clear session cookie
+            ClearSessionCookie();
+
+            _logger?.LogInformation("User {UserId} logged out successfully", userId);
             return Ok(new { message = "Logout successful" });
         }
 
@@ -161,56 +211,66 @@ namespace ChatApp.Modules.Identity.Api.Controllers
         }
 
         /// <summary>
-        /// Sets HttpOnly authentication cookies (XSS-proof)
+        /// Extracts user ID from the login response JWT (without full validation, just to get the sub claim)
         /// </summary>
-        private void SetAuthCookies(string accessToken, string refreshToken, int expiresIn, bool rememberMe)
+        private static Guid GetUserIdFromLoginResponse(LoginResponse loginResponse)
         {
-            var isProduction = !_isDevelopment;
-            var refreshTokenExpirationDays = _configuration.GetValue<int>("JwtSettings:RefreshTokenExpirationDays", 30);
-
-            // Set access token cookie with expiration
-            var accessTokenOptions = new CookieOptions
+            try
             {
-                HttpOnly = true,        // Cannot be accessed by JavaScript (XSS protection)
-                Secure = isProduction,  // Only sent over HTTPS in production
-                SameSite = isProduction ? SameSiteMode.None : SameSiteMode.Lax,
-                Expires = DateTimeOffset.UtcNow.AddSeconds(expiresIn),
-                Path = "/"
-            };
+                // JWT has 3 parts: header.payload.signature
+                var parts = loginResponse.AccessToken.Split('.');
+                if (parts.Length != 3) return Guid.Empty;
 
-            Response.Cookies.Append("accessToken", accessToken, accessTokenOptions);
+                var payload = parts[1];
+                // Fix base64 padding
+                switch (payload.Length % 4)
+                {
+                    case 2: payload += "=="; break;
+                    case 3: payload += "="; break;
+                }
 
-            // Set refresh token cookie
-            // If RememberMe is true, cookie persists for configured days
-            // If RememberMe is false, cookie is session-only (expires when browser closes)
-            var refreshTokenOptions = new CookieOptions
-            {
-                HttpOnly = true,
-                Secure = isProduction,
-                SameSite = isProduction ? SameSiteMode.None : SameSiteMode.Lax,
-                Expires = rememberMe ? DateTimeOffset.UtcNow.AddDays(refreshTokenExpirationDays) : null,
-                Path = "/"
-            };
+                var json = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(payload));
+                var doc = System.Text.Json.JsonDocument.Parse(json);
 
-            Response.Cookies.Append("refreshToken", refreshToken, refreshTokenOptions);
+                if (doc.RootElement.TryGetProperty("nameid", out var nameid) ||
+                    doc.RootElement.TryGetProperty("sub", out nameid))
+                {
+                    if (Guid.TryParse(nameid.GetString(), out var userId))
+                        return userId;
+                }
+            }
+            catch { }
+
+            return Guid.Empty;
         }
 
         /// <summary>
-        /// Clears authentication cookies on logout
+        /// Sets the opaque session cookie (no tokens exposed)
         /// </summary>
-        private void ClearAuthCookies()
+        private void SetSessionCookie(string sessionId, bool rememberMe, TimeSpan refreshTokenLifetime)
         {
             var isProduction = !_isDevelopment;
 
-            Response.Cookies.Delete("accessToken", new CookieOptions
+            var cookieOptions = new CookieOptions
             {
                 HttpOnly = true,
                 Secure = isProduction,
                 SameSite = isProduction ? SameSiteMode.None : SameSiteMode.Lax,
+                Expires = rememberMe ? DateTimeOffset.UtcNow.Add(refreshTokenLifetime) : null,
                 Path = "/"
-            });
+            };
 
-            Response.Cookies.Delete("refreshToken", new CookieOptions
+            Response.Cookies.Append(SessionCookieName, sessionId, cookieOptions);
+        }
+
+        /// <summary>
+        /// Clears the session cookie on logout
+        /// </summary>
+        private void ClearSessionCookie()
+        {
+            var isProduction = !_isDevelopment;
+
+            Response.Cookies.Delete(SessionCookieName, new CookieOptions
             {
                 HttpOnly = true,
                 Secure = isProduction,
