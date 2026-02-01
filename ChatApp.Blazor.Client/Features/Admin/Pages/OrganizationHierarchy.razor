@@ -24,6 +24,10 @@
                 <MudIcon Icon="@Icons.Material.Filled.UnfoldMore" Size="Size.Small" />
                 <span>Expand All</span>
             </button>
+            <button class="admin-btn admin-btn-secondary" @onclick='() => Navigation.NavigateTo("/admin/positions")'>
+                <MudIcon Icon="@Icons.Material.Filled.WorkOutline" Size="Size.Small" />
+                <span>Positions</span>
+            </button>
             <button class="admin-btn admin-btn-primary" @onclick="() => OpenCreateDepartmentDialog(null, null, null)">
                 <MudIcon Icon="@Icons.Material.Filled.BusinessCenter" Size="Size.Small" />
                 <span>New Department</span>
@@ -185,21 +189,20 @@
                             }
                             else
                             {
-                                <InputSelect @bind-Value="createUserModel.DepartmentId" class="admin-input">
+                                <select class="admin-input" value="@createUserModel.DepartmentId" @onchange="OnCreateUserDepartmentChanged">
                                     <option value="@Guid.Empty">Select Department</option>
                                     @foreach (var dept in allDepartments)
                                     {
                                         <option value="@dept.Id">@dept.Name</option>
                                     }
-                                </InputSelect>
-                                <ValidationMessage For="@(() => createUserModel.DepartmentId)" />
+                                </select>
                             }
                         </div>
                         <div class="admin-form-group">
                             <label>Position (Optional)</label>
                             <InputSelect @bind-Value="createUserModel.PositionId" class="admin-input">
                                 <option value="">No Position</option>
-                                @foreach (var pos in allPositions)
+                                @foreach (var pos in filteredPositions)
                                 {
                                     <option value="@pos.Id">@pos.Name</option>
                                 }
@@ -531,7 +534,7 @@
                             <label>Position</label>
                             <InputSelect @bind-Value="editUserModel.PositionId" class="admin-input">
                                 <option value="">No Position</option>
-                                @foreach (var pos in allPositions)
+                                @foreach (var pos in filteredPositions)
                                 {
                                     <option value="@pos.Id">@pos.Name</option>
                                 }
@@ -554,39 +557,6 @@
                         <label>About Me</label>
                         <textarea @bind="editUserModel.AboutMe" class="admin-input admin-textarea" rows="3" placeholder="Brief description" maxlength="500"></textarea>
                         <ValidationMessage For="@(() => editUserModel.AboutMe)" />
-                    </div>
-
-                    @* Avatar upload in edit dialog *@
-                    <div class="admin-form-group">
-                        <label>Profile Avatar</label>
-                        <div class="admin-file-upload">
-                            @if (editAvatarFileData != null && !string.IsNullOrEmpty(editAvatarFileName))
-                            {
-                                <div class="admin-file-selected">
-                                    <div class="admin-file-icon">
-                                        <MudIcon Icon="@Icons.Material.Filled.Image" />
-                                    </div>
-                                    <div class="admin-file-info">
-                                        <span class="admin-file-name">@editAvatarFileName</span>
-                                        <span class="admin-file-size">@FormatFileSize(editAvatarFileSize)</span>
-                                    </div>
-                                    <button type="button" class="admin-file-remove-btn" @onclick="RemoveEditAvatar">
-                                        <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" />
-                                    </button>
-                                </div>
-                            }
-                            else
-                            {
-                                <label class="admin-file-input-label">
-                                    <InputFile OnChange="OnEditAvatarFileSelected" accept="image/*" class="admin-file-input" />
-                                    <div class="admin-file-placeholder">
-                                        <MudIcon Icon="@Icons.Material.Filled.CloudUpload" />
-                                        <span>Click to upload or drag and drop</span>
-                                        <small>PNG, JPG, GIF up to 10MB</small>
-                                    </div>
-                                </label>
-                            }
-                        </div>
                     </div>
 
                     @if (!string.IsNullOrEmpty(editUserMessage))

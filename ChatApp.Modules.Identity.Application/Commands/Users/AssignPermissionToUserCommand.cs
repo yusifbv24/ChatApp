@@ -57,9 +57,9 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
                 if (user.UserPermissions.Any(up => up.PermissionName == command.PermissionName))
                     return Result.Failure($"User already has the permission '{command.PermissionName}'");
 
-                // Create and assign permission
+                // Create permission directly via DbSet to avoid concurrency issues with User entity
                 var userPermission = new UserPermission(command.UserId, command.PermissionName);
-                user.AssignPermission(userPermission);
+                await unitOfWork.UserPermissions.AddAsync(userPermission, cancellationToken);
 
                 await unitOfWork.SaveChangesAsync(cancellationToken);
 

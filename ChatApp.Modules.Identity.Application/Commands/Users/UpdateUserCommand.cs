@@ -175,7 +175,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
 
             // Update Employee fields (Organizational & Sensitive Data)
             if (request.PositionId.HasValue)
-                employee.AssignToPosition(request.PositionId);
+                employee.AssignToPosition(request.PositionId == Guid.Empty ? null : request.PositionId);
 
             if (request.AboutMe is not null)
                 employee.UpdateAboutMe(request.AboutMe);

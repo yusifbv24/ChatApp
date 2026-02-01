@@ -422,19 +422,19 @@
                     <div class="admin-form-row">
                         <div class="admin-form-group">
                             <label>Department</label>
-                            <InputSelect @bind-Value="selectedDepartmentId" class="admin-input">
+                            <select class="admin-input" value="@selectedDepartmentId" @onchange="OnEditDepartmentChanged">
                                 <option value="">No Department</option>
                                 @foreach (var dept in allDepartments)
                                 {
                                     <option value="@dept.Id">@dept.Name</option>
                                 }
-                            </InputSelect>
+                            </select>
                         </div>
                         <div class="admin-form-group">
                             <label>Position</label>
                             <InputSelect @bind-Value="editModel.PositionId" class="admin-input">
                                 <option value="">No Position</option>
-                                @foreach (var pos in allPositions)
+                                @foreach (var pos in filteredPositions)
                                 {
                                     <option value="@pos.Id">@pos.Name</option>
                                 }
@@ -458,16 +458,6 @@
                         <div class="admin-form-group">
                             <label>Hiring Date</label>
                             <InputDate @bind-Value="editModel.HiringDate" class="admin-input" />
-                        </div>
-                        <div class="admin-form-group">
-                            <label>Supervisor</label>
-                            <InputSelect @bind-Value="selectedSupervisorId" class="admin-input">
-                                <option value="">No Supervisor</option>
-                                @foreach (var u in allUsers.Where(u => u.Id != UserId))
-                                {
-                                    <option value="@u.Id">@u.FullName</option>
-                                }
-                            </InputSelect>
                         </div>
                     </div>
 
@@ -571,6 +561,7 @@
 
     private UserDetailDto? user;
     private List<PositionDto> allPositions = new();
+    private List<PositionDto> filteredPositions = new();
     private List<DepartmentDto> allDepartments = new();
     private List<UserListItemDto> allUsers = new();
     private List<string> allPermissions = new();
@@ -595,7 +586,6 @@
     private string? editMessage;
     private bool editSuccess;
     private string? selectedDepartmentId;
-    private string? selectedSupervisorId;
 
     // Change password dialog
     private bool showChangePasswordDialog;
@@ -721,7 +711,11 @@
 
             if (result.IsSuccess)
             {
-                await LoadUserAsync();
+                // Update locally instead of reloading
+                if (currentlyGranted)
+                    user!.Permissions.Remove(permission);
+                else
+                    user!.Permissions.Add(permission);
             }
             else
             {
@@ -764,7 +758,7 @@
             {
                 actionSuccess = true;
                 actionMessage = "Avatar removed.";
-                await LoadUserAsync();
+                user = user! with { AvatarUrl = null };
             }
             else
             {
@@ -808,7 +802,7 @@
 
                 actionSuccess = true;
                 actionMessage = "Avatar uploaded successfully.";
-                await LoadUserAsync();
+                user = user! with { AvatarUrl = avatarUrl };
             }
             else
             {
@@ -845,13 +839,32 @@
             HiringDate = user.HiringDate
         };
         selectedDepartmentId = user.DepartmentId?.ToString() ?? "";
-        selectedSupervisorId = user.SupervisorId?.ToString() ?? "";
+        FilterPositionsByDepartment(user.DepartmentId);
         editMessage = null;
         editSuccess = false;
         showEditDialog = true;
     }
 
     private void CloseEditDialog() => showEditDialog = false;
+
+    private void FilterPositionsByDepartment(Guid? departmentId)
+    {
+        if (departmentId.HasValue && departmentId.Value != Guid.Empty)
+            filteredPositions = allPositions.Where(p => p.DepartmentId == departmentId.Value).ToList();
+        else
+            filteredPositions = allPositions.ToList();
+    }
+
+    private void OnEditDepartmentChanged(ChangeEventArgs e)
+    {
+        var val = e.Value?.ToString();
+        selectedDepartmentId = val ?? "";
+        if (Guid.TryParse(val, out var deptId) && deptId != Guid.Empty)
+            FilterPositionsByDepartment(deptId);
+        else
+            FilterPositionsByDepartment(null);
+        editModel.PositionId = null;
+    }
 
     private async Task HandleEditUser()
     {
@@ -861,6 +874,10 @@
 
         try
         {
+            // Send Guid.Empty to clear position (backend treats null as "no change")
+            if (!editModel.PositionId.HasValue)
+                editModel.PositionId = Guid.Empty;
+
             var result = await UserService.UpdateUserAsync(UserId, editModel);
             if (!result.IsSuccess)
             {
@@ -882,16 +899,6 @@
                 await UserService.RemoveFromDepartmentAsync(UserId);
             }
 
-            // Handle supervisor change
-            if (Guid.TryParse(selectedSupervisorId, out var supId) && supId != Guid.Empty)
-            {
-                if (user.SupervisorId != supId)
-                    await UserService.AssignSupervisorAsync(UserId, supId);
-            }
-            else if (user.SupervisorId.HasValue)
-            {
-                await UserService.RemoveSupervisorAsync(UserId);
-            }
 
             editSuccess = true;
             editMessage = "User updated successfully.";
@@ -974,7 +981,7 @@
             {
                 actionSuccess = true;
                 actionMessage = user.IsActive ? "User deactivated." : "User activated.";
-                await LoadUserAsync();
+                user = user with { IsActive = !user.IsActive };
             }
             else
             {
@@ -1009,7 +1016,7 @@
             {
                 actionSuccess = true;
                 actionMessage = "User assigned as Head of Department.";
-                await LoadUserAsync();
+                user = user! with { IsHeadOfDepartment = true };
             }
             else
             {
@@ -1043,7 +1050,7 @@
             {
                 actionSuccess = true;
                 actionMessage = "User removed as Head of Department.";
-                await LoadUserAsync();
+                user = user! with { IsHeadOfDepartment = false };
             }
             else
             {

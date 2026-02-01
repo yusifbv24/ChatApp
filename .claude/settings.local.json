@@ -35,7 +35,8 @@
       "Bash(PGPASSWORD=npg_9JCrdsL5ZRjq psql -h ep-tiny-silence-a97holpz-pooler.gwc.azure.neon.tech -p 5432 -U neondb_owner -d neondb -c \"CREATE DATABASE chatapp;\")",
       "Bash(cmd /c \"tasklist | findstr ChatApp\")",
       "Bash(cmd /c \"rmdir /s /q C:\\\\Users\\\\Joseph\\\\Desktop\\\\ChatApp\\\\ChatApp.Api\\\\bin\\\\Debug\\\\net10.0\")",
-      "Bash(cmd /c \"taskkill /IM ChatApp.Api.exe /F 2>nul & taskkill /IM dotnet.exe /F 2>nul\")"
+      "Bash(cmd /c \"taskkill /IM ChatApp.Api.exe /F 2>nul & taskkill /IM dotnet.exe /F 2>nul\")",
+      "Bash(cmd /c \"rmdir /s /q C:\\\\Users\\\\Joseph\\\\Desktop\\\\ChatApp\\\\ChatApp.Api\\\\bin\")"
     ],
     "deny": [],
     "ask": []

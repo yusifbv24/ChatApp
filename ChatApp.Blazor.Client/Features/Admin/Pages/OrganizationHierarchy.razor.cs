@@ -24,6 +24,7 @@ public partial class OrganizationHierarchy
     private List<OrganizationHierarchyNode> allNodes = [];
     private List<DepartmentDto> allDepartments = [];
     private List<PositionDto> allPositions = [];
+    private List<PositionDto> filteredPositions = [];
     private string searchTerm = "";
     private bool isLoading = true;
     private string? errorMessage;
@@ -64,11 +65,6 @@ public partial class OrganizationHierarchy
     private bool isUpdatingUser = false;
     private string? editUserMessage;
     private bool editUserSuccess = false;
-    private byte[]? editAvatarFileData;
-    private string? editAvatarFileName;
-    private string? editAvatarContentType;
-    private long editAvatarFileSize;
-    private string? editAvatarPreviewUrl;
 
     // Edit Department Dialog
     private bool showEditDepartmentDialog = false;
@@ -291,6 +287,29 @@ public partial class OrganizationHierarchy
         return node.Children.Any(c => c.MatchesSearch || HasMatchingDescendant(c));
     }
 
+    private void FilterPositionsByDepartment(Guid? departmentId)
+    {
+        if (departmentId.HasValue && departmentId.Value != Guid.Empty)
+            filteredPositions = allPositions.Where(p => p.DepartmentId == departmentId.Value).ToList();
+        else
+            filteredPositions = allPositions.ToList();
+    }
+
+    private void OnCreateUserDepartmentChanged(ChangeEventArgs e)
+    {
+        if (Guid.TryParse(e.Value?.ToString(), out var deptId) && deptId != Guid.Empty)
+        {
+            createUserModel.DepartmentId = deptId;
+            FilterPositionsByDepartment(deptId);
+        }
+        else
+        {
+            createUserModel.DepartmentId = Guid.Empty;
+            FilterPositionsByDepartment(null);
+        }
+        createUserModel.PositionId = null;
+    }
+
     // Create User Methods
     private void OpenCreateUserDialog(Guid? departmentId = null, string? departmentName = null)
     {
@@ -308,6 +327,7 @@ public partial class OrganizationHierarchy
         selectedAvatarFileSize = 0;
         avatarPreviewUrl = null;
         isUploadingAvatar = false;
+        FilterPositionsByDepartment(departmentId);
         showCreateUserDialog = true;
     }
 
@@ -689,11 +709,7 @@ public partial class OrganizationHierarchy
                 };
                 editUserMessage = null;
                 editUserSuccess = false;
-                editAvatarFileData = null;
-                editAvatarFileName = null;
-                editAvatarContentType = null;
-                editAvatarFileSize = 0;
-                editAvatarPreviewUrl = null;
+                FilterPositionsByDepartment(user.DepartmentId);
                 showEditUserDialog = true;
             }
         }
@@ -718,31 +734,12 @@ public partial class OrganizationHierarchy
         editUserMessage = null;
         editUserSuccess = false;
 
+        // Send Guid.Empty to clear position (backend treats null as "no change")
+        if (!editUserModel.PositionId.HasValue)
+            editUserModel.PositionId = Guid.Empty;
+
         try
         {
-            if (editAvatarFileData != null && !string.IsNullOrEmpty(editAvatarFileName) && !string.IsNullOrEmpty(editAvatarContentType))
-            {
-                var uploadResult = await FileService.UploadProfilePictureAsync(
-                    editAvatarFileData,
-                    editAvatarFileName,
-                    editAvatarContentType,
-                    editingUserNode.Id);
-
-                if (uploadResult.IsSuccess && uploadResult.Value != null)
-                {
-                    editUserModel.AvatarUrl = uploadResult.Value.ThumbnailUrl ?? uploadResult.Value.DownloadUrl;
-                }
-                else
-                {
-                    editUserSuccess = false;
-                    editUserMessage = !string.IsNullOrEmpty(uploadResult.Error)
-                        ? uploadResult.Error
-                        : "Failed to upload avatar. Please try again.";
-                    isUpdatingUser = false;
-                    return;
-                }
-            }
-
             var result = await UserService.UpdateUserAsync(editingUserNode.Id, editUserModel);
 
             if (result.IsSuccess)
@@ -817,64 +814,6 @@ public partial class OrganizationHierarchy
         {
             isDeletingUser = false;
         }
-    }
-
-    // Edit Avatar Methods (for edit user dialog)
-    private async Task OnEditAvatarFileSelected(InputFileChangeEventArgs e)
-    {
-        var file = e.File;
-        editUserMessage = null;
-
-        if (file != null)
-        {
-            if (!file.ContentType.StartsWith("image/"))
-            {
-                editUserMessage = "Only image files are allowed for profile pictures";
-                editAvatarFileData = null;
-                editAvatarPreviewUrl = null;
-                return;
-            }
-
-            if (file.Size > 10 * 1024 * 1024)
-            {
-                editUserMessage = "File size must be less than 10 MB";
-                editAvatarFileData = null;
-                editAvatarPreviewUrl = null;
-                return;
-            }
-
-            try
-            {
-                using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
-                var buffer = new byte[file.Size];
-                await stream.ReadExactlyAsync(buffer, 0, buffer.Length);
-
-                editAvatarFileData = buffer;
-                editAvatarFileName = file.Name;
-                editAvatarContentType = file.ContentType;
-                editAvatarFileSize = file.Size;
-                editAvatarPreviewUrl = file.Name;
-
-                StateHasChanged();
-            }
-            catch (Exception ex)
-            {
-                editUserMessage = $"Error reading file: {ex.Message}";
-                editAvatarFileData = null;
-                editAvatarPreviewUrl = null;
-            }
-        }
-    }
-
-    private void RemoveEditAvatar()
-    {
-        editAvatarFileData = null;
-        editAvatarFileName = null;
-        editAvatarContentType = null;
-        editAvatarFileSize = 0;
-        editAvatarPreviewUrl = null;
-        editUserModel.AvatarUrl = null;
-        StateHasChanged();
     }
 
     // Navigation helpers

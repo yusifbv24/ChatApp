@@ -49,12 +49,15 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
                 if (user == null)
                     return Result.Failure("User not found");
 
-                // Check if user has this permission
-                if (!user.UserPermissions.Any(up => up.PermissionName == command.PermissionName))
+                // Find the permission
+                var permission = await unitOfWork.UserPermissions
+                    .FirstOrDefaultAsync(up => up.UserId == command.UserId && up.PermissionName == command.PermissionName, cancellationToken);
+
+                if (permission == null)
                     return Result.Failure($"User does not have the permission '{command.PermissionName}'");
 
-                // Remove permission
-                user.RemovePermission(command.PermissionName);
+                // Remove permission directly via DbSet
+                unitOfWork.UserPermissions.Remove(permission);
                 await unitOfWork.SaveChangesAsync(cancellationToken);
 
                 logger.LogInformation(

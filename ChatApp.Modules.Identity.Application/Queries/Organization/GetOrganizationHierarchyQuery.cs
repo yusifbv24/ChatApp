@@ -199,13 +199,27 @@ namespace ChatApp.Modules.Identity.Application.Queries.Organization
             // This dept's head name (for assigning as supervisor to children)
             deptHeadNames.TryGetValue(dept.Id, out var thisDeptHeadName);
 
-            // Recursively add child departments (sorted A-Z)
+            // 1. First: Add department head (if exists and is in this department)
+            if (usersByDepartment.TryGetValue(dept.Id, out var users))
+            {
+                var headUser = users.FirstOrDefault(u => u.Id == dept.HeadOfDepartmentId);
+                if (headUser != null)
+                {
+                    children.Add(headUser with
+                    {
+                        Level = level + 1,
+                        SupervisorName = dept.SupervisorName,
+                        IsDepartmentHead = true
+                    });
+                }
+            }
+
+            // 2. Then: Add child departments (sorted A-Z)
             if (childDepartmentsByParent.TryGetValue(dept.Id, out var childDepts))
             {
                 foreach (var child in childDepts.OrderBy(d => d.Name))
                 {
                     var subordinateCount = CalculateSubordinateCount(child, usersByDepartment);
-                    // Child dept head's supervisor = this dept's head
                     var childWithInfo = child with
                     {
                         SupervisorName = thisDeptHeadName,
@@ -216,28 +230,17 @@ namespace ChatApp.Modules.Identity.Application.Queries.Organization
                 }
             }
 
-            // Add users in this department (department head first, then others A-Z)
-            if (usersByDepartment.TryGetValue(dept.Id, out var users))
+            // 3. Finally: Add remaining users (not dept head, sorted A-Z)
+            if (users != null)
             {
-                var sortedUsers = users
-                    .OrderByDescending(u => u.Id == dept.HeadOfDepartmentId)
-                    .ThenBy(u => u.Name)
-                    .ToList();
-                foreach (var user in sortedUsers)
+                foreach (var user in users.Where(u => u.Id != dept.HeadOfDepartmentId).OrderBy(u => u.Name))
                 {
-                    string? supervisorName;
-                    if (user.Id == dept.HeadOfDepartmentId)
+                    children.Add(user with
                     {
-                        // This user IS the dept head - supervisor comes from parent
-                        supervisorName = dept.SupervisorName;
-                    }
-                    else
-                    {
-                        // Regular employee - supervisor = dept head
-                        supervisorName = thisDeptHeadName;
-                    }
-                    var isDeptHead = user.Id == dept.HeadOfDepartmentId;
-                    children.Add(user with { Level = level + 1, SupervisorName = supervisorName, IsDepartmentHead = isDeptHead });
+                        Level = level + 1,
+                        SupervisorName = thisDeptHeadName,
+                        IsDepartmentHead = false
+                    });
                 }
             }
 
