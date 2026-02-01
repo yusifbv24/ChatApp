@@ -31,7 +31,7 @@ namespace ChatApp.Modules.Channels.Application.Events
                     @event.UserId,
                     leftUserFullName);
 
-                logger.LogInformation(
+                logger?.LogInformation(
                     "Notified channel {ChannelId} group about user {UserId} leaving",
                     @event.ChannelId,
                     @event.UserId);

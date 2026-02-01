@@ -13,6 +13,7 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
 {
     private readonly HttpClient _httpClient;
     private readonly IJSRuntime _jsRuntime;
+    private UserDetailDto? _cachedUser;
 
     public CustomAuthStateProvider(HttpClient httpClient, IJSRuntime jsRuntime)
     {
@@ -24,11 +25,18 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
     {
         try
         {
+            // Return cached user if available (set during login)
+            if (_cachedUser != null)
+            {
+                return CreateAuthenticatedState(_cachedUser);
+            }
+
             // Call /api/auth/me to get current user (cookie sent automatically)
             var user = await TryGetCurrentUserAsync();
 
             if (user != null)
             {
+                _cachedUser = user;
                 return CreateAuthenticatedState(user);
             }
         }
@@ -128,14 +136,13 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
     }
 
     /// <summary>
-    /// Marks user as authenticated (cookies are set by backend)
+    /// Marks user as authenticated with already-fetched user data (avoids extra API call)
     /// </summary>
-    public async Task MarkUserAsAuthenticated()
+    public void MarkUserAsAuthenticated(UserDetailDto user)
     {
-        // Get updated authentication state from /api/auth/me
-        var authState = GetAuthenticationStateAsync();
+        _cachedUser = user;
+        var authState = Task.FromResult(CreateAuthenticatedState(user));
         NotifyAuthenticationStateChanged(authState);
-        await Task.CompletedTask;
     }
 
     /// <summary>
@@ -143,6 +150,8 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
     /// </summary>
     public async Task MarkUserAsLoggedOut()
     {
+        _cachedUser = null;
+
         // Clear RememberMe preference on logout
         try
         {

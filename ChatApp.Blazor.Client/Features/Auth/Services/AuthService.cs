@@ -35,12 +35,14 @@ public class AuthService : IAuthService
 
         if (result.IsSuccess)
         {
-            // Notify auth state changed (cookies are already set by backend)
-            await _authStateProvider.MarkUserAsAuthenticated();
-
-            // Load current user info from /api/auth/me
             var user = await _authStateProvider.GetCurrentUserAsync();
             _userState.CurrentUser = user;
+
+            // Notify auth state changed with cached user (no extra API call)
+            if (user != null)
+            {
+                _authStateProvider.MarkUserAsAuthenticated(user);
+            }
 
             // Return success (no tokens in response for security)
             return Result.Success(new LoginResponse("", "", 0));
@@ -58,12 +60,14 @@ public class AuthService : IAuthService
 
         if (result.IsSuccess)
         {
-            // Notify auth state changed (new cookies are already set by backend)
-            await _authStateProvider.MarkUserAsAuthenticated();
-
-            // Reload current user info from /api/auth/me
             var user = await _authStateProvider.GetCurrentUserAsync();
             _userState.CurrentUser = user;
+
+            // Notify auth state changed with cached user (no extra API call)
+            if (user != null)
+            {
+                _authStateProvider.MarkUserAsAuthenticated(user);
+            }
 
             // Return success (no tokens in response for security)
             return Result.Success(new LoginResponse("", "", 0));

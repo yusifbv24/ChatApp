@@ -17,7 +17,7 @@ namespace ChatApp.Modules.DirectMessages.Application.Events
         {
             try
             {
-                logger.LogInformation("Creating Notes conversation for user {UserId}", @event.UserId);
+                logger?.LogInformation("Creating Notes conversation for user {UserId}", @event.UserId);
 
                 // Create Notes conversation (self-conversation)
                 var notesConversation = new DirectConversation(
@@ -30,7 +30,7 @@ namespace ChatApp.Modules.DirectMessages.Application.Events
                 await conversationRepository.AddAsync(notesConversation);
                 await unitOfWork.SaveChangesAsync();
 
-                logger.LogInformation("Notes conversation created successfully for user {UserId}", @event.UserId);
+                logger?.LogInformation("Notes conversation created successfully for user {UserId}", @event.UserId);
             }
             catch (Exception ex)
             {

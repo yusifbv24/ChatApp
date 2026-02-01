@@ -140,7 +140,7 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence
             if (await context.Positions.AnyAsync())
             {
                 logger?.LogInformation("Positions already exist, skipping position seeding");
-                return new Dictionary<string, Position>();
+                return [];
             }
 
             logger?.LogInformation("Seeding default positions...");
