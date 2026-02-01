@@ -1,0 +1,376 @@
+@page "/admin/department/{DepartmentId:guid}"
+@attribute [Authorize]
+@using ChatApp.Blazor.Client.Helpers
+@using ChatApp.Blazor.Client.Models.Organization
+@using ChatApp.Blazor.Client.Models.Auth
+@using ChatApp.Blazor.Client.Features.Admin.Services
+@using ChatApp.Blazor.Client.Features.Auth.Services
+
+@inject IDepartmentService DepartmentService
+@inject IOrganizationService OrganizationService
+@inject IUserService UserService
+@inject NavigationManager Navigation
+
+<PageTitle>Department Details - ChatApp</PageTitle>
+
+<div class="admin-page">
+    @* Back Button *@
+    <div class="detail-back-bar">
+        <button class="admin-btn admin-btn-secondary" @onclick="NavigateBack">
+            <MudIcon Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small" />
+            <span>Back to Organization</span>
+        </button>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="admin-loading">
+            <div class="admin-loading-spinner"></div>
+            <p>Loading department details...</p>
+        </div>
+    }
+    else if (errorMessage != null)
+    {
+        <div class="admin-error">
+            <MudIcon Icon="@Icons.Material.Filled.Error" />
+            <span>@errorMessage</span>
+        </div>
+    }
+    else if (department != null)
+    {
+        @* Department Header *@
+        <div class="detail-page-header">
+            <div class="detail-page-header-icon dept">
+                <MudIcon Icon="@Icons.Material.Filled.BusinessCenter" />
+            </div>
+            <div class="detail-page-header-info">
+                <h1 class="detail-page-header-title">@department.Name</h1>
+                <p class="detail-page-header-subtitle">Department</p>
+            </div>
+            <div class="detail-actions-bar">
+                <button class="admin-btn admin-btn-primary" @onclick="OpenEditDialog">
+                    <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" />
+                    <span>Edit Department</span>
+                </button>
+            </div>
+        </div>
+
+        @* Department Info *@
+        <div class="detail-sections-grid">
+            <div class="detail-section">
+                <h3 class="detail-section-title">
+                    <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" />
+                    Department Information
+                </h3>
+                <div class="detail-info-grid">
+                    <div class="detail-info-item">
+                        <span class="detail-info-label">Department Name</span>
+                        <span class="detail-info-value">@department.Name</span>
+                    </div>
+                    <div class="detail-info-item">
+                        <span class="detail-info-label">Parent Department</span>
+                        <span class="detail-info-value">
+                            @if (department.ParentDepartmentId.HasValue)
+                            {
+                                <a class="detail-link" @onclick="() => NavigateToDepartment(department.ParentDepartmentId.Value)" @onclick:preventDefault>
+                                    <MudIcon Icon="@Icons.Material.Filled.BusinessCenter" Size="Size.Small" />
+                                    @department.ParentDepartmentName
+                                </a>
+                            }
+                            else
+                            {
+                                <span class="admin-text-muted">Root Department</span>
+                            }
+                        </span>
+                    </div>
+                    <div class="detail-info-item">
+                        <span class="detail-info-label">Head of Department</span>
+                        <span class="detail-info-value">
+                            @if (department.HeadOfDepartmentId.HasValue)
+                            {
+                                <a class="detail-link" @onclick="() => NavigateToUser(department.HeadOfDepartmentId.Value)" @onclick:preventDefault>
+                                    <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" />
+                                    @department.HeadOfDepartmentName
+                                </a>
+                            }
+                            else
+                            {
+                                <span class="admin-text-muted">Not assigned</span>
+                            }
+                        </span>
+                    </div>
+                    <div class="detail-info-item">
+                        <span class="detail-info-label">Created</span>
+                        <span class="detail-info-value">@department.CreatedAtUtc.ToString("MMMM dd, yyyy")</span>
+                    </div>
+                </div>
+            </div>
+
+            @* Users in Department *@
+            <div class="detail-section">
+                <h3 class="detail-section-title">
+                    <MudIcon Icon="@Icons.Material.Filled.People" Size="Size.Small" />
+                    Users (@departmentUsers.Count)
+                </h3>
+                @if (departmentUsers.Any())
+                {
+                    <div class="detail-list">
+                        @foreach (var user in departmentUsers)
+                        {
+                            <div class="detail-list-item" @onclick="() => NavigateToUser(user.Id)">
+                                <div class="org-user-avatar" style="width:36px;height:36px;">
+                                    @if (!string.IsNullOrEmpty(user.AvatarUrl))
+                                    {
+                                        <img src="@user.AvatarUrl" alt="@user.Name" />
+                                    }
+                                    else
+                                    {
+                                        <div class="org-user-avatar-placeholder" style="font-size:0.75rem;">@StringHelper.GetInitials(user.Name)</div>
+                                    }
+                                </div>
+                                <div class="detail-list-item-info">
+                                    <strong>@user.Name</strong>
+                                    <span class="admin-text-muted">@user.Email</span>
+                                </div>
+                                <span class="admin-status @(user.IsActive ? "active" : "inactive")">
+                                    @(user.IsActive ? "Active" : "Inactive")
+                                </span>
+                                <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Class="admin-text-muted" />
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="detail-empty">
+                        <MudIcon Icon="@Icons.Material.Filled.PersonOff" />
+                        <span>No users in this department</span>
+                    </div>
+                }
+            </div>
+        </div>
+
+        @* Sub-departments *@
+        <div class="detail-section">
+            <h3 class="detail-section-title">
+                <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small" />
+                Sub-departments (@subDepartments.Count)
+            </h3>
+            @if (subDepartments.Any())
+            {
+                <div class="detail-list">
+                    @foreach (var sub in subDepartments)
+                    {
+                        <div class="detail-list-item" @onclick="() => NavigateToDepartment(sub.Id)">
+                            <div class="org-dept-icon" style="width:36px;height:36px;border-radius:8px;">
+                                <MudIcon Icon="@Icons.Material.Filled.BusinessCenter" Size="Size.Small" />
+                            </div>
+                            <div class="detail-list-item-info">
+                                <strong>@sub.Name</strong>
+                                <span class="admin-text-muted">@sub.UserCount users</span>
+                            </div>
+                            <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Class="admin-text-muted" />
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="detail-empty">
+                    <MudIcon Icon="@Icons.Material.Filled.FolderOff" />
+                    <span>No sub-departments</span>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@* Edit Department Dialog *@
+@if (showEditDialog && department != null)
+{
+    <div class="admin-dialog-overlay" @onclick="CloseEditDialog">
+        <div class="admin-dialog" @onclick:stopPropagation="true">
+            <div class="admin-dialog-header">
+                <h2>Edit Department</h2>
+                <button class="admin-dialog-close" @onclick="CloseEditDialog">
+                    <MudIcon Icon="@Icons.Material.Filled.Close" />
+                </button>
+            </div>
+            <div class="admin-dialog-content">
+                <EditForm Model="@editModel" OnValidSubmit="HandleEditDepartment">
+                    <DataAnnotationsValidator />
+
+                    <div class="admin-form-group">
+                        <label>Department Name</label>
+                        <InputText @bind-Value="editModel.Name" class="admin-input" placeholder="Enter department name" />
+                        <ValidationMessage For="@(() => editModel.Name)" />
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(editMessage))
+                    {
+                        <div class="admin-message @(editSuccess ? "success" : "error")">
+                            <MudIcon Icon="@(editSuccess ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Error)" Size="Size.Small" />
+                            <span>@editMessage</span>
+                        </div>
+                    }
+
+                    <div class="admin-dialog-actions">
+                        <button type="button" class="admin-btn admin-btn-secondary" @onclick="CloseEditDialog" disabled="@isSaving">
+                            Cancel
+                        </button>
+                        <button type="submit" class="admin-btn admin-btn-primary" disabled="@isSaving">
+                            @if (isSaving)
+                            {
+                                <span class="admin-btn-spinner"></span>
+                                <span>Updating...</span>
+                            }
+                            else
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.Save" Size="Size.Small" />
+                                <span>Update Department</span>
+                            }
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public Guid DepartmentId { get; set; }
+
+    private DepartmentDto? department;
+    private List<OrganizationHierarchyNode> departmentUsers = new();
+    private List<OrganizationHierarchyNode> subDepartments = new();
+
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    // Edit dialog
+    private bool showEditDialog;
+    private UpdateDepartmentRequest editModel = new();
+    private bool isSaving;
+    private string? editMessage;
+    private bool editSuccess;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDepartmentAsync();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadDepartmentAsync();
+    }
+
+    private async Task LoadDepartmentAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            var deptResult = await DepartmentService.GetDepartmentByIdAsync(DepartmentId);
+            if (!deptResult.IsSuccess)
+            {
+                errorMessage = deptResult.Error ?? "Failed to load department.";
+                isLoading = false;
+                return;
+            }
+            department = deptResult.Value;
+
+            // Load hierarchy to get users and sub-departments
+            var hierarchyResult = await OrganizationService.GetOrganizationHierarchyAsync();
+            if (hierarchyResult.IsSuccess)
+            {
+                var allNodes = FlattenNodes(hierarchyResult.Value);
+                var deptNode = allNodes.FirstOrDefault(n => n.Type == NodeType.Department && n.Id == DepartmentId);
+
+                departmentUsers = deptNode?.Children
+                    .Where(c => c.Type == NodeType.User)
+                    .ToList() ?? new();
+
+                subDepartments = deptNode?.Children
+                    .Where(c => c.Type == NodeType.Department)
+                    .ToList() ?? new();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private List<OrganizationHierarchyNode> FlattenNodes(List<OrganizationHierarchyNode> nodes)
+    {
+        var result = new List<OrganizationHierarchyNode>();
+        foreach (var node in nodes)
+        {
+            result.Add(node);
+            result.AddRange(FlattenNodes(node.Children));
+        }
+        return result;
+    }
+
+    private void NavigateBack() => Navigation.NavigateTo("/admin/organization");
+    private void NavigateToDepartment(Guid id) => Navigation.NavigateTo($"/admin/department/{id}");
+    private void NavigateToUser(Guid id) => Navigation.NavigateTo($"/admin/user/{id}");
+
+    private void OpenEditDialog()
+    {
+        editModel = new UpdateDepartmentRequest
+        {
+            Name = department!.Name,
+            ParentDepartmentId = department.ParentDepartmentId
+        };
+        editMessage = null;
+        editSuccess = false;
+        showEditDialog = true;
+    }
+
+    private void CloseEditDialog()
+    {
+        showEditDialog = false;
+    }
+
+    private async Task HandleEditDepartment()
+    {
+        isSaving = true;
+        editMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            var result = await DepartmentService.UpdateDepartmentAsync(DepartmentId, editModel);
+            if (result.IsSuccess)
+            {
+                editSuccess = true;
+                editMessage = "Department updated successfully.";
+                await LoadDepartmentAsync();
+                await Task.Delay(1000);
+                CloseEditDialog();
+            }
+            else
+            {
+                editSuccess = false;
+                editMessage = result.Error ?? "Failed to update department.";
+            }
+        }
+        catch (Exception ex)
+        {
+            editSuccess = false;
+            editMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+}

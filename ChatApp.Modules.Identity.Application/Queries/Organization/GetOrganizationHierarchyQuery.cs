@@ -97,45 +97,27 @@ namespace ChatApp.Modules.Identity.Application.Queries.Organization
             List<OrganizationHierarchyNodeDto> departmentNodes,
             List<OrganizationHierarchyNodeDto> userNodes)
         {
-            // Create a dictionary for quick department lookup
-            var departmentDict = departmentNodes.ToDictionary(d => d.Id);
+            // Group users by department
+            var usersByDepartment = userNodes
+                .Where(u => u.DepartmentId.HasValue)
+                .GroupBy(u => u.DepartmentId!.Value)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            // Group child departments by parent
+            var childDepartmentsByParent = departmentNodes
+                .Where(d => d.ParentDepartmentId.HasValue)
+                .GroupBy(d => d.ParentDepartmentId!.Value)
+                .ToDictionary(g => g.Key, g => g.ToList());
 
             // Find root departments (no parent)
             var rootDepartments = departmentNodes
                 .Where(d => !d.ParentDepartmentId.HasValue)
                 .ToList();
 
-            // Build tree recursively
-            foreach (var dept in departmentNodes)
-            {
-                var children = new List<OrganizationHierarchyNodeDto>();
-
-                // Add child departments
-                var childDepartments = departmentNodes
-                    .Where(d => d.ParentDepartmentId == dept.Id)
-                    .ToList();
-
-                foreach (var child in childDepartments)
-                {
-                    // Update level
-                    var updatedChild = child with { Level = dept.Level + 1 };
-                    children.Add(updatedChild);
-                }
-
-                // Add users in this department
-                var departmentUsers = userNodes
-                    .Where(u => u.DepartmentId == dept.Id)
-                    .Select(u => u with { Level = dept.Level + 1 })
-                    .ToList();
-
-                children.AddRange(departmentUsers);
-
-                // Update department with children
-                if (children.Any())
-                {
-                    departmentDict[dept.Id] = dept with { Children = children };
-                }
-            }
+            // Build tree recursively from roots
+            var result = rootDepartments
+                .Select(d => BuildNode(d, 0, childDepartmentsByParent, usersByDepartment))
+                .ToList();
 
             // Add users with no department to root
             var usersWithoutDepartment = userNodes
@@ -143,13 +125,35 @@ namespace ChatApp.Modules.Identity.Application.Queries.Organization
                 .Select(u => u with { Level = 0 })
                 .ToList();
 
-            // Return root departments + users without department
-            var result = rootDepartments
-                .Select(d => departmentDict[d.Id])
-                .Concat(usersWithoutDepartment)
-                .ToList();
+            result.AddRange(usersWithoutDepartment);
 
             return result;
+        }
+
+        private static OrganizationHierarchyNodeDto BuildNode(
+            OrganizationHierarchyNodeDto dept,
+            int level,
+            Dictionary<Guid, List<OrganizationHierarchyNodeDto>> childDepartmentsByParent,
+            Dictionary<Guid, List<OrganizationHierarchyNodeDto>> usersByDepartment)
+        {
+            var children = new List<OrganizationHierarchyNodeDto>();
+
+            // Recursively add child departments
+            if (childDepartmentsByParent.TryGetValue(dept.Id, out var childDepts))
+            {
+                foreach (var child in childDepts)
+                {
+                    children.Add(BuildNode(child, level + 1, childDepartmentsByParent, usersByDepartment));
+                }
+            }
+
+            // Add users in this department
+            if (usersByDepartment.TryGetValue(dept.Id, out var users))
+            {
+                children.AddRange(users.Select(u => u with { Level = level + 1 }));
+            }
+
+            return dept with { Level = level, Children = children };
         }
     }
 }

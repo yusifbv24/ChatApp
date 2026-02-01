@@ -50,6 +50,9 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetUser
                 .Select(up => up.PermissionName)
                 .ToList();
 
+            var isHeadOfDepartment = user.Employee?.DepartmentId.HasValue == true &&
+                user.Employee.Department?.HeadOfDepartmentId == user.Id;
+
             return new UserDetailDto(
                 user.Id,
                 user.FirstName,
@@ -57,6 +60,7 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetUser
                 user.Email,
                 user.Role.ToString(),
                 user.Employee?.Position?.Name,
+                user.Employee?.PositionId,
                 user.AvatarUrl,
                 user.Employee?.AboutMe,
                 user.Employee?.DateOfBirth,
@@ -68,6 +72,8 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetUser
                 user.Employee?.Department?.Name,
                 user.Employee?.SupervisorId,
                 user.Employee?.Supervisor?.User?.FullName,
+                isHeadOfDepartment,
+                new List<SubordinateDto>(), // Current user doesn't need subordinates
                 permissions,
                 user.CreatedAtUtc,
                 user.UpdatedAtUtc);

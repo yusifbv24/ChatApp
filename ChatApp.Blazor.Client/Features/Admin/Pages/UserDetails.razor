@@ -1,0 +1,1040 @@
+@page "/admin/user/{UserId:guid}"
+@attribute [Authorize]
+@using ChatApp.Blazor.Client.Helpers
+@using ChatApp.Blazor.Client.Models.Organization
+@using ChatApp.Blazor.Client.Models.Auth
+@using ChatApp.Blazor.Client.Models.Files
+@using ChatApp.Blazor.Client.Features.Admin.Services
+@using ChatApp.Blazor.Client.Features.Auth.Services
+@using ChatApp.Blazor.Client.Features.Files.Services
+@using Microsoft.AspNetCore.Components.Forms
+
+@inject IUserService UserService
+@inject IPositionService PositionService
+@inject IDepartmentService DepartmentService
+@inject IFileService FileService
+@inject NavigationManager Navigation
+
+<PageTitle>User Details - ChatApp</PageTitle>
+
+<div class="admin-page">
+    @* Back Button *@
+    <div class="detail-back-bar">
+        <button class="admin-btn admin-btn-secondary" @onclick="NavigateBack">
+            <MudIcon Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small" />
+            <span>Back to Organization</span>
+        </button>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="admin-loading">
+            <div class="admin-loading-spinner"></div>
+            <p>Loading user details...</p>
+        </div>
+    }
+    else if (errorMessage != null)
+    {
+        <div class="admin-error">
+            <MudIcon Icon="@Icons.Material.Filled.Error" />
+            <span>@errorMessage</span>
+        </div>
+    }
+    else if (user != null)
+    {
+        @* User Profile Header *@
+        <div class="detail-user-card">
+            <div class="detail-user-card-avatar">
+                @if (!string.IsNullOrEmpty(user.AvatarUrl))
+                {
+                    <img src="@user.AvatarUrl" alt="@user.FullName" />
+                }
+                else
+                {
+                    <div class="detail-user-card-avatar-placeholder">@StringHelper.GetInitials(user.FullName)</div>
+                }
+            </div>
+            <div class="detail-user-card-info">
+                <h1 class="detail-user-card-name">@user.FullName</h1>
+                <p class="detail-user-card-email">@user.Email</p>
+                <div class="detail-user-card-badges">
+                    <span class="admin-badge @(user.IsAdmin ? "admin-badge-admin" : "admin-badge-role")">
+                        @user.Role
+                    </span>
+                    <span class="admin-status @(user.IsActive ? "active" : "inactive")">
+                        @(user.IsActive ? "Active" : "Inactive")
+                    </span>
+                    @if (!string.IsNullOrEmpty(user.Position))
+                    {
+                        <span class="admin-badge admin-badge-role">@user.Position</span>
+                    }
+                    @if (user.IsHeadOfDepartment)
+                    {
+                        <span class="admin-badge admin-badge-admin">
+                            <MudIcon Icon="@Icons.Material.Filled.Star" Size="Size.Small" />
+                            Head of Department
+                        </span>
+                    }
+                </div>
+            </div>
+            <div class="detail-actions-bar">
+                <button class="admin-btn @(user.IsActive ? "admin-btn-danger" : "admin-btn-primary")" @onclick="ToggleActiveStatus" disabled="@isTogglingStatus">
+                    @if (isTogglingStatus)
+                    {
+                        <span class="admin-btn-spinner"></span>
+                    }
+                    else
+                    {
+                        <MudIcon Icon="@(user.IsActive ? Icons.Material.Filled.Block : Icons.Material.Filled.CheckCircle)" Size="Size.Small" />
+                    }
+                    <span>@(user.IsActive ? "Deactivate" : "Activate")</span>
+                </button>
+                <button class="admin-btn admin-btn-primary" @onclick="OpenEditDialog">
+                    <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" />
+                    <span>Edit User</span>
+                </button>
+                <button class="admin-btn admin-btn-secondary" @onclick="OpenChangePasswordDialog">
+                    <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" />
+                    <span>Change Password</span>
+                </button>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(actionMessage))
+        {
+            <div class="admin-message @(actionSuccess ? "success" : "error")" style="margin-bottom:1rem;">
+                <MudIcon Icon="@(actionSuccess ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Error)" Size="Size.Small" />
+                <span>@actionMessage</span>
+            </div>
+        }
+
+        @* Info Sections *@
+        <div class="detail-sections-grid">
+            @* Personal Info *@
+            <div class="detail-section">
+                <h3 class="detail-section-title">
+                    <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" />
+                    Personal Information
+                </h3>
+                <div class="detail-info-grid">
+                    <div class="detail-info-item">
+                        <span class="detail-info-label">Full Name</span>
+                        <span class="detail-info-value">@user.FullName</span>
+                    </div>
+                    <div class="detail-info-item">
+                        <span class="detail-info-label">Email</span>
+                        <span class="detail-info-value">@user.Email</span>
+                    </div>
+                    <div class="detail-info-item">
+                        <span class="detail-info-label">Work Phone</span>
+                        <span class="detail-info-value">@(user.WorkPhone ?? "Not set")</span>
+                    </div>
+                    <div class="detail-info-item">
+                        <span class="detail-info-label">Date of Birth</span>
+                        <span class="detail-info-value">@(user.DateOfBirth?.ToString("MMMM dd, yyyy") ?? "Not set")</span>
+                    </div>
+                    <div class="detail-info-item">
+                        <span class="detail-info-label">Hiring Date</span>
+                        <span class="detail-info-value">@(user.HiringDate?.ToString("MMMM dd, yyyy") ?? "Not set")</span>
+                    </div>
+                    <div class="detail-info-item">
+                        <span class="detail-info-label">About</span>
+                        <span class="detail-info-value">@(user.AboutMe ?? "Not set")</span>
+                    </div>
+                </div>
+            </div>
+
+            @* Organization Info *@
+            <div class="detail-section">
+                <h3 class="detail-section-title">
+                    <MudIcon Icon="@Icons.Material.Filled.Business" Size="Size.Small" />
+                    Organization
+                </h3>
+                <div class="detail-info-grid">
+                    <div class="detail-info-item">
+                        <span class="detail-info-label">Department</span>
+                        <span class="detail-info-value">
+                            @if (user.DepartmentId.HasValue)
+                            {
+                                <a class="detail-link" @onclick="() => NavigateToDepartment(user.DepartmentId.Value)" @onclick:preventDefault>
+                                    <MudIcon Icon="@Icons.Material.Filled.BusinessCenter" Size="Size.Small" />
+                                    @user.DepartmentName
+                                </a>
+                            }
+                            else
+                            {
+                                <span class="admin-text-muted">Not assigned</span>
+                            }
+                        </span>
+                    </div>
+                    <div class="detail-info-item">
+                        <span class="detail-info-label">Position</span>
+                        <span class="detail-info-value">@(user.Position ?? "Not assigned")</span>
+                    </div>
+                    <div class="detail-info-item">
+                        <span class="detail-info-label">Supervisor</span>
+                        <span class="detail-info-value">
+                            @if (user.SupervisorId.HasValue)
+                            {
+                                <a class="detail-link" @onclick="() => NavigateToUser(user.SupervisorId.Value)" @onclick:preventDefault>
+                                    <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" />
+                                    @user.SupervisorName
+                                </a>
+                            }
+                            else
+                            {
+                                <span class="admin-text-muted">Not assigned</span>
+                            }
+                        </span>
+                    </div>
+                    <div class="detail-info-item">
+                        <span class="detail-info-label">Role</span>
+                        <span class="detail-info-value">
+                            <span class="admin-badge @(user.IsAdmin ? "admin-badge-admin" : "admin-badge-role")">@user.Role</span>
+                        </span>
+                    </div>
+                    <div class="detail-info-item">
+                        <span class="detail-info-label">Head of Department</span>
+                        <span class="detail-info-value">
+                            @if (user.IsHeadOfDepartment)
+                            {
+                                <span class="admin-status active">
+                                    <MudIcon Icon="@Icons.Material.Filled.Star" Size="Size.Small" />
+                                    Yes
+                                </span>
+                                <button class="admin-btn admin-btn-danger" style="margin-left:0.5rem;padding:0.25rem 0.5rem;font-size:0.75rem;" @onclick="RemoveAsHead" disabled="@isTogglingHead">
+                                    @if (isTogglingHead) { <span class="admin-btn-spinner"></span> }
+                                    Remove
+                                </button>
+                            }
+                            else if (user.DepartmentId.HasValue)
+                            {
+                                <span class="admin-text-muted">No</span>
+                                <button class="admin-btn admin-btn-primary" style="margin-left:0.5rem;padding:0.25rem 0.5rem;font-size:0.75rem;" @onclick="MakeHead" disabled="@isTogglingHead">
+                                    @if (isTogglingHead) { <span class="admin-btn-spinner"></span> }
+                                    Make Head
+                                </button>
+                            }
+                            else
+                            {
+                                <span class="admin-text-muted">No department</span>
+                            }
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            @* Account Info *@
+            <div class="detail-section">
+                <h3 class="detail-section-title">
+                    <MudIcon Icon="@Icons.Material.Filled.ManageAccounts" Size="Size.Small" />
+                    Account
+                </h3>
+                <div class="detail-info-grid">
+                    <div class="detail-info-item">
+                        <span class="detail-info-label">Created</span>
+                        <span class="detail-info-value">@user.CreatedAtUtc.ToString("MMMM dd, yyyy HH:mm")</span>
+                    </div>
+                    <div class="detail-info-item">
+                        <span class="detail-info-label">Last Updated</span>
+                        <span class="detail-info-value">@user.UpdatedAtUtc.ToString("MMMM dd, yyyy HH:mm")</span>
+                    </div>
+                    <div class="detail-info-item">
+                        <span class="detail-info-label">Last Visit</span>
+                        <span class="detail-info-value">@(user.LastVisit?.ToString("MMMM dd, yyyy HH:mm") ?? "Never")</span>
+                    </div>
+                    <div class="detail-info-item">
+                        <span class="detail-info-label">Status</span>
+                        <span class="detail-info-value">
+                            <span class="admin-status @(user.IsActive ? "active" : "inactive")">
+                                @(user.IsActive ? "Active" : "Inactive")
+                            </span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            @* Permissions *@
+            <div class="detail-section">
+                <h3 class="detail-section-title">
+                    <MudIcon Icon="@Icons.Material.Filled.Security" Size="Size.Small" />
+                    Permissions (@user.Permissions.Count)
+                </h3>
+                @if (user.Permissions.Any())
+                {
+                    <div class="detail-permissions-list">
+                        @foreach (var permission in user.Permissions)
+                        {
+                            <span class="detail-permission-badge">
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" />
+                                @permission
+                            </span>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="detail-empty">
+                        <MudIcon Icon="@Icons.Material.Filled.LockOpen" />
+                        <span>No permissions assigned</span>
+                    </div>
+                }
+            </div>
+        </div>
+
+        @* Subordinates Section *@
+        <div class="detail-section" style="margin-top:1rem;">
+            <h3 class="detail-section-title">
+                <MudIcon Icon="@Icons.Material.Filled.Groups" Size="Size.Small" />
+                Subordinates (@user.Subordinates.Count)
+            </h3>
+            @if (user.Subordinates.Any())
+            {
+                <div class="detail-list">
+                    @foreach (var sub in user.Subordinates)
+                    {
+                        <div class="detail-list-item" @onclick="() => NavigateToUser(sub.Id)">
+                            <div class="org-user-avatar" style="width:36px;height:36px;">
+                                @if (!string.IsNullOrEmpty(sub.AvatarUrl))
+                                {
+                                    <img src="@sub.AvatarUrl" alt="@sub.FullName" />
+                                }
+                                else
+                                {
+                                    <div class="org-user-avatar-placeholder" style="font-size:0.75rem;">@StringHelper.GetInitials(sub.FullName)</div>
+                                }
+                            </div>
+                            <div class="detail-list-item-info">
+                                <strong>@sub.FullName</strong>
+                                <span class="admin-text-muted">@(sub.Position ?? "No position")</span>
+                            </div>
+                            <span class="admin-status @(sub.IsActive ? "active" : "inactive")">
+                                @(sub.IsActive ? "Active" : "Inactive")
+                            </span>
+                            <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Class="admin-text-muted" />
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="detail-empty">
+                    <MudIcon Icon="@Icons.Material.Filled.PersonOff" />
+                    <span>No subordinates</span>
+                </div>
+            }
+        </div>
+
+        @* Avatar Upload Section *@
+        <div class="detail-section" style="margin-top:1rem;">
+            <h3 class="detail-section-title">
+                <MudIcon Icon="@Icons.Material.Filled.PhotoCamera" Size="Size.Small" />
+                Upload Avatar
+            </h3>
+            <div class="admin-file-upload">
+                <label class="admin-file-input-label">
+                    <InputFile OnChange="OnAvatarSelected" accept="image/*" class="admin-file-input" />
+                    <div class="admin-file-placeholder">
+                        <MudIcon Icon="@Icons.Material.Filled.CloudUpload" />
+                        <span>Click to upload a new avatar</span>
+                        <small>PNG, JPG, GIF up to 10MB</small>
+                    </div>
+                </label>
+            </div>
+            @if (isUploadingAvatar)
+            {
+                <div class="admin-message success" style="margin-top:0.5rem;">
+                    <span class="admin-btn-spinner" style="border-top-color:#065f46;border-color:rgba(0,0,0,0.1);"></span>
+                    <span>Uploading avatar...</span>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@* Edit User Dialog - Full form matching organization page *@
+@if (showEditDialog && user != null)
+{
+    <div class="admin-dialog-overlay" @onclick="CloseEditDialog">
+        <div class="admin-dialog admin-dialog-large" @onclick:stopPropagation="true">
+            <div class="admin-dialog-header">
+                <h2>Edit User</h2>
+                <button class="admin-dialog-close" @onclick="CloseEditDialog">
+                    <MudIcon Icon="@Icons.Material.Filled.Close" />
+                </button>
+            </div>
+            <div class="admin-dialog-content">
+                <EditForm Model="@editModel" OnValidSubmit="HandleEditUser">
+                    <DataAnnotationsValidator />
+
+                    <div class="admin-form-row">
+                        <div class="admin-form-group">
+                            <label>First Name</label>
+                            <InputText @bind-Value="editModel.FirstName" class="admin-input" placeholder="Enter first name" />
+                            <ValidationMessage For="@(() => editModel.FirstName)" />
+                        </div>
+                        <div class="admin-form-group">
+                            <label>Last Name</label>
+                            <InputText @bind-Value="editModel.LastName" class="admin-input" placeholder="Enter last name" />
+                            <ValidationMessage For="@(() => editModel.LastName)" />
+                        </div>
+                    </div>
+
+                    <div class="admin-form-row">
+                        <div class="admin-form-group">
+                            <label>Email</label>
+                            <InputText @bind-Value="editModel.Email" type="email" class="admin-input" placeholder="Enter email" />
+                            <ValidationMessage For="@(() => editModel.Email)" />
+                        </div>
+                        <div class="admin-form-group">
+                            <label>Role</label>
+                            <InputSelect @bind-Value="editModel.Role" class="admin-input">
+                                <option value="@Role.User">User</option>
+                                <option value="@Role.Administrator">Administrator</option>
+                            </InputSelect>
+                        </div>
+                    </div>
+
+                    <div class="admin-form-row">
+                        <div class="admin-form-group">
+                            <label>Department</label>
+                            <InputSelect @bind-Value="selectedDepartmentId" class="admin-input">
+                                <option value="">No Department</option>
+                                @foreach (var dept in allDepartments)
+                                {
+                                    <option value="@dept.Id">@dept.Name</option>
+                                }
+                            </InputSelect>
+                        </div>
+                        <div class="admin-form-group">
+                            <label>Position</label>
+                            <InputSelect @bind-Value="editModel.PositionId" class="admin-input">
+                                <option value="">No Position</option>
+                                @foreach (var pos in allPositions)
+                                {
+                                    <option value="@pos.Id">@pos.Name</option>
+                                }
+                            </InputSelect>
+                        </div>
+                    </div>
+
+                    <div class="admin-form-row">
+                        <div class="admin-form-group">
+                            <label>Work Phone</label>
+                            <InputText @bind-Value="editModel.WorkPhone" type="tel" class="admin-input" placeholder="Enter work phone" />
+                            <ValidationMessage For="@(() => editModel.WorkPhone)" />
+                        </div>
+                        <div class="admin-form-group">
+                            <label>Date of Birth</label>
+                            <InputDate @bind-Value="editModel.DateOfBirth" class="admin-input" />
+                        </div>
+                    </div>
+
+                    <div class="admin-form-row">
+                        <div class="admin-form-group">
+                            <label>Hiring Date</label>
+                            <InputDate @bind-Value="editModel.HiringDate" class="admin-input" />
+                        </div>
+                        <div class="admin-form-group">
+                            <label>Supervisor</label>
+                            <InputSelect @bind-Value="selectedSupervisorId" class="admin-input">
+                                <option value="">No Supervisor</option>
+                                @foreach (var u in allUsers.Where(u => u.Id != UserId))
+                                {
+                                    <option value="@u.Id">@u.FullName</option>
+                                }
+                            </InputSelect>
+                        </div>
+                    </div>
+
+                    <div class="admin-form-group">
+                        <label>About Me</label>
+                        <textarea @bind="editModel.AboutMe" class="admin-input admin-textarea" rows="3" placeholder="Brief description" maxlength="500"></textarea>
+                        <ValidationMessage For="@(() => editModel.AboutMe)" />
+                    </div>
+
+                    @* Avatar upload in edit dialog *@
+                    <div class="admin-form-group">
+                        <label>Profile Avatar</label>
+                        <div class="admin-file-upload">
+                            @if (editAvatarFileData != null && !string.IsNullOrEmpty(editAvatarFileName))
+                            {
+                                <div class="admin-file-selected">
+                                    <div class="admin-file-icon">
+                                        <MudIcon Icon="@Icons.Material.Filled.Image" />
+                                    </div>
+                                    <div class="admin-file-info">
+                                        <span class="admin-file-name">@editAvatarFileName</span>
+                                        <span class="admin-file-size">@FormatFileSize(editAvatarFileSize)</span>
+                                    </div>
+                                    <button type="button" class="admin-file-remove-btn" @onclick="RemoveEditAvatar">
+                                        <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" />
+                                    </button>
+                                </div>
+                            }
+                            else
+                            {
+                                <label class="admin-file-input-label">
+                                    <InputFile OnChange="OnEditAvatarSelected" accept="image/*" class="admin-file-input" />
+                                    <div class="admin-file-placeholder">
+                                        <MudIcon Icon="@Icons.Material.Filled.CloudUpload" />
+                                        <span>Click to upload or drag and drop</span>
+                                        <small>PNG, JPG, GIF up to 10MB</small>
+                                    </div>
+                                </label>
+                            }
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(editMessage))
+                    {
+                        <div class="admin-message @(editSuccess ? "success" : "error")">
+                            <MudIcon Icon="@(editSuccess ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Error)" Size="Size.Small" />
+                            <span>@editMessage</span>
+                        </div>
+                    }
+
+                    <div class="admin-dialog-actions">
+                        <button type="button" class="admin-btn admin-btn-secondary" @onclick="CloseEditDialog" disabled="@isSaving">
+                            Cancel
+                        </button>
+                        <button type="submit" class="admin-btn admin-btn-primary" disabled="@isSaving">
+                            @if (isSaving)
+                            {
+                                <span class="admin-btn-spinner"></span>
+                                <span>Updating...</span>
+                            }
+                            else
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.Save" Size="Size.Small" />
+                                <span>Update User</span>
+                            }
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@* Change Password Dialog *@
+@if (showChangePasswordDialog)
+{
+    <div class="admin-dialog-overlay" @onclick="CloseChangePasswordDialog">
+        <div class="admin-dialog admin-dialog-small" @onclick:stopPropagation="true">
+            <div class="admin-dialog-header">
+                <h2>Change Password</h2>
+                <button class="admin-dialog-close" @onclick="CloseChangePasswordDialog">
+                    <MudIcon Icon="@Icons.Material.Filled.Close" />
+                </button>
+            </div>
+            <div class="admin-dialog-content">
+                <EditForm Model="@changePasswordModel" OnValidSubmit="HandleChangePassword">
+                    <DataAnnotationsValidator />
+
+                    <div class="admin-form-group">
+                        <label>New Password</label>
+                        <InputText @bind-Value="changePasswordModel.NewPassword" type="password" class="admin-input" placeholder="Enter new password" />
+                        <ValidationMessage For="@(() => changePasswordModel.NewPassword)" />
+                    </div>
+
+                    <div class="admin-form-group" style="margin-top:1rem;">
+                        <label>Confirm Password</label>
+                        <InputText @bind-Value="changePasswordModel.ConfirmNewPassword" type="password" class="admin-input" placeholder="Confirm new password" />
+                        <ValidationMessage For="@(() => changePasswordModel.ConfirmNewPassword)" />
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(passwordMessage))
+                    {
+                        <div class="admin-message @(passwordSuccess ? "success" : "error")">
+                            <MudIcon Icon="@(passwordSuccess ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Error)" Size="Size.Small" />
+                            <span>@passwordMessage</span>
+                        </div>
+                    }
+
+                    <div class="admin-dialog-actions">
+                        <button type="button" class="admin-btn admin-btn-secondary" @onclick="CloseChangePasswordDialog" disabled="@isChangingPassword">
+                            Cancel
+                        </button>
+                        <button type="submit" class="admin-btn admin-btn-primary" disabled="@isChangingPassword">
+                            @if (isChangingPassword)
+                            {
+                                <span class="admin-btn-spinner"></span>
+                                <span>Changing...</span>
+                            }
+                            else
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" />
+                                <span>Change Password</span>
+                            }
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public Guid UserId { get; set; }
+
+    private UserDetailDto? user;
+    private List<PositionDto> allPositions = new();
+    private List<DepartmentDto> allDepartments = new();
+    private List<UserListItemDto> allUsers = new();
+
+    private bool isLoading = true;
+    private string? errorMessage;
+    private string? actionMessage;
+    private bool actionSuccess;
+
+    // Edit dialog
+    private bool showEditDialog;
+    private UpdateUserRequest editModel = new();
+    private bool isSaving;
+    private string? editMessage;
+    private bool editSuccess;
+    private string? selectedDepartmentId;
+    private string? selectedSupervisorId;
+
+    // Edit avatar
+    private byte[]? editAvatarFileData;
+    private string? editAvatarFileName;
+    private string? editAvatarContentType;
+    private long editAvatarFileSize;
+
+    // Change password dialog
+    private bool showChangePasswordDialog;
+    private AdminChangePasswordRequest changePasswordModel = new();
+    private bool isChangingPassword;
+    private string? passwordMessage;
+    private bool passwordSuccess;
+
+    // Status toggle
+    private bool isTogglingStatus;
+
+    // Head of department toggle
+    private bool isTogglingHead;
+
+    // Avatar upload
+    private bool isUploadingAvatar;
+
+    private Guid? previousUserId;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (previousUserId != UserId)
+        {
+            previousUserId = UserId;
+            await LoadUserAsync();
+        }
+    }
+
+    private async Task LoadUserAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+        actionMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            var userTask = UserService.GetUserByIdAsync(UserId);
+            var posTask = PositionService.GetAllPositionsAsync();
+            var deptTask = DepartmentService.GetAllDepartmentsAsync();
+            var usersTask = UserService.GetUsersAsync(1, 1000);
+
+            await Task.WhenAll(userTask, posTask, deptTask, usersTask);
+
+            var result = userTask.Result;
+            if (!result.IsSuccess)
+            {
+                errorMessage = result.Error ?? "Failed to load user.";
+                isLoading = false;
+                return;
+            }
+            user = result.Value;
+
+            if (posTask.Result.IsSuccess)
+                allPositions = posTask.Result.Value;
+
+            if (deptTask.Result.IsSuccess)
+                allDepartments = deptTask.Result.Value;
+
+            if (usersTask.Result.IsSuccess)
+                allUsers = usersTask.Result.Value;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void NavigateBack() => Navigation.NavigateTo("/admin/organization");
+    private void NavigateToDepartment(Guid id) => Navigation.NavigateTo($"/admin/department/{id}");
+    private void NavigateToUser(Guid id) => Navigation.NavigateTo($"/admin/user/{id}");
+
+    // Edit User
+    private void OpenEditDialog()
+    {
+        editModel = new UpdateUserRequest
+        {
+            FirstName = user!.FirstName,
+            LastName = user.LastName,
+            Email = user.Email,
+            Role = Enum.TryParse<Role>(user.Role, out var role) ? role : Role.User,
+            PositionId = user.PositionId,
+            AvatarUrl = user.AvatarUrl,
+            AboutMe = user.AboutMe,
+            DateOfBirth = user.DateOfBirth,
+            WorkPhone = user.WorkPhone,
+            HiringDate = user.HiringDate
+        };
+        selectedDepartmentId = user.DepartmentId?.ToString() ?? "";
+        selectedSupervisorId = user.SupervisorId?.ToString() ?? "";
+        editMessage = null;
+        editSuccess = false;
+        editAvatarFileData = null;
+        editAvatarFileName = null;
+        editAvatarContentType = null;
+        editAvatarFileSize = 0;
+        showEditDialog = true;
+    }
+
+    private void CloseEditDialog() => showEditDialog = false;
+
+    private async Task OnEditAvatarSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file == null) return;
+
+        if (!file.ContentType.StartsWith("image/"))
+        {
+            editMessage = "Only image files are allowed";
+            return;
+        }
+
+        if (file.Size > 10 * 1024 * 1024)
+        {
+            editMessage = "File size must be less than 10 MB";
+            return;
+        }
+
+        try
+        {
+            using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+            var buffer = new byte[file.Size];
+            await stream.ReadExactlyAsync(buffer, 0, buffer.Length);
+
+            editAvatarFileData = buffer;
+            editAvatarFileName = file.Name;
+            editAvatarContentType = file.ContentType;
+            editAvatarFileSize = file.Size;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            editMessage = $"Error reading file: {ex.Message}";
+        }
+    }
+
+    private void RemoveEditAvatar()
+    {
+        editAvatarFileData = null;
+        editAvatarFileName = null;
+        editAvatarContentType = null;
+        editAvatarFileSize = 0;
+        StateHasChanged();
+    }
+
+    private string FormatFileSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        double len = bytes;
+        int order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len /= 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
+    }
+
+    private async Task HandleEditUser()
+    {
+        isSaving = true;
+        editMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            // Upload avatar if selected
+            if (editAvatarFileData != null && !string.IsNullOrEmpty(editAvatarFileName) && !string.IsNullOrEmpty(editAvatarContentType))
+            {
+                var uploadResult = await FileService.UploadProfilePictureAsync(
+                    editAvatarFileData, editAvatarFileName, editAvatarContentType, UserId);
+
+                if (uploadResult.IsSuccess && uploadResult.Value != null)
+                {
+                    editModel.AvatarUrl = uploadResult.Value.ThumbnailUrl ?? uploadResult.Value.DownloadUrl;
+                }
+                else
+                {
+                    editSuccess = false;
+                    editMessage = uploadResult.Error ?? "Failed to upload avatar.";
+                    isSaving = false;
+                    return;
+                }
+            }
+
+            var result = await UserService.UpdateUserAsync(UserId, editModel);
+            if (!result.IsSuccess)
+            {
+                editSuccess = false;
+                editMessage = result.Error ?? "Failed to update user.";
+                isSaving = false;
+                StateHasChanged();
+                return;
+            }
+
+            // Handle department change
+            if (Guid.TryParse(selectedDepartmentId, out var deptId) && deptId != Guid.Empty)
+            {
+                if (user!.DepartmentId != deptId)
+                    await UserService.AssignToDepartmentAsync(UserId, deptId);
+            }
+            else if (user!.DepartmentId.HasValue)
+            {
+                await UserService.RemoveFromDepartmentAsync(UserId);
+            }
+
+            // Handle supervisor change
+            if (Guid.TryParse(selectedSupervisorId, out var supId) && supId != Guid.Empty)
+            {
+                if (user.SupervisorId != supId)
+                    await UserService.AssignSupervisorAsync(UserId, supId);
+            }
+            else if (user.SupervisorId.HasValue)
+            {
+                await UserService.RemoveSupervisorAsync(UserId);
+            }
+
+            editSuccess = true;
+            editMessage = "User updated successfully.";
+            await LoadUserAsync();
+            StateHasChanged();
+            await Task.Delay(1000);
+            CloseEditDialog();
+        }
+        catch (Exception ex)
+        {
+            editSuccess = false;
+            editMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    // Change Password
+    private void OpenChangePasswordDialog()
+    {
+        changePasswordModel = new AdminChangePasswordRequest { Id = UserId };
+        passwordMessage = null;
+        passwordSuccess = false;
+        showChangePasswordDialog = true;
+    }
+
+    private void CloseChangePasswordDialog() => showChangePasswordDialog = false;
+
+    private async Task HandleChangePassword()
+    {
+        isChangingPassword = true;
+        passwordMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            var result = await UserService.ChangeUserPasswordAsync(changePasswordModel);
+            if (result.IsSuccess)
+            {
+                passwordSuccess = true;
+                passwordMessage = "Password changed successfully.";
+                await Task.Delay(1500);
+                CloseChangePasswordDialog();
+            }
+            else
+            {
+                passwordSuccess = false;
+                passwordMessage = result.Error ?? "Failed to change password.";
+            }
+        }
+        catch (Exception ex)
+        {
+            passwordSuccess = false;
+            passwordMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isChangingPassword = false;
+            StateHasChanged();
+        }
+    }
+
+    // Toggle Active/Inactive
+    private async Task ToggleActiveStatus()
+    {
+        isTogglingStatus = true;
+        actionMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            var result = user!.IsActive
+                ? await UserService.DeactivateUserAsync(UserId)
+                : await UserService.ActivateUserAsync(UserId);
+
+            if (result.IsSuccess)
+            {
+                actionSuccess = true;
+                actionMessage = user.IsActive ? "User deactivated." : "User activated.";
+                await LoadUserAsync();
+            }
+            else
+            {
+                actionSuccess = false;
+                actionMessage = result.Error ?? "Failed to update status.";
+            }
+        }
+        catch (Exception ex)
+        {
+            actionSuccess = false;
+            actionMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isTogglingStatus = false;
+            StateHasChanged();
+        }
+    }
+
+    // Head of Department
+    private async Task MakeHead()
+    {
+        if (!user!.DepartmentId.HasValue) return;
+        isTogglingHead = true;
+        actionMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            var result = await DepartmentService.AssignDepartmentHeadAsync(user.DepartmentId.Value, UserId);
+            if (result.IsSuccess)
+            {
+                actionSuccess = true;
+                actionMessage = "User assigned as Head of Department.";
+                await LoadUserAsync();
+            }
+            else
+            {
+                actionSuccess = false;
+                actionMessage = result.Error ?? "Failed to assign as head.";
+            }
+        }
+        catch (Exception ex)
+        {
+            actionSuccess = false;
+            actionMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isTogglingHead = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RemoveAsHead()
+    {
+        if (!user!.DepartmentId.HasValue) return;
+        isTogglingHead = true;
+        actionMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            var result = await DepartmentService.RemoveDepartmentHeadAsync(user.DepartmentId.Value);
+            if (result.IsSuccess)
+            {
+                actionSuccess = true;
+                actionMessage = "User removed as Head of Department.";
+                await LoadUserAsync();
+            }
+            else
+            {
+                actionSuccess = false;
+                actionMessage = result.Error ?? "Failed to remove as head.";
+            }
+        }
+        catch (Exception ex)
+        {
+            actionSuccess = false;
+            actionMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isTogglingHead = false;
+            StateHasChanged();
+        }
+    }
+
+    // Avatar Upload (direct, outside edit dialog)
+    private async Task OnAvatarSelected(InputFileChangeEventArgs e)
+    {
+        isUploadingAvatar = true;
+        actionMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            var file = e.File;
+            var result = await FileService.UploadProfilePictureAsync(file, UserId);
+            if (result.IsSuccess)
+            {
+                var avatarUrl = result.Value.ThumbnailUrl ?? result.Value.DownloadUrl;
+                var updateReq = new UpdateUserRequest
+                {
+                    FirstName = user!.FirstName,
+                    LastName = user.LastName,
+                    Email = user.Email,
+                    AvatarUrl = avatarUrl
+                };
+                await UserService.UpdateUserAsync(UserId, updateReq);
+
+                actionSuccess = true;
+                actionMessage = "Avatar uploaded successfully.";
+                await LoadUserAsync();
+            }
+            else
+            {
+                actionSuccess = false;
+                actionMessage = result.Error ?? "Failed to upload avatar.";
+            }
+        }
+        catch (Exception ex)
+        {
+            actionSuccess = false;
+            actionMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isUploadingAvatar = false;
+            StateHasChanged();
+        }
+    }
+}

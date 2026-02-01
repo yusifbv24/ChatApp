@@ -24,6 +24,8 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetUser
                     .Include(u => u.Employee!.Position)
                     .Include(u => u.Employee!.Department)
                     .Include(u => u.Employee!.Supervisor!.User)
+                    .Include(u => u.Employee!.Subordinates).ThenInclude(s => s.User)
+                    .Include(u => u.Employee!.Subordinates).ThenInclude(s => s.Position)
                     .AsNoTracking()
                     .FirstOrDefaultAsync(u => u.Id == query.UserId, cancellationToken);
 
@@ -50,6 +52,18 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetUser
                 .Select(up => up.PermissionName)
                 .ToList();
 
+            var subordinates = user.Employee?.Subordinates?
+                .Select(s => new SubordinateDto(
+                    s.UserId,
+                    s.User?.FullName ?? "Unknown",
+                    s.Position?.Name,
+                    s.User?.AvatarUrl,
+                    s.User?.IsActive ?? false))
+                .ToList() ?? [];
+
+            var isHeadOfDepartment = user.Employee?.DepartmentId.HasValue == true &&
+                user.Employee.Department?.HeadOfDepartmentId == user.Id;
+
             return new UserDetailDto(
                 user.Id,
                 user.FirstName,
@@ -57,6 +71,7 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetUser
                 user.Email,
                 user.Role.ToString(),
                 user.Employee?.Position?.Name,
+                user.Employee?.PositionId,
                 user.AvatarUrl,
                 user.Employee?.AboutMe,
                 user.Employee?.DateOfBirth,
@@ -68,6 +83,8 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetUser
                 user.Employee?.Department?.Name,
                 user.Employee?.SupervisorId,
                 user.Employee?.Supervisor?.User?.FullName,
+                isHeadOfDepartment,
+                subordinates,
                 permissions,
                 user.CreatedAtUtc,
                 user.UpdatedAtUtc);

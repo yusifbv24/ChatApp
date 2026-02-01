@@ -231,70 +231,70 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence
                 : context.Positions.Local.FirstOrDefault(p => p.Name == name)
                 ?? throw new InvalidOperationException($"{name} position must be seeded before users");
 
-            // ========== 1. Emily Johnson - CFO ==========
+            // ========== 1. Leyla Məmmədova - CFO ==========
             var user1Id = Guid.Parse("00000000-0000-0000-0000-000000000001");
-            var user1 = new User("Emily", "Johnson", "emily.johnson@chatapp.com",
+            var user1 = new User("Leyla", "Məmmədova", "leyla.mammadova@chatapp.com",
                 passwordHasher.Hash("Password123!"), Role.Administrator, null) { Id = user1Id };
             await context.Users.AddAsync(user1);
-            var emp1 = new Employee(user1Id, new DateTime(1985, 3, 15), "+1234567890",
+            var emp1 = new Employee(user1Id, new DateTime(1985, 3, 15), "+994501234567",
                 "Chief Financial Officer overseeing all financial operations", DateTime.UtcNow.AddYears(-8));
             emp1.AssignToDepartment(GetDept("Finance").Id);
             emp1.AssignToPosition(GetPos("Chief Financial Officer").Id);
             await context.Employees.AddAsync(emp1);
             GetDept("Finance").AssignHead(user1Id);
 
-            // ========== 2. Michael Chen - Senior Backend Developer ==========
+            // ========== 2. Rəşad Əliyev - Senior Backend Developer ==========
             var user2Id = Guid.Parse("00000000-0000-0000-0000-000000000002");
-            var user2 = new User("Michael", "Chen", "michael.chen@chatapp.com",
+            var user2 = new User("Rəşad", "Əliyev", "reshad.aliyev@chatapp.com",
                 passwordHasher.Hash("Password123!"), Role.User, null) { Id = user2Id };
             await context.Users.AddAsync(user2);
-            var emp2 = new Employee(user2Id, new DateTime(1990, 7, 22), "+1234567891",
+            var emp2 = new Employee(user2Id, new DateTime(1990, 7, 22), "+994502345678",
                 "Senior Backend Developer specializing in .NET and cloud architecture", DateTime.UtcNow.AddYears(-5));
             emp2.AssignToDepartment(GetDept("Backend Development").Id);
             emp2.AssignToPosition(GetPos("Senior Backend Developer").Id);
             await context.Employees.AddAsync(emp2);
             GetDept("Backend Development").AssignHead(user2Id);
 
-            // ========== 3. Sarah Williams - Senior Frontend Developer ==========
+            // ========== 3. Aysel Həsənova - Senior Frontend Developer ==========
             var user3Id = Guid.Parse("00000000-0000-0000-0000-000000000003");
-            var user3 = new User("Sarah", "Williams", "sarah.williams@chatapp.com",
+            var user3 = new User("Aysel", "Həsənova", "aysel.hasanova@chatapp.com",
                 passwordHasher.Hash("Password123!"), Role.User, null) { Id = user3Id };
             await context.Users.AddAsync(user3);
-            var emp3 = new Employee(user3Id, new DateTime(1992, 11, 8), "+1234567892",
+            var emp3 = new Employee(user3Id, new DateTime(1992, 11, 8), "+994503456789",
                 "Senior Frontend Developer expert in React and modern web technologies", DateTime.UtcNow.AddYears(-4));
             emp3.AssignToDepartment(GetDept("Frontend Development").Id);
             emp3.AssignToPosition(GetPos("Senior Frontend Developer").Id);
             await context.Employees.AddAsync(emp3);
             GetDept("Frontend Development").AssignHead(user3Id);
 
-            // ========== 4. David Martinez - Backend Developer ==========
+            // ========== 4. Elvin Quliyev - Backend Developer ==========
             var user4Id = Guid.Parse("00000000-0000-0000-0000-000000000004");
-            var user4 = new User("David", "Martinez", "david.martinez@chatapp.com",
+            var user4 = new User("Elvin", "Quliyev", "elvin.guliyev@chatapp.com",
                 passwordHasher.Hash("Password123!"), Role.User, null) { Id = user4Id };
             await context.Users.AddAsync(user4);
-            var emp4 = new Employee(user4Id, new DateTime(1995, 5, 18), "+1234567893",
+            var emp4 = new Employee(user4Id, new DateTime(1995, 5, 18), "+994504567890",
                 "Backend Developer working on microservices and APIs", DateTime.UtcNow.AddYears(-2));
             emp4.AssignToDepartment(GetDept("Backend Development").Id);
             emp4.AssignToPosition(GetPos("Backend Developer").Id);
             await context.Employees.AddAsync(emp4);
 
-            // ========== 5. Jessica Brown - Frontend Developer ==========
+            // ========== 5. Günel İbrahimova - Frontend Developer ==========
             var user5Id = Guid.Parse("00000000-0000-0000-0000-000000000005");
-            var user5 = new User("Jessica", "Brown", "jessica.brown@chatapp.com",
+            var user5 = new User("Günel", "İbrahimova", "gunel.ibrahimova@chatapp.com",
                 passwordHasher.Hash("Password123!"), Role.User, null) { Id = user5Id };
             await context.Users.AddAsync(user5);
-            var emp5 = new Employee(user5Id, new DateTime(1994, 9, 25), "+1234567894",
+            var emp5 = new Employee(user5Id, new DateTime(1994, 9, 25), "+994505678901",
                 "Frontend Developer focused on UI/UX and responsive design", DateTime.UtcNow.AddYears(-3));
             emp5.AssignToDepartment(GetDept("Frontend Development").Id);
             emp5.AssignToPosition(GetPos("Frontend Developer").Id);
             await context.Employees.AddAsync(emp5);
 
-            // ========== 6. Robert Taylor - Sales Manager ==========
+            // ========== 6. Fərid Musayev - Sales Manager ==========
             var user6Id = Guid.Parse("00000000-0000-0000-0000-000000000006");
-            var user6 = new User("Robert", "Taylor", "robert.taylor@chatapp.com",
+            var user6 = new User("Fərid", "Musayev", "farid.musayev@chatapp.com",
                 passwordHasher.Hash("Password123!"), Role.User, null) { Id = user6Id };
             await context.Users.AddAsync(user6);
-            var emp6 = new Employee(user6Id, new DateTime(1988, 2, 14), "+1234567895",
+            var emp6 = new Employee(user6Id, new DateTime(1988, 2, 14), "+994506789012",
                 "Sales Manager leading the sales team and driving revenue growth", DateTime.UtcNow.AddYears(-6));
             emp6.AssignToDepartment(GetDept("Sales").Id);
             emp6.AssignToPosition(GetPos("Sales Manager").Id);
@@ -302,50 +302,51 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence
             GetDept("Sales").AssignHead(user6Id);
             GetDept("Sales & Marketing").AssignHead(user6Id);
 
-            // ========== 7. Jennifer Wilson - Sales Representative ==========
+            // ========== 7. Nigar Əhmədova - Sales Representative ==========
             var user7Id = Guid.Parse("00000000-0000-0000-0000-000000000007");
-            var user7 = new User("Jennifer", "Wilson", "jennifer.wilson@chatapp.com",
+            var user7 = new User("Nigar", "Əhmədova", "nigar.ahmadova@chatapp.com",
                 passwordHasher.Hash("Password123!"), Role.User, null) { Id = user7Id };
             await context.Users.AddAsync(user7);
-            var emp7 = new Employee(user7Id, new DateTime(1993, 6, 30), "+1234567896",
+            var emp7 = new Employee(user7Id, new DateTime(1993, 6, 30), "+994507890123",
                 "Sales Representative handling enterprise client relationships", DateTime.UtcNow.AddYears(-2));
             emp7.AssignToDepartment(GetDept("Sales").Id);
             emp7.AssignToPosition(GetPos("Sales Representative").Id);
             await context.Employees.AddAsync(emp7);
 
-            // ========== 8. James Anderson - Financial Analyst ==========
+            // ========== 8. Kamran Abdullayev - Financial Analyst ==========
             var user8Id = Guid.Parse("00000000-0000-0000-0000-000000000008");
-            var user8 = new User("James", "Anderson", "james.anderson@chatapp.com",
+            var user8 = new User("Kamran", "Abdullayev", "kamran.abdullayev@chatapp.com",
                 passwordHasher.Hash("Password123!"), Role.User, null) { Id = user8Id };
             await context.Users.AddAsync(user8);
-            var emp8 = new Employee(user8Id, new DateTime(1991, 12, 5), "+1234567897",
+            var emp8 = new Employee(user8Id, new DateTime(1991, 12, 5), "+994508901234",
                 "Financial Analyst providing detailed financial reports and analysis", DateTime.UtcNow.AddYears(-4));
             emp8.AssignToDepartment(GetDept("Finance").Id);
             emp8.AssignToPosition(GetPos("Financial Analyst").Id);
             await context.Employees.AddAsync(emp8);
 
-            // ========== 9. Linda Garcia - HR Manager ==========
+            // ========== 9. Sevda Əsgərova - HR Manager ==========
             var user9Id = Guid.Parse("00000000-0000-0000-0000-000000000009");
-            var user9 = new User("Linda", "Garcia", "linda.garcia@chatapp.com",
+            var user9 = new User("Sevda", "Əsgərova", "sevda.asgarova@chatapp.com",
                 passwordHasher.Hash("Password123!"), Role.User, null) { Id = user9Id };
             await context.Users.AddAsync(user9);
-            var emp9 = new Employee(user9Id, new DateTime(1987, 4, 20), "+1234567898",
+            var emp9 = new Employee(user9Id, new DateTime(1987, 4, 20), "+994509012345",
                 "HR Manager overseeing recruitment, employee relations, and HR policies", DateTime.UtcNow.AddYears(-7));
             emp9.AssignToDepartment(GetDept("HR").Id);
             emp9.AssignToPosition(GetPos("HR Manager").Id);
             await context.Employees.AddAsync(emp9);
             GetDept("HR").AssignHead(user9Id);
 
-            // ========== 10. Christopher Lee - HR Specialist ==========
+            // ========== 10. Tural Məhəmmədov - HR Specialist ==========
             var user10Id = Guid.Parse("00000000-0000-0000-0000-000000000010");
-            var user10 = new User("Christopher", "Lee", "christopher.lee@chatapp.com",
+            var user10 = new User("Tural", "Məhəmmədov", "tural.mahammadov@chatapp.com",
                 passwordHasher.Hash("Password123!"), Role.User, null) { Id = user10Id };
             await context.Users.AddAsync(user10);
-            var emp10 = new Employee(user10Id, new DateTime(1996, 8, 12), "+1234567899",
+            var emp10 = new Employee(user10Id, new DateTime(1996, 8, 12), "+994510123456",
                 "HR Specialist handling recruitment and onboarding processes", DateTime.UtcNow.AddYears(-1));
             emp10.AssignToDepartment(GetDept("HR").Id);
             emp10.AssignToPosition(GetPos("HR Specialist").Id);
             await context.Employees.AddAsync(emp10);
+
 
             // Set Engineering department head
             GetDept("Engineering").AssignHead(user2Id);

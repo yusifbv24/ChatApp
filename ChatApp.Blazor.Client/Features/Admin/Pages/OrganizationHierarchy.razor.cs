@@ -17,6 +17,7 @@ public partial class OrganizationHierarchy
     [Inject] private IPositionService PositionService { get; set; } = default!;
     [Inject] private IFileService FileService { get; set; } = default!;
     [Inject] private UserState UserState { get; set; } = default!;
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
 
     // Hierarchy state
     private List<OrganizationHierarchyNode> hierarchyRoots = [];
@@ -642,7 +643,7 @@ public partial class OrganizationHierarchy
                     LastName = user.LastName,
                     Email = user.Email,
                     Role = Enum.Parse<Role>(user.Role),
-                    PositionId = null,
+                    PositionId = user.PositionId,
                     AvatarUrl = user.AvatarUrl,
                     AboutMe = user.AboutMe,
                     DateOfBirth = user.DateOfBirth,
@@ -780,4 +781,66 @@ public partial class OrganizationHierarchy
             isDeletingUser = false;
         }
     }
+
+    // Edit Avatar Methods (for edit user dialog)
+    private async Task OnEditAvatarFileSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        editUserMessage = null;
+
+        if (file != null)
+        {
+            if (!file.ContentType.StartsWith("image/"))
+            {
+                editUserMessage = "Only image files are allowed for profile pictures";
+                editAvatarFileData = null;
+                editAvatarPreviewUrl = null;
+                return;
+            }
+
+            if (file.Size > 10 * 1024 * 1024)
+            {
+                editUserMessage = "File size must be less than 10 MB";
+                editAvatarFileData = null;
+                editAvatarPreviewUrl = null;
+                return;
+            }
+
+            try
+            {
+                using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+                var buffer = new byte[file.Size];
+                await stream.ReadExactlyAsync(buffer, 0, buffer.Length);
+
+                editAvatarFileData = buffer;
+                editAvatarFileName = file.Name;
+                editAvatarContentType = file.ContentType;
+                editAvatarFileSize = file.Size;
+                editAvatarPreviewUrl = file.Name;
+
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                editUserMessage = $"Error reading file: {ex.Message}";
+                editAvatarFileData = null;
+                editAvatarPreviewUrl = null;
+            }
+        }
+    }
+
+    private void RemoveEditAvatar()
+    {
+        editAvatarFileData = null;
+        editAvatarFileName = null;
+        editAvatarContentType = null;
+        editAvatarFileSize = 0;
+        editAvatarPreviewUrl = null;
+        editUserModel.AvatarUrl = null;
+        StateHasChanged();
+    }
+
+    // Navigation helpers
+    private void NavigateToDepartment(Guid departmentId) => Navigation.NavigateTo($"/admin/department/{departmentId}");
+    private void NavigateToUser(Guid userId) => Navigation.NavigateTo($"/admin/user/{userId}");
 }

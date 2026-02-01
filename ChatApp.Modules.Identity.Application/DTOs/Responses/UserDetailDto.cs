@@ -11,6 +11,7 @@ namespace ChatApp.Modules.Identity.Application.DTOs.Responses
         string Email,
         string Role,
         string? Position,
+        Guid? PositionId,
         string? AvatarUrl,
         string? AboutMe,
         DateTime? DateOfBirth,
@@ -22,10 +23,19 @@ namespace ChatApp.Modules.Identity.Application.DTOs.Responses
         string? DepartmentName,
         Guid? SupervisorId,
         string? SupervisorName,
+        bool IsHeadOfDepartment,
+        List<SubordinateDto> Subordinates,
         List<string> Permissions,
         DateTime CreatedAtUtc,
         DateTime UpdatedAtUtc)
     {
         public string FullName => $"{FirstName} {LastName}";
     };
+
+    public record SubordinateDto(
+        Guid Id,
+        string FullName,
+        string? Position,
+        string? AvatarUrl,
+        bool IsActive);
 }

@@ -478,11 +478,11 @@
     </div>
 }
 
-@* Edit User Dialog *@
+@* Edit User Dialog - Full form *@
 @if (showEditUserDialog && editingUserNode != null)
 {
     <div class="admin-dialog-overlay" @onclick="CloseEditUserDialog">
-        <div class="admin-dialog" @onclick:stopPropagation="true">
+        <div class="admin-dialog admin-dialog-large" @onclick:stopPropagation="true">
             <div class="admin-dialog-header">
                 <h2>Edit User</h2>
                 <button class="admin-dialog-close" @onclick="CloseEditUserDialog">
@@ -506,10 +506,87 @@
                         </div>
                     </div>
 
+                    <div class="admin-form-row">
+                        <div class="admin-form-group">
+                            <label>Email</label>
+                            <InputText @bind-Value="editUserModel.Email" type="email" class="admin-input" placeholder="Enter email" />
+                            <ValidationMessage For="@(() => editUserModel.Email)" />
+                        </div>
+                        <div class="admin-form-group">
+                            <label>Role</label>
+                            <InputSelect @bind-Value="editUserModel.Role" class="admin-input">
+                                <option value="@Role.User">User</option>
+                                <option value="@Role.Administrator">Administrator</option>
+                            </InputSelect>
+                        </div>
+                    </div>
+
+                    <div class="admin-form-row">
+                        <div class="admin-form-group">
+                            <label>Work Phone</label>
+                            <InputText @bind-Value="editUserModel.WorkPhone" type="tel" class="admin-input" placeholder="Enter work phone" />
+                            <ValidationMessage For="@(() => editUserModel.WorkPhone)" />
+                        </div>
+                        <div class="admin-form-group">
+                            <label>Position</label>
+                            <InputSelect @bind-Value="editUserModel.PositionId" class="admin-input">
+                                <option value="">No Position</option>
+                                @foreach (var pos in allPositions)
+                                {
+                                    <option value="@pos.Id">@pos.Name</option>
+                                }
+                            </InputSelect>
+                        </div>
+                    </div>
+
+                    <div class="admin-form-row">
+                        <div class="admin-form-group">
+                            <label>Date of Birth</label>
+                            <InputDate @bind-Value="editUserModel.DateOfBirth" class="admin-input" />
+                        </div>
+                        <div class="admin-form-group">
+                            <label>Hiring Date</label>
+                            <InputDate @bind-Value="editUserModel.HiringDate" class="admin-input" />
+                        </div>
+                    </div>
+
                     <div class="admin-form-group">
-                        <label>Email</label>
-                        <InputText @bind-Value="editUserModel.Email" type="email" class="admin-input" placeholder="Enter email" />
-                        <ValidationMessage For="@(() => editUserModel.Email)" />
+                        <label>About Me</label>
+                        <textarea @bind="editUserModel.AboutMe" class="admin-input admin-textarea" rows="3" placeholder="Brief description" maxlength="500"></textarea>
+                        <ValidationMessage For="@(() => editUserModel.AboutMe)" />
+                    </div>
+
+                    @* Avatar upload in edit dialog *@
+                    <div class="admin-form-group">
+                        <label>Profile Avatar</label>
+                        <div class="admin-file-upload">
+                            @if (editAvatarFileData != null && !string.IsNullOrEmpty(editAvatarFileName))
+                            {
+                                <div class="admin-file-selected">
+                                    <div class="admin-file-icon">
+                                        <MudIcon Icon="@Icons.Material.Filled.Image" />
+                                    </div>
+                                    <div class="admin-file-info">
+                                        <span class="admin-file-name">@editAvatarFileName</span>
+                                        <span class="admin-file-size">@FormatFileSize(editAvatarFileSize)</span>
+                                    </div>
+                                    <button type="button" class="admin-file-remove-btn" @onclick="RemoveEditAvatar">
+                                        <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" />
+                                    </button>
+                                </div>
+                            }
+                            else
+                            {
+                                <label class="admin-file-input-label">
+                                    <InputFile OnChange="OnEditAvatarFileSelected" accept="image/*" class="admin-file-input" />
+                                    <div class="admin-file-placeholder">
+                                        <MudIcon Icon="@Icons.Material.Filled.CloudUpload" />
+                                        <span>Click to upload or drag and drop</span>
+                                        <small>PNG, JPG, GIF up to 10MB</small>
+                                    </div>
+                                </label>
+                            }
+                        </div>
                     </div>
 
                     @if (!string.IsNullOrEmpty(editUserMessage))
@@ -615,7 +692,7 @@
                         <MudIcon Icon="@Icons.Material.Filled.BusinessCenter" Size="Size.Small" />
                     </div>
                     <div class="org-dept-info">
-                        <strong class="org-dept-name">@node.Name</strong>
+                        <a class="org-dept-name" style="cursor:pointer;text-decoration:none;color:inherit;" @onclick="() => NavigateToDepartment(node.Id)" @onclick:preventDefault>@node.Name</a>
                         @if (!string.IsNullOrEmpty(node.HeadOfDepartmentName))
                         {
                             <span class="org-dept-head">
@@ -629,6 +706,9 @@
                         }
                     </div>
                     <div class="org-node-actions">
+                        <button class="org-action-btn" title="View Details" @onclick="() => NavigateToDepartment(node.Id)">
+                            <MudIcon Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" />
+                        </button>
                         <button class="org-action-btn" title="Add User to this Department" @onclick="() => OpenCreateUserDialog(node.Id, node.Name)">
                             <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Size="Size.Small" />
                         </button>
@@ -667,7 +747,7 @@
                         }
                     </div>
                     <div class="org-user-info">
-                        <strong class="org-user-name">@node.Name</strong>
+                        <a class="org-user-name" style="cursor:pointer;text-decoration:none;color:inherit;" @onclick="() => NavigateToUser(node.Id)" @onclick:preventDefault>@node.Name</a>
                         @if (!string.IsNullOrEmpty(node.PositionName))
                         {
                             <span class="org-user-position">@node.PositionName</span>
@@ -680,6 +760,9 @@
                         </span>
                     </div>
                     <div class="org-node-actions">
+                        <button class="org-action-btn" title="View Details" @onclick="() => NavigateToUser(node.Id)">
+                            <MudIcon Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" />
+                        </button>
                         <button class="org-action-btn" title="Edit User" @onclick="() => OpenEditUserDialog(node)">
                             <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" />
                         </button>

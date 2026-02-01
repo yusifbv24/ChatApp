@@ -11,6 +11,7 @@ public record UserDetailDto(
     string Email,
     string Role,
     string? Position,
+    Guid? PositionId,
     string? AvatarUrl,
     string? AboutMe,
     DateTime? DateOfBirth,
@@ -22,6 +23,8 @@ public record UserDetailDto(
     string? DepartmentName,
     Guid? SupervisorId,
     string? SupervisorName,
+    bool IsHeadOfDepartment,
+    List<SubordinateDto> Subordinates,
     List<string> Permissions,
     DateTime CreatedAtUtc,
     DateTime UpdatedAtUtc)
@@ -29,3 +32,10 @@ public record UserDetailDto(
     public string FullName => $"{FirstName} {LastName}";
     public bool IsAdmin => Role == RoleNames.Administrator;
 }
+
+public record SubordinateDto(
+    Guid Id,
+    string FullName,
+    string? Position,
+    string? AvatarUrl,
+    bool IsActive);
