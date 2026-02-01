@@ -33,7 +33,8 @@ namespace ChatApp.Modules.Notifications.Infrastructure
             services.AddScoped<INotificationRepository, NotificationRepository>();
             services.AddScoped<IEmailService, SmtpEmailService>();
 
-            services.AddHostedService<EmailNotificationWorker>();
+            // Email notification worker disabled - not needed currently
+            // services.AddHostedService<EmailNotificationWorker>();
 
             return services;
         }

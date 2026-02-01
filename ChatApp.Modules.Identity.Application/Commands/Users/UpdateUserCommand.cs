@@ -171,7 +171,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.Users
                 user.ChangeRole(request.Role.Value);
 
             if (request.AvatarUrl is not null)
-                user.UpdateAvatarUrl(request.AvatarUrl);
+                user.UpdateAvatarUrl(string.IsNullOrWhiteSpace(request.AvatarUrl) ? null : request.AvatarUrl);
 
             // Update Employee fields (Organizational & Sensitive Data)
             if (request.PositionId.HasValue)

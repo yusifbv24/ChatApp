@@ -51,6 +51,7 @@ public partial class OrganizationHierarchy
     private bool showCreateDepartmentDialog = false;
     private Guid? createDepartmentParentId;
     private string? createDepartmentParentName;
+    private Guid? createDepartmentCompanyId;
     private CreateDepartmentRequest createDepartmentModel = new();
     private bool isCreatingDepartment = false;
     private string? createDepartmentMessage;
@@ -181,7 +182,7 @@ public partial class OrganizationHierarchy
 
     private void ExpandAll()
     {
-        foreach (var node in allNodes.Where(n => n.Type == NodeType.Department))
+        foreach (var node in allNodes.Where(n => n.Type is NodeType.Department or NodeType.Company))
         {
             node.IsExpanded = true;
         }
@@ -190,7 +191,7 @@ public partial class OrganizationHierarchy
 
     private void CollapseAll()
     {
-        foreach (var node in allNodes.Where(n => n.Type == NodeType.Department))
+        foreach (var node in allNodes.Where(n => n.Type is NodeType.Department or NodeType.Company))
         {
             node.IsExpanded = false;
         }
@@ -246,7 +247,7 @@ public partial class OrganizationHierarchy
         }
 
         // Auto-expand nodes with matches
-        foreach (var node in allNodes.Where(n => n.Type == NodeType.Department && HasMatchingDescendant(n)))
+        foreach (var node in allNodes.Where(n => (n.Type is NodeType.Department or NodeType.Company) && HasMatchingDescendant(n)))
         {
             node.IsExpanded = true;
         }
@@ -263,9 +264,20 @@ public partial class OrganizationHierarchy
                 ShowParentChain(parent);
             }
         }
-        else if (node.Type == NodeType.Department && node.ParentDepartmentId.HasValue)
+        else if (node.Type == NodeType.Department)
         {
-            var parent = allNodes.FirstOrDefault(n => n.Type == NodeType.Department && n.Id == node.ParentDepartmentId.Value);
+            // Find parent: either a parent department or the company node
+            OrganizationHierarchyNode? parent = null;
+            if (node.ParentDepartmentId.HasValue)
+            {
+                parent = allNodes.FirstOrDefault(n => n.Type == NodeType.Department && n.Id == node.ParentDepartmentId.Value);
+            }
+            else
+            {
+                // Root department - find parent Company node
+                parent = allNodes.FirstOrDefault(n => n.Type == NodeType.Company && n.Children.Any(c => c.Id == node.Id));
+            }
+
             if (parent != null)
             {
                 parent.MatchesSearch = true;
@@ -465,11 +477,36 @@ public partial class OrganizationHierarchy
     }
 
     // Create Department Methods
-    private void OpenCreateDepartmentDialog(Guid? parentId = null, string? parentName = null)
+    private void OpenCreateDepartmentDialog(Guid? parentId = null, string? parentName = null, Guid? companyId = null)
     {
         createDepartmentParentId = parentId;
         createDepartmentParentName = parentName;
-        createDepartmentModel = new CreateDepartmentRequest { ParentDepartmentId = parentId };
+        createDepartmentCompanyId = companyId;
+
+        // Resolve companyId: if creating sub-dept under a dept, find the company from hierarchy
+        if (companyId == null && parentId != null)
+        {
+            var parentNode = allNodes.FirstOrDefault(n => n.Type == NodeType.Department && n.Id == parentId);
+            if (parentNode != null)
+            {
+                var companyNode = allNodes.FirstOrDefault(n => n.Type == NodeType.Company);
+                if (companyNode != null)
+                    createDepartmentCompanyId = companyNode.Id;
+            }
+        }
+        else if (companyId == null)
+        {
+            // Default to first company
+            var companyNode = allNodes.FirstOrDefault(n => n.Type == NodeType.Company);
+            if (companyNode != null)
+                createDepartmentCompanyId = companyNode.Id;
+        }
+
+        createDepartmentModel = new CreateDepartmentRequest
+        {
+            ParentDepartmentId = parentId,
+            CompanyId = createDepartmentCompanyId ?? Guid.Empty
+        };
         createDepartmentMessage = null;
         createDepartmentSuccess = false;
         showCreateDepartmentDialog = true;

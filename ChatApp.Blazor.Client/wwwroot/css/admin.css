@@ -1312,6 +1312,243 @@
     padding: 1.5rem 0;
 }
 
+/* Avatar Hover Overlay */
+.detail-user-card-avatar {
+    position: relative;
+    cursor: pointer;
+}
+
+.avatar-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+}
+
+.avatar-overlay.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.avatar-overlay-btn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    color: white;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    padding: 0;
+}
+
+.avatar-overlay-btn:hover {
+    background: rgba(255, 255, 255, 0.35);
+    transform: scale(1.1);
+}
+
+.avatar-overlay-btn-danger:hover {
+    background: rgba(239, 68, 68, 0.7);
+    border-color: rgba(239, 68, 68, 0.8);
+}
+
+.avatar-overlay-btn .mud-icon-root {
+    font-size: 0.875rem;
+}
+
+.avatar-uploading-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Avatar Viewer Modal */
+.avatar-viewer {
+    position: relative;
+    max-width: 500px;
+    max-height: 500px;
+}
+
+.avatar-viewer img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 12px;
+}
+
+.avatar-viewer-close {
+    position: absolute;
+    top: -12px;
+    right: -12px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 50%;
+    color: #374151;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    transition: all 0.15s ease;
+}
+
+.avatar-viewer-close:hover {
+    background: #f3f4f6;
+}
+
+/* Permission Counter */
+.detail-permission-counter {
+    margin-left: auto;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #6b7280;
+    background: #f3f4f6;
+    padding: 0.125rem 0.5rem;
+    border-radius: 10px;
+}
+
+/* Permission Modules Grid */
+.perm-modules-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+}
+
+.perm-module-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.perm-module-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.perm-module-header .mud-icon-root {
+    font-size: 1.125rem;
+    color: #6366f1;
+}
+
+.perm-module-name {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #111827;
+}
+
+.perm-module-count {
+    margin-left: auto;
+    font-size: 0.75rem;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+.perm-items {
+    display: flex;
+    flex-direction: column;
+}
+
+.perm-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.625rem 1rem;
+    border-bottom: 1px solid #f3f4f6;
+    transition: background 0.15s ease;
+}
+
+.perm-item:last-child {
+    border-bottom: none;
+}
+
+.perm-item:hover {
+    background: #f9fafb;
+}
+
+.perm-item.granted {
+    background: #f0fdf4;
+}
+
+.perm-item.granted:hover {
+    background: #dcfce7;
+}
+
+.perm-item-name {
+    font-size: 0.8125rem;
+    color: #374151;
+    font-weight: 500;
+}
+
+/* Toggle Switch */
+.perm-toggle {
+    position: relative;
+    display: inline-block;
+    width: 36px;
+    height: 20px;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+.perm-toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.perm-toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: #d1d5db;
+    border-radius: 10px;
+    transition: all 0.2s ease;
+}
+
+.perm-toggle-slider::before {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    left: 2px;
+    bottom: 2px;
+    background: white;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.perm-toggle input:checked + .perm-toggle-slider {
+    background: #6366f1;
+}
+
+.perm-toggle input:checked + .perm-toggle-slider::before {
+    transform: translateX(16px);
+}
+
+.perm-toggle input:disabled + .perm-toggle-slider {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 /* Responsive for detail pages */
 @media (max-width: 768px) {
     .detail-sections-grid {
@@ -1339,5 +1576,9 @@
     .detail-actions-bar {
         width: 100%;
         justify-content: center;
+    }
+
+    .perm-modules-grid {
+        grid-template-columns: 1fr;
     }
 }

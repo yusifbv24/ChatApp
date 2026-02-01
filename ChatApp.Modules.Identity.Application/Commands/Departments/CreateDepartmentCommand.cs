@@ -10,6 +10,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.Departments
 {
     public record CreateDepartmentCommand(
         string Name,
+        Guid CompanyId,
         Guid? ParentDepartmentId
     ) : IRequest<Result<Guid>>;
 
@@ -50,16 +51,22 @@ namespace ChatApp.Modules.Identity.Application.Commands.Departments
                 if (isDuplicate)
                     return Result.Failure<Guid>("A department with this name already exists");
 
+                // Validate company exists
+                var companyExists = await unitOfWork.Companies
+                    .AnyAsync(c => c.Id == command.CompanyId, cancellationToken);
+                if (!companyExists)
+                    return Result.Failure<Guid>("Company not found");
+
                 Department department;
                 if (command.ParentDepartmentId.HasValue)
                 {
                     // Subdepartment
-                    department = new Department(command.Name, command.ParentDepartmentId.Value);
+                    department = new Department(command.Name, command.CompanyId, command.ParentDepartmentId.Value);
                 }
                 else
                 {
                     // Top-level department
-                    department = new Department(command.Name);
+                    department = new Department(command.Name, command.CompanyId);
                 }
 
                 await unitOfWork.Departments.AddAsync(department, cancellationToken);

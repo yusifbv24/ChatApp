@@ -94,6 +94,124 @@
     animation: fadeIn 0.2s ease-in-out;
 }
 
+/* Company Node */
+.org-company-node {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 1.25rem;
+    background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
+    border: 1px solid #1e40af;
+    border-radius: 10px;
+    transition: all 0.2s ease;
+}
+
+.org-company-node:hover {
+    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.3);
+    transform: translateY(-1px);
+}
+
+.org-company-node:hover .org-node-actions {
+    opacity: 1;
+}
+
+.org-company-node.highlight {
+    box-shadow: 0 0 0 2px #f59e0b;
+}
+
+.org-company-icon {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    color: white;
+    flex-shrink: 0;
+}
+
+.org-company-icon .mud-icon-root {
+    font-size: 1.5rem;
+}
+
+.org-company-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.org-company-name {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: white;
+    white-space: nowrap;
+}
+
+.org-company-head {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.8125rem;
+    color: #fbbf24;
+    font-weight: 500;
+    padding: 0.25rem 0.625rem;
+    background: rgba(251, 191, 36, 0.15);
+    border-radius: 4px;
+}
+
+.org-company-head .mud-icon-root {
+    font-size: 0.875rem;
+}
+
+.org-company-node .org-node-actions {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.org-company-node .org-action-btn {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: white;
+}
+
+.org-company-node .org-action-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+    color: white;
+}
+
+/* Subordinate Count Badge */
+.org-subordinate-count {
+    font-size: 0.8125rem;
+    color: white;
+    padding: 0.25rem 0.625rem;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+.org-dept-node .org-subordinate-count {
+    color: #6b7280;
+    background: #e5e7eb;
+}
+
+/* Supervisor Name */
+.org-supervisor-name {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.8125rem;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+.org-supervisor-name .mud-icon-root {
+    font-size: 0.875rem;
+}
+
 /* Department Node */
 .org-dept-node {
     display: flex;
@@ -219,6 +337,12 @@
 
 .org-dept-head .mud-icon-root {
     font-size: 0.875rem;
+}
+
+.org-dept-head-star {
+    color: #f59e0b;
+    margin-left: 4px;
+    vertical-align: middle;
 }
 
 .org-user-count {

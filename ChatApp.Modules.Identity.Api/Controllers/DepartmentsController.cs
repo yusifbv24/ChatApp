@@ -67,6 +67,7 @@ namespace ChatApp.Modules.Identity.Api.Controllers
         {
             var command = new CreateDepartmentCommand(
                 request.Name,
+                request.CompanyId,
                 request.ParentDepartmentId);
 
             var result = await mediator.Send(command, cancellationToken);

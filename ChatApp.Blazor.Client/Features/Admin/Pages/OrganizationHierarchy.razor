@@ -24,7 +24,7 @@
                 <MudIcon Icon="@Icons.Material.Filled.UnfoldMore" Size="Size.Small" />
                 <span>Expand All</span>
             </button>
-            <button class="admin-btn admin-btn-primary" @onclick="() => OpenCreateDepartmentDialog(null, null)">
+            <button class="admin-btn admin-btn-primary" @onclick="() => OpenCreateDepartmentDialog(null, null, null)">
                 <MudIcon Icon="@Icons.Material.Filled.BusinessCenter" Size="Size.Small" />
                 <span>New Department</span>
             </button>
@@ -675,7 +675,52 @@
         if (!node.IsVisible) return;
 
         <div class="org-tree-node" style="margin-left: @(node.Level * 24)px">
-            @if (node.Type == NodeType.Department)
+            @if (node.Type == NodeType.Company)
+            {
+                <div class="org-company-node @(node.MatchesSearch && !string.IsNullOrEmpty(searchTerm) ? "highlight" : "")">
+                    <button class="org-expand-btn" @onclick="() => ToggleNode(node)">
+                        @if (node.Children.Any(c => c.IsVisible))
+                        {
+                            <MudIcon Icon="@(node.IsExpanded ? Icons.Material.Filled.ExpandMore : Icons.Material.Filled.ChevronRight)" Size="Size.Small" />
+                        }
+                        else
+                        {
+                            <span class="org-expand-placeholder"></span>
+                        }
+                    </button>
+                    <div class="org-company-icon">
+                        <MudIcon Icon="@Icons.Material.Filled.Business" Size="Size.Small" />
+                    </div>
+                    <div class="org-company-info">
+                        <span class="org-company-name">@node.Name</span>
+                        @if (!string.IsNullOrEmpty(node.HeadOfDepartmentName))
+                        {
+                            <span class="org-company-head">
+                                <MudIcon Icon="@Icons.Material.Filled.Star" Size="Size.Small" />
+                                Head of Company: @node.HeadOfDepartmentName
+                            </span>
+                        }
+                        @if (node.SubordinateCount > 0)
+                        {
+                            <span class="org-subordinate-count">@node.SubordinateCount employees</span>
+                        }
+                    </div>
+                    <div class="org-node-actions">
+                        <button class="org-action-btn" title="Add Department" @onclick="() => OpenCreateDepartmentDialog(null, null, node.Id)">
+                            <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" />
+                        </button>
+                    </div>
+                </div>
+
+                @if (node.IsExpanded)
+                {
+                    foreach (var child in node.Children.Where(c => c.IsVisible))
+                    {
+                        @RenderTreeNode(child)
+                    }
+                }
+            }
+            else if (node.Type == NodeType.Department)
             {
                 <div class="org-dept-node @(node.MatchesSearch && !string.IsNullOrEmpty(searchTerm) ? "highlight" : "")">
                     <button class="org-expand-btn" @onclick="() => ToggleNode(node)">
@@ -747,7 +792,13 @@
                         }
                     </div>
                     <div class="org-user-info">
-                        <a class="org-user-name" style="cursor:pointer;text-decoration:none;color:inherit;" @onclick="() => NavigateToUser(node.Id)" @onclick:preventDefault>@node.Name</a>
+                        <a class="org-user-name" style="cursor:pointer;text-decoration:none;color:inherit;" @onclick="() => NavigateToUser(node.Id)" @onclick:preventDefault>
+                            @node.Name
+                            @if (node.IsDepartmentHead)
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.Star" Size="Size.Small" Class="org-dept-head-star" />
+                            }
+                        </a>
                         @if (!string.IsNullOrEmpty(node.PositionName))
                         {
                             <span class="org-user-position">@node.PositionName</span>

@@ -3,7 +3,8 @@ namespace ChatApp.Modules.Identity.Application.DTOs.Responses
     public enum NodeType
     {
         Department,
-        User
+        User,
+        Company
     }
 
     public record OrganizationHierarchyNodeDto(
@@ -28,6 +29,11 @@ namespace ChatApp.Modules.Identity.Application.DTOs.Responses
         DateTime? CreatedAtUtc,
 
         // Tree structure
-        List<OrganizationHierarchyNodeDto> Children
+        List<OrganizationHierarchyNodeDto> Children,
+
+        // Supervisor & Subordinate info
+        int SubordinateCount = 0,
+        string? SupervisorName = null,
+        bool IsDepartmentHead = false
     );
 }

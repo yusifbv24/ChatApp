@@ -10,6 +10,10 @@ namespace ChatApp.Modules.Identity.Domain.Entities
     {
         public string Name { get; private set; } = null!;
 
+        // Company relationship
+        public Guid CompanyId { get; private set; }
+        public Company? Company { get; private set; }
+
         // Hierarchy (self-referencing for subdepartments)
         public Guid? ParentDepartmentId { get; private set; }
         public Department? ParentDepartment { get; private set; }
@@ -33,12 +37,16 @@ namespace ChatApp.Modules.Identity.Domain.Entities
         /// <summary>
         /// Creates a new top-level department (no parent).
         /// </summary>
-        public Department(string name, Guid? headOfDepartmentId = null) : base()
+        public Department(string name, Guid companyId, Guid? headOfDepartmentId = null) : base()
         {
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Department name cannot be empty", nameof(name));
 
+            if (companyId == Guid.Empty)
+                throw new ArgumentException("Company ID cannot be empty", nameof(companyId));
+
             Name = name;
+            CompanyId = companyId;
             ParentDepartmentId = null;
             HeadOfDepartmentId = headOfDepartmentId;
         }
@@ -46,15 +54,19 @@ namespace ChatApp.Modules.Identity.Domain.Entities
         /// <summary>
         /// Creates a new subdepartment (with parent).
         /// </summary>
-        public Department(string name, Guid parentDepartmentId, Guid? headOfDepartmentId = null) : base()
+        public Department(string name, Guid companyId, Guid parentDepartmentId, Guid? headOfDepartmentId = null) : base()
         {
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Department name cannot be empty", nameof(name));
+
+            if (companyId == Guid.Empty)
+                throw new ArgumentException("Company ID cannot be empty", nameof(companyId));
 
             if (parentDepartmentId == Guid.Empty)
                 throw new ArgumentException("Parent department ID cannot be empty", nameof(parentDepartmentId));
 
             Name = name;
+            CompanyId = companyId;
             ParentDepartmentId = parentDepartmentId;
             HeadOfDepartmentId = headOfDepartmentId;
         }

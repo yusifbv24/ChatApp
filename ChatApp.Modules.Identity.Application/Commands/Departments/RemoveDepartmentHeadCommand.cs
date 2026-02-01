@@ -37,11 +37,35 @@ namespace ChatApp.Modules.Identity.Application.Commands.Departments
                 if (department.HeadOfDepartmentId == null)
                     return Result.Failure("Department does not have a head assigned");
 
+                var previousHeadUserId = department.HeadOfDepartmentId.Value;
+
+                // === Auto Supervisor Cleanup ===
+
+                // 1. Remove supervisor from all department members who had the old head as supervisor
+                var oldHeadEmployee = await unitOfWork.Employees
+                    .FirstOrDefaultAsync(e => e.UserId == previousHeadUserId, cancellationToken);
+
+                if (oldHeadEmployee != null)
+                {
+                    var subordinates = await unitOfWork.Employees
+                        .Where(e => e.SupervisorId == oldHeadEmployee.Id)
+                        .ToListAsync(cancellationToken);
+
+                    foreach (var sub in subordinates)
+                    {
+                        sub.RemoveSupervisor();
+                    }
+
+                    // 2. Remove supervisor from the old head itself
+                    oldHeadEmployee.RemoveSupervisor();
+                }
+
+                // Remove head from department
                 department.RemoveHead();
                 await unitOfWork.SaveChangesAsync(cancellationToken);
 
                 logger.LogInformation(
-                    "Head removed from department {DepartmentId}",
+                    "Head removed from department {DepartmentId}, supervisors cleared",
                     command.DepartmentId);
 
                 return Result.Success();

@@ -42,9 +42,9 @@
     }
     else if (user != null)
     {
-        @* User Profile Header *@
+        @* User Profile Header Card *@
         <div class="detail-user-card">
-            <div class="detail-user-card-avatar">
+            <div class="detail-user-card-avatar" @onmouseenter="() => showAvatarActions = true" @onmouseleave="() => showAvatarActions = false">
                 @if (!string.IsNullOrEmpty(user.AvatarUrl))
                 {
                     <img src="@user.AvatarUrl" alt="@user.FullName" />
@@ -52,6 +52,30 @@
                 else
                 {
                     <div class="detail-user-card-avatar-placeholder">@StringHelper.GetInitials(user.FullName)</div>
+                }
+
+                @* Avatar hover overlay *@
+                <div class="avatar-overlay @(showAvatarActions ? "visible" : "")">
+                    <label class="avatar-overlay-btn" title="Upload avatar">
+                        <InputFile OnChange="OnAvatarSelected" accept="image/*" style="display:none;" />
+                        <MudIcon Icon="@Icons.Material.Filled.CameraAlt" Size="Size.Small" />
+                    </label>
+                    @if (!string.IsNullOrEmpty(user.AvatarUrl))
+                    {
+                        <button class="avatar-overlay-btn" title="View avatar" @onclick="ViewAvatar">
+                            <MudIcon Icon="@Icons.Material.Filled.ZoomIn" Size="Size.Small" />
+                        </button>
+                        <button class="avatar-overlay-btn avatar-overlay-btn-danger" title="Remove avatar" @onclick="RemoveAvatar">
+                            <MudIcon Icon="@Icons.Material.Filled.Delete" Size="Size.Small" />
+                        </button>
+                    }
+                </div>
+
+                @if (isUploadingAvatar)
+                {
+                    <div class="avatar-uploading-overlay">
+                        <span class="admin-btn-spinner" style="border-top-color:white;width:24px;height:24px;"></span>
+                    </div>
                 }
             </div>
             <div class="detail-user-card-info">
@@ -254,103 +278,103 @@
                 </div>
             </div>
 
-            @* Permissions *@
+            @* Subordinates Section *@
             <div class="detail-section">
                 <h3 class="detail-section-title">
-                    <MudIcon Icon="@Icons.Material.Filled.Security" Size="Size.Small" />
-                    Permissions (@user.Permissions.Count)
+                    <MudIcon Icon="@Icons.Material.Filled.Groups" Size="Size.Small" />
+                    Subordinates (@user.Subordinates.Count)
                 </h3>
-                @if (user.Permissions.Any())
+                @if (user.Subordinates.Any())
                 {
-                    <div class="detail-permissions-list">
-                        @foreach (var permission in user.Permissions)
+                    <div class="detail-list">
+                        @foreach (var sub in user.Subordinates)
                         {
-                            <span class="detail-permission-badge">
-                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" />
-                                @permission
-                            </span>
+                            <div class="detail-list-item" @onclick="() => NavigateToUser(sub.Id)">
+                                <div class="org-user-avatar" style="width:36px;height:36px;">
+                                    @if (!string.IsNullOrEmpty(sub.AvatarUrl))
+                                    {
+                                        <img src="@sub.AvatarUrl" alt="@sub.FullName" />
+                                    }
+                                    else
+                                    {
+                                        <div class="org-user-avatar-placeholder" style="font-size:0.75rem;">@StringHelper.GetInitials(sub.FullName)</div>
+                                    }
+                                </div>
+                                <div class="detail-list-item-info">
+                                    <strong>@sub.FullName</strong>
+                                    <span class="admin-text-muted">@(sub.Position ?? "No position")</span>
+                                </div>
+                                <span class="admin-status @(sub.IsActive ? "active" : "inactive")">
+                                    @(sub.IsActive ? "Active" : "Inactive")
+                                </span>
+                                <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Class="admin-text-muted" />
+                            </div>
                         }
                     </div>
                 }
                 else
                 {
                     <div class="detail-empty">
-                        <MudIcon Icon="@Icons.Material.Filled.LockOpen" />
-                        <span>No permissions assigned</span>
+                        <MudIcon Icon="@Icons.Material.Filled.PersonOff" />
+                        <span>No subordinates</span>
                     </div>
                 }
             </div>
         </div>
 
-        @* Subordinates Section *@
-        <div class="detail-section" style="margin-top:1rem;">
+        @* Permissions Section - Full Width *@
+        <div class="detail-section" style="margin-top:1.5rem;">
             <h3 class="detail-section-title">
-                <MudIcon Icon="@Icons.Material.Filled.Groups" Size="Size.Small" />
-                Subordinates (@user.Subordinates.Count)
+                <MudIcon Icon="@Icons.Material.Filled.Security" Size="Size.Small" />
+                Permissions
+                <span class="detail-permission-counter">@user.Permissions.Count / @allPermissions.Count</span>
             </h3>
-            @if (user.Subordinates.Any())
-            {
-                <div class="detail-list">
-                    @foreach (var sub in user.Subordinates)
-                    {
-                        <div class="detail-list-item" @onclick="() => NavigateToUser(sub.Id)">
-                            <div class="org-user-avatar" style="width:36px;height:36px;">
-                                @if (!string.IsNullOrEmpty(sub.AvatarUrl))
-                                {
-                                    <img src="@sub.AvatarUrl" alt="@sub.FullName" />
-                                }
-                                else
-                                {
-                                    <div class="org-user-avatar-placeholder" style="font-size:0.75rem;">@StringHelper.GetInitials(sub.FullName)</div>
-                                }
-                            </div>
-                            <div class="detail-list-item-info">
-                                <strong>@sub.FullName</strong>
-                                <span class="admin-text-muted">@(sub.Position ?? "No position")</span>
-                            </div>
-                            <span class="admin-status @(sub.IsActive ? "active" : "inactive")">
-                                @(sub.IsActive ? "Active" : "Inactive")
-                            </span>
-                            <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Class="admin-text-muted" />
+            <div class="perm-modules-grid">
+                @foreach (var module in GetGroupedPermissions())
+                {
+                    <div class="perm-module-card">
+                        <div class="perm-module-header">
+                            <MudIcon Icon="@GetModuleIcon(module.Key)" Size="Size.Small" />
+                            <span class="perm-module-name">@module.Key</span>
+                            <span class="perm-module-count">@module.Value.Count(p => user.Permissions.Contains(p)) / @module.Value.Count</span>
                         </div>
-                    }
-                </div>
-            }
-            else
-            {
-                <div class="detail-empty">
-                    <MudIcon Icon="@Icons.Material.Filled.PersonOff" />
-                    <span>No subordinates</span>
-                </div>
-            }
-        </div>
-
-        @* Avatar Upload Section *@
-        <div class="detail-section" style="margin-top:1rem;">
-            <h3 class="detail-section-title">
-                <MudIcon Icon="@Icons.Material.Filled.PhotoCamera" Size="Size.Small" />
-                Upload Avatar
-            </h3>
-            <div class="admin-file-upload">
-                <label class="admin-file-input-label">
-                    <InputFile OnChange="OnAvatarSelected" accept="image/*" class="admin-file-input" />
-                    <div class="admin-file-placeholder">
-                        <MudIcon Icon="@Icons.Material.Filled.CloudUpload" />
-                        <span>Click to upload a new avatar</span>
-                        <small>PNG, JPG, GIF up to 10MB</small>
+                        <div class="perm-items">
+                            @foreach (var permission in module.Value)
+                            {
+                                var isGranted = user.Permissions.Contains(permission);
+                                var permKey = permission;
+                                var isToggling = togglingPermissions.Contains(permKey);
+                                <div class="perm-item @(isGranted ? "granted" : "")">
+                                    <div class="perm-item-info">
+                                        <span class="perm-item-name">@permission.Split('.')[1]</span>
+                                    </div>
+                                    <label class="perm-toggle">
+                                        <input type="checkbox" checked="@isGranted" disabled="@isToggling"
+                                               @onchange="() => TogglePermission(permKey, isGranted)" />
+                                        <span class="perm-toggle-slider"></span>
+                                    </label>
+                                </div>
+                            }
+                        </div>
                     </div>
-                </label>
+                }
             </div>
-            @if (isUploadingAvatar)
-            {
-                <div class="admin-message success" style="margin-top:0.5rem;">
-                    <span class="admin-btn-spinner" style="border-top-color:#065f46;border-color:rgba(0,0,0,0.1);"></span>
-                    <span>Uploading avatar...</span>
-                </div>
-            }
         </div>
     }
 </div>
+
+@* Avatar Viewer Modal *@
+@if (showAvatarViewer && !string.IsNullOrEmpty(user?.AvatarUrl))
+{
+    <div class="admin-dialog-overlay" @onclick="() => showAvatarViewer = false">
+        <div class="avatar-viewer" @onclick:stopPropagation="true">
+            <button class="avatar-viewer-close" @onclick="() => showAvatarViewer = false">
+                <MudIcon Icon="@Icons.Material.Filled.Close" />
+            </button>
+            <img src="@user.AvatarUrl" alt="@user.FullName" />
+        </div>
+    </div>
+}
 
 @* Edit User Dialog - Full form matching organization page *@
 @if (showEditDialog && user != null)
@@ -453,39 +477,6 @@
                         <ValidationMessage For="@(() => editModel.AboutMe)" />
                     </div>
 
-                    @* Avatar upload in edit dialog *@
-                    <div class="admin-form-group">
-                        <label>Profile Avatar</label>
-                        <div class="admin-file-upload">
-                            @if (editAvatarFileData != null && !string.IsNullOrEmpty(editAvatarFileName))
-                            {
-                                <div class="admin-file-selected">
-                                    <div class="admin-file-icon">
-                                        <MudIcon Icon="@Icons.Material.Filled.Image" />
-                                    </div>
-                                    <div class="admin-file-info">
-                                        <span class="admin-file-name">@editAvatarFileName</span>
-                                        <span class="admin-file-size">@FormatFileSize(editAvatarFileSize)</span>
-                                    </div>
-                                    <button type="button" class="admin-file-remove-btn" @onclick="RemoveEditAvatar">
-                                        <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" />
-                                    </button>
-                                </div>
-                            }
-                            else
-                            {
-                                <label class="admin-file-input-label">
-                                    <InputFile OnChange="OnEditAvatarSelected" accept="image/*" class="admin-file-input" />
-                                    <div class="admin-file-placeholder">
-                                        <MudIcon Icon="@Icons.Material.Filled.CloudUpload" />
-                                        <span>Click to upload or drag and drop</span>
-                                        <small>PNG, JPG, GIF up to 10MB</small>
-                                    </div>
-                                </label>
-                            }
-                        </div>
-                    </div>
-
                     @if (!string.IsNullOrEmpty(editMessage))
                     {
                         <div class="admin-message @(editSuccess ? "success" : "error")">
@@ -582,11 +573,20 @@
     private List<PositionDto> allPositions = new();
     private List<DepartmentDto> allDepartments = new();
     private List<UserListItemDto> allUsers = new();
+    private List<string> allPermissions = new();
 
     private bool isLoading = true;
     private string? errorMessage;
     private string? actionMessage;
     private bool actionSuccess;
+
+    // Avatar
+    private bool showAvatarActions;
+    private bool showAvatarViewer;
+    private bool isUploadingAvatar;
+
+    // Permissions
+    private HashSet<string> togglingPermissions = new();
 
     // Edit dialog
     private bool showEditDialog;
@@ -596,12 +596,6 @@
     private bool editSuccess;
     private string? selectedDepartmentId;
     private string? selectedSupervisorId;
-
-    // Edit avatar
-    private byte[]? editAvatarFileData;
-    private string? editAvatarFileName;
-    private string? editAvatarContentType;
-    private long editAvatarFileSize;
 
     // Change password dialog
     private bool showChangePasswordDialog;
@@ -616,10 +610,12 @@
     // Head of department toggle
     private bool isTogglingHead;
 
-    // Avatar upload
-    private bool isUploadingAvatar;
-
     private Guid? previousUserId;
+
+    protected override void OnInitialized()
+    {
+        allPermissions = GetAllPermissions();
+    }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -678,6 +674,160 @@
     private void NavigateToDepartment(Guid id) => Navigation.NavigateTo($"/admin/department/{id}");
     private void NavigateToUser(Guid id) => Navigation.NavigateTo($"/admin/user/{id}");
 
+    // Permissions
+    private static List<string> GetAllPermissions()
+    {
+        return new List<string>
+        {
+            Permissions.UsersCreate, Permissions.UsersRead, Permissions.UsersUpdate, Permissions.UsersDelete,
+            Permissions.PermissionsRead, Permissions.PermissionsAssign, Permissions.PermissionsRevoke,
+            Permissions.MessagesSend, Permissions.MessagesRead, Permissions.MessagesEdit, Permissions.MessagesDelete,
+            Permissions.FilesUpload, Permissions.FilesDownload, Permissions.FilesDelete,
+            Permissions.ChannelsCreate, Permissions.ChannelsRead, Permissions.ChannelsManage, Permissions.ChannelsDelete
+        };
+    }
+
+    private Dictionary<string, List<string>> GetGroupedPermissions()
+    {
+        return allPermissions
+            .GroupBy(p => p.Split('.')[0])
+            .ToDictionary(g => g.Key, g => g.ToList());
+    }
+
+    private string GetModuleIcon(string module) => module switch
+    {
+        "Users" => Icons.Material.Filled.People,
+        "Permissions" => Icons.Material.Filled.AdminPanelSettings,
+        "Messages" => Icons.Material.Filled.Chat,
+        "Files" => Icons.Material.Filled.Folder,
+        "Channels" => Icons.Material.Filled.Forum,
+        _ => Icons.Material.Filled.Extension
+    };
+
+    private async Task TogglePermission(string permission, bool currentlyGranted)
+    {
+        if (togglingPermissions.Contains(permission)) return;
+
+        togglingPermissions.Add(permission);
+        StateHasChanged();
+
+        try
+        {
+            Result result;
+            if (currentlyGranted)
+                result = await UserService.RemovePermissionAsync(UserId, permission);
+            else
+                result = await UserService.AssignPermissionAsync(UserId, permission);
+
+            if (result.IsSuccess)
+            {
+                await LoadUserAsync();
+            }
+            else
+            {
+                actionSuccess = false;
+                actionMessage = result.Error ?? "Failed to update permission.";
+            }
+        }
+        catch (Exception ex)
+        {
+            actionSuccess = false;
+            actionMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            togglingPermissions.Remove(permission);
+            StateHasChanged();
+        }
+    }
+
+    // Avatar actions
+    private void ViewAvatar() => showAvatarViewer = true;
+
+    private async Task RemoveAvatar()
+    {
+        isUploadingAvatar = true;
+        actionMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            var updateReq = new UpdateUserRequest
+            {
+                FirstName = user!.FirstName,
+                LastName = user.LastName,
+                Email = user.Email,
+                AvatarUrl = ""
+            };
+            var result = await UserService.UpdateUserAsync(UserId, updateReq);
+            if (result.IsSuccess)
+            {
+                actionSuccess = true;
+                actionMessage = "Avatar removed.";
+                await LoadUserAsync();
+            }
+            else
+            {
+                actionSuccess = false;
+                actionMessage = result.Error ?? "Failed to remove avatar.";
+            }
+        }
+        catch (Exception ex)
+        {
+            actionSuccess = false;
+            actionMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isUploadingAvatar = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnAvatarSelected(InputFileChangeEventArgs e)
+    {
+        isUploadingAvatar = true;
+        actionMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            var file = e.File;
+            var result = await FileService.UploadProfilePictureAsync(file, UserId);
+            if (result.IsSuccess)
+            {
+                var avatarUrl = result.Value.ThumbnailUrl ?? result.Value.DownloadUrl;
+                var updateReq = new UpdateUserRequest
+                {
+                    FirstName = user!.FirstName,
+                    LastName = user.LastName,
+                    Email = user.Email,
+                    AvatarUrl = avatarUrl
+                };
+                await UserService.UpdateUserAsync(UserId, updateReq);
+
+                actionSuccess = true;
+                actionMessage = "Avatar uploaded successfully.";
+                await LoadUserAsync();
+            }
+            else
+            {
+                actionSuccess = false;
+                actionMessage = result.Error ?? "Failed to upload avatar.";
+            }
+        }
+        catch (Exception ex)
+        {
+            actionSuccess = false;
+            actionMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isUploadingAvatar = false;
+            StateHasChanged();
+        }
+    }
+
     // Edit User
     private void OpenEditDialog()
     {
@@ -698,71 +848,10 @@
         selectedSupervisorId = user.SupervisorId?.ToString() ?? "";
         editMessage = null;
         editSuccess = false;
-        editAvatarFileData = null;
-        editAvatarFileName = null;
-        editAvatarContentType = null;
-        editAvatarFileSize = 0;
         showEditDialog = true;
     }
 
     private void CloseEditDialog() => showEditDialog = false;
-
-    private async Task OnEditAvatarSelected(InputFileChangeEventArgs e)
-    {
-        var file = e.File;
-        if (file == null) return;
-
-        if (!file.ContentType.StartsWith("image/"))
-        {
-            editMessage = "Only image files are allowed";
-            return;
-        }
-
-        if (file.Size > 10 * 1024 * 1024)
-        {
-            editMessage = "File size must be less than 10 MB";
-            return;
-        }
-
-        try
-        {
-            using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
-            var buffer = new byte[file.Size];
-            await stream.ReadExactlyAsync(buffer, 0, buffer.Length);
-
-            editAvatarFileData = buffer;
-            editAvatarFileName = file.Name;
-            editAvatarContentType = file.ContentType;
-            editAvatarFileSize = file.Size;
-            StateHasChanged();
-        }
-        catch (Exception ex)
-        {
-            editMessage = $"Error reading file: {ex.Message}";
-        }
-    }
-
-    private void RemoveEditAvatar()
-    {
-        editAvatarFileData = null;
-        editAvatarFileName = null;
-        editAvatarContentType = null;
-        editAvatarFileSize = 0;
-        StateHasChanged();
-    }
-
-    private string FormatFileSize(long bytes)
-    {
-        string[] sizes = { "B", "KB", "MB", "GB" };
-        double len = bytes;
-        int order = 0;
-        while (len >= 1024 && order < sizes.Length - 1)
-        {
-            order++;
-            len /= 1024;
-        }
-        return $"{len:0.##} {sizes[order]}";
-    }
 
     private async Task HandleEditUser()
     {
@@ -772,25 +861,6 @@
 
         try
         {
-            // Upload avatar if selected
-            if (editAvatarFileData != null && !string.IsNullOrEmpty(editAvatarFileName) && !string.IsNullOrEmpty(editAvatarContentType))
-            {
-                var uploadResult = await FileService.UploadProfilePictureAsync(
-                    editAvatarFileData, editAvatarFileName, editAvatarContentType, UserId);
-
-                if (uploadResult.IsSuccess && uploadResult.Value != null)
-                {
-                    editModel.AvatarUrl = uploadResult.Value.ThumbnailUrl ?? uploadResult.Value.DownloadUrl;
-                }
-                else
-                {
-                    editSuccess = false;
-                    editMessage = uploadResult.Error ?? "Failed to upload avatar.";
-                    isSaving = false;
-                    return;
-                }
-            }
-
             var result = await UserService.UpdateUserAsync(UserId, editModel);
             if (!result.IsSuccess)
             {
@@ -993,48 +1063,16 @@
         }
     }
 
-    // Avatar Upload (direct, outside edit dialog)
-    private async Task OnAvatarSelected(InputFileChangeEventArgs e)
+    private string FormatFileSize(long bytes)
     {
-        isUploadingAvatar = true;
-        actionMessage = null;
-        StateHasChanged();
-
-        try
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        double len = bytes;
+        int order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
         {
-            var file = e.File;
-            var result = await FileService.UploadProfilePictureAsync(file, UserId);
-            if (result.IsSuccess)
-            {
-                var avatarUrl = result.Value.ThumbnailUrl ?? result.Value.DownloadUrl;
-                var updateReq = new UpdateUserRequest
-                {
-                    FirstName = user!.FirstName,
-                    LastName = user.LastName,
-                    Email = user.Email,
-                    AvatarUrl = avatarUrl
-                };
-                await UserService.UpdateUserAsync(UserId, updateReq);
-
-                actionSuccess = true;
-                actionMessage = "Avatar uploaded successfully.";
-                await LoadUserAsync();
-            }
-            else
-            {
-                actionSuccess = false;
-                actionMessage = result.Error ?? "Failed to upload avatar.";
-            }
+            order++;
+            len /= 1024;
         }
-        catch (Exception ex)
-        {
-            actionSuccess = false;
-            actionMessage = $"An error occurred: {ex.Message}";
-        }
-        finally
-        {
-            isUploadingAvatar = false;
-            StateHasChanged();
-        }
+        return $"{len:0.##} {sizes[order]}";
     }
 }

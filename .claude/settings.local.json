@@ -26,7 +26,16 @@
       "Bash(powershell -Command \"Stop-Process -Id 45064 -Force\")",
       "Bash(powershell -Command \"Stop-Process -Id 15292 -Force\")",
       "Bash(del \"C:\\Users\\ybaghiyev\\Desktop\\ChatApp\\ChatApp.Blazor.Client\\Features\\Admin\\Pages\\Users.razor\" \"C:\\Users\\ybaghiyev\\Desktop\\ChatApp\\ChatApp.Blazor.Client\\Features\\Admin\\Pages\\Users.razor.cs\" \"C:\\Users\\ybaghiyev\\Desktop\\ChatApp\\ChatApp.Blazor.Client\\Features\\Admin\\Pages\\Departments.razor\" \"C:\\Users\\ybaghiyev\\Desktop\\ChatApp\\ChatApp.Blazor.Client\\Features\\Admin\\Pages\\Departments.razor.cs\" \"C:\\Users\\ybaghiyev\\Desktop\\ChatApp\\ChatApp.Blazor.Client\\Features\\Admin\\Pages\\Positions.razor\" \"C:\\Users\\ybaghiyev\\Desktop\\ChatApp\\ChatApp.Blazor.Client\\Features\\Admin\\Pages\\Positions.razor.cs\")",
-      "Bash(powershell -Command:*)"
+      "Bash(powershell -Command:*)",
+      "Bash(dotnet ef migrations add:*)",
+      "Bash(dotnet run:*)",
+      "Bash(tasklist)",
+      "Bash(dotnet ef database drop:*)",
+      "Bash(dotnet ef database update:*)",
+      "Bash(PGPASSWORD=npg_9JCrdsL5ZRjq psql -h ep-tiny-silence-a97holpz-pooler.gwc.azure.neon.tech -p 5432 -U neondb_owner -d neondb -c \"CREATE DATABASE chatapp;\")",
+      "Bash(cmd /c \"tasklist | findstr ChatApp\")",
+      "Bash(cmd /c \"rmdir /s /q C:\\\\Users\\\\Joseph\\\\Desktop\\\\ChatApp\\\\ChatApp.Api\\\\bin\\\\Debug\\\\net10.0\")",
+      "Bash(cmd /c \"taskkill /IM ChatApp.Api.exe /F 2>nul & taskkill /IM dotnet.exe /F 2>nul\")"
     ],
     "deny": [],
     "ask": []

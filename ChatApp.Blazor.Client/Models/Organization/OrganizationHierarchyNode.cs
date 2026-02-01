@@ -3,7 +3,8 @@ namespace ChatApp.Blazor.Client.Models.Organization;
 public enum NodeType
 {
     Department,
-    User
+    User,
+    Company
 }
 
 public class OrganizationHierarchyNode
@@ -31,6 +32,11 @@ public class OrganizationHierarchyNode
 
     // Tree structure
     public List<OrganizationHierarchyNode> Children { get; set; } = [];
+
+    // Supervisor & Subordinate info
+    public int SubordinateCount { get; set; }
+    public string? SupervisorName { get; set; }
+    public bool IsDepartmentHead { get; set; }
 
     // Search/filter helper
     public bool IsVisible { get; set; } = true;

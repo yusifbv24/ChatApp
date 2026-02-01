@@ -131,7 +131,7 @@ public class UserService : IUserService
     /// </summary>
     public async Task<Result> AssignPermissionAsync(Guid userId, string permissionName)
     {
-        return await _apiClient.PostAsync($"/api/users/{userId}/permissions/{Uri.EscapeDataString(permissionName)}");
+        return await _apiClient.PostAsync($"/api/users/{userId}/permissions", new { PermissionName = permissionName });
     }
 
 

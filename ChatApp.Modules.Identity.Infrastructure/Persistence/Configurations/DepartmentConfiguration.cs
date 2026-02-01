@@ -20,6 +20,10 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence.Configurations
                 .HasColumnName("name")
                 .HasMaxLength(200);
 
+            builder.Property(d => d.CompanyId)
+                .IsRequired()
+                .HasColumnName("company_id");
+
             builder.Property(d => d.ParentDepartmentId)
                 .HasColumnName("parent_department_id");
 
@@ -39,6 +43,9 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence.Configurations
             // Indexes
             builder.HasIndex(d => d.Name)
                 .HasDatabaseName("ix_departments_name");
+
+            builder.HasIndex(d => d.CompanyId)
+                .HasDatabaseName("ix_departments_company_id");
 
             builder.HasIndex(d => d.ParentDepartmentId)
                 .HasDatabaseName("ix_departments_parent_department_id");
