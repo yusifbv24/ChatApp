@@ -378,6 +378,7 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence
             var user11 = new User("System", "Administrator", "admin@chatapp.com",
                 passwordHasher.Hash("Yusif2000+"), Role.Administrator, null)
             { Id = user11Id };
+            user11.SetSuperAdmin(); // System Administrator is the Super Admin
             await context.Users.AddAsync(user11);
             var emp11 = new Employee(user11Id, new DateTime(2000, 6, 23), "++994708074624",
                 "System Administration", DateTime.UtcNow.AddYears(-4));

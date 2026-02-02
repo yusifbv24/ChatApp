@@ -48,6 +48,11 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence.Configurations
                 .HasConversion<int>() // Store enum as integer
                 .HasDefaultValue(Role.User);
 
+            builder.Property(u => u.IsSuperAdmin)
+                .IsRequired()
+                .HasColumnName("is_super_admin")
+                .HasDefaultValue(false);
+
             // Optional fields
             builder.Property(u => u.AvatarUrl)
                 .HasColumnName("avatar_url")

@@ -26,6 +26,7 @@ public record UserDetailDto(
     bool IsHeadOfDepartment,
     List<SubordinateDto> Subordinates,
     List<string> Permissions,
+    bool IsSuperAdmin,
     DateTime CreatedAtUtc,
     DateTime UpdatedAtUtc)
 {

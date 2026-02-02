@@ -19,6 +19,10 @@ namespace ChatApp.Modules.Identity.Domain.Entities
         // Role (User or Administrator)
         public Role Role { get; private set; } = Role.User;
 
+        // Super Admin - only the System Administrator has this flag
+        // Bypasses ALL permission checks, cannot be deleted or deactivated by others
+        public bool IsSuperAdmin { get; private set; }
+
         // Optional fields (NULLABLE)
         public string? AvatarUrl { get; private set; }
         public DateTime? LastVisit { get; private set; }
@@ -153,6 +157,16 @@ namespace ChatApp.Modules.Identity.Domain.Entities
         public void ChangeRole(Role newRole)
         {
             Role = newRole;
+            UpdateTimestamp();
+        }
+
+        /// <summary>
+        /// Promotes user to Super Admin. Should only be called during seeding.
+        /// </summary>
+        public void SetSuperAdmin()
+        {
+            IsSuperAdmin = true;
+            Role = Role.Administrator;
             UpdateTimestamp();
         }
 

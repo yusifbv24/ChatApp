@@ -26,6 +26,7 @@ namespace ChatApp.Modules.Identity.Application.DTOs.Responses
         bool IsHeadOfDepartment,
         List<SubordinateDto> Subordinates,
         List<string> Permissions,
+        bool IsSuperAdmin,
         DateTime CreatedAtUtc,
         DateTime UpdatedAtUtc)
     {

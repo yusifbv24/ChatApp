@@ -75,6 +75,7 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetUser
                 isHeadOfDepartment,
                 new List<SubordinateDto>(), // Current user doesn't need subordinates
                 permissions,
+                user.IsSuperAdmin,
                 user.CreatedAtUtc,
                 user.UpdatedAtUtc);
         }

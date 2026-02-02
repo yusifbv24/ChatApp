@@ -14,6 +14,7 @@
 @inject IDepartmentService DepartmentService
 @inject IFileService FileService
 @inject NavigationManager Navigation
+@inject ChatApp.Blazor.Client.Infrastructure.Auth.CustomAuthStateProvider AuthStateProvider
 
 <PageTitle>User Details - ChatApp</PageTitle>
 
@@ -322,44 +323,48 @@
             </div>
         </div>
 
-        @* Permissions Section - Full Width *@
-        <div class="detail-section" style="margin-top:1.5rem;">
-            <h3 class="detail-section-title">
-                <MudIcon Icon="@Icons.Material.Filled.Security" Size="Size.Small" />
-                Permissions
-                <span class="detail-permission-counter">@user.Permissions.Count / @allPermissions.Count</span>
-            </h3>
-            <div class="perm-modules-grid">
-                @foreach (var module in GetGroupedPermissions())
-                {
-                    <div class="perm-module-card">
-                        <div class="perm-module-header">
-                            <MudIcon Icon="@GetModuleIcon(module.Key)" Size="Size.Small" />
-                            <span class="perm-module-name">@module.Key</span>
-                            <span class="perm-module-count">@module.Value.Count(p => user.Permissions.Contains(p)) / @module.Value.Count</span>
-                        </div>
-                        <div class="perm-items">
-                            @foreach (var permission in module.Value)
-                            {
-                                var isGranted = user.Permissions.Contains(permission);
-                                var permKey = permission;
-                                var isToggling = togglingPermissions.Contains(permKey);
-                                <div class="perm-item @(isGranted ? "granted" : "")">
-                                    <div class="perm-item-info">
-                                        <span class="perm-item-name">@permission.Split('.')[1]</span>
+        @* Permissions Section - Only visible if current user has Permissions.Read *@
+        @if (canReadPermissions)
+        {
+            <div class="detail-section" style="margin-top:1.5rem;">
+                <h3 class="detail-section-title">
+                    <MudIcon Icon="@Icons.Material.Filled.Security" Size="Size.Small" />
+                    Permissions
+                    <span class="detail-permission-counter">@user.Permissions.Count / @allPermissions.Count</span>
+                </h3>
+                <div class="perm-modules-grid">
+                    @foreach (var module in GetGroupedPermissions())
+                    {
+                        <div class="perm-module-card">
+                            <div class="perm-module-header">
+                                <MudIcon Icon="@GetModuleIcon(module.Key)" Size="Size.Small" />
+                                <span class="perm-module-name">@module.Key</span>
+                                <span class="perm-module-count">@module.Value.Count(p => user.Permissions.Contains(p)) / @module.Value.Count</span>
+                            </div>
+                            <div class="perm-items">
+                                @foreach (var permission in module.Value)
+                                {
+                                    var isGranted = user.Permissions.Contains(permission);
+                                    var permKey = permission;
+                                    var isToggling = togglingPermissions.Contains(permKey);
+                                    var canToggle = isGranted ? canRevokePermissions : canAssignPermissions;
+                                    <div class="perm-item @(isGranted ? "granted" : "")">
+                                        <div class="perm-item-info">
+                                            <span class="perm-item-name">@permission.Split('.')[1]</span>
+                                        </div>
+                                        <label class="perm-toggle">
+                                            <input type="checkbox" checked="@isGranted" disabled="@(isToggling || !canToggle)"
+                                                   @onchange="() => TogglePermission(permKey, isGranted)" />
+                                            <span class="perm-toggle-slider"></span>
+                                        </label>
                                     </div>
-                                    <label class="perm-toggle">
-                                        <input type="checkbox" checked="@isGranted" disabled="@isToggling"
-                                               @onchange="() => TogglePermission(permKey, isGranted)" />
-                                        <span class="perm-toggle-slider"></span>
-                                    </label>
-                                </div>
-                            }
+                                }
+                            </div>
                         </div>
-                    </div>
-                }
+                    }
+                </div>
             </div>
-        </div>
+        }
     }
 </div>
 
@@ -578,6 +583,9 @@
 
     // Permissions
     private HashSet<string> togglingPermissions = new();
+    private bool canReadPermissions;
+    private bool canAssignPermissions;
+    private bool canRevokePermissions;
 
     // Edit dialog
     private bool showEditDialog;
@@ -612,6 +620,12 @@
         if (previousUserId != UserId)
         {
             previousUserId = UserId;
+
+            // Check current user's permissions for viewing/modifying permissions
+            canReadPermissions = await AuthStateProvider.HasPermissionAsync(Permissions.PermissionsRead);
+            canAssignPermissions = await AuthStateProvider.HasPermissionAsync(Permissions.PermissionsAssign);
+            canRevokePermissions = await AuthStateProvider.HasPermissionAsync(Permissions.PermissionsRevoke);
+
             await LoadUserAsync();
         }
     }

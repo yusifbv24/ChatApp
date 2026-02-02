@@ -31,7 +31,8 @@ namespace ChatApp.Modules.Identity.Infrastructure.Services
                 new(JwtRegisteredClaimNames.Name, user.FullName),
                 new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                 new("role", user.Role.ToString()),
-                new("isAdmin", user.IsAdmin.ToString())
+                new("isAdmin", user.IsAdmin.ToString()),
+                new("isSuperAdmin", user.IsSuperAdmin.ToString())
             };
 
             if (permissions is not null)

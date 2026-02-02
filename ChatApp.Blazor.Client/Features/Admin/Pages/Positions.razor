@@ -46,60 +46,94 @@
     }
     else
     {
+        @* Stats Bar *@
+        <div class="pos-stats-bar">
+            <div class="pos-stat-item">
+                <span class="pos-stat-value">@allPositions.Count</span>
+                <span class="pos-stat-label">Total Positions</span>
+            </div>
+            <div class="pos-stat-item">
+                <span class="pos-stat-value">@filteredGroups.Count</span>
+                <span class="pos-stat-label">Departments</span>
+            </div>
+        </div>
+
         @* Search *@
-        <div class="positions-search-bar">
-            <MudIcon Icon="@Icons.Material.Filled.Search" Size="Size.Small" Class="positions-search-icon" />
-            <input type="text" @bind="searchTerm" @bind:event="oninput" placeholder="Search positions..." class="admin-input positions-search-input" />
+        <div class="pos-toolbar">
+            <div class="pos-search">
+                <MudIcon Icon="@Icons.Material.Filled.Search" Size="Size.Small" Class="pos-search-icon" />
+                <input type="text" @bind="searchTerm" @bind:event="oninput" placeholder="Search by name, description or department..." class="pos-search-input" />
+                @if (!string.IsNullOrEmpty(searchTerm))
+                {
+                    <button class="pos-search-clear" @onclick="() => { searchTerm = string.Empty; }">
+                        <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" />
+                    </button>
+                }
+            </div>
         </div>
 
         <div class="admin-page-content">
             @if (!filteredGroups.Any())
             {
-                <div class="positions-empty">
-                    <MudIcon Icon="@Icons.Material.Filled.WorkOff" Style="font-size:3rem; color:#9ca3af;" />
-                    <p>No positions found</p>
+                <div class="pos-empty-state">
+                    <div class="pos-empty-icon">
+                        <MudIcon Icon="@Icons.Material.Filled.WorkOff" />
+                    </div>
+                    <h3>No positions found</h3>
+                    <p>@(string.IsNullOrEmpty(searchTerm) ? "Create your first position to get started." : "Try adjusting your search terms.")</p>
+                    @if (string.IsNullOrEmpty(searchTerm))
+                    {
+                        <button class="admin-btn admin-btn-primary" @onclick="OpenCreateDialog">
+                            <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" />
+                            <span>Create Position</span>
+                        </button>
+                    }
                 </div>
             }
             else
             {
-                @foreach (var group in filteredGroups)
-                {
-                    <div class="positions-dept-group">
-                        <div class="positions-dept-header">
-                            <MudIcon Icon="@Icons.Material.Filled.BusinessCenter" Size="Size.Small" />
-                            <span>@group.DepartmentName</span>
-                            <span class="positions-dept-count">@group.Positions.Count</span>
-                        </div>
-                        <table class="positions-table">
-                            <thead>
-                                <tr>
-                                    <th>Name</th>
-                                    <th>Description</th>
-                                    <th>Created</th>
-                                    <th class="positions-actions-col">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
+                <div class="pos-groups">
+                    @foreach (var group in filteredGroups)
+                    {
+                        <div class="pos-group-card">
+                            <div class="pos-group-header">
+                                <div class="pos-group-header-left">
+                                    <div class="pos-group-icon">
+                                        <MudIcon Icon="@Icons.Material.Filled.BusinessCenter" Size="Size.Small" />
+                                    </div>
+                                    <span class="pos-group-name">@group.DepartmentName</span>
+                                </div>
+                                <span class="pos-group-badge">@group.Positions.Count @(group.Positions.Count == 1 ? "position" : "positions")</span>
+                            </div>
+                            <div class="pos-group-body">
                                 @foreach (var pos in group.Positions)
                                 {
-                                    <tr>
-                                        <td class="positions-name-cell">@pos.Name</td>
-                                        <td class="positions-desc-cell">@(pos.Description ?? "—")</td>
-                                        <td class="positions-date-cell">@pos.CreatedAtUtc.ToString("dd MMM yyyy")</td>
-                                        <td class="positions-actions-cell">
-                                            <button class="admin-btn admin-btn-ghost" title="Edit" @onclick="() => OpenEditDialog(pos)">
+                                    <div class="pos-item">
+                                        <div class="pos-item-info">
+                                            <div class="pos-item-name">@pos.Name</div>
+                                            @if (!string.IsNullOrEmpty(pos.Description))
+                                            {
+                                                <div class="pos-item-desc">@pos.Description</div>
+                                            }
+                                            <div class="pos-item-meta">
+                                                <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Small" />
+                                                <span>@pos.CreatedAtUtc.ToString("dd MMM yyyy")</span>
+                                            </div>
+                                        </div>
+                                        <div class="pos-item-actions">
+                                            <button class="pos-action-btn" title="Edit" @onclick="() => OpenEditDialog(pos)">
                                                 <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" />
                                             </button>
-                                            <button class="admin-btn admin-btn-ghost-danger" title="Delete" @onclick="() => OpenDeleteDialog(pos)">
+                                            <button class="pos-action-btn pos-action-btn-danger" title="Delete" @onclick="() => OpenDeleteDialog(pos)">
                                                 <MudIcon Icon="@Icons.Material.Filled.Delete" Size="Size.Small" />
                                             </button>
-                                        </td>
-                                    </tr>
+                                        </div>
+                                    </div>
                                 }
-                            </tbody>
-                        </table>
-                    </div>
-                }
+                            </div>
+                        </div>
+                    }
+                </div>
             }
         </div>
     }
@@ -111,21 +145,21 @@
     <div class="admin-dialog-overlay" @onclick="CloseCreateDialog">
         <div class="admin-dialog" @onclick:stopPropagation>
             <div class="admin-dialog-header">
-                <h3>Create Position</h3>
+                <h2>Create New Position</h2>
                 <button class="admin-dialog-close" @onclick="CloseCreateDialog">
                     <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" />
                 </button>
             </div>
             <EditForm Model="createModel" OnValidSubmit="HandleCreate">
                 <DataAnnotationsValidator />
-                <div class="admin-dialog-body">
+                <div class="admin-dialog-content">
                     <div class="admin-form-group">
-                        <label>Name *</label>
+                        <label class="admin-label">Position Name <span class="admin-required">*</span></label>
                         <InputText @bind-Value="createModel.Name" class="admin-input" placeholder="e.g. Senior Developer" />
                         <ValidationMessage For="@(() => createModel.Name)" />
                     </div>
                     <div class="admin-form-group">
-                        <label>Department</label>
+                        <label class="admin-label">Department</label>
                         <InputSelect @bind-Value="createDepartmentId" class="admin-input">
                             <option value="">No Department</option>
                             @foreach (var dept in departments)
@@ -135,8 +169,8 @@
                         </InputSelect>
                     </div>
                     <div class="admin-form-group">
-                        <label>Description</label>
-                        <textarea @bind="createModel.Description" class="admin-input admin-textarea" rows="3" placeholder="Position description" maxlength="500"></textarea>
+                        <label class="admin-label">Description</label>
+                        <InputTextArea @bind-Value="createModel.Description" class="admin-input admin-textarea" rows="3" placeholder="Brief description of the position responsibilities..." />
                         <ValidationMessage For="@(() => createModel.Description)" />
                     </div>
 
@@ -147,13 +181,14 @@
                             <span>@dialogMessage</span>
                         </div>
                     }
-                </div>
-                <div class="admin-dialog-actions">
-                    <button type="button" class="admin-btn admin-btn-secondary" @onclick="CloseCreateDialog" disabled="@isSaving">Cancel</button>
-                    <button type="submit" class="admin-btn admin-btn-primary" disabled="@isSaving">
-                        @if (isSaving) { <span class="admin-loading-spinner small"></span> }
-                        Create
-                    </button>
+
+                    <div class="admin-dialog-actions">
+                        <button type="button" class="admin-btn admin-btn-secondary" @onclick="CloseCreateDialog" disabled="@isSaving">Cancel</button>
+                        <button type="submit" class="admin-btn admin-btn-primary" disabled="@isSaving">
+                            @if (isSaving) { <span class="admin-loading-spinner small"></span> }
+                            Create Position
+                        </button>
+                    </div>
                 </div>
             </EditForm>
         </div>
@@ -166,21 +201,21 @@
     <div class="admin-dialog-overlay" @onclick="CloseEditDialog">
         <div class="admin-dialog" @onclick:stopPropagation>
             <div class="admin-dialog-header">
-                <h3>Edit Position</h3>
+                <h2>Edit Position</h2>
                 <button class="admin-dialog-close" @onclick="CloseEditDialog">
                     <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" />
                 </button>
             </div>
             <EditForm Model="editModel" OnValidSubmit="HandleEdit">
                 <DataAnnotationsValidator />
-                <div class="admin-dialog-body">
+                <div class="admin-dialog-content">
                     <div class="admin-form-group">
-                        <label>Name</label>
+                        <label class="admin-label">Position Name <span class="admin-required">*</span></label>
                         <InputText @bind-Value="editModel.Name" class="admin-input" />
                         <ValidationMessage For="@(() => editModel.Name)" />
                     </div>
                     <div class="admin-form-group">
-                        <label>Department</label>
+                        <label class="admin-label">Department</label>
                         <InputSelect @bind-Value="editDepartmentId" class="admin-input">
                             <option value="">No Department</option>
                             @foreach (var dept in departments)
@@ -190,8 +225,8 @@
                         </InputSelect>
                     </div>
                     <div class="admin-form-group">
-                        <label>Description</label>
-                        <textarea @bind="editModel.Description" class="admin-input admin-textarea" rows="3" maxlength="500"></textarea>
+                        <label class="admin-label">Description</label>
+                        <InputTextArea @bind-Value="editModel.Description" class="admin-input admin-textarea" rows="3" />
                         <ValidationMessage For="@(() => editModel.Description)" />
                     </div>
 
@@ -202,13 +237,14 @@
                             <span>@dialogMessage</span>
                         </div>
                     }
-                </div>
-                <div class="admin-dialog-actions">
-                    <button type="button" class="admin-btn admin-btn-secondary" @onclick="CloseEditDialog" disabled="@isSaving">Cancel</button>
-                    <button type="submit" class="admin-btn admin-btn-primary" disabled="@isSaving">
-                        @if (isSaving) { <span class="admin-loading-spinner small"></span> }
-                        Save
-                    </button>
+
+                    <div class="admin-dialog-actions">
+                        <button type="button" class="admin-btn admin-btn-secondary" @onclick="CloseEditDialog" disabled="@isSaving">Cancel</button>
+                        <button type="submit" class="admin-btn admin-btn-primary" disabled="@isSaving">
+                            @if (isSaving) { <span class="admin-loading-spinner small"></span> }
+                            Save Changes
+                        </button>
+                    </div>
                 </div>
             </EditForm>
         </div>
@@ -219,16 +255,21 @@
 @if (showDeleteDialog)
 {
     <div class="admin-dialog-overlay" @onclick="CloseDeleteDialog">
-        <div class="admin-dialog admin-dialog-sm" @onclick:stopPropagation>
+        <div class="admin-dialog admin-dialog-small" @onclick:stopPropagation>
             <div class="admin-dialog-header">
-                <h3>Delete Position</h3>
+                <h2>Delete Position</h2>
                 <button class="admin-dialog-close" @onclick="CloseDeleteDialog">
                     <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" />
                 </button>
             </div>
-            <div class="admin-dialog-body">
-                <p>Are you sure you want to delete <strong>@deleteTarget?.Name</strong>?</p>
-                <p class="admin-text-muted">This action cannot be undone.</p>
+            <div class="admin-dialog-content">
+                <div class="pos-delete-warning">
+                    <div class="pos-delete-icon">
+                        <MudIcon Icon="@Icons.Material.Filled.Warning" />
+                    </div>
+                    <p>Are you sure you want to delete <strong>@deleteTarget?.Name</strong>?</p>
+                    <p class="admin-text-muted">This action cannot be undone.</p>
+                </div>
 
                 @if (!string.IsNullOrEmpty(dialogMessage))
                 {
@@ -237,13 +278,14 @@
                         <span>@dialogMessage</span>
                     </div>
                 }
-            </div>
-            <div class="admin-dialog-actions">
-                <button class="admin-btn admin-btn-secondary" @onclick="CloseDeleteDialog" disabled="@isSaving">Cancel</button>
-                <button class="admin-btn admin-btn-danger" @onclick="HandleDelete" disabled="@isSaving">
-                    @if (isSaving) { <span class="admin-loading-spinner small"></span> }
-                    Delete
-                </button>
+
+                <div class="admin-dialog-actions">
+                    <button class="admin-btn admin-btn-secondary" @onclick="CloseDeleteDialog" disabled="@isSaving">Cancel</button>
+                    <button class="admin-btn admin-btn-danger" @onclick="HandleDelete" disabled="@isSaving">
+                        @if (isSaving) { <span class="admin-loading-spinner small"></span> }
+                        Delete
+                    </button>
+                </div>
             </div>
         </div>
     </div>

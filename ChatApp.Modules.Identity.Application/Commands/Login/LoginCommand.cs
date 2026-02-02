@@ -1,6 +1,7 @@
 using ChatApp.Modules.Identity.Application.DTOs.Responses;
 using ChatApp.Modules.Identity.Application.Interfaces;
 using ChatApp.Modules.Identity.Domain.Constants;
+using ChatApp.Modules.Identity.Domain.Entities;
 using ChatApp.Modules.Identity.Domain.Enums;
 using ChatApp.Modules.Identity.Domain.Services;
 using ChatApp.Shared.Kernel.Common;
@@ -47,13 +48,13 @@ namespace ChatApp.Modules.Identity.Application.Commands.Login
         {
             try
             {
-                logger.LogInformation("Login attempt for email: {Email}", command.Email);
+                logger?.LogInformation("Login attempt for email: {Email}", command.Email);
 
                 var user = await FindUserWithPermissionsAsync(command.Email, cancellationToken);
 
                 if (user is null)
                 {
-                    logger.LogWarning("Login failed: User with email {Email} not found", command.Email);
+                    logger?.LogWarning("Login failed: User with email {Email} not found", command.Email);
                     return Result.Failure<LoginResponse>("Invalid email or password");
                 }
 
@@ -65,7 +66,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.Login
 
                 var (accessToken, refreshToken) = await GenerateAndSaveTokensAsync(user, permissions, cancellationToken);
 
-                logger.LogInformation("Login successful for user {Email}", command.Email);
+                logger?.LogInformation("Login successful for user {Email}", command.Email);
 
                 var accessTokenExpiration = GetAccessTokenExpirationMinutes();
                 return Result.Success(new LoginResponse(
@@ -81,7 +82,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.Login
             }
         }
 
-        private async Task<Domain.Entities.User?> FindUserWithPermissionsAsync(
+        private async Task<User?> FindUserWithPermissionsAsync(
             string email,
             CancellationToken cancellationToken)
         {
@@ -90,7 +91,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.Login
                 .FirstOrDefaultAsync(u => u.Email == email, cancellationToken);
         }
 
-        private Result ValidateUser(Domain.Entities.User user, string password)
+        private Result ValidateUser(User user, string password)
         {
             if (!user.IsActive)
             {
@@ -108,7 +109,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.Login
         }
 
         private Task<List<string>> GetUserPermissionsAsync(
-            Domain.Entities.User user,
+            User user,
             CancellationToken cancellationToken)
         {
             // Administrators have ALL permissions
@@ -124,7 +125,7 @@ namespace ChatApp.Modules.Identity.Application.Commands.Login
         }
 
         private async Task<(string AccessToken, string RefreshToken)> GenerateAndSaveTokensAsync(
-            Domain.Entities.User user,
+            User user,
             List<string> permissions,
             CancellationToken cancellationToken)
         {

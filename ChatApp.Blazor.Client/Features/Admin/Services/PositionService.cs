@@ -36,9 +36,9 @@ public class PositionService : IPositionService
     /// <summary>
     /// Creates a new position - POST /api/identity/positions
     /// </summary>
-    public async Task<Result<Guid>> CreatePositionAsync(CreatePositionRequest request)
+    public async Task<Result> CreatePositionAsync(CreatePositionRequest request)
     {
-        return await _apiClient.PostAsync<Guid>("/api/identity/positions", request);
+        return await _apiClient.PostAsync("/api/identity/positions", request);
     }
 
     /// <summary>

@@ -191,8 +191,8 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
             return false;
         }
 
-        // Check if user is admin (admins have all permissions)
-        if (user.IsAdmin)
+        // Only Super Admin bypasses all permission checks
+        if (user.IsSuperAdmin)
         {
             return true;
         }
