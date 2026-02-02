@@ -26,21 +26,24 @@ namespace ChatApp.Modules.DirectMessages.Api.Controllers
 
 
         /// <summary>
-        /// Gets all conversations for the current user
+        /// Gets paginated conversations for the current user
         /// </summary>
         [HttpGet]
         [RequirePermission("Messages.Read")]
-        [ProducesResponseType(typeof(List<DirectConversationDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ChatApp.Shared.Kernel.Common.PagedResult<DirectConversationDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        public async Task<IActionResult> GetConversations(CancellationToken cancellationToken)
+        public async Task<IActionResult> GetConversationsPaged(
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 20,
+            CancellationToken cancellationToken = default)
         {
             var userId = GetCurrentUserId();
             if (userId == Guid.Empty)
                 return Unauthorized();
 
             var result = await _mediator.Send(
-                new GetConversationsQuery(userId),
+                new GetConversationsPagedQuery(userId, pageNumber, pageSize),
                 cancellationToken);
 
             if (result.IsFailure)
@@ -48,8 +51,6 @@ namespace ChatApp.Modules.DirectMessages.Api.Controllers
 
             return Ok(result.Value);
         }
-
-
 
         /// <summary>
         /// Starts a new conversation with another user
@@ -76,7 +77,7 @@ namespace ChatApp.Modules.DirectMessages.Api.Controllers
                 return BadRequest(new { error = result.Error });
 
             return CreatedAtAction(
-                nameof(GetConversations),
+                nameof(GetConversationsPaged),
                 new { conversationId = result.Value },
                 new { conversationId = result.Value, message = "Conversation started succesfully" });
         }

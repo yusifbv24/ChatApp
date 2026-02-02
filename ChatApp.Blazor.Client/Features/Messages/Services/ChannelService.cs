@@ -6,12 +6,6 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
 {
     public class ChannelService(IApiClient apiClient) : IChannelService
     {
-        public async Task<Result<List<ChannelDto>>> GetMyChannelsAsync()
-        {
-            return await apiClient.GetAsync<List<ChannelDto>>("/api/channels/my-channels");
-        }
-
-
         public async Task<Result<ChannelDetailsDto>> GetChannelAsync(Guid channelId)
         {
             return await apiClient.GetAsync<ChannelDetailsDto>($"/api/channels/{channelId}");

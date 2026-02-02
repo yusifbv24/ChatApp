@@ -1,6 +1,6 @@
 ﻿using ChatApp.Modules.Channels.Application.DTOs.Responses;
 using ChatApp.Modules.Channels.Domain.Entities;
-using ChatApp.Modules.Channels.Domain.Enums;
+using ChatApp.Shared.Kernel.Common;
 using System.Linq.Expressions;
 
 namespace ChatApp.Modules.Channels.Application.Interfaces
@@ -12,7 +12,7 @@ namespace ChatApp.Modules.Channels.Application.Interfaces
         Task<ChannelDetailsDto?> GetChannelDetailsByIdAsync(Guid id, CancellationToken cancellationToken = default);
         Task<Channel?> GetByNameAsync(string name, CancellationToken cancellationToken = default);
         Task<List<Channel>> GetUserChannelsAsync(Guid userId, CancellationToken cancellationToken = default);
-        Task<List<ChannelDto>> GetUserChannelDtosAsync(Guid userId, CancellationToken cancellationToken = default);
+        Task<PagedResult<ChannelDto>> GetUserChannelDtosPagedAsync(Guid userId, int pageNumber, int pageSize, CancellationToken cancellationToken = default);
         Task<List<Channel>> GetPublicChannelsAsync(CancellationToken cancellationToken = default);
         Task<bool> IsUserMemberAsync(Guid channelId, Guid userId, CancellationToken cancellationToken = default);
         Task<List<Guid>> GetMemberUserIdsAsync(Guid channelId, CancellationToken cancellationToken = default);

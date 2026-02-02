@@ -54,6 +54,31 @@ public partial class Messages : IAsyncDisposable
     private List<ChannelDto> channelConversations = [];
 
     /// <summary>
+    /// Department əməkdaşları siyahısı (conversation olmayanlar).
+    /// </summary>
+    private List<DepartmentUserDto> departmentUsers = [];
+
+    /// <summary>
+    /// Unified conversation list-də daha çox item var?
+    /// </summary>
+    private bool hasMoreConversationItems = true;
+
+    /// <summary>
+    /// Daha çox item yüklənir?
+    /// </summary>
+    private bool isLoadingMoreItems = false;
+
+    /// <summary>
+    /// Unified conversation list səhifə nömrəsi.
+    /// </summary>
+    private int unifiedPageNumber = 1;
+
+    /// <summary>
+    /// Conversation/channel page size.
+    /// </summary>
+    private const int ConversationListPageSize = 20;
+
+    /// <summary>
     /// Aktiv conversation-un mesajları.
     /// </summary>
     private List<DirectMessageDto> directMessages = [];

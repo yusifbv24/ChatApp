@@ -4,6 +4,7 @@ using ChatApp.Blazor.Client.State;
 using ChatApp.Blazor.Client.Features.Messages.Services;
 using MudBlazor;
 using System.Globalization;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 
 namespace ChatApp.Blazor.Client.Features.Messages.Components;
@@ -46,6 +47,21 @@ public partial class ConversationList : IAsyncDisposable
     /// Yükləmə statusu.
     /// </summary>
     [Parameter] public bool IsLoading { get; set; }
+
+    /// <summary>
+    /// Department əməkdaşları siyahısı (conversation olmayan istifadəçilər).
+    /// </summary>
+    [Parameter] public List<DepartmentUserDto> DepartmentUsers { get; set; } = [];
+
+    /// <summary>
+    /// Daha çox item var? (infinite scroll üçün)
+    /// </summary>
+    [Parameter] public bool HasMoreItems { get; set; }
+
+    /// <summary>
+    /// Növbəti səhifə yüklənir?
+    /// </summary>
+    [Parameter] public bool IsLoadingMore { get; set; }
 
     #endregion
 
@@ -125,6 +141,16 @@ public partial class ConversationList : IAsyncDisposable
     /// </summary>
     [Parameter] public EventCallback<Guid> OnChannelLeave { get; set; }
 
+    /// <summary>
+    /// Department istifadəçisi seçildiyi zaman callback (conversation yaratmaq üçün).
+    /// </summary>
+    [Parameter] public EventCallback<DepartmentUserDto> OnDepartmentUserSelected { get; set; }
+
+    /// <summary>
+    /// Daha çox item yüklə callback (infinite scroll).
+    /// </summary>
+    [Parameter] public EventCallback OnLoadMore { get; set; }
+
     #endregion
 
     #region Private Fields - UI State
@@ -200,6 +226,11 @@ public partial class ConversationList : IAsyncDisposable
     /// </summary>
     private Guid? _previousSelectedChannelId;
 
+    /// <summary>
+    /// Əvvəlki DepartmentUsers reference-i.
+    /// </summary>
+    private List<DepartmentUserDto>? _previousDepartmentUsers;
+
     #endregion
 
     #region Unified List Model
@@ -257,6 +288,10 @@ public partial class ConversationList : IAsyncDisposable
         public DirectConversationDto? DirectConversation { get; set; }
 
         public ChannelDto? Channel { get; set; }
+
+        public DepartmentUserDto? DepartmentUser { get; set; }
+
+        public bool IsDepartmentUser { get; set; }
     }
 
     #endregion
@@ -271,12 +306,14 @@ public partial class ConversationList : IAsyncDisposable
         // Data reference dəyişibsə cache-i invalidate et
         if (!ReferenceEquals(Conversations, _previousConversations) ||
             !ReferenceEquals(Channels, _previousChannels) ||
+            !ReferenceEquals(DepartmentUsers, _previousDepartmentUsers) ||
             SelectedConversationId != _previousSelectedConversationId ||
             SelectedChannelId != _previousSelectedChannelId)
         {
             InvalidateCache();
             _previousConversations = Conversations;
             _previousChannels = Channels;
+            _previousDepartmentUsers = DepartmentUsers;
             _previousSelectedConversationId = SelectedConversationId;
             _previousSelectedChannelId = SelectedChannelId;
         }
@@ -300,7 +337,10 @@ public partial class ConversationList : IAsyncDisposable
     /// </summary>
     private void RebuildCache()
     {
-        var items = new List<UnifiedChatItem>(Conversations.Count + Channels.Count);
+        var items = new List<UnifiedChatItem>(Conversations.Count + Channels.Count + DepartmentUsers.Count);
+
+        // Conversation-lardakı istifadəçi ID-lərini topla (department users ilə overlap olmasın)
+        var conversationUserIds = new HashSet<Guid>(Conversations.Select(c => c.OtherUserId));
 
         // Direct conversation-ları əlavə et
         foreach (var conv in Conversations)
@@ -314,6 +354,15 @@ public partial class ConversationList : IAsyncDisposable
             items.Add(CreateChannelItem(channel));
         }
 
+        // Department istifadəçilərini əlavə et (yalnız conversation olmayanlari)
+        foreach (var user in DepartmentUsers)
+        {
+            if (!conversationUserIds.Contains(user.UserId))
+            {
+                items.Add(CreateDepartmentUserItem(user));
+            }
+        }
+
         // Axtarış filtri
         if (!string.IsNullOrEmpty(_searchTerm))
         {
@@ -322,14 +371,20 @@ public partial class ConversationList : IAsyncDisposable
             ).ToList();
         }
 
-        // Sıralama: Əvvəlcə pinned conversations, sonra son aktivliyə görə
+        // Sıralama: Pinned → aktiv conversations/channels → department users
         items.Sort((a, b) =>
         {
+            // Department users həmişə sonuncudur
+            if (a.IsDepartmentUser && !b.IsDepartmentUser) return 1;
+            if (!a.IsDepartmentUser && b.IsDepartmentUser) return -1;
+            if (a.IsDepartmentUser && b.IsDepartmentUser)
+                return string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase);
+
             // Pinned conversations ən yuxarıda
             if (a.IsPinned && !b.IsPinned) return -1;
             if (!a.IsPinned && b.IsPinned) return 1;
 
-            // Həm pinned və ya heç biri pinned deyilsə, son aktivliyə görə
+            // Son aktivliyə görə
             return (b.LastActivityTime ?? DateTime.MinValue).CompareTo(a.LastActivityTime ?? DateTime.MinValue);
         });
 
@@ -433,6 +488,23 @@ public partial class ConversationList : IAsyncDisposable
         };
     }
 
+    /// <summary>
+    /// DepartmentUserDto-dan UnifiedChatItem yaradır.
+    /// </summary>
+    private UnifiedChatItem CreateDepartmentUserItem(DepartmentUserDto user)
+    {
+        return new UnifiedChatItem
+        {
+            Id = user.UserId,
+            OtherUserId = user.UserId,
+            Name = user.FullName,
+            AvatarUrl = user.AvatarUrl,
+            LastMessage = user.PositionName, // Vəzifə adı göstərilir
+            IsDepartmentUser = true,
+            DepartmentUser = user
+        };
+    }
+
     #endregion
 
     #region Menu Methods
@@ -489,6 +561,17 @@ public partial class ConversationList : IAsyncDisposable
         if (item.Channel != null)
         {
             await OnChannelSelected.InvokeAsync(item.Channel);
+        }
+    }
+
+    /// <summary>
+    /// Department istifadəçisi seçir - conversation yaradılır.
+    /// </summary>
+    private async Task SelectDepartmentUserItem(UnifiedChatItem item)
+    {
+        if (item.DepartmentUser != null)
+        {
+            await OnDepartmentUserSelected.InvokeAsync(item.DepartmentUser);
         }
     }
 
@@ -591,15 +674,34 @@ public partial class ConversationList : IAsyncDisposable
     }
 
     /// <summary>
-    /// Scroll event handler - scroll edərkən menu bağlanır.
+    /// Scroll event handler - infinite scroll + menu bağlama.
     /// </summary>
-    private void HandleScroll()
+    private async Task HandleScroll(EventArgs e)
     {
         if (showMoreMenu)
         {
             CloseMoreMenu();
         }
+
+        // Infinite scroll: aşağıya çatanda daha çox yüklə
+        if (HasMoreItems && !IsLoadingMore)
+        {
+            try
+            {
+                var scrollInfo = await JSRuntime.InvokeAsync<ScrollInfo>("chatAppUtils.getScrollInfo", ".conversation-items");
+                if (scrollInfo != null && scrollInfo.ScrollTop + scrollInfo.ClientHeight >= scrollInfo.ScrollHeight - 100)
+                {
+                    await OnLoadMore.InvokeAsync();
+                }
+            }
+            catch
+            {
+                // Ignore JS interop errors
+            }
+        }
     }
+
+    private record ScrollInfo(double ScrollTop, double ClientHeight, double ScrollHeight);
 
     #endregion
 

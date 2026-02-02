@@ -21,7 +21,12 @@
                           OnConversationClosed="CloseConversation"
                           OnChannelClosed="CloseConversation"
                           OnFindChatsWithUser="HandleFindChatsWithUser"
-                          OnChannelLeave="HandleChannelLeave"/>
+                          OnChannelLeave="HandleChannelLeave"
+                          DepartmentUsers="departmentUsers"
+                          HasMoreItems="@hasMoreConversationItems"
+                          IsLoadingMore="@isLoadingMoreItems"
+                          OnDepartmentUserSelected="StartConversationWithDepartmentUser"
+                          OnLoadMore="LoadMoreConversationItems"/>
     </div>
 
     <!-- Main Panel: Chat Area -->

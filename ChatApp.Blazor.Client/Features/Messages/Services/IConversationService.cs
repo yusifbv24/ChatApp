@@ -5,8 +5,7 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
 {
     public interface IConversationService
     {
-        Task<Result<List<DirectConversationDto>>> GetConversationsAsync();
-
+        Task<Result<UnifiedConversationListResponse>> GetUnifiedListAsync(int pageNumber = 1, int pageSize = 20);
 
         Task<Result<Guid>> StartConversationAsync(Guid otherUserId);
 

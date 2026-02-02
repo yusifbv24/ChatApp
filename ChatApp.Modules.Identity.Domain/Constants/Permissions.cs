@@ -68,8 +68,8 @@ namespace ChatApp.Modules.Identity.Domain.Constants
             return role switch
             {
                 Role.Administrator => GetAll(),
-                Role.User => new[]
-                {
+                Role.User =>
+                [
                     // Basic user permissions
                     UsersRead,
                     // Messaging permissions
@@ -83,7 +83,7 @@ namespace ChatApp.Modules.Identity.Domain.Constants
                     FilesDownload,
                     // Channel permissions
                     ChannelsRead
-                },
+                ],
                 _ => []
             };
         }

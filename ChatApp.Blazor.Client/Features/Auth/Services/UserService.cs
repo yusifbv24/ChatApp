@@ -1,6 +1,7 @@
 using ChatApp.Blazor.Client.Infrastructure.Http;
 using ChatApp.Blazor.Client.Models.Auth;
 using ChatApp.Blazor.Client.Models.Common;
+using ChatApp.Blazor.Client.Models.Messages;
 
 namespace ChatApp.Blazor.Client.Features.Auth.Services;
 
@@ -196,5 +197,14 @@ public class UserService : IUserService
             return Result<List<UserSearchResultDto>>.Success(new List<UserSearchResultDto>());
         }
         return await _apiClient.GetAsync<List<UserSearchResultDto>>($"/api/users/search?q={Uri.EscapeDataString(searchTerm)}");
+    }
+
+    public async Task<Result<PagedResult<DepartmentUserDto>>> GetDepartmentUsersAsync(int pageNumber = 1, int pageSize = 20, string? search = null)
+    {
+        var url = $"/api/users/department-users?pageNumber={pageNumber}&pageSize={pageSize}";
+        if (!string.IsNullOrWhiteSpace(search))
+            url += $"&search={Uri.EscapeDataString(search)}";
+
+        return await _apiClient.GetAsync<PagedResult<DepartmentUserDto>>(url);
     }
 }

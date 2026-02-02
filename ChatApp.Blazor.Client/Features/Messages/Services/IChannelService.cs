@@ -5,9 +5,6 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
 {
     public interface IChannelService
     {
-        Task<Result<List<ChannelDto>>> GetMyChannelsAsync();
-
-
         Task<Result<List<ChannelDto>>> GetPublicChannelsAsync();
 
 

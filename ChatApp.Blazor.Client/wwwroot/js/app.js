@@ -399,6 +399,16 @@ window.chatAppUtils = {
         return {
             dispose: () => window.removeEventListener('mentionClicked', handler)
         };
+    },
+
+    getScrollInfo: (selector) => {
+        const el = document.querySelector(selector);
+        if (!el) return null;
+        return {
+            scrollTop: el.scrollTop,
+            clientHeight: el.clientHeight,
+            scrollHeight: el.scrollHeight
+        };
     }
 };
 

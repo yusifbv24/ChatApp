@@ -3,6 +3,7 @@ using ChatApp.Modules.DirectMessages.Application.DTOs.Response;
 using ChatApp.Modules.DirectMessages.Application.Interfaces;
 using ChatApp.Modules.DirectMessages.Domain.Entities;
 using ChatApp.Modules.Files.Domain.Entities;
+using ChatApp.Shared.Kernel.Common;
 using Microsoft.EntityFrameworkCore;
 
 namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
@@ -61,58 +62,66 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
 
 
 
-        public async Task<List<DirectConversationDto>> GetUserConversationsAsync(
+        public async Task<PagedResult<DirectConversationDto>> GetUserConversationsPagedAsync(
             Guid userId,
+            int pageNumber,
+            int pageSize,
             CancellationToken cancellationToken = default)
         {
-            // Get conversations with other user details and last message
-            // Only show conversations where:
-            // 1. User is the initiator (can always see their own initiated conversations), OR
-            // 2. User is NOT the initiator AND the conversation has messages, OR
-            // 3. Notes conversation (always visible)
-            var conversationsQuery = await (from conv in _context.DirectConversations
-                                       join member in _context.DirectConversationMembers
-                                           on new { conv.Id, UserId = userId } equals new { Id = member.ConversationId, member.UserId }
-                                       where member.IsActive && !member.IsHidden
-                                             && (conv.InitiatedByUserId == userId || conv.HasMessages || conv.IsNotes)
-                                       let otherUserId = conv.User1Id == userId ? conv.User2Id : conv.User1Id
-                                       join user in _context.Set<UserReadModel>() on otherUserId equals user.Id
-                                       let lastMessageInfo = (from m in _context.DirectMessages
-                                          where m.ConversationId == conv.Id
-                                          orderby m.CreatedAtUtc descending
-                                          join file in _context.Set<FileMetadata>()
-                                              on m.FileId equals file.Id.ToString() into fileGroup
-                                          from file in fileGroup.DefaultIfEmpty()
-                                          select new { m.Id, m.Content, m.IsDeleted, m.SenderId, m.IsRead, m.FileId, FileContentType = file != null ? file.ContentType : null })
-                                          .FirstOrDefault()
-                                       orderby conv.LastMessageAtUtc descending
-                                       select new
-                                       {
-                                           conv.Id,
-                                           conv.IsNotes,
-                                           OtherUserId=otherUserId,
-                                           OtherUserEmail = user.Email,
-                                           FullName = user.FullName,
-                                           user.AvatarUrl,
-                                           LastMessage = lastMessageInfo == null ? null :
-                                               lastMessageInfo.IsDeleted ? "This message was deleted" :
-                                               lastMessageInfo.FileId != null ?
-                                                   (lastMessageInfo.FileContentType != null && lastMessageInfo.FileContentType.StartsWith("image/") ?
-                                                       (string.IsNullOrWhiteSpace(lastMessageInfo.Content) ? "[Image]" : "[Image] " + lastMessageInfo.Content) :
-                                                       (string.IsNullOrWhiteSpace(lastMessageInfo.Content) ? "[File]" : "[File] " + lastMessageInfo.Content)) :
-                                               lastMessageInfo.Content,
-                                           conv.LastMessageAtUtc,
-                                           member.LastReadLaterMessageId,
-                                           LastMessageSenderId = lastMessageInfo != null ? (Guid?)lastMessageInfo.SenderId : null,
-                                           LastMessageIsRead = lastMessageInfo != null && lastMessageInfo.IsRead,
-                                           LastMessageId = lastMessageInfo != null ? (Guid?)lastMessageInfo.Id : null,
-                                           member.IsPinned,
-                                           member.IsMuted,
-                                           member.IsMarkedReadLater
-                                       })
-                                       .ToListAsync(cancellationToken);
+            // Base query - same visibility rules as non-paged version
+            var baseQuery = from conv in _context.DirectConversations
+                            join member in _context.DirectConversationMembers
+                                on new { conv.Id, UserId = userId } equals new { Id = member.ConversationId, member.UserId }
+                            where member.IsActive && !member.IsHidden
+                                  && (conv.InitiatedByUserId == userId || conv.HasMessages || conv.IsNotes)
+                            select conv;
 
-            // Batch query: Get ALL unread messages, then find first for each conversation in-memory
+            var totalCount = await baseQuery.CountAsync(cancellationToken);
+
+            // Paginated main query with all details
+            var conversationsQuery = await (from conv in baseQuery
+                                        join member in _context.DirectConversationMembers
+                                            on new { conv.Id, UserId = userId } equals new { Id = member.ConversationId, member.UserId }
+                                        let otherUserId = conv.User1Id == userId ? conv.User2Id : conv.User1Id
+                                        join user in _context.Set<UserReadModel>() on otherUserId equals user.Id
+                                        let lastMessageInfo = (from m in _context.DirectMessages
+                                           where m.ConversationId == conv.Id
+                                           orderby m.CreatedAtUtc descending
+                                           join file in _context.Set<FileMetadata>()
+                                               on m.FileId equals file.Id.ToString() into fileGroup
+                                           from file in fileGroup.DefaultIfEmpty()
+                                           select new { m.Id, m.Content, m.IsDeleted, m.SenderId, m.IsRead, m.FileId, FileContentType = file != null ? file.ContentType : null })
+                                           .FirstOrDefault()
+                                        orderby member.IsPinned descending, conv.LastMessageAtUtc descending
+                                        select new
+                                        {
+                                            conv.Id,
+                                            conv.IsNotes,
+                                            OtherUserId = otherUserId,
+                                            OtherUserEmail = user.Email,
+                                            user.FullName,
+                                            user.AvatarUrl,
+                                            LastMessage = lastMessageInfo == null ? null :
+                                                lastMessageInfo.IsDeleted ? "This message was deleted" :
+                                                lastMessageInfo.FileId != null ?
+                                                    (lastMessageInfo.FileContentType != null && lastMessageInfo.FileContentType.StartsWith("image/") ?
+                                                        (string.IsNullOrWhiteSpace(lastMessageInfo.Content) ? "[Image]" : "[Image] " + lastMessageInfo.Content) :
+                                                        (string.IsNullOrWhiteSpace(lastMessageInfo.Content) ? "[File]" : "[File] " + lastMessageInfo.Content)) :
+                                                lastMessageInfo.Content,
+                                            conv.LastMessageAtUtc,
+                                            member.LastReadLaterMessageId,
+                                            LastMessageSenderId = lastMessageInfo != null ? (Guid?)lastMessageInfo.SenderId : null,
+                                            LastMessageIsRead = lastMessageInfo != null && lastMessageInfo.IsRead,
+                                            LastMessageId = lastMessageInfo != null ? (Guid?)lastMessageInfo.Id : null,
+                                            member.IsPinned,
+                                            member.IsMuted,
+                                            member.IsMarkedReadLater
+                                        })
+                                        .Skip((pageNumber - 1) * pageSize)
+                                        .Take(pageSize)
+                                        .ToListAsync(cancellationToken);
+
+            // Batch unread data only for this page's conversations
             var conversationIds = conversationsQuery.Select(c => c.Id).ToList();
             var firstUnreadMessageIds = new Dictionary<Guid, Guid>();
             var unreadCountDictionary = new Dictionary<Guid, int>();
@@ -120,7 +129,6 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
 
             if (conversationIds.Any())
             {
-                // Simple query - get all unread messages
                 var allUnreadMessages = await _context.DirectMessages
                     .Where(m => conversationIds.Contains(m.ConversationId) &&
                                 m.ReceiverId == userId &&
@@ -129,22 +137,14 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                     .Select(m => new { m.Id, m.ConversationId, m.CreatedAtUtc })
                     .ToListAsync(cancellationToken);
 
-                // In-memory GroupBy and OrderBy - EF Core translation issue workaround
                 var groupedUnreadMessages = allUnreadMessages.GroupBy(m => m.ConversationId);
 
                 firstUnreadMessageIds = groupedUnreadMessages
-                    .ToDictionary(
-                        g => g.Key,
-                        g => g.OrderBy(m => m.CreatedAtUtc).First().Id
-                    );
+                    .ToDictionary(g => g.Key, g => g.OrderBy(m => m.CreatedAtUtc).First().Id);
 
                 unreadCountDictionary = groupedUnreadMessages
-                    .ToDictionary(
-                        g => g.Key,
-                        g => g.Count()
-                    );
+                    .ToDictionary(g => g.Key, g => g.Count());
 
-                // Batch query: Get conversations with unread mentions
                 var conversationsWithMentions = await _context.DirectMessageMentions
                     .Where(mention => conversationIds.Contains(mention.Message.ConversationId) &&
                                       mention.MentionedUserId == userId &&
@@ -160,10 +160,8 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 }
             }
 
-            // Map to DTOs with message status
             var conversations = conversationsQuery.Select(c =>
             {
-                // Calculate status for user's own messages only
                 string? status = null;
                 if (c.LastMessageSenderId == userId)
                 {
@@ -171,28 +169,17 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 }
 
                 return new DirectConversationDto(
-                    c.Id,
-                    c.OtherUserId,
-                    c.OtherUserEmail,
-                    c.FullName,
-                    c.AvatarUrl,
-                    c.LastMessage,
-                    c.LastMessageAtUtc,
+                    c.Id, c.OtherUserId, c.OtherUserEmail, c.FullName, c.AvatarUrl,
+                    c.LastMessage, c.LastMessageAtUtc,
                     unreadCountDictionary.TryGetValue(c.Id, out int unreadCount) ? unreadCount : 0,
                     hasUnreadMentionsDictionary.ContainsKey(c.Id) && hasUnreadMentionsDictionary[c.Id],
-                    c.LastReadLaterMessageId,
-                    c.LastMessageSenderId,
-                    status,
-                    c.LastMessageId,
+                    c.LastReadLaterMessageId, c.LastMessageSenderId, status, c.LastMessageId,
                     firstUnreadMessageIds.TryGetValue(c.Id, out Guid value) ? (Guid?)value : null,
-                    c.IsNotes,
-                    c.IsPinned,
-                    c.IsMuted,
-                    c.IsMarkedReadLater
+                    c.IsNotes, c.IsPinned, c.IsMuted, c.IsMarkedReadLater
                 );
             }).ToList();
 
-            return conversations;
+            return PagedResult<DirectConversationDto>.Create(conversations, pageNumber, pageSize, totalCount);
         }
 
 

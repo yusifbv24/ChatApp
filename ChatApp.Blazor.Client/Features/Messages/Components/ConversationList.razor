@@ -76,7 +76,32 @@
         {
             @foreach(var item in UnifiedList)
             {
-                @if (item.IsChannel)
+                @if (item.IsDepartmentUser)
+                {
+                    <!-- Department User Item (no conversation yet) -->
+                    <div @key="@($"dept_{item.Id}")" class="conversation-item department-user-item"
+                         @onclick="()=> SelectDepartmentUserItem(item)">
+                        <div class="conversation-avatar">
+                            @if (!string.IsNullOrEmpty(item.AvatarUrl))
+                            {
+                                <img src="@item.AvatarUrl" alt="@item.Name" />
+                            }
+                            else
+                            {
+                                <div class="avatar-placeholder" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(item.OtherUserId ?? item.Id);">@StringHelper.GetInitials(item.Name)</div>
+                            }
+                        </div>
+                        <div class="conversation-info">
+                            <div class="conversation-header">
+                                <span class="conversation-name">@item.Name</span>
+                            </div>
+                            <div class="conversation-preview">
+                                <span class="preview-text department-position">@(item.LastMessage ?? "Department colleague")</span>
+                            </div>
+                        </div>
+                    </div>
+                }
+                else if (item.IsChannel)
                 {
                     <!-- Channel Item -->
                     <div @key="item.Id" class="conversation-item @(SelectedChannelId == item.Id ? "selected" : "")"
@@ -385,6 +410,13 @@
                 {
                     <button class="empty-action-btn" @onclick="() => { showNewMenu = true; }">Start a chat</button>
                 }
+            </div>
+        }
+
+        @if (IsLoadingMore)
+        {
+            <div class="conversation-loading-more">
+                <div class="loading-spinner small"></div>
             </div>
         }
     </div>

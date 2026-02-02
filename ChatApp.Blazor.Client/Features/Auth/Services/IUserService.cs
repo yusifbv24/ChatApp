@@ -1,5 +1,6 @@
 using ChatApp.Blazor.Client.Models.Auth;
 using ChatApp.Blazor.Client.Models.Common;
+using ChatApp.Blazor.Client.Models.Messages;
 
 namespace ChatApp.Blazor.Client.Features.Auth.Services;
 
@@ -35,4 +36,7 @@ public interface IUserService
 
     // Search operations
     Task<Result<List<UserSearchResultDto>>> SearchUsersAsync(string searchTerm);
+
+    // Department users for conversation sidebar
+    Task<Result<PagedResult<DepartmentUserDto>>> GetDepartmentUsersAsync(int pageNumber = 1, int pageSize = 20, string? search = null);
 }

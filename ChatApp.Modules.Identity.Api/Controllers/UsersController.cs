@@ -6,6 +6,7 @@ using ChatApp.Modules.Identity.Application.Queries.GetUser;
 using ChatApp.Modules.Identity.Application.Queries.GetUsers;
 using ChatApp.Modules.Identity.Application.Queries.SearchUsers;
 using ChatApp.Shared.Infrastructure.Authorization;
+using ChatApp.Shared.Kernel.Common;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -108,6 +109,33 @@ namespace ChatApp.Modules.Identity.Api.Controllers
             return Ok(filteredUsers);
         }
 
+
+        /// <summary>
+        /// Returns paginated list of department colleagues for conversation sidebar.
+        /// Normal users see only their department. Admin/SuperAdmin see all users.
+        /// </summary>
+        [HttpGet("department-users")]
+        [ProducesResponseType(typeof(PagedResult<DepartmentUserDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> GetDepartmentUsers(
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 20,
+            [FromQuery] string? search = null,
+            CancellationToken cancellationToken = default)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == Guid.Empty)
+                return Unauthorized();
+
+            var result = await _mediator.Send(
+                new GetDepartmentUsersQuery(userId, pageNumber, pageSize, search),
+                cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return Ok(result.Value);
+        }
 
         /// <summary>
         /// Gets the current authenticated user's profile information

@@ -25,9 +25,9 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
 
 
 
-        public async Task<Result<List<DirectConversationDto>>> GetConversationsAsync()
+        public async Task<Result<UnifiedConversationListResponse>> GetUnifiedListAsync(int pageNumber = 1, int pageSize = 20)
         {
-            return await _apiClient.GetAsync<List<DirectConversationDto>>("/api/conversations");
+            return await _apiClient.GetAsync<UnifiedConversationListResponse>($"/api/unified-conversations?pageNumber={pageNumber}&pageSize={pageSize}");
         }
 
 

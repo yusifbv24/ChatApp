@@ -2,6 +2,7 @@
 using ChatApp.Modules.Channels.Application.Interfaces;
 using ChatApp.Modules.Channels.Domain.Entities;
 using ChatApp.Modules.Channels.Domain.Enums;
+using ChatApp.Shared.Kernel.Common;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
 
@@ -100,7 +101,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 .ToListAsync(cancellationToken);
         }
 
-        public async Task<List<ChannelDto>> GetUserChannelDtosAsync(Guid userId, CancellationToken cancellationToken = default)
+        private async Task<List<ChannelDto>> GetUserChannelDtosAsync(Guid userId, CancellationToken cancellationToken = default)
         {
             // Get channels where user is a member with last message info
             var channelsWithLastMessage = await (
@@ -289,6 +290,24 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
             return result
                 .OrderByDescending(c => c.LastMessageAtUtc ?? c.CreatedAtUtc)
                 .ToList();
+        }
+
+        public async Task<PagedResult<ChannelDto>> GetUserChannelDtosPagedAsync(
+            Guid userId,
+            int pageNumber,
+            int pageSize,
+            CancellationToken cancellationToken = default)
+        {
+            // Reuse existing method - channels per user are typically few,
+            // so in-memory pagination is efficient and avoids duplicating the complex query
+            var allChannels = await GetUserChannelDtosAsync(userId, cancellationToken);
+            var totalCount = allChannels.Count;
+            var items = allChannels
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            return PagedResult<ChannelDto>.Create(items, pageNumber, pageSize, totalCount);
         }
 
         public async Task<List<Channel>> GetPublicChannelsAsync(CancellationToken cancellationToken = default)

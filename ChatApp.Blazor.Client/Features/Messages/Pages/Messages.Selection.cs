@@ -1,3 +1,5 @@
+using ChatApp.Blazor.Client.Models.Auth;
+using ChatApp.Blazor.Client.Models.Common;
 using ChatApp.Blazor.Client.Models.Messages;
 using Microsoft.JSInterop;
 
@@ -8,33 +10,48 @@ public partial class Messages
     #region Load Conversations and Channels - İlkin yükləmə
 
     /// <summary>
-    /// Bütün conversation və channel-ları yükləyir.
+    /// Unified conversation listini yükləyir.
+    /// Tək API çağırışı ilə DM + Channel + Department users birlikdə gəlir.
     /// OnInitializedAsync-də və yeni conversation yaradıldıqda çağrılır.
     /// </summary>
     private async Task LoadConversationsAndChannels()
     {
         isLoadingConversationList = true;
+        unifiedPageNumber = 1;
         StateHasChanged();
 
         try
         {
-            // PARALEL yükləmə - hər iki sorğunu eyni anda göndər
-            var directConversationsTask = ConversationService.GetConversationsAsync();
-            var channelConversationsTask = ChannelService.GetMyChannelsAsync();
+            var result = await ConversationService.GetUnifiedListAsync(1, ConversationListPageSize);
 
-            await Task.WhenAll(directConversationsTask, channelConversationsTask);
-
-            var directConversationsResult = await directConversationsTask;
-            var channelConversationsResult = await channelConversationsTask;
-
-            if (directConversationsResult.IsSuccess)
+            if (result.IsSuccess && result.Value != null)
             {
-                directConversations = directConversationsResult.Value ?? [];
+                var response = result.Value;
+
+                // Unified response-dan ayrı listlərə parse et
+                directConversations = response.Items
+                    .Where(i => i.Type == UnifiedChatItemType.Conversation)
+                    .Select(MapToDirectConversationDto)
+                    .ToList();
+
+                channelConversations = response.Items
+                    .Where(i => i.Type == UnifiedChatItemType.Channel)
+                    .Select(MapToChannelDto)
+                    .ToList();
+
+                departmentUsers = response.Items
+                    .Where(i => i.Type == UnifiedChatItemType.DepartmentUser)
+                    .Select(MapToDepartmentUserDto)
+                    .ToList();
+
+                hasMoreConversationItems = response.HasNextPage;
             }
-
-            if (channelConversationsResult.IsSuccess)
+            else
             {
-                channelConversations = channelConversationsResult.Value ?? [];
+                directConversations = [];
+                channelConversations = [];
+                departmentUsers = [];
+                hasMoreConversationItems = false;
             }
 
             // Global unread badge-i yenilə
@@ -49,6 +66,133 @@ public partial class Messages
             isLoadingConversationList = false;
             StateHasChanged();
         }
+    }
+
+    /// <summary>
+    /// Daha çox conversation item yüklə (infinite scroll).
+    /// Page 2+ yalnız department users gətirir (conversations/channels page 1-də tam yüklənib).
+    /// </summary>
+    private async Task LoadMoreConversationItems()
+    {
+        if (isLoadingMoreItems || !hasMoreConversationItems) return;
+
+        isLoadingMoreItems = true;
+        StateHasChanged();
+
+        try
+        {
+            unifiedPageNumber++;
+            var result = await ConversationService.GetUnifiedListAsync(unifiedPageNumber, ConversationListPageSize);
+
+            if (result.IsSuccess && result.Value != null)
+            {
+                var response = result.Value;
+
+                // Page 2+ yalnız department users gətirir
+                departmentUsers.AddRange(
+                    response.Items
+                        .Where(i => i.Type == UnifiedChatItemType.DepartmentUser)
+                        .Select(MapToDepartmentUserDto));
+
+                hasMoreConversationItems = response.HasNextPage;
+            }
+            else
+            {
+                hasMoreConversationItems = false;
+            }
+        }
+        catch
+        {
+            hasMoreConversationItems = false;
+        }
+        finally
+        {
+            isLoadingMoreItems = false;
+            StateHasChanged();
+        }
+    }
+
+    #region Unified DTO Mappers
+
+    private static DirectConversationDto MapToDirectConversationDto(UnifiedChatItemDto item) => new(
+        Id: item.Id,
+        OtherUserId: item.OtherUserId ?? Guid.Empty,
+        OtherUserEmail: item.OtherUserEmail ?? string.Empty,
+        OtherUserFullName: item.Name,
+        OtherUserAvatarUrl: item.AvatarUrl,
+        LastMessageContent: item.LastMessage,
+        LastMessageAtUtc: item.LastMessageAtUtc ?? DateTime.MinValue,
+        UnreadCount: item.UnreadCount,
+        HasUnreadMentions: item.HasUnreadMentions,
+        LastReadLaterMessageId: item.LastReadLaterMessageId,
+        LastMessageSenderId: item.LastMessageSenderId,
+        LastMessageStatus: item.LastMessageStatus,
+        LastMessageId: item.LastMessageId,
+        FirstUnreadMessageId: item.FirstUnreadMessageId,
+        IsNotes: item.IsNotes,
+        IsPinned: item.IsPinned,
+        IsMuted: item.IsMuted,
+        IsMarkedReadLater: item.IsMarkedReadLater
+    );
+
+    private static ChannelDto MapToChannelDto(UnifiedChatItemDto item) => new(
+        Id: item.Id,
+        Name: item.Name,
+        Description: item.ChannelDescription,
+        Type: Enum.TryParse<ChannelType>(item.ChannelType, out var ct) ? ct : ChannelType.Public,
+        CreatedBy: item.CreatedBy ?? Guid.Empty,
+        MemberCount: item.MemberCount ?? 0,
+        IsArchived: false,
+        CreatedAtUtc: DateTime.MinValue,
+        ArchivedAtUtc: null,
+        LastMessageContent: item.LastMessage,
+        LastMessageAtUtc: item.LastMessageAtUtc,
+        UnreadCount: item.UnreadCount,
+        HasUnreadMentions: item.HasUnreadMentions,
+        LastReadLaterMessageId: item.LastReadLaterMessageId,
+        LastMessageId: item.LastMessageId,
+        LastMessageSenderId: item.LastMessageSenderId,
+        LastMessageStatus: item.LastMessageStatus,
+        LastMessageSenderAvatarUrl: item.LastMessageSenderAvatarUrl,
+        FirstUnreadMessageId: item.FirstUnreadMessageId,
+        IsPinned: item.IsPinned,
+        IsMuted: item.IsMuted,
+        IsMarkedReadLater: item.IsMarkedReadLater
+    );
+
+    private static DepartmentUserDto MapToDepartmentUserDto(UnifiedChatItemDto item) => new(
+        UserId: item.Id,
+        FullName: item.Name,
+        Email: item.Email ?? item.OtherUserEmail ?? string.Empty,
+        AvatarUrl: item.AvatarUrl,
+        PositionName: item.PositionName,
+        DepartmentId: null,
+        DepartmentName: item.DepartmentName
+    );
+
+    #endregion
+
+    /// <summary>
+    /// Department istifadəçisi ilə conversation yarat.
+    /// StartConversationWithUser ilə eyni pending conversation pattern istifadə edir.
+    /// Full reload yoxdur - yalnız UI state hazırlanır, ilk mesajda conversation yaranır.
+    /// </summary>
+    private async Task StartConversationWithDepartmentUser(DepartmentUserDto user)
+    {
+        // DepartmentUserDto → UserSearchResultDto çevir (StartConversationWithUser tələb edir)
+        var nameParts = user.FullName.Split(' ', 2);
+        var searchUser = new UserSearchResultDto(
+            Id: user.UserId,
+            FirstName: nameParts[0],
+            LastName: nameParts.Length > 1 ? nameParts[1] : string.Empty,
+            Email: user.Email,
+            AvatarUrl: user.AvatarUrl,
+            Position: user.PositionName
+        );
+
+        // userSearchResults-a əlavə et (StartConversationWithUser oradan oxuyur)
+        userSearchResults = [searchUser];
+        await StartConversationWithUser(user.UserId);
     }
 
     /// <summary>
