@@ -85,6 +85,10 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Configuratio
             builder.HasIndex(m => new { m.ReceiverId, m.IsRead })
                 .HasDatabaseName("ix_direct_messages_receiver_read");
 
+            // Pinned messages üçün composite index (GetPinnedMessages performance)
+            builder.HasIndex(m => new { m.ConversationId, m.IsPinned })
+                .HasDatabaseName("ix_direct_messages_conversation_pinned");
+
             // Relationships
             builder.HasMany(m => m.Reactions)
                 .WithOne(r => r.Message)

@@ -44,7 +44,8 @@
       "Bash(for dir in \"C:\\\\Users\\\\ybaghiyev\\\\Desktop\\\\ChatApp\\\\ChatApp.Modules.Channels.Infrastructure\\\\Persistence\" \"C:\\\\Users\\\\ybaghiyev\\\\Desktop\\\\ChatApp\\\\ChatApp.Modules.DirectMessages.Infrastructure\\\\Persistence\" \"C:\\\\Users\\\\ybaghiyev\\\\Desktop\\\\ChatApp\\\\ChatApp.Modules.Files.Infrastructure\\\\Persistence\" \"C:\\\\Users\\\\ybaghiyev\\\\Desktop\\\\ChatApp\\\\ChatApp.Modules.Settings.Infrastructure\\\\Persistence\")",
       "Bash(do echo \"=== $dir ===\")",
       "Bash(done)",
-      "Bash(del \"C:\\\\Users\\\\ybaghiyev\\\\Desktop\\\\ChatApp\\\\ChatApp.Blazor.Client\\\\Infrastructure\\\\Http\\\\JwtAuthorizationMessageHandler.cs\")"
+      "Bash(del \"C:\\\\Users\\\\ybaghiyev\\\\Desktop\\\\ChatApp\\\\ChatApp.Blazor.Client\\\\Infrastructure\\\\Http\\\\JwtAuthorizationMessageHandler.cs\")",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": []

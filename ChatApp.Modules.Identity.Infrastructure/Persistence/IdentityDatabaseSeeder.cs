@@ -135,13 +135,27 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence
             // Create subdepartments
             var engineeringDept = departments["Engineering"];
             var salesMarketingDept = departments["Sales & Marketing"];
+            var financeDeptParent = departments["Finance"];
+            var hrDeptParent = departments["HR"];
 
             var subDepartments = new Dictionary<string, Department>
             {
                 ["Frontend Development"] = new Department("Frontend Development", company.Id, engineeringDept.Id),
                 ["Backend Development"] = new Department("Backend Development", company.Id, engineeringDept.Id),
-                ["Sales"] = new Department("Sales", company.Id, salesMarketingDept.Id)
+                ["QA & Testing"] = new Department("QA & Testing", company.Id, engineeringDept.Id),
+                ["DevOps"] = new Department("DevOps", company.Id, engineeringDept.Id),
+                ["IT Support"] = new Department("IT Support", company.Id, engineeringDept.Id),
+                ["Sales"] = new Department("Sales", company.Id, salesMarketingDept.Id),
+                ["Marketing"] = new Department("Marketing", company.Id, salesMarketingDept.Id),
+                ["Accounting"] = new Department("Accounting", company.Id, financeDeptParent.Id),
+                ["Recruitment"] = new Department("Recruitment", company.Id, hrDeptParent.Id),
             };
+
+            // Add two more top-level departments
+            departments["Legal"] = new Department("Legal", company.Id);
+            departments["Operations"] = new Department("Operations", company.Id);
+            await context.Departments.AddAsync(departments["Legal"]);
+            await context.Departments.AddAsync(departments["Operations"]);
 
             foreach (var subDept in subDepartments.Values)
             {
@@ -195,8 +209,50 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence
                 : context.Departments.Local.FirstOrDefault(d => d.Name == "HR")
                   ?? await context.Departments.FirstOrDefaultAsync(d => d.Name == "HR");
 
+            // Look up new departments
+            var qaDept = departments.TryGetValue("QA & Testing", out var qaD)
+                ? qaD
+                : context.Departments.Local.FirstOrDefault(d => d.Name == "QA & Testing")
+                  ?? await context.Departments.FirstOrDefaultAsync(d => d.Name == "QA & Testing");
+
+            var devopsDept = departments.TryGetValue("DevOps", out var devD)
+                ? devD
+                : context.Departments.Local.FirstOrDefault(d => d.Name == "DevOps")
+                  ?? await context.Departments.FirstOrDefaultAsync(d => d.Name == "DevOps");
+
+            var itSupportDept = departments.TryGetValue("IT Support", out var itD)
+                ? itD
+                : context.Departments.Local.FirstOrDefault(d => d.Name == "IT Support")
+                  ?? await context.Departments.FirstOrDefaultAsync(d => d.Name == "IT Support");
+
+            var marketingDept = departments.TryGetValue("Marketing", out var mktD)
+                ? mktD
+                : context.Departments.Local.FirstOrDefault(d => d.Name == "Marketing")
+                  ?? await context.Departments.FirstOrDefaultAsync(d => d.Name == "Marketing");
+
+            var accountingDept = departments.TryGetValue("Accounting", out var accD)
+                ? accD
+                : context.Departments.Local.FirstOrDefault(d => d.Name == "Accounting")
+                  ?? await context.Departments.FirstOrDefaultAsync(d => d.Name == "Accounting");
+
+            var recruitmentDept = departments.TryGetValue("Recruitment", out var recD)
+                ? recD
+                : context.Departments.Local.FirstOrDefault(d => d.Name == "Recruitment")
+                  ?? await context.Departments.FirstOrDefaultAsync(d => d.Name == "Recruitment");
+
+            var legalDept = departments.TryGetValue("Legal", out var legD)
+                ? legD
+                : context.Departments.Local.FirstOrDefault(d => d.Name == "Legal")
+                  ?? await context.Departments.FirstOrDefaultAsync(d => d.Name == "Legal");
+
+            var operationsDept = departments.TryGetValue("Operations", out var opsD)
+                ? opsD
+                : context.Departments.Local.FirstOrDefault(d => d.Name == "Operations")
+                  ?? await context.Departments.FirstOrDefaultAsync(d => d.Name == "Operations");
+
             var positions = new Dictionary<string, Position>
             {
+                // Existing
                 ["Frontend Developer"] = new Position("Frontend Developer", frontendDept?.Id, "Develops user-facing web applications"),
                 ["Senior Frontend Developer"] = new Position("Senior Frontend Developer", frontendDept?.Id, "Lead frontend developer"),
                 ["Backend Developer"] = new Position("Backend Developer", backendDept?.Id, "Develops server-side applications"),
@@ -206,7 +262,28 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence
                 ["Financial Analyst"] = new Position("Financial Analyst", financeDept?.Id, "Analyzes financial data and reports"),
                 ["Chief Financial Officer"] = new Position("Chief Financial Officer", financeDept?.Id, "Oversees all financial operations"),
                 ["HR Manager"] = new Position("HR Manager", hrDept?.Id, "Manages human resources department"),
-                ["HR Specialist"] = new Position("HR Specialist", hrDept?.Id, "Handles recruitment and employee relations")
+                ["HR Specialist"] = new Position("HR Specialist", hrDept?.Id, "Handles recruitment and employee relations"),
+                // New positions
+                ["QA Engineer"] = new Position("QA Engineer", qaDept?.Id, "Tests and ensures software quality"),
+                ["Senior QA Engineer"] = new Position("Senior QA Engineer", qaDept?.Id, "Leads QA team and testing strategy"),
+                ["DevOps Engineer"] = new Position("DevOps Engineer", devopsDept?.Id, "Manages CI/CD and infrastructure"),
+                ["Senior DevOps Engineer"] = new Position("Senior DevOps Engineer", devopsDept?.Id, "Leads DevOps practices and cloud architecture"),
+                ["IT Support Specialist"] = new Position("IT Support Specialist", itSupportDept?.Id, "Provides technical support to employees"),
+                ["IT Support Lead"] = new Position("IT Support Lead", itSupportDept?.Id, "Leads IT support team"),
+                ["Marketing Specialist"] = new Position("Marketing Specialist", marketingDept?.Id, "Develops marketing campaigns"),
+                ["Marketing Manager"] = new Position("Marketing Manager", marketingDept?.Id, "Leads marketing strategy"),
+                ["Content Writer"] = new Position("Content Writer", marketingDept?.Id, "Creates marketing content"),
+                ["Accountant"] = new Position("Accountant", accountingDept?.Id, "Manages financial records"),
+                ["Senior Accountant"] = new Position("Senior Accountant", accountingDept?.Id, "Oversees accounting operations"),
+                ["Recruiter"] = new Position("Recruiter", recruitmentDept?.Id, "Handles talent acquisition"),
+                ["Senior Recruiter"] = new Position("Senior Recruiter", recruitmentDept?.Id, "Leads recruitment strategy"),
+                ["Legal Counsel"] = new Position("Legal Counsel", legalDept?.Id, "Provides legal advice"),
+                ["Legal Assistant"] = new Position("Legal Assistant", legalDept?.Id, "Supports legal operations"),
+                ["Operations Manager"] = new Position("Operations Manager", operationsDept?.Id, "Manages daily operations"),
+                ["Operations Coordinator"] = new Position("Operations Coordinator", operationsDept?.Id, "Coordinates operational activities"),
+                ["Junior Frontend Developer"] = new Position("Junior Frontend Developer", frontendDept?.Id, "Entry-level frontend developer"),
+                ["Junior Backend Developer"] = new Position("Junior Backend Developer", backendDept?.Id, "Entry-level backend developer"),
+                ["UI/UX Designer"] = new Position("UI/UX Designer", frontendDept?.Id, "Designs user interfaces and experiences"),
             };
 
             foreach (var position in positions.Values)
@@ -389,7 +466,111 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence
             // Set Engineering department head
             GetDept("Engineering").AssignHead(user2Id);
 
-            logger?.LogInformation("Seeded 11 default users (including Head of Company) with employee records");
+            // =====================================================
+            // 50 YENİ İSTİFADƏÇİ (Test üçün)
+            // =====================================================
+            var pwd = passwordHasher.Hash("Password123!");
+
+            // Helper: user + employee yaratma
+            async Task<Guid> AddUser(int idx, string first, string last, string email, string dept, string pos,
+                DateTime? dob = null, string? phone = null, string? about = null, int yearsAgo = 1, Role role = Role.User)
+            {
+                var id = Guid.Parse($"00000000-0000-0000-0000-0000000000{idx:D2}");
+                var user = new User(first, last, email, pwd, role, null) { Id = id };
+                await context.Users.AddAsync(user);
+                var emp = new Employee(id, dob ?? new DateTime(1990 + (idx % 10), (idx % 12) + 1, (idx % 28) + 1),
+                    phone ?? $"+99450{idx:D7}", about ?? $"{pos} at {dept}", DateTime.UtcNow.AddYears(-yearsAgo));
+                emp.AssignToDepartment(GetDept(dept).Id);
+                emp.AssignToPosition(GetPos(pos).Id);
+                await context.Employees.AddAsync(emp);
+                return id;
+            }
+
+            // --- QA & Testing (5 nəfər) ---
+            var qaHeadId = await AddUser(12, "Vüsal", "Nəsibov", "vusal.nasibov@chatapp.com", "QA & Testing", "Senior QA Engineer", yearsAgo: 5);
+            await AddUser(13, "Lalə", "Cəfərova", "lale.cafarova@chatapp.com", "QA & Testing", "QA Engineer", yearsAgo: 3);
+            await AddUser(14, "Orxan", "Rəhimov", "orxan.rahimov@chatapp.com", "QA & Testing", "QA Engineer", yearsAgo: 2);
+            await AddUser(15, "Şəbnəm", "Hüseynova", "shabnam.huseynova@chatapp.com", "QA & Testing", "QA Engineer", yearsAgo: 1);
+            await AddUser(16, "Cavid", "Əkbərov", "cavid.akbarov@chatapp.com", "QA & Testing", "QA Engineer", yearsAgo: 1);
+            GetDept("QA & Testing").AssignHead(qaHeadId);
+
+            // --- DevOps (4 nəfər) ---
+            var devopsHeadId = await AddUser(17, "Murad", "Babayev", "murad.babayev@chatapp.com", "DevOps", "Senior DevOps Engineer", yearsAgo: 6);
+            await AddUser(18, "Aygün", "Vəliyeva", "aygun.valiyeva@chatapp.com", "DevOps", "DevOps Engineer", yearsAgo: 3);
+            await AddUser(19, "Samir", "Novruzov", "samir.novruzov@chatapp.com", "DevOps", "DevOps Engineer", yearsAgo: 2);
+            await AddUser(20, "Ülviyyə", "Kərimova", "ulviyya.karimova@chatapp.com", "DevOps", "DevOps Engineer", yearsAgo: 1);
+            GetDept("DevOps").AssignHead(devopsHeadId);
+
+            // --- IT Support (4 nəfər) ---
+            var itHeadId = await AddUser(21, "Əli", "Sultanov", "ali.sultanov@chatapp.com", "IT Support", "IT Support Lead", yearsAgo: 4);
+            await AddUser(22, "Nərmin", "Qasımova", "narmin.gasimova@chatapp.com", "IT Support", "IT Support Specialist", yearsAgo: 2);
+            await AddUser(23, "Rauf", "İsmayılov", "rauf.ismayilov@chatapp.com", "IT Support", "IT Support Specialist", yearsAgo: 1);
+            await AddUser(24, "Aynur", "Məmmədli", "aynur.mammadli@chatapp.com", "IT Support", "IT Support Specialist", yearsAgo: 1);
+            GetDept("IT Support").AssignHead(itHeadId);
+
+            // --- Marketing (5 nəfər) ---
+            var mktHeadId = await AddUser(25, "Səbinə", "Əlizadə", "sabina.alizade@chatapp.com", "Marketing", "Marketing Manager", yearsAgo: 5);
+            await AddUser(26, "Toğrul", "Həsənli", "togrul.hasanli@chatapp.com", "Marketing", "Marketing Specialist", yearsAgo: 3);
+            await AddUser(27, "Gülay", "Bayramova", "gulay.bayramova@chatapp.com", "Marketing", "Marketing Specialist", yearsAgo: 2);
+            await AddUser(28, "Ceyhun", "Əsgərov", "ceyhun.asgarov@chatapp.com", "Marketing", "Content Writer", yearsAgo: 1);
+            await AddUser(29, "Ləman", "Hümbətova", "laman.humbatova@chatapp.com", "Marketing", "Content Writer", yearsAgo: 1);
+            GetDept("Marketing").AssignHead(mktHeadId);
+
+            // --- Accounting (4 nəfər) ---
+            var accHeadId = await AddUser(30, "Tahir", "Mikayılov", "tahir.mikayilov@chatapp.com", "Accounting", "Senior Accountant", yearsAgo: 6);
+            await AddUser(31, "Fatimə", "Rzayeva", "fatima.rzayeva@chatapp.com", "Accounting", "Accountant", yearsAgo: 3);
+            await AddUser(32, "İlkin", "Sadıqov", "ilkin.sadigov@chatapp.com", "Accounting", "Accountant", yearsAgo: 2);
+            await AddUser(33, "Nuranə", "Abbasova", "nurana.abbasova@chatapp.com", "Accounting", "Accountant", yearsAgo: 1);
+            GetDept("Accounting").AssignHead(accHeadId);
+
+            // --- Recruitment (3 nəfər) ---
+            var recHeadId = await AddUser(34, "Zəhra", "Quluzadə", "zahra.guluzade@chatapp.com", "Recruitment", "Senior Recruiter", yearsAgo: 4);
+            await AddUser(35, "Kənan", "Hüseynli", "kanan.huseynli@chatapp.com", "Recruitment", "Recruiter", yearsAgo: 2);
+            await AddUser(36, "Gülnarə", "Tağıyeva", "gulnara.tagiyeva@chatapp.com", "Recruitment", "Recruiter", yearsAgo: 1);
+            GetDept("Recruitment").AssignHead(recHeadId);
+
+            // --- Legal (4 nəfər) ---
+            var legalHeadId = await AddUser(37, "Ramin", "Əhmədov", "ramin.ahmadov@chatapp.com", "Legal", "Legal Counsel", yearsAgo: 7, role: Role.User);
+            await AddUser(38, "Samirə", "Nəzərova", "samira.nazarova@chatapp.com", "Legal", "Legal Counsel", yearsAgo: 4);
+            await AddUser(39, "Vüqar", "Hümmətov", "vugar.hummatov@chatapp.com", "Legal", "Legal Assistant", yearsAgo: 2);
+            await AddUser(40, "Nigar", "Mehdiyeva", "nigar.mehdiyeva@chatapp.com", "Legal", "Legal Assistant", yearsAgo: 1);
+            GetDept("Legal").AssignHead(legalHeadId);
+
+            // --- Operations (5 nəfər) ---
+            var opsHeadId = await AddUser(41, "Xəyal", "Aslanov", "xayal.aslanov@chatapp.com", "Operations", "Operations Manager", yearsAgo: 6, role: Role.User);
+            await AddUser(42, "Pərvin", "Qəhrəmanova", "parvin.gahramanova@chatapp.com", "Operations", "Operations Coordinator", yearsAgo: 3);
+            await AddUser(43, "Elnur", "Bağırov", "elnur.bagirov@chatapp.com", "Operations", "Operations Coordinator", yearsAgo: 2);
+            await AddUser(44, "Sevinc", "Əmirova", "sevinc.amirova@chatapp.com", "Operations", "Operations Coordinator", yearsAgo: 1);
+            await AddUser(45, "Fuad", "Hüseynzadə", "fuad.huseynzade@chatapp.com", "Operations", "Operations Coordinator", yearsAgo: 1);
+            GetDept("Operations").AssignHead(opsHeadId);
+
+            // --- Əlavə Backend Development (5 nəfər) ---
+            await AddUser(46, "Cəmil", "Orucov", "cemil.orucov@chatapp.com", "Backend Development", "Backend Developer", yearsAgo: 3);
+            await AddUser(47, "Türkan", "Nəcəfova", "turkan.nacafova@chatapp.com", "Backend Development", "Backend Developer", yearsAgo: 2);
+            await AddUser(48, "Həsən", "Bəşirov", "hasan.bashirov@chatapp.com", "Backend Development", "Junior Backend Developer", yearsAgo: 1);
+            await AddUser(49, "Lamiyə", "Əliyeva", "lamiya.aliyeva@chatapp.com", "Backend Development", "Junior Backend Developer", yearsAgo: 1);
+            await AddUser(50, "Rəvan", "İbadov", "ravan.ibadov@chatapp.com", "Backend Development", "Senior Backend Developer", yearsAgo: 4);
+
+            // --- Əlavə Frontend Development (5 nəfər) ---
+            await AddUser(51, "Şahin", "Qədimov", "shahin.gadimov@chatapp.com", "Frontend Development", "Frontend Developer", yearsAgo: 3);
+            await AddUser(52, "Xanım", "Məmmədzadə", "xanim.mammadzade@chatapp.com", "Frontend Development", "Junior Frontend Developer", yearsAgo: 1);
+            await AddUser(53, "Vasif", "Salahov", "vasif.salahov@chatapp.com", "Frontend Development", "UI/UX Designer", yearsAgo: 2);
+            await AddUser(54, "Nərgiz", "Əlibəyova", "nargiz.alibayova@chatapp.com", "Frontend Development", "Frontend Developer", yearsAgo: 2);
+            await AddUser(55, "Tərlan", "Kərimzadə", "tarlan.karimzade@chatapp.com", "Frontend Development", "Junior Frontend Developer", yearsAgo: 1);
+
+            // --- Əlavə Sales (3 nəfər) ---
+            await AddUser(56, "Anar", "Hacıyev", "anar.haciyev@chatapp.com", "Sales", "Sales Representative", yearsAgo: 2);
+            await AddUser(57, "Gülçin", "Muradova", "gulcin.muradova@chatapp.com", "Sales", "Sales Representative", yearsAgo: 1);
+            await AddUser(58, "Emil", "Seyidov", "emil.seyidov@chatapp.com", "Sales", "Sales Representative", yearsAgo: 1);
+
+            // --- Əlavə Finance (2 nəfər) ---
+            await AddUser(59, "Mədinə", "Hüseynli", "madina.huseynli@chatapp.com", "Finance", "Financial Analyst", yearsAgo: 2);
+            await AddUser(60, "Bəxtiyar", "Cəbrayılov", "baxtiyar.cabrayilov@chatapp.com", "Finance", "Financial Analyst", yearsAgo: 1);
+
+            // --- Əlavə HR (1 nəfər) ---
+            await AddUser(61, "İlahə", "Qəribova", "ilahe.garibova@chatapp.com", "HR", "HR Specialist", yearsAgo: 1);
+
+            logger?.LogInformation("Seeded 61 users (11 original + 50 new) with employee records");
             logger?.LogWarning("SECURITY: All users have password 'Password123!' - Remember to change after first login!");
         }
 
@@ -411,8 +592,8 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence
             // Load all employees from DB
             var employees = await context.Employees.ToListAsync();
             var getEmp = (Guid userId) => employees.First(e => e.UserId == userId);
-            // SupervisorId references Employee.Id (PK), not UserId — so we need the Employee.Id
             var getEmpId = (Guid userId) => getEmp(userId).Id;
+            Guid Uid(int idx) => Guid.Parse($"00000000-0000-0000-0000-0000000000{idx:D2}");
 
             var headEmpId = getEmpId(headOfCompanyId);
             var emp1EmpId = getEmpId(user1Id);   // Finance head
@@ -421,24 +602,110 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence
             var emp6EmpId = getEmpId(user6Id);   // Sales head
             var emp9EmpId = getEmpId(user9Id);   // HR head
 
-            // Department heads → Head of Company
+            // New subdepartment head Employee IDs
+            var qaHeadEmpId = getEmpId(Uid(12));    // Vüsal - QA head
+            var devopsHeadEmpId = getEmpId(Uid(17)); // Murad - DevOps head
+            var itHeadEmpId = getEmpId(Uid(21));     // Əli - IT Support head
+            var mktHeadEmpId = getEmpId(Uid(25));    // Səbinə - Marketing head
+            var accHeadEmpId = getEmpId(Uid(30));    // Tahir - Accounting head
+            var recHeadEmpId = getEmpId(Uid(34));    // Zəhra - Recruitment head
+            var legalHeadEmpId = getEmpId(Uid(37));  // Ramin - Legal head
+            var opsHeadEmpId = getEmpId(Uid(41));    // Xəyal - Operations head
+
+            // ===== Top-level department heads → Head of Company =====
             getEmp(user1Id).AssignSupervisor(headEmpId);   // Finance head
             getEmp(user2Id).AssignSupervisor(headEmpId);   // Engineering head
-            getEmp(user6Id).AssignSupervisor(headEmpId);   // Sales head
+            getEmp(user6Id).AssignSupervisor(headEmpId);   // Sales & Marketing head
             getEmp(user9Id).AssignSupervisor(headEmpId);   // HR head
+            getEmp(Uid(37)).AssignSupervisor(headEmpId);   // Legal head
+            getEmp(Uid(41)).AssignSupervisor(headEmpId);   // Operations head
 
-            // Sub-department heads → parent department head
-            getEmp(user3Id).AssignSupervisor(emp2EmpId);           // Frontend head → Engineering head
+            // ===== Sub-department heads → parent department head =====
+            getEmp(user3Id).AssignSupervisor(emp2EmpId);   // Frontend head → Engineering head
+            getEmp(Uid(12)).AssignSupervisor(emp2EmpId);   // QA head → Engineering head
+            getEmp(Uid(17)).AssignSupervisor(emp2EmpId);   // DevOps head → Engineering head
+            getEmp(Uid(21)).AssignSupervisor(emp2EmpId);   // IT Support head → Engineering head
+            getEmp(Uid(25)).AssignSupervisor(emp6EmpId);   // Marketing head → Sales & Marketing head
+            getEmp(Uid(30)).AssignSupervisor(emp1EmpId);   // Accounting head → Finance head
+            getEmp(Uid(34)).AssignSupervisor(emp9EmpId);   // Recruitment head → HR head
 
-            // Regular employees → their department head
-            getEmp(Guid.Parse("00000000-0000-0000-0000-000000000004")).AssignSupervisor(emp2EmpId);   // Elvin → Backend head
-            getEmp(Guid.Parse("00000000-0000-0000-0000-000000000005")).AssignSupervisor(emp3EmpId);   // Günel → Frontend head
-            getEmp(Guid.Parse("00000000-0000-0000-0000-000000000007")).AssignSupervisor(emp6EmpId);   // Nigar → Sales head
-            getEmp(Guid.Parse("00000000-0000-0000-0000-000000000008")).AssignSupervisor(emp1EmpId);   // Kamran → Finance head
-            getEmp(Guid.Parse("00000000-0000-0000-0000-000000000010")).AssignSupervisor(emp9EmpId);   // Tural → HR head
-            getEmp(Guid.Parse("00000000-0000-0000-0000-000000000011")).AssignSupervisor(emp2EmpId);   // System Admin → Backend head
+            // ===== Original employees =====
+            getEmp(Uid(4)).AssignSupervisor(emp2EmpId);    // Elvin → Backend/Engineering head
+            getEmp(Uid(5)).AssignSupervisor(emp3EmpId);    // Günel → Frontend head
+            getEmp(Uid(7)).AssignSupervisor(emp6EmpId);    // Nigar → Sales head
+            getEmp(Uid(8)).AssignSupervisor(emp1EmpId);    // Kamran → Finance head
+            getEmp(Uid(10)).AssignSupervisor(emp9EmpId);   // Tural → HR head
+            getEmp(Uid(11)).AssignSupervisor(emp2EmpId);   // System Admin → Backend/Engineering head
 
-            logger?.LogInformation("Assigned supervisors for all employees");
+            // ===== QA & Testing employees → QA head =====
+            getEmp(Uid(13)).AssignSupervisor(qaHeadEmpId);
+            getEmp(Uid(14)).AssignSupervisor(qaHeadEmpId);
+            getEmp(Uid(15)).AssignSupervisor(qaHeadEmpId);
+            getEmp(Uid(16)).AssignSupervisor(qaHeadEmpId);
+
+            // ===== DevOps employees → DevOps head =====
+            getEmp(Uid(18)).AssignSupervisor(devopsHeadEmpId);
+            getEmp(Uid(19)).AssignSupervisor(devopsHeadEmpId);
+            getEmp(Uid(20)).AssignSupervisor(devopsHeadEmpId);
+
+            // ===== IT Support employees → IT Support head =====
+            getEmp(Uid(22)).AssignSupervisor(itHeadEmpId);
+            getEmp(Uid(23)).AssignSupervisor(itHeadEmpId);
+            getEmp(Uid(24)).AssignSupervisor(itHeadEmpId);
+
+            // ===== Marketing employees → Marketing head =====
+            getEmp(Uid(26)).AssignSupervisor(mktHeadEmpId);
+            getEmp(Uid(27)).AssignSupervisor(mktHeadEmpId);
+            getEmp(Uid(28)).AssignSupervisor(mktHeadEmpId);
+            getEmp(Uid(29)).AssignSupervisor(mktHeadEmpId);
+
+            // ===== Accounting employees → Accounting head =====
+            getEmp(Uid(31)).AssignSupervisor(accHeadEmpId);
+            getEmp(Uid(32)).AssignSupervisor(accHeadEmpId);
+            getEmp(Uid(33)).AssignSupervisor(accHeadEmpId);
+
+            // ===== Recruitment employees → Recruitment head =====
+            getEmp(Uid(35)).AssignSupervisor(recHeadEmpId);
+            getEmp(Uid(36)).AssignSupervisor(recHeadEmpId);
+
+            // ===== Legal employees → Legal head =====
+            getEmp(Uid(38)).AssignSupervisor(legalHeadEmpId);
+            getEmp(Uid(39)).AssignSupervisor(legalHeadEmpId);
+            getEmp(Uid(40)).AssignSupervisor(legalHeadEmpId);
+
+            // ===== Operations employees → Operations head =====
+            getEmp(Uid(42)).AssignSupervisor(opsHeadEmpId);
+            getEmp(Uid(43)).AssignSupervisor(opsHeadEmpId);
+            getEmp(Uid(44)).AssignSupervisor(opsHeadEmpId);
+            getEmp(Uid(45)).AssignSupervisor(opsHeadEmpId);
+
+            // ===== Əlavə Backend employees → Engineering/Backend head =====
+            getEmp(Uid(46)).AssignSupervisor(emp2EmpId);
+            getEmp(Uid(47)).AssignSupervisor(emp2EmpId);
+            getEmp(Uid(48)).AssignSupervisor(emp2EmpId);
+            getEmp(Uid(49)).AssignSupervisor(emp2EmpId);
+            getEmp(Uid(50)).AssignSupervisor(emp2EmpId);
+
+            // ===== Əlavə Frontend employees → Frontend head =====
+            getEmp(Uid(51)).AssignSupervisor(emp3EmpId);
+            getEmp(Uid(52)).AssignSupervisor(emp3EmpId);
+            getEmp(Uid(53)).AssignSupervisor(emp3EmpId);
+            getEmp(Uid(54)).AssignSupervisor(emp3EmpId);
+            getEmp(Uid(55)).AssignSupervisor(emp3EmpId);
+
+            // ===== Əlavə Sales employees → Sales head =====
+            getEmp(Uid(56)).AssignSupervisor(emp6EmpId);
+            getEmp(Uid(57)).AssignSupervisor(emp6EmpId);
+            getEmp(Uid(58)).AssignSupervisor(emp6EmpId);
+
+            // ===== Əlavə Finance employees → Finance head =====
+            getEmp(Uid(59)).AssignSupervisor(emp1EmpId);
+            getEmp(Uid(60)).AssignSupervisor(emp1EmpId);
+
+            // ===== Əlavə HR employee → HR head =====
+            getEmp(Uid(61)).AssignSupervisor(emp9EmpId);
+
+            logger?.LogInformation("Assigned supervisors for all 62 employees");
         }
     }
 }
