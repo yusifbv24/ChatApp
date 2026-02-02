@@ -45,7 +45,9 @@ public class UserState
 
     public bool HasPermission(string permission)
     {
-        if (IsAdmin)
+        // Only Super Admin bypasses all permission checks
+        // Regular admins are subject to their assigned permissions
+        if (_currentUser?.IsSuperAdmin == true)
         {
             return true;
         }
