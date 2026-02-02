@@ -144,19 +144,27 @@ namespace ChatApp.Modules.Search.Infrastructure.Repositories
                 .Take(pageSize)
                 .ToListAsync(cancellationToken);
 
-            // Build DTOs in memory with the other user details
-            var results = new List<SearchResultDto>();
+            // Batch load other user details to eliminate N+1 queries
+            var otherUserIds = rawData
+                .Select(item => item.Conversation.User1Id == userId
+                    ? item.Conversation.User2Id
+                    : item.Conversation.User1Id)
+                .Distinct()
+                .ToList();
 
-            foreach(var item in rawData)
+            var otherUsers = await _context.Set<UserReadModel>()
+                .Where(u => otherUserIds.Contains(u.Id))
+                .ToDictionaryAsync(u => u.Id, cancellationToken);
+
+            var results = rawData.Select(item =>
             {
-                var otherUserId=item.Conversation.User1Id==userId
+                var otherUserId = item.Conversation.User1Id == userId
                     ? item.Conversation.User2Id
                     : item.Conversation.User1Id;
 
-                var otherUser = await _context.Set<UserReadModel>()
-                    .FirstOrDefaultAsync(u => u.Id == otherUserId, cancellationToken);
+                otherUsers.TryGetValue(otherUserId, out var otherUser);
 
-                results.Add(new SearchResultDto(
+                return new SearchResultDto(
                     item.Message.Id,
                     SearchResultType.DirectMessage,
                     item.Message.Content,
@@ -172,8 +180,8 @@ namespace ChatApp.Modules.Search.Infrastructure.Repositories
                     otherUser?.Id,
                     otherUser?.Email,
                     otherUser?.FullName
-                ));
-            }
+                );
+            }).ToList();
 
             var hasNextPage = totalCount > (pageNumber * pageSize);
 

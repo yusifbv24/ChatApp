@@ -123,12 +123,10 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectMessages
                 await _unitOfWork.Messages.AddAsync(message, cancellationToken);
 
                 // Add mentions if provided
-                _logger?.LogInformation($"[MENTION DEBUG] Mentions count: {request.Mentions?.Count ?? 0}");
                 if (request.Mentions != null && request.Mentions.Count > 0)
                 {
                     foreach (var mentionReq in request.Mentions)
                     {
-                        _logger?.LogInformation($"[MENTION DEBUG] Adding mention: UserName={mentionReq.UserName}, UserId={mentionReq.UserId}");
                         var mention = new DirectMessageMention(
                             message.Id,
                             mentionReq.UserId,

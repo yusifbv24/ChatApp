@@ -107,12 +107,10 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMessages
                 await _unitOfWork.ChannelMessages.AddAsync(message, cancellationToken);
 
                 // Add mentions if provided
-                _logger?.LogInformation($"[MENTION DEBUG] Mentions count: {request.Mentions?.Count ?? 0}");
                 if (request.Mentions != null && request.Mentions.Count > 0)
                 {
                     foreach (var mentionReq in request.Mentions)
                     {
-                        _logger?.LogInformation($"[MENTION DEBUG] Adding mention: UserName={mentionReq.UserName}, UserId={mentionReq.UserId}, IsAllMention={mentionReq.IsAllMention}");
                         var mention = new ChannelMessageMention(
                             message.Id,
                             mentionReq.UserId,

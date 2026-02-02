@@ -34,13 +34,13 @@ namespace ChatApp.Shared.Infrastructure.Middleware
 
         private async Task HandleExceptionAsync(HttpContext context, Exception exception)
         {
-            context.Request.ContentType= "application/json";
+            context.Response.ContentType = "application/json";
 
-            var (statusCode, message, errors) = exception switch
+            var (statusCode, error, errors) = exception switch
             {
                 NotFoundException notFoundEx => (HttpStatusCode.NotFound, notFoundEx.Message, (IDictionary<string, string[]>?)null),
                 ValidationException validationEx => (HttpStatusCode.BadRequest, "Validation failed", validationEx.Errors),
-                DomainException domaineEx => (HttpStatusCode.BadRequest, domaineEx.Message, null),
+                DomainException domainEx => (HttpStatusCode.BadRequest, domainEx.Message, null),
                 _ => (HttpStatusCode.InternalServerError, "An internal server error occurred. Please try again later.", null)
             };
 
@@ -48,13 +48,12 @@ namespace ChatApp.Shared.Infrastructure.Middleware
 
             var response = new
             {
-                statusCode = (int)statusCode,
-                message,
+                error,
                 errors,
                 timestamp = DateTime.UtcNow
             };
 
-            var options=new JsonSerializerOptions { PropertyNamingPolicy=JsonNamingPolicy.CamelCase};
+            var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
             await context.Response.WriteAsync(JsonSerializer.Serialize(response, options));
         }
     }

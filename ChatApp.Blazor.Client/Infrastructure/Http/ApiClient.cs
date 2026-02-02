@@ -144,14 +144,43 @@ public class ApiClient : IApiClient
         try
         {
             var content = await response.Content.ReadAsStringAsync();
-            var errorResponse = JsonSerializer.Deserialize<ErrorResponse>(content, _jsonOptions);
-            return errorResponse?.Error ?? $"Request failed with status code {response.StatusCode}";
+
+            if (string.IsNullOrWhiteSpace(content))
+                return GetDefaultErrorMessage(response.StatusCode);
+
+            var errorResponse = JsonSerializer.Deserialize<ApiErrorResponse>(content, _jsonOptions);
+
+            if (errorResponse == null)
+                return GetDefaultErrorMessage(response.StatusCode);
+
+            // If validation errors exist, combine them into a readable message
+            if (errorResponse.Errors is { Count: > 0 })
+            {
+                var validationMessages = errorResponse.Errors
+                    .SelectMany(kvp => kvp.Value.Select(v => $"{kvp.Key}: {v}"));
+                return string.Join("; ", validationMessages);
+            }
+
+            return errorResponse.Error ?? GetDefaultErrorMessage(response.StatusCode);
         }
         catch
         {
-            return $"Request failed with status code {response.StatusCode}";
+            return GetDefaultErrorMessage(response.StatusCode);
         }
     }
 
-    private record ErrorResponse(string? Error);
+    private static string GetDefaultErrorMessage(System.Net.HttpStatusCode statusCode) => statusCode switch
+    {
+        System.Net.HttpStatusCode.BadRequest => "Invalid request. Please check your input.",
+        System.Net.HttpStatusCode.Unauthorized => "Your session has expired. Please log in again.",
+        System.Net.HttpStatusCode.Forbidden => "You don't have permission to perform this action.",
+        System.Net.HttpStatusCode.NotFound => "The requested resource was not found.",
+        System.Net.HttpStatusCode.Conflict => "A conflict occurred. Please try again.",
+        System.Net.HttpStatusCode.TooManyRequests => "Too many requests. Please wait and try again.",
+        _ => "An unexpected error occurred. Please try again later."
+    };
+
+    private record ApiErrorResponse(
+        string? Error,
+        Dictionary<string, string[]>? Errors);
 }
