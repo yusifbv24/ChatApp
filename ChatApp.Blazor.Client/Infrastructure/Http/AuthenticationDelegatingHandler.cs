@@ -8,7 +8,6 @@ namespace ChatApp.Blazor.Client.Infrastructure.Http;
 public class AuthenticationDelegatingHandler : DelegatingHandler
 {
     private readonly IServiceProvider _serviceProvider;
-    private bool _refreshing = false;
 
     public AuthenticationDelegatingHandler(IServiceProvider serviceProvider)
     {
@@ -27,29 +26,16 @@ public class AuthenticationDelegatingHandler : DelegatingHandler
 
         var response = await base.SendAsync(request, cancellationToken);
 
-        // If 401 or 403 and not already refreshing, try to refresh token
-        if ((response.StatusCode == HttpStatusCode.Unauthorized || response.StatusCode == HttpStatusCode.Forbidden) && !_refreshing)
+        if (response.StatusCode == HttpStatusCode.Unauthorized || response.StatusCode == HttpStatusCode.Forbidden)
         {
-            _refreshing = true;
-            try
-            {
-                // Get auth service from DI
-                using var scope = _serviceProvider.CreateScope();
-                var authService = scope.ServiceProvider.GetRequiredService<Features.Auth.Services.IAuthService>();
+            var refreshService = _serviceProvider.GetRequiredService<TokenRefreshService>();
+            var refreshed = await refreshService.TryRefreshAsync();
 
-                // Try to refresh token
-                var refreshResult = await authService.RefreshTokenAsync();
-
-                if (refreshResult.IsSuccess)
-                {
-                    // Retry the original request with new access token
-                    var retryResponse = await base.SendAsync(request, cancellationToken);
-                    return retryResponse;
-                }
-            }
-            finally
+            if (refreshed)
             {
-                _refreshing = false;
+                // Retry the original request with new access token
+                var retryResponse = await base.SendAsync(request, cancellationToken);
+                return retryResponse;
             }
         }
 

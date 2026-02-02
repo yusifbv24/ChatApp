@@ -1,3 +1,4 @@
+using ChatApp.Blazor.Client.Infrastructure.Http;
 using ChatApp.Blazor.Client.Models.Auth;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.JSInterop;
@@ -13,12 +14,14 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
 {
     private readonly HttpClient _httpClient;
     private readonly IJSRuntime _jsRuntime;
+    private readonly TokenRefreshService _tokenRefreshService;
     private UserDetailDto? _cachedUser;
 
-    public CustomAuthStateProvider(HttpClient httpClient, IJSRuntime jsRuntime)
+    public CustomAuthStateProvider(HttpClient httpClient, IJSRuntime jsRuntime, TokenRefreshService tokenRefreshService)
     {
         _httpClient = httpClient;
         _jsRuntime = jsRuntime;
+        _tokenRefreshService = tokenRefreshService;
     }
 
     public override async Task<AuthenticationState> GetAuthenticationStateAsync()
@@ -63,28 +66,20 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
                 return await response.Content.ReadFromJsonAsync<UserDetailDto>();
             }
 
-            // Access token expired or missing - check if RememberMe was set
+            // Access token expired or missing - try refresh via shared service
             if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
             {
-                var rememberMe = await GetRememberMePreference();
+                var refreshed = await _tokenRefreshService.TryRefreshAsync();
 
-                if (rememberMe)
+                if (refreshed)
                 {
-                    // Try to refresh the access token using refresh token
-                    var refreshResponse = await _httpClient.PostAsync("/api/auth/refresh", null);
+                    var retryResponse = await _httpClient.GetAsync("/api/users/me");
 
-                    if (refreshResponse.IsSuccessStatusCode)
+                    if (retryResponse.IsSuccessStatusCode)
                     {
-                        // Refresh succeeded - retry getting user info
-                        var retryResponse = await _httpClient.GetAsync("/api/users/me");
-
-                        if (retryResponse.IsSuccessStatusCode)
-                        {
-                            return await retryResponse.Content.ReadFromJsonAsync<UserDetailDto>();
-                        }
+                        return await retryResponse.Content.ReadFromJsonAsync<UserDetailDto>();
                     }
                 }
-                // RememberMe not set or refresh failed - user must re-login
             }
         }
         catch
@@ -93,22 +88,6 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
         }
 
         return null;
-    }
-
-    /// <summary>
-    /// Gets RememberMe preference from localStorage
-    /// </summary>
-    private async Task<bool> GetRememberMePreference()
-    {
-        try
-        {
-            var value = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", "rememberMe");
-            return value == "true";
-        }
-        catch
-        {
-            return false;
-        }
     }
 
     /// <summary>
