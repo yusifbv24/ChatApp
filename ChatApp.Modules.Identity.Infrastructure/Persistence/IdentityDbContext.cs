@@ -27,33 +27,6 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence
         public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
 
-        public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
-        {
-            NormalizeDateTimesToUtc();
-            return await base.SaveChangesAsync(cancellationToken);
-        }
-
-        /// <summary>
-        /// Ensures all DateTime values have Kind=UTC before saving to PostgreSQL.
-        /// PostgreSQL 'timestamp with time zone' columns reject Kind=Unspecified.
-        /// </summary>
-        private void NormalizeDateTimesToUtc()
-        {
-            foreach (var entry in ChangeTracker.Entries())
-            {
-                if (entry.State is not (EntityState.Added or EntityState.Modified))
-                    continue;
-
-                foreach (var property in entry.Properties)
-                {
-                    if (property.CurrentValue is DateTime dt && dt.Kind == DateTimeKind.Unspecified)
-                    {
-                        property.CurrentValue = DateTime.SpecifyKind(dt, DateTimeKind.Utc);
-                    }
-                }
-            }
-        }
-
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
