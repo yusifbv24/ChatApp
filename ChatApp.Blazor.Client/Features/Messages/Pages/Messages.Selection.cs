@@ -16,6 +16,9 @@ public partial class Messages
     /// </summary>
     private async Task LoadConversationsAndChannels()
     {
+        // Guard: Artıq yüklənir
+        if (isLoadingConversationList) return;
+
         isLoadingConversationList = true;
         unifiedPageNumber = 1;
         StateHasChanged();
@@ -89,11 +92,16 @@ public partial class Messages
                 var response = result.Value;
 
                 // Page 2+ yalnız department users gətirir
-                departmentUsers.AddRange(
-                    response.Items
-                        .Where(i => i.Type == UnifiedChatItemType.DepartmentUser)
-                        .Select(MapToDepartmentUserDto));
+                // DUPLICATE FIX: Artıq mövcud olan user-ləri əlavə etmə
+                var existingUserIds = departmentUsers.Select(u => u.UserId).ToHashSet();
+                var newUsers = response.Items
+                    .Where(i => i.Type == UnifiedChatItemType.DepartmentUser)
+                    .Select(MapToDepartmentUserDto)
+                    .Where(u => !existingUserIds.Contains(u.UserId))
+                    .ToList();
 
+                // CRITICAL: Yeni list yaradırıq ki ReferenceEquals dəyişsin və cache invalidate olsun
+                departmentUsers = [..departmentUsers, ..newUsers];
                 hasMoreConversationItems = response.HasNextPage;
             }
             else

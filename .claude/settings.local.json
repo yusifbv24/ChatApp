@@ -45,7 +45,8 @@
       "Bash(do echo \"=== $dir ===\")",
       "Bash(done)",
       "Bash(del \"C:\\\\Users\\\\ybaghiyev\\\\Desktop\\\\ChatApp\\\\ChatApp.Blazor.Client\\\\Infrastructure\\\\Http\\\\JwtAuthorizationMessageHandler.cs\")",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(powershell:*)"
     ],
     "deny": [],
     "ask": []

@@ -162,12 +162,18 @@ public class UnifiedConversationsController(IMediator mediator) : ControllerBase
             .ToList();
 
         // Page 1-dəki department user sayını hesabla
+        // Məsələn: pageSize=20, totalConvAndChannels=2 → page1-də 18 dept user var
         var deptUsersOnPage1 = Math.Max(0, pageSize - totalConvAndChannels);
-        var deptSkip = deptUsersOnPage1 + (pageNumber - 2) * pageSize;
-        var deptPageNumber = (deptSkip / pageSize) + 1;
 
+        // Page 2+ üçün department users offset:
+        // Page 2: skip = 18 (page1-dəkilər)
+        // Page 3: skip = 18 + 20 = 38
+        // Page N: skip = deptUsersOnPage1 + (pageNumber - 2) * pageSize
+        var deptSkip = deptUsersOnPage1 + (pageNumber - 2) * pageSize;
+
+        // SkipOverride ilə birbaşa skip göndəririk
         var deptResult = await mediator.Send(
-            new GetDepartmentUsersQuery(userId, deptPageNumber, pageSize, null, conversationUserIds),
+            new GetDepartmentUsersQuery(userId, 1, pageSize, null, conversationUserIds, deptSkip),
             cancellationToken);
 
         int totalDepartmentUsers = 0;
@@ -179,9 +185,9 @@ public class UnifiedConversationsController(IMediator mediator) : ControllerBase
             pageItems = deptResult.Value.Items.Select(MapDepartmentUser).ToList();
         }
 
-        var hasNextPage = deptResult.IsSuccess && deptResult.Value != null
-            && deptResult.Value.Items.Count >= pageSize
-            && deptSkip + pageSize < totalDepartmentUsers;
+        // HasNextPage: daha çox department user varmı?
+        var totalShownSoFar = deptSkip + pageItems.Count;
+        var hasNextPage = totalShownSoFar < totalDepartmentUsers;
 
         return Ok(new UnifiedConversationListResponse(
             Items: pageItems,

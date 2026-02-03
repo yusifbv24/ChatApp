@@ -9,16 +9,34 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetUsers;
 
 /// <summary>
 /// Returns paginated list of department colleagues for conversation sidebar.
-/// Normal user → same department only.
-/// Head of department → own department + all subdepartments (recursive).
-/// Admin/SuperAdmin → all users.
+///
+/// VISIBILITY RULES:
+/// 1. User has no department (e.g., CEO) → sees ALL users
+/// 2. User has department → sees entire department tree from root ancestor down:
+///    - Find the ROOT ancestor of user's department
+///    - Get ALL descendants of that root (entire branch)
+/// 3. Admin/SuperAdmin → sees ALL users
+///
+/// Example structure:
+///   Engineering (root)
+///     ├── Backend
+///     ├── Frontend
+///     └── DevOps
+///   Finance (root)
+///     └── Accounting
+///
+/// - DevOps employee sees: Engineering + Backend + Frontend + DevOps (entire Engineering tree)
+/// - Accounting employee sees: Finance + Accounting (entire Finance tree)
+/// - Finance head (Leyla) sees: Finance + Accounting (NOT Engineering - different tree)
+/// - CEO (no department) sees: ALL users
 /// </summary>
 public record GetDepartmentUsersQuery(
     Guid CurrentUserId,
     int PageNumber,
     int PageSize,
     string? SearchTerm,
-    List<Guid>? ExcludeUserIds = null
+    List<Guid>? ExcludeUserIds = null,
+    int? SkipOverride = null  // Optional: override calculated skip for unified pagination
 ) : IRequest<Result<PagedResult<DepartmentUserDto>>>;
 
 public class GetDepartmentUsersQueryHandler(
@@ -35,7 +53,7 @@ public class GetDepartmentUsersQueryHandler(
         try
         {
             var pageSize = Math.Min(query.PageSize, MaxPageSize);
-            var skip = (query.PageNumber - 1) * pageSize;
+            var skip = query.SkipOverride ?? (query.PageNumber - 1) * pageSize;
 
             // Get current user with employee info
             var currentUser = await unitOfWork.Users
@@ -57,41 +75,25 @@ public class GetDepartmentUsersQueryHandler(
             }
 
             // DEPARTMENT AUTHORIZATION LOGIC
-            if (!currentUser.IsAdmin && !currentUser.IsSuperAdmin)
+            var departmentId = currentUser.Employee?.DepartmentId;
+
+            // If user has no department (like CEO) OR is Admin/SuperAdmin → see all users
+            if (departmentId == null || currentUser.IsAdmin || currentUser.IsSuperAdmin)
             {
-                var departmentId = currentUser.Employee?.DepartmentId;
-                if (departmentId == null)
-                    return Result.Success(PagedResult<DepartmentUserDto>.Create([], query.PageNumber, pageSize, 0));
+                // No department filter - see everyone
+            }
+            else
+            {
+                // Find the ROOT ancestor of user's department
+                var rootDepartmentId = await GetRootAncestorDepartmentIdAsync(departmentId.Value, cancellationToken);
 
-                // Check if current user is head of any department
-                var isHeadOfDepartment = await unitOfWork.Departments
-                    .AnyAsync(d => d.HeadOfDepartmentId == query.CurrentUserId, cancellationToken);
+                // Get ALL departments in this tree (root + all descendants)
+                var visibleDepartmentIds = new HashSet<Guid> { rootDepartmentId };
+                await GetDescendantDepartmentIdsAsync([rootDepartmentId], visibleDepartmentIds, cancellationToken);
 
-                if (isHeadOfDepartment)
-                {
-                    // Get all departments where this user is head
-                    var headDepartmentIds = await unitOfWork.Departments
-                        .Where(d => d.HeadOfDepartmentId == query.CurrentUserId)
-                        .Select(d => d.Id)
-                        .ToListAsync(cancellationToken);
-
-                    // Recursively get all descendant department IDs
-                    var allDepartmentIds = new HashSet<Guid>(headDepartmentIds);
-                    await GetDescendantDepartmentIdsAsync(headDepartmentIds, allDepartmentIds, cancellationToken);
-
-                    // Also include current user's own department
-                    allDepartmentIds.Add(departmentId.Value);
-
-                    usersQuery = usersQuery.Where(u =>
-                        u.Employee != null && u.Employee.DepartmentId != null &&
-                        allDepartmentIds.Contains(u.Employee.DepartmentId.Value));
-                }
-                else
-                {
-                    // Normal employee — only same department
-                    usersQuery = usersQuery.Where(u =>
-                        u.Employee != null && u.Employee.DepartmentId == departmentId);
-                }
+                usersQuery = usersQuery.Where(u =>
+                    u.Employee != null && u.Employee.DepartmentId != null &&
+                    visibleDepartmentIds.Contains(u.Employee.DepartmentId.Value));
             }
 
             // Search filter
@@ -130,6 +132,33 @@ public class GetDepartmentUsersQueryHandler(
         {
             logger.LogError(ex, "Error retrieving department users for user {UserId}", query.CurrentUserId);
             return Result.Failure<PagedResult<DepartmentUserDto>>("An error occurred while retrieving department users");
+        }
+    }
+
+    /// <summary>
+    /// Finds the ROOT ancestor of a department (the topmost parent in the hierarchy).
+    /// If department has no parent, returns itself.
+    /// Example: DevOps → Engineering (root) returns Engineering ID
+    /// </summary>
+    private async Task<Guid> GetRootAncestorDepartmentIdAsync(
+        Guid departmentId,
+        CancellationToken cancellationToken)
+    {
+        var currentId = departmentId;
+
+        while (true)
+        {
+            var department = await unitOfWork.Departments
+                .Where(d => d.Id == currentId)
+                .Select(d => new { d.ParentDepartmentId })
+                .FirstOrDefaultAsync(cancellationToken);
+
+            // No parent means this is the root
+            if (department?.ParentDepartmentId == null)
+                return currentId;
+
+            // Move up to parent
+            currentId = department.ParentDepartmentId.Value;
         }
     }
 
