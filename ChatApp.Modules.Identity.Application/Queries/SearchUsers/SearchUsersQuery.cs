@@ -30,9 +30,9 @@ public class SearchUsersQueryHandler(
 
             var users = await unitOfWork.Users
                 .Where(u => u.IsActive &&
-                    (u.FirstName.Contains(searchTerm, StringComparison.CurrentCultureIgnoreCase) ||
-                     u.LastName.Contains(searchTerm, StringComparison.CurrentCultureIgnoreCase) ||
-                     u.Email.Contains(searchTerm, StringComparison.CurrentCultureIgnoreCase)))
+                    (EF.Functions.Like(u.FirstName.ToLower(), $"%{searchTerm}%") ||
+                     EF.Functions.Like(u.LastName.ToLower(), $"%{searchTerm}%") ||
+                     EF.Functions.Like(u.Email.ToLower(), $"%{searchTerm}%")))
                 .Select(u => new UserSearchResultDto(
                     u.Id,
                     u.FirstName,
