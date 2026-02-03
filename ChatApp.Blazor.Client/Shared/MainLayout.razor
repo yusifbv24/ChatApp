@@ -68,7 +68,7 @@
                         }
                         else
                         {
-                            <div class="user-avatar-placeholder">
+                            <div class="user-avatar-placeholder" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(UserState.CurrentUser.Id);">
                                 @StringHelper.GetInitials(UserState.CurrentUser.FullName)
                             </div>
                         }
@@ -88,7 +88,7 @@
                         }
                         else
                         {
-                            <div class="user-avatar-placeholder">
+                            <div class="user-avatar-placeholder" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(UserState.CurrentUser.Id);">
                                 @StringHelper.GetInitials(UserState.CurrentUser.FullName)
                             </div>
                         }
@@ -197,7 +197,7 @@
                             }
                             else
                             {
-                                <div class="user-menu-avatar-placeholder">
+                                <div class="user-menu-avatar-placeholder" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(UserState.CurrentUser.Id);">
                                     @StringHelper.GetInitials(UserState.CurrentUser.FullName)
                                 </div>
                             }

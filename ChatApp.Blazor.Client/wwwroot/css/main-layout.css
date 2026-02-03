@@ -129,11 +129,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--primary-gradient);
     color: var(--white);
     font-size: 24px;
     font-weight: 600;
-    animation: pulse 2s ease-in-out infinite;
 }
 
 .user-status {
@@ -558,7 +556,6 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--primary-gradient);
     color: var(--white);
     font-size: 14px;
     font-weight: 600;

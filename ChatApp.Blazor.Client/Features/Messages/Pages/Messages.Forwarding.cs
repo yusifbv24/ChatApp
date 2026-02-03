@@ -237,7 +237,7 @@ public partial class Messages
     /// Forward dialog üçün item record-u.
     /// Conversation və channel-ları eyni list-də göstərmək üçün.
     /// </summary>
-    private record ForwardItem(Guid Id, string Name, string? AvatarUrl, bool IsChannel, bool IsPrivate, DateTime? LastMessageAt);
+    private record ForwardItem(Guid Id, Guid? OtherUserId, string Name, string? AvatarUrl, bool IsChannel, bool IsPrivate, DateTime? LastMessageAt);
 
     /// <summary>
     /// Forward dialog üçün filter olunmuş item-ları qaytarır.
@@ -259,6 +259,7 @@ public partial class Messages
 
             items.Add(new ForwardItem(
                 conv.Id,
+                conv.OtherUserId,
                 conv.OtherUserFullName,
                 conv.OtherUserAvatarUrl,
                 IsChannel: false,
@@ -271,6 +272,7 @@ public partial class Messages
         {
             items.Add(new ForwardItem(
                 channel.Id,
+                null,
                 channel.Name,
                 null,
                 IsChannel: true,

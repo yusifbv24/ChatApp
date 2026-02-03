@@ -178,7 +178,7 @@
                                             }
                                             else
                                             {
-                                                <div class="avatar-placeholder">@StringHelper.GetInitials(message.SenderFullName)</div>
+                                                <div class="avatar-placeholder" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(message.SenderId);">@StringHelper.GetInitials(message.SenderFullName)</div>
                                             }
                                         </div>
                                         <div class="pinned-item-content">
@@ -203,7 +203,7 @@
                                             }
                                             else
                                             {
-                                                <div class="avatar-placeholder">@StringHelper.GetInitials(message.SenderFullName)</div>
+                                                <div class="avatar-placeholder" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(message.SenderId);">@StringHelper.GetInitials(message.SenderFullName)</div>
                                             }
                                         </div>
                                         <div class="pinned-item-content">
