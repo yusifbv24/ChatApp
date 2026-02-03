@@ -55,6 +55,10 @@ public partial class Messages
                 var messageTime = DateTime.UtcNow;
                 var tempId = Guid.NewGuid();
 
+                // RACE CONDITION FIX: finally block-da CancelReply() çağrılır və field null olur
+                // Task.Run closure field-ə reference saxlayır, ona görə əvvəlcədən local copy lazımdır
+                var capturedReplyToMessageId = replyToMessageId;
+
                 // Mentions-ı include et
                 var optimisticMentions = mentionedUsers?.Select(m => new MessageMentionDto(m.Value, m.Key)).ToList();
 
@@ -80,7 +84,7 @@ public partial class Messages
                     messageTime,                                    // CreatedAtUtc
                     null,                                           // EditedAtUtc
                     null,                                           // PinnedAtUtc
-                    replyToMessageId,
+                    capturedReplyToMessageId,
                     replyToContent,
                     replyToSenderName,
                     null,                                           // ReplyToFileId
@@ -106,7 +110,7 @@ public partial class Messages
                     var realId = await SendDirectMessageWithRetry(
                         conversationId,
                         content,
-                        replyToMessageId,
+                        capturedReplyToMessageId,
                         mentionedUsers,
                         tempId,
                         maxRetries: 3);
@@ -138,6 +142,9 @@ public partial class Messages
                 var messageTime = DateTime.UtcNow;
                 var tempId = Guid.NewGuid();
 
+                // RACE CONDITION FIX: finally block-da CancelReply() çağrılır və field null olur
+                var capturedReplyToMessageId = replyToMessageId;
+
                 // TotalMemberCount = üzvlər - sender
                 var totalMembers = Math.Max(0, selectedChannelMemberCount - 1);
 
@@ -165,7 +172,7 @@ public partial class Messages
                     messageTime,                                // CreatedAtUtc
                     null,                                       // EditedAtUtc
                     null,                                       // PinnedAtUtc
-                    replyToMessageId,
+                    capturedReplyToMessageId,
                     replyToContent,
                     replyToSenderName,
                     null,                                       // ReplyToFileId
@@ -194,7 +201,7 @@ public partial class Messages
                     await SendChannelMessageWithRetry(
                         channelId,
                         content,
-                        replyToMessageId,
+                        capturedReplyToMessageId,
                         mentionedUsers,
                         tempId,
                         maxRetries: 3);

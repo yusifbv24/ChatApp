@@ -19,4 +19,8 @@ Identity | Channels | DirectMessages | Files | Notifications | Search | Settings
 - **Lazy Loading** - SignalR group-lara yalnız aktiv conversation/channel seçiləndə join olunur
 - **In-Memory Cache** - Channel member list (typing üçün, 30 dəq)
 
----
+- İşləyən funksiyaya toxunma
+- Yeni bir method əlavə edərkən, əgər köhnə və ya ona oxşar method varsa optimallaşdırmağa çalış.
+- Lazımsız kodları silməyi unutma
+- Həmişə kodları optimizasiya etmək, code refactor etmək və performansı yüksəltmək lazımdır.
+- Yeni bir kod yazmamışdan öncə yazılan arxitekturanı, yanaşmanı təhlil et , daha sonra kod yaz.
