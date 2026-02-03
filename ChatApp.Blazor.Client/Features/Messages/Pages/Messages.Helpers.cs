@@ -112,6 +112,17 @@ public partial class Messages
     }
 
     /// <summary>
+    /// Member picker dropdown-u bağla.
+    /// </summary>
+    private void CloseMemberPicker()
+    {
+        showCreateGroupMemberSearch = false;
+        createGroupMemberSearchQuery = string.Empty;
+        createGroupMemberSearchResults.Clear();
+        StateHasChanged();
+    }
+
+    /// <summary>
     /// Create Group panel-də Chat Settings bölməsini toggle et.
     /// </summary>
     private void ToggleChatSettings()

@@ -51,7 +51,7 @@
 
                     <!-- Members Section -->
                     <div class="create-group-members-section">
-                        <label class="members-label">Members <span class="members-hint">(add a person or a department)</span></label>
+                        <label class="members-label"><span class="members-title">Members</span> <span class="members-hint">(add a person or a department)</span></label>
                         <div class="members-input-container">
                             <!-- Group Creator (always first, cannot be removed) -->
                             <div class="selected-member-chip creator-chip">
@@ -95,36 +95,44 @@
                                 </div>
                             }
 
-                            <!-- Add Button -->
-                            <button class="add-member-trigger" @onclick="ToggleCreateGroupMemberSearch">
-                                <span>+ Add</span>
-                            </button>
+                            <!-- Add Button / Inline Search -->
+                            @if (showCreateGroupMemberSearch)
+                            {
+                                <input type="text"
+                                       placeholder=""
+                                       value="@createGroupMemberSearchQuery"
+                                       @oninput="OnCreateGroupMemberSearchInput"
+                                       class="inline-member-search"
+                                       autofocus />
+                            }
+                            else
+                            {
+                                <button class="add-member-trigger" @onclick="ToggleCreateGroupMemberSearch" @onclick:stopPropagation="true">
+                                    <span>+ Add</span>
+                                </button>
+                            }
                         </div>
 
                         <!-- Member Search Dropdown -->
                         @if (showCreateGroupMemberSearch)
                         {
                             <div class="member-picker-dropdown">
-                                <!-- Search Input -->
-                                <div class="picker-search-container">
-                                    <input type="text"
-                                           placeholder="Search..."
-                                           value="@createGroupMemberSearchQuery"
-                                           @oninput="OnCreateGroupMemberSearchInput"
-                                           class="picker-search-input" />
-                                </div>
-
-                                <!-- Tabs -->
-                                <div class="picker-tabs">
-                                    <button class="picker-tab @(memberPickerTab == "recent" ? "active" : "")"
-                                            @onclick="@(() => SetMemberPickerTab("recent"))">
-                                        <MudIcon Icon="@Icons.Material.Filled.Search" Size="Size.Small" />
-                                        <span>Recent</span>
-                                    </button>
-                                    <button class="picker-tab @(memberPickerTab == "departments" ? "active" : "")"
-                                            @onclick="@(() => SetMemberPickerTab("departments"))">
-                                        <MudIcon Icon="@Icons.Material.Filled.Business" Size="Size.Small" />
-                                        <span>Departments</span>
+                                <!-- Header with Tabs and Close Button -->
+                                <div class="picker-header">
+                                    <div class="picker-tabs">
+                                        <button class="picker-tab @(memberPickerTab == "recent" ? "active" : "")"
+                                                @onclick="@(() => SetMemberPickerTab("recent"))">
+                                            <MudIcon Icon="@Icons.Material.Filled.Search" Size="Size.Small" />
+                                            <span>Recent</span>
+                                        </button>
+                                        <button class="picker-tab @(memberPickerTab == "departments" ? "active" : "")"
+                                                @onclick="@(() => SetMemberPickerTab("departments"))">
+                                            <MudIcon Icon="@Icons.Material.Filled.Business" Size="Size.Small" />
+                                            <span>Departments</span>
+                                        </button>
+                                    </div>
+                                    <button class="picker-close-btn" @onclick="CloseMemberPicker">
+                                        <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" />
                                     </button>
                                 </div>
 
@@ -181,76 +189,71 @@
                                     }
                                     else if (memberPickerTab == "departments")
                                     {
-                                        <!-- Departments -->
+                                        <!-- Departments - Bitrix24 Style -->
                                         @if (isLoadingDepartments)
                                         {
                                             <div class="picker-loading">
                                                 <div class="loading-spinner small"></div>
-                                                <span>Loading departments...</span>
+                                                <span>Loading...</span>
                                             </div>
                                         }
                                         else if (createGroupDepartments.Any())
                                         {
-                                            <div class="picker-list">
+                                            <div class="picker-list dept-list">
                                                 @foreach (var dept in GetFilteredDepartments())
                                                 {
                                                     var isExpanded = expandedDepartmentIds.Contains(dept.Id);
                                                     var isSelected = selectedDepartmentIds.Contains(dept.Id);
-                                                    <div class="picker-department">
-                                                        <div class="picker-item department-item @(isSelected ? "selected" : "")" @onclick="() => ToggleDepartmentSelection(dept)">
-                                                            <div class="picker-item-avatar department-avatar">
-                                                                <MudIcon Icon="@Icons.Material.Filled.Groups" Size="Size.Small" />
-                                                            </div>
-                                                            <div class="picker-item-info">
-                                                                <span class="picker-dept-label">Department</span>
-                                                                <span class="picker-item-name">@dept.Name</span>
-                                                            </div>
-                                                            @if (isSelected)
-                                                            {
-                                                                <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Class="picker-item-check" />
-                                                            }
-                                                            <button class="dept-expand-btn" @onclick="() => ToggleDepartmentExpand(dept.Id)" @onclick:stopPropagation="true">
-                                                                <MudIcon Icon="@(isExpanded ? Icons.Material.Filled.KeyboardArrowUp : Icons.Material.Filled.KeyboardArrowDown)" Size="Size.Small" />
-                                                            </button>
-                                                        </div>
 
-                                                        @if (isExpanded)
+                                                    <!-- Department Header -->
+                                                    <div class="picker-item dept-item @(isSelected ? "selected" : "")" @onclick="() => ToggleDepartmentSelection(dept)">
+                                                        <div class="picker-item-avatar dept-avatar">
+                                                            <MudIcon Icon="@Icons.Material.Filled.Groups" Size="Size.Small" />
+                                                        </div>
+                                                        <div class="picker-item-info">
+                                                            <span class="dept-label">Department</span>
+                                                            <span class="picker-item-name">@dept.Name</span>
+                                                        </div>
+                                                        <button class="dept-expand-btn" @onclick="() => ToggleDepartmentExpand(dept.Id)" @onclick:stopPropagation="true">
+                                                            <MudIcon Icon="@(isExpanded ? Icons.Material.Filled.KeyboardArrowUp : Icons.Material.Filled.KeyboardArrowDown)" Size="Size.Small" />
+                                                        </button>
+                                                    </div>
+
+                                                    <!-- Department Users (expanded) -->
+                                                    @if (isExpanded)
+                                                    {
+                                                        @if (departmentUsersCache.TryGetValue(dept.Id, out var users))
                                                         {
-                                                            <div class="dept-users-list">
-                                                                @if (departmentUsersCache.TryGetValue(dept.Id, out var users))
-                                                                {
-                                                                    @foreach (var user in users.Where(u => u.UserId != currentUserId))
-                                                                    {
-                                                                        var userSelected = createGroupSelectedMembers.Any(m => m.Id == user.UserId);
-                                                                        <div class="picker-item dept-user-item @(userSelected ? "selected" : "")"
-                                                                             @onclick="() => ToggleDepartmentUser(user)">
-                                                                            <div class="picker-item-avatar" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(user.UserId);">
-                                                                                @if (!string.IsNullOrEmpty(user.AvatarUrl))
-                                                                                {
-                                                                                    <img src="@user.AvatarUrl" alt="@user.FullName" />
-                                                                                }
-                                                                                else
-                                                                                {
-                                                                                    <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" />
-                                                                                }
-                                                                            </div>
-                                                                            <span class="picker-item-name">@user.FullName</span>
-                                                                            @if (userSelected)
-                                                                            {
-                                                                                <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Class="picker-item-check" />
-                                                                            }
-                                                                        </div>
-                                                                    }
-                                                                }
-                                                                else
-                                                                {
-                                                                    <div class="picker-loading">
-                                                                        <div class="loading-spinner small"></div>
+                                                            @foreach (var user in users.Where(u => u.UserId != currentUserId))
+                                                            {
+                                                                var userSelected = createGroupSelectedMembers.Any(m => m.Id == user.UserId);
+                                                                <div class="picker-item user-item @(userSelected ? "selected" : "")"
+                                                                     @onclick="() => ToggleDepartmentUser(user)">
+                                                                    <div class="picker-item-avatar" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(user.UserId);">
+                                                                        @if (!string.IsNullOrEmpty(user.AvatarUrl))
+                                                                        {
+                                                                            <img src="@user.AvatarUrl" alt="@user.FullName" />
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" />
+                                                                        }
                                                                     </div>
-                                                                }
+                                                                    <span class="picker-item-name">@user.FullName</span>
+                                                                    @if (userSelected)
+                                                                    {
+                                                                        <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Class="picker-item-check" />
+                                                                    }
+                                                                </div>
+                                                            }
+                                                        }
+                                                        else
+                                                        {
+                                                            <div class="picker-loading small">
+                                                                <div class="loading-spinner small"></div>
                                                             </div>
                                                         }
-                                                    </div>
+                                                    }
                                                 }
                                             </div>
                                         }
