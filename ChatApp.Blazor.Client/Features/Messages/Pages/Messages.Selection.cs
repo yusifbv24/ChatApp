@@ -151,7 +151,7 @@ public partial class Messages
         CreatedBy: item.CreatedBy ?? Guid.Empty,
         MemberCount: item.MemberCount ?? 0,
         IsArchived: false,
-        CreatedAtUtc: DateTime.MinValue,
+        CreatedAtUtc: item.CreatedAtUtc ?? DateTime.UtcNow,
         ArchivedAtUtc: null,
         LastMessageContent: item.LastMessage,
         LastMessageAtUtc: item.LastMessageAtUtc,

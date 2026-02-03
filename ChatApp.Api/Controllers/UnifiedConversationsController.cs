@@ -227,6 +227,7 @@ public class UnifiedConversationsController(IMediator mediator) : ControllerBase
         LastMessageSenderAvatarUrl: null,
         CreatedBy: null,
         ChannelDescription: null,
+        CreatedAtUtc: null,
         Email: null,
         PositionName: null,
         DepartmentName: null
@@ -257,6 +258,7 @@ public class UnifiedConversationsController(IMediator mediator) : ControllerBase
         LastMessageSenderAvatarUrl: c.LastMessageSenderAvatarUrl,
         CreatedBy: c.CreatedBy,
         ChannelDescription: c.Description,
+        CreatedAtUtc: c.CreatedAtUtc,
         Email: null,
         PositionName: null,
         DepartmentName: null
@@ -287,6 +289,7 @@ public class UnifiedConversationsController(IMediator mediator) : ControllerBase
         LastMessageSenderAvatarUrl: null,
         CreatedBy: null,
         ChannelDescription: null,
+        CreatedAtUtc: null,
         Email: u.Email,
         PositionName: u.PositionName,
         DepartmentName: u.DepartmentName

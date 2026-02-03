@@ -50,6 +50,7 @@ public record UnifiedChatItemDto(
     string? LastMessageSenderAvatarUrl,
     Guid? CreatedBy,
     string? ChannelDescription,
+    DateTime? CreatedAtUtc,
 
     // DepartmentUser-specific
     string? Email,

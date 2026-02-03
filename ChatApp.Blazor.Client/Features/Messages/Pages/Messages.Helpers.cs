@@ -433,6 +433,7 @@ public partial class Messages
 
     /// <summary>
     /// Department seçimi toggle (bütün department).
+    /// Department seçildikdə onun bütün istifadəçiləri əlavə olunur.
     /// </summary>
     private async Task ToggleDepartmentSelection(DepartmentDto dept)
     {
@@ -440,22 +441,45 @@ public partial class Messages
         {
             // Deselect department
             selectedDepartmentIds.Remove(dept.Id);
-            // Department-i selected members-dan sil
-            createGroupSelectedMembers.RemoveAll(m => m.Id == dept.Id);
+
+            // Department-in istifadəçilərini sil (əgər cache-də varsa)
+            if (departmentUsersCache.TryGetValue(dept.Id, out var cachedUsers))
+            {
+                var userIds = cachedUsers.Select(u => u.UserId).ToHashSet();
+                createGroupSelectedMembers.RemoveAll(m => userIds.Contains(m.Id));
+            }
         }
         else
         {
             // Select department
             selectedDepartmentIds.Add(dept.Id);
-            // Department-i chip kimi əlavə et
-            createGroupSelectedMembers.Add(new UserSearchResultDto(
-                dept.Id,
-                dept.Name,
-                string.Empty,
-                string.Empty,
-                null,
-                null
-            ));
+
+            // Department istifadəçilərini yüklə (əgər cache-də yoxdursa)
+            if (!departmentUsersCache.ContainsKey(dept.Id))
+            {
+                await LoadDepartmentUsers(dept.Id);
+            }
+
+            // Department-in bütün istifadəçilərini əlavə et
+            if (departmentUsersCache.TryGetValue(dept.Id, out var users))
+            {
+                foreach (var user in users)
+                {
+                    // Artıq əlavə olunmamış və cari user olmayan istifadəçiləri əlavə et
+                    if (user.UserId != currentUserId &&
+                        !createGroupSelectedMembers.Any(m => m.Id == user.UserId))
+                    {
+                        createGroupSelectedMembers.Add(new UserSearchResultDto(
+                            user.UserId,
+                            user.FullName,
+                            string.Empty,
+                            user.Email,
+                            user.AvatarUrl,
+                            user.PositionName
+                        ));
+                    }
+                }
+            }
         }
         StateHasChanged();
     }
