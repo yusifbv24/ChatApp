@@ -1,4 +1,5 @@
 using ChatApp.Modules.DirectMessages.Application.Interfaces;
+using ChatApp.Shared.Infrastructure.SignalR.Services;
 using ChatApp.Shared.Kernel.Common;
 using ChatApp.Shared.Kernel.Exceptions;
 using FluentValidation;
@@ -27,13 +28,16 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.MessageConditions
     public class UnpinDirectMessageCommandHandler : IRequestHandler<UnpinDirectMessageCommand, Result>
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ISignalRNotificationService _signalRNotificationService;
         private readonly ILogger<UnpinDirectMessageCommandHandler> _logger;
 
         public UnpinDirectMessageCommandHandler(
             IUnitOfWork unitOfWork,
+            ISignalRNotificationService signalRNotificationService,
             ILogger<UnpinDirectMessageCommandHandler> logger)
         {
             _unitOfWork = unitOfWork;
+            _signalRNotificationService = signalRNotificationService;
             _logger = logger;
         }
 
@@ -65,6 +69,17 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.MessageConditions
 
                 await _unitOfWork.Messages.UpdateAsync(message, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                // Send SignalR notification to other participant
+                var receiverId = message.SenderId == request.RequestedBy ? message.ReceiverId : message.SenderId;
+                var messageDto = await _unitOfWork.Messages.GetByIdAsDtoAsync(message.Id, cancellationToken);
+                if (messageDto != null)
+                {
+                    await _signalRNotificationService.NotifyDirectMessageUnpinnedAsync(
+                        message.ConversationId,
+                        receiverId,
+                        messageDto);
+                }
 
                 _logger?.LogInformation("Direct message {MessageId} unpinned successfully", request.MessageId);
 

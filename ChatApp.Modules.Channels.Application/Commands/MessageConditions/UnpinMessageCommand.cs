@@ -1,4 +1,5 @@
 ﻿using ChatApp.Modules.Channels.Application.Interfaces;
+using ChatApp.Shared.Infrastructure.SignalR.Services;
 using ChatApp.Shared.Kernel.Common;
 using ChatApp.Shared.Kernel.Exceptions;
 using FluentValidation;
@@ -27,13 +28,16 @@ namespace ChatApp.Modules.Channels.Application.Commands.MessageConditions
     public class UnpinMessageCommandHandler : IRequestHandler<UnpinMessageCommand, Result>
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ISignalRNotificationService _signalRNotificationService;
         private readonly ILogger<UnpinMessageCommandHandler> _logger;
 
         public UnpinMessageCommandHandler(
             IUnitOfWork unitOfWork,
+            ISignalRNotificationService signalRNotificationService,
             ILogger<UnpinMessageCommandHandler> logger)
         {
             _unitOfWork = unitOfWork;
+            _signalRNotificationService = signalRNotificationService;
             _logger = logger;
         }
 
@@ -70,6 +74,21 @@ namespace ChatApp.Modules.Channels.Application.Commands.MessageConditions
 
                 await _unitOfWork.ChannelMessages.UpdateAsync(message, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                // Send SignalR notification to channel members
+                var memberUserIds = await _unitOfWork.ChannelMembers.GetChannelMemberIdsAsync(
+                    message.ChannelId,
+                    cancellationToken);
+                var messageDto = await _unitOfWork.ChannelMessages.GetByIdAsDtoAsync(
+                    message.Id,
+                    cancellationToken);
+                if (messageDto != null)
+                {
+                    await _signalRNotificationService.NotifyChannelMessageUnpinnedToMembersAsync(
+                        message.ChannelId,
+                        memberUserIds,
+                        messageDto);
+                }
 
                 _logger?.LogInformation("Message {MessageId} unpinned successfully", request.MessageId);
 

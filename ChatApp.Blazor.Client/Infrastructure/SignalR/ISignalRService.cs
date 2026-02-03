@@ -46,6 +46,13 @@ public interface ISignalRService
     event Action<Guid, List<ChannelMessageReactionDto>>? OnChannelMessageReactionsUpdated;  // messageId, reactions (simplified)
 
 
+    // Pin/Unpin events
+    event Action<DirectMessageDto>? OnDirectMessagePinned;
+    event Action<DirectMessageDto>? OnDirectMessageUnpinned;
+    event Action<ChannelMessageDto>? OnChannelMessagePinned;
+    event Action<ChannelMessageDto>? OnChannelMessageUnpinned;
+
+
     // Channel membership events
     event Action<ChannelDto>? OnAddedToChannel;
     event Action<Guid, Guid, string>? OnMemberLeftChannel;  // channelId, leftUserId, leftUserFullName

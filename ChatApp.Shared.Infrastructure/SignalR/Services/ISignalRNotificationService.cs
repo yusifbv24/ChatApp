@@ -141,5 +141,25 @@
         /// Notify conversation members about typing indicator (hybrid: group + direct connections)
         /// </summary>
         Task NotifyUserTypingInConversationToMembersAsync(Guid conversationId, List<Guid> memberUserIds, Guid typingUserId, bool isTyping);
+
+        /// <summary>
+        /// Notify about direct message pinned
+        /// </summary>
+        Task NotifyDirectMessagePinnedAsync(Guid conversationId, Guid receiverId, object messageDto);
+
+        /// <summary>
+        /// Notify about direct message unpinned
+        /// </summary>
+        Task NotifyDirectMessageUnpinnedAsync(Guid conversationId, Guid receiverId, object messageDto);
+
+        /// <summary>
+        /// Notify channel members about message pinned (hybrid: group + direct connections)
+        /// </summary>
+        Task NotifyChannelMessagePinnedToMembersAsync(Guid channelId, List<Guid> memberUserIds, object messageDto);
+
+        /// <summary>
+        /// Notify channel members about message unpinned (hybrid: group + direct connections)
+        /// </summary>
+        Task NotifyChannelMessageUnpinnedToMembersAsync(Guid channelId, List<Guid> memberUserIds, object messageDto);
     }
 }

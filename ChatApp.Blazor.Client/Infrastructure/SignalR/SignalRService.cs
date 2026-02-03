@@ -60,6 +60,13 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
     public event Action<Guid, List<ChannelMessageReactionDto>>? OnChannelMessageReactionsUpdated;
 
 
+    // Pin/Unpin events
+    public event Action<DirectMessageDto>? OnDirectMessagePinned;
+    public event Action<DirectMessageDto>? OnDirectMessageUnpinned;
+    public event Action<ChannelMessageDto>? OnChannelMessagePinned;
+    public event Action<ChannelMessageDto>? OnChannelMessageUnpinned;
+
+
     // Channel membership events
     public event Action<ChannelDto>? OnAddedToChannel;
     public event Action<Guid, Guid, string>? OnMemberLeftChannel;
@@ -417,6 +424,77 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
                 var leftUserFullName = root.GetProperty("leftUserFullName").GetString() ?? "";
 
                 OnMemberLeftChannel?.Invoke(channelId, leftUserId, leftUserFullName);
+            }
+            catch
+            {
+                // Silently handle deserialization errors
+            }
+        }));
+
+
+        // Pin/Unpin events for direct messages
+        _subscriptions.Add(hubConnection.On<object>("DirectMessagePinned", messageObj =>
+        {
+            try
+            {
+                var json = JsonSerializer.Serialize(messageObj);
+                var message = JsonSerializer.Deserialize<DirectMessageDto>(json, _jsonOptions);
+                if (message != null)
+                {
+                    OnDirectMessagePinned?.Invoke(message);
+                }
+            }
+            catch
+            {
+                // Silently handle deserialization errors
+            }
+        }));
+
+        _subscriptions.Add(hubConnection.On<object>("DirectMessageUnpinned", messageObj =>
+        {
+            try
+            {
+                var json = JsonSerializer.Serialize(messageObj);
+                var message = JsonSerializer.Deserialize<DirectMessageDto>(json, _jsonOptions);
+                if (message != null)
+                {
+                    OnDirectMessageUnpinned?.Invoke(message);
+                }
+            }
+            catch
+            {
+                // Silently handle deserialization errors
+            }
+        }));
+
+        // Pin/Unpin events for channel messages
+        _subscriptions.Add(hubConnection.On<object>("ChannelMessagePinned", messageObj =>
+        {
+            try
+            {
+                var json = JsonSerializer.Serialize(messageObj);
+                var message = JsonSerializer.Deserialize<ChannelMessageDto>(json, _jsonOptions);
+                if (message != null)
+                {
+                    OnChannelMessagePinned?.Invoke(message);
+                }
+            }
+            catch
+            {
+                // Silently handle deserialization errors
+            }
+        }));
+
+        _subscriptions.Add(hubConnection.On<object>("ChannelMessageUnpinned", messageObj =>
+        {
+            try
+            {
+                var json = JsonSerializer.Serialize(messageObj);
+                var message = JsonSerializer.Deserialize<ChannelMessageDto>(json, _jsonOptions);
+                if (message != null)
+                {
+                    OnChannelMessageUnpinned?.Invoke(message);
+                }
             }
             catch
             {

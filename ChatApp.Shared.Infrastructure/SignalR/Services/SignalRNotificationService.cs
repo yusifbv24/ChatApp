@@ -442,5 +442,102 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Services
                     .SendAsync("UserTypingInConversation", conversationId, typingUserId, isTyping);
             }
         }
+
+
+        public async Task NotifyDirectMessagePinnedAsync(Guid conversationId, Guid receiverId, object messageDto)
+        {
+            _logger?.LogInformation(
+                "Sending pinned direct message notification to user {ReceiverId} in conversation {ConversationId}",
+                receiverId,
+                conversationId);
+
+            // Send to conversation group
+            await _hubContext.Clients
+                .Group($"conversation_{conversationId}")
+                .SendAsync("DirectMessagePinned", messageDto);
+
+            // Also send directly to receiver's connections
+            var receiverConnections = await _connectionManager.GetUserConnectionsAsync(receiverId);
+            if (receiverConnections.Count != 0)
+            {
+                await _hubContext.Clients
+                    .Clients(receiverConnections)
+                    .SendAsync("DirectMessagePinned", messageDto);
+            }
+        }
+
+        public async Task NotifyDirectMessageUnpinnedAsync(Guid conversationId, Guid receiverId, object messageDto)
+        {
+            _logger?.LogInformation(
+                "Sending unpinned direct message notification to user {ReceiverId} in conversation {ConversationId}",
+                receiverId,
+                conversationId);
+
+            // Send to conversation group
+            await _hubContext.Clients
+                .Group($"conversation_{conversationId}")
+                .SendAsync("DirectMessageUnpinned", messageDto);
+
+            // Also send directly to receiver's connections
+            var receiverConnections = await _connectionManager.GetUserConnectionsAsync(receiverId);
+            if (receiverConnections.Count != 0)
+            {
+                await _hubContext.Clients
+                    .Clients(receiverConnections)
+                    .SendAsync("DirectMessageUnpinned", messageDto);
+            }
+        }
+
+        public async Task NotifyChannelMessagePinnedToMembersAsync(Guid channelId, List<Guid> memberUserIds, object messageDto)
+        {
+            _logger?.LogInformation("Broadcasting pinned message to channel {ChannelId} and {MemberCount} members directly",
+                channelId, memberUserIds.Count);
+
+            // 1. Send to channel group
+            await _hubContext.Clients
+                .Group($"channel_{channelId}")
+                .SendAsync("ChannelMessagePinned", messageDto);
+
+            // 2. Send directly to each member's connections
+            var allConnections = new List<string>();
+            foreach (var memberId in memberUserIds)
+            {
+                var memberConnections = await _connectionManager.GetUserConnectionsAsync(memberId);
+                allConnections.AddRange(memberConnections);
+            }
+
+            if (allConnections.Count > 0)
+            {
+                await _hubContext.Clients
+                    .Clients(allConnections)
+                    .SendAsync("ChannelMessagePinned", messageDto);
+            }
+        }
+
+        public async Task NotifyChannelMessageUnpinnedToMembersAsync(Guid channelId, List<Guid> memberUserIds, object messageDto)
+        {
+            _logger?.LogInformation("Broadcasting unpinned message to channel {ChannelId} and {MemberCount} members directly",
+                channelId, memberUserIds.Count);
+
+            // 1. Send to channel group
+            await _hubContext.Clients
+                .Group($"channel_{channelId}")
+                .SendAsync("ChannelMessageUnpinned", messageDto);
+
+            // 2. Send directly to each member's connections
+            var allConnections = new List<string>();
+            foreach (var memberId in memberUserIds)
+            {
+                var memberConnections = await _connectionManager.GetUserConnectionsAsync(memberId);
+                allConnections.AddRange(memberConnections);
+            }
+
+            if (allConnections.Count > 0)
+            {
+                await _hubContext.Clients
+                    .Clients(allConnections)
+                    .SendAsync("ChannelMessageUnpinned", messageDto);
+            }
+        }
     }
 }

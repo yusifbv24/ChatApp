@@ -52,6 +52,12 @@ public partial class Messages
         SignalRService.OnAddedToChannel += HandleAddedToChannel;       // Sizi channel-ə əlavə etdilər
         SignalRService.OnMemberLeftChannel += HandleMemberLeftChannel; // Member channel-dan ayrıldı
 
+        // Pin/Unpin event-ləri
+        SignalRService.OnDirectMessagePinned += HandleDirectMessagePinned;
+        SignalRService.OnDirectMessageUnpinned += HandleDirectMessageUnpinned;
+        SignalRService.OnChannelMessagePinned += HandleChannelMessagePinned;
+        SignalRService.OnChannelMessageUnpinned += HandleChannelMessageUnpinned;
+
         // KRITIK: Bağlantı kəsildikdən sonra yenidən qoşulduqda group-lara rejoin olmaq lazımdır
         SignalRService.OnReconnected += HandleSignalRReconnected;
     }
@@ -81,6 +87,10 @@ public partial class Messages
         SignalRService.OnChannelMessagesRead -= HandleChannelMessagesRead;
         SignalRService.OnAddedToChannel -= HandleAddedToChannel;
         SignalRService.OnMemberLeftChannel -= HandleMemberLeftChannel;
+        SignalRService.OnDirectMessagePinned -= HandleDirectMessagePinned;
+        SignalRService.OnDirectMessageUnpinned -= HandleDirectMessageUnpinned;
+        SignalRService.OnChannelMessagePinned -= HandleChannelMessagePinned;
+        SignalRService.OnChannelMessageUnpinned -= HandleChannelMessageUnpinned;
         SignalRService.OnReconnected -= HandleSignalRReconnected;
     }
 
@@ -1165,5 +1175,172 @@ public partial class Messages
         });
     }
 
+    #endregion
+
+    #region Pin/Unpin Handlers - Mesaj pin/unpin olduqda
+
+    /// <summary>
+    /// Direct message pin olunduqda çağrılır.
+    /// Mesajı list-də tapıb IsPinned=true olaraq yeniləyir.
+    /// Pinned messages list-ini də yeniləyir (API call olmadan, local update).
+    /// </summary>
+    private void HandleDirectMessagePinned(DirectMessageDto pinnedMessage)
+    {
+        InvokeAsync(() =>
+        {
+            if (_disposed) return;
+
+            try
+            {
+                if (pinnedMessage.ConversationId == selectedConversationId)
+                {
+                    // Mesaj list-ini yenilə
+                    var messageIndex = directMessages.FindIndex(m => m.Id == pinnedMessage.Id);
+                    if (messageIndex >= 0)
+                    {
+                        var updatedMessage = directMessages[messageIndex] with { IsPinned = true, PinnedAtUtc = pinnedMessage.PinnedAtUtc };
+                        directMessages[messageIndex] = updatedMessage;
+                        InvalidateMessageCache();
+
+                        // Pinned list-ə əlavə et (API call olmadan)
+                        if (!pinnedDirectMessages.Any(m => m.Id == pinnedMessage.Id))
+                        {
+                            pinnedDirectMessages.Add(updatedMessage);
+                            pinnedDirectMessageCount = pinnedDirectMessages.Count;
+                        }
+                    }
+
+                    StateHasChanged();
+                }
+            }
+            catch
+            {
+                // Silently handle
+            }
+        });
+    }
+
+    /// <summary>
+    /// Direct message unpin olunduqda çağrılır.
+    /// Mesajı list-də tapıb IsPinned=false olaraq yeniləyir.
+    /// Pinned messages list-ini də yeniləyir (API call olmadan, local update).
+    /// </summary>
+    private void HandleDirectMessageUnpinned(DirectMessageDto unpinnedMessage)
+    {
+        InvokeAsync(() =>
+        {
+            if (_disposed) return;
+
+            try
+            {
+                if (unpinnedMessage.ConversationId == selectedConversationId)
+                {
+                    // Mesaj list-ini yenilə
+                    var messageIndex = directMessages.FindIndex(m => m.Id == unpinnedMessage.Id);
+                    if (messageIndex >= 0)
+                    {
+                        directMessages[messageIndex] = directMessages[messageIndex] with { IsPinned = false, PinnedAtUtc = null };
+                        InvalidateMessageCache();
+                    }
+
+                    // Pinned list-dən sil (API call olmadan)
+                    var pinnedIndex = pinnedDirectMessages.FindIndex(m => m.Id == unpinnedMessage.Id);
+                    if (pinnedIndex >= 0)
+                    {
+                        pinnedDirectMessages.RemoveAt(pinnedIndex);
+                        pinnedDirectMessageCount = pinnedDirectMessages.Count;
+                    }
+
+                    StateHasChanged();
+                }
+            }
+            catch
+            {
+                // Silently handle
+            }
+        });
+    }
+
+    /// <summary>
+    /// Channel message pin olunduqda çağrılır.
+    /// Mesajı list-də tapıb IsPinned=true olaraq yeniləyir.
+    /// Pinned messages list-ini də yeniləyir (API call olmadan, local update).
+    /// </summary>
+    private void HandleChannelMessagePinned(ChannelMessageDto pinnedMessage)
+    {
+        InvokeAsync(() =>
+        {
+            if (_disposed) return;
+
+            try
+            {
+                if (pinnedMessage.ChannelId == selectedChannelId)
+                {
+                    // Mesaj list-ini yenilə
+                    var messageIndex = channelMessages.FindIndex(m => m.Id == pinnedMessage.Id);
+                    if (messageIndex >= 0)
+                    {
+                        var updatedMessage = channelMessages[messageIndex] with { IsPinned = true, PinnedAtUtc = pinnedMessage.PinnedAtUtc };
+                        channelMessages[messageIndex] = updatedMessage;
+                        InvalidateMessageCache();
+
+                        // Pinned list-ə əlavə et (API call olmadan)
+                        if (!pinnedChannelMessages.Any(m => m.Id == pinnedMessage.Id))
+                        {
+                            pinnedChannelMessages.Add(updatedMessage);
+                            pinnedChannelMessageCount = pinnedChannelMessages.Count;
+                        }
+                    }
+
+                    StateHasChanged();
+                }
+            }
+            catch
+            {
+                // Silently handle
+            }
+        });
+    }
+
+    /// <summary>
+    /// Channel message unpin olunduqda çağrılır.
+    /// Mesajı list-də tapıb IsPinned=false olaraq yeniləyir.
+    /// Pinned messages list-ini də yeniləyir (API call olmadan, local update).
+    /// </summary>
+    private void HandleChannelMessageUnpinned(ChannelMessageDto unpinnedMessage)
+    {
+        InvokeAsync(() =>
+        {
+            if (_disposed) return;
+
+            try
+            {
+                if (unpinnedMessage.ChannelId == selectedChannelId)
+                {
+                    // Mesaj list-ini yenilə
+                    var messageIndex = channelMessages.FindIndex(m => m.Id == unpinnedMessage.Id);
+                    if (messageIndex >= 0)
+                    {
+                        channelMessages[messageIndex] = channelMessages[messageIndex] with { IsPinned = false, PinnedAtUtc = null };
+                        InvalidateMessageCache();
+                    }
+
+                    // Pinned list-dən sil (API call olmadan)
+                    var pinnedIndex = pinnedChannelMessages.FindIndex(m => m.Id == unpinnedMessage.Id);
+                    if (pinnedIndex >= 0)
+                    {
+                        pinnedChannelMessages.RemoveAt(pinnedIndex);
+                        pinnedChannelMessageCount = pinnedChannelMessages.Count;
+                    }
+
+                    StateHasChanged();
+                }
+            }
+            catch
+            {
+                // Silently handle
+            }
+        });
+    }
     #endregion
 }

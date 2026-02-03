@@ -1,4 +1,5 @@
 using ChatApp.Modules.DirectMessages.Application.Interfaces;
+using ChatApp.Shared.Infrastructure.SignalR.Services;
 using ChatApp.Shared.Kernel.Common;
 using ChatApp.Shared.Kernel.Exceptions;
 using FluentValidation;
@@ -27,13 +28,16 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.MessageConditions
     public class PinDirectMessageCommandHandler : IRequestHandler<PinDirectMessageCommand, Result>
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ISignalRNotificationService _signalRNotificationService;
         private readonly ILogger<PinDirectMessageCommandHandler> _logger;
 
         public PinDirectMessageCommandHandler(
             IUnitOfWork unitOfWork,
+            ISignalRNotificationService signalRNotificationService,
             ILogger<PinDirectMessageCommandHandler> logger)
         {
             _unitOfWork = unitOfWork;
+            _signalRNotificationService = signalRNotificationService;
             _logger = logger;
         }
 
@@ -47,7 +51,7 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.MessageConditions
 
                 var message = await _unitOfWork.Messages.GetByIdAsync(
                     request.MessageId,
-                    cancellationToken) 
+                    cancellationToken)
                     ?? throw new NotFoundException($"Message with ID {request.MessageId} not found");
 
                 // Check if user is part of the conversation
@@ -65,6 +69,17 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.MessageConditions
 
                 await _unitOfWork.Messages.UpdateAsync(message, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                // Send SignalR notification to other participant
+                var receiverId = message.SenderId == request.RequestedBy ? message.ReceiverId : message.SenderId;
+                var messageDto = await _unitOfWork.Messages.GetByIdAsDtoAsync(message.Id, cancellationToken);
+                if (messageDto != null)
+                {
+                    await _signalRNotificationService.NotifyDirectMessagePinnedAsync(
+                        message.ConversationId,
+                        receiverId,
+                        messageDto);
+                }
 
                 _logger?.LogInformation("Direct message {MessageId} pinned successfully", request.MessageId);
 
