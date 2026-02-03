@@ -2,6 +2,7 @@ using ChatApp.Blazor.Client.Infrastructure.Http;
 using ChatApp.Blazor.Client.Models.Auth;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.JSInterop;
+using System.Net;
 using System.Net.Http.Json;
 using System.Security.Claims;
 
@@ -67,7 +68,7 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
             }
 
             // Access token expired or missing - try refresh via shared service
-            if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            if (response.StatusCode == HttpStatusCode.Unauthorized)
             {
                 var refreshed = await _tokenRefreshService.TryRefreshAsync();
 
@@ -93,7 +94,7 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
     /// <summary>
     /// Creates authenticated state from user DTO
     /// </summary>
-    private AuthenticationState CreateAuthenticatedState(UserDetailDto user)
+    private static AuthenticationState CreateAuthenticatedState(UserDetailDto user)
     {
         var claims = new List<Claim>
         {

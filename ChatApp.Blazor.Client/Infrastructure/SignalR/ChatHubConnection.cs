@@ -100,8 +100,8 @@ public class ChatHubConnection : IChatHubConnection, IAsyncDisposable
         await _hubConnection.StartAsync();
 
         // Start token refresh timer for long sessions
-        // Refresh token every 30 minutes to prevent expiration during stable connections
-        // This ensures reconnection succeeds even after 1+ hour sessions
+        // JWT expires in 15 min, so refresh at 12 min to avoid 401 + extra refresh request
+        // This ensures token is always fresh when reconnection happens
         _tokenRefreshTimer = new Timer(async _ =>
         {
             try
@@ -124,7 +124,7 @@ public class ChatHubConnection : IChatHubConnection, IAsyncDisposable
             {
                 // Silently handle token refresh failures
             }
-        }, null, TimeSpan.FromMinutes(30), TimeSpan.FromMinutes(30));
+        }, null, TimeSpan.FromMinutes(12), TimeSpan.FromMinutes(12));
     }
 
     /// <summary>
