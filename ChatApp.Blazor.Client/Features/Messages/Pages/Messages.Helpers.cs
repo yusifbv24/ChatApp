@@ -5,6 +5,7 @@ using ChatApp.Blazor.Client.Models.Organization;
 using ChatApp.Blazor.Client.Models.Search;
 using ChatApp.Shared.Kernel;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.JSInterop;
 
 namespace ChatApp.Blazor.Client.Features.Messages.Pages;
@@ -94,6 +95,86 @@ public partial class Messages
         _createGroupSearchCts?.Cancel();
         _createGroupSearchCts?.Dispose();
         _createGroupSearchCts = null;
+
+        // Avatar state-ini sıfırla
+        createGroupAvatarUrl = null;
+        createGroupAvatarFileId = null;
+
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Create Group panelini ləğv et (Cancel butonu).
+    /// Əgər avatar yüklənibsə, silinir.
+    /// </summary>
+    private async Task CancelCreateGroupPanel()
+    {
+        // Əgər avatar yüklənibsə, sil
+        if (createGroupAvatarFileId.HasValue)
+        {
+            try
+            {
+                // TODO: FileService.DeleteFileAsync çağır (əgər mövcuddursa)
+                // Hələlik sadəcə state-i sıfırla
+                await Task.CompletedTask; // Placeholder for async operation
+            }
+            catch
+            {
+                // Silmə uğursuz olsa da paneli bağla
+            }
+        }
+
+        CloseCreateGroupPanel();
+    }
+
+    /// <summary>
+    /// Create Group avatar seçildikdə.
+    /// </summary>
+    private async Task OnGroupAvatarSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file == null) return;
+
+        // Yalnız şəkil faylları qəbul et
+        if (!file.ContentType.StartsWith("image/"))
+        {
+            ShowError("Please select an image file");
+            return;
+        }
+
+        // Max 5MB
+        if (file.Size > 5 * 1024 * 1024)
+        {
+            ShowError("Image size must be less than 5MB");
+            return;
+        }
+
+        try
+        {
+            // Preview üçün base64 URL yarat
+            using var memoryStream = new MemoryStream();
+            await file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024).CopyToAsync(memoryStream);
+            var buffer = memoryStream.ToArray();
+            createGroupAvatarUrl = $"data:{file.ContentType};base64,{Convert.ToBase64String(buffer)}";
+
+            // Faylı upload et
+            var result = await FileService.UploadFileAsync(file);
+            if (result.IsSuccess && result.Value != null)
+            {
+                createGroupAvatarFileId = result.Value.FileId;
+            }
+            else
+            {
+                ShowError(result.Error ?? "Failed to upload avatar");
+                createGroupAvatarUrl = null;
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowError("Failed to upload avatar: " + ex.Message);
+            createGroupAvatarUrl = null;
+        }
+
         StateHasChanged();
     }
 
@@ -236,7 +317,7 @@ public partial class Messages
     /// <summary>
     /// Create Group panel-də üzv toggle et (seçili isə sil, deyilsə əlavə et).
     /// </summary>
-    private void ToggleCreateGroupMember(UserSearchResultDto user)
+    private async Task ToggleCreateGroupMember(UserSearchResultDto user)
     {
         var existing = createGroupSelectedMembers.FirstOrDefault(m => m.Id == user.Id);
         if (existing != null)
@@ -247,7 +328,14 @@ public partial class Messages
         {
             createGroupSelectedMembers.Add(user);
         }
+
+        // Axtarış yazısını sil və inputa fokuslan
+        createGroupMemberSearchQuery = string.Empty;
+        createGroupMemberSearchResults.Clear();
         StateHasChanged();
+
+        // Input-a fokuslan
+        await JS.InvokeVoidAsync("chatAppUtils.focusElement", ".inline-member-search");
     }
 
     /// <summary>

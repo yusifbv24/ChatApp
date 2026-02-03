@@ -159,6 +159,14 @@ window.chatAppUtils = {
         }
     },
 
+    // Focus element by selector
+    focusElement: (selector) => {
+        const element = document.querySelector(selector);
+        if (element) {
+            element.focus();
+        }
+    },
+
     // Prevent Enter key default behavior (newline) when sending message
     setupTextareaKeydownHandler: (element) => {
         if (!element) return;

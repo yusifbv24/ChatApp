@@ -519,6 +519,26 @@ public partial class Messages : IAsyncDisposable
     /// </summary>
     private Dictionary<Guid, List<DepartmentUserDto>> departmentUsersCache = [];
 
+    /// <summary>
+    /// Create Group avatar URL (preview).
+    /// </summary>
+    private string? createGroupAvatarUrl;
+
+    /// <summary>
+    /// Create Group avatar file ID (uploaded).
+    /// </summary>
+    private Guid? createGroupAvatarFileId;
+
+    /// <summary>
+    /// Create Group form validation:
+    /// - Name boşdursa və ya 100-dən çoxdursa
+    /// - Description 500-dən çoxdursa
+    /// </summary>
+    private bool IsCreateGroupFormInvalid =>
+        string.IsNullOrWhiteSpace(newChannelRequest.Name) ||
+        (newChannelRequest.Name?.Length ?? 0) > 100 ||
+        (newChannelRequest.Description?.Length ?? 0) > 500;
+
     #endregion
 
     #region Search State - Axtarış state-i

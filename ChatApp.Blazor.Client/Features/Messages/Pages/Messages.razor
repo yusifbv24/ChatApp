@@ -37,15 +37,28 @@
                 <div class="create-group-content">
                     <!-- Group Avatar & Name -->
                     <div class="create-group-header-section">
-                        <div class="create-group-avatar">
-                            <MudIcon Icon="@Icons.Material.Filled.CameraAlt" Size="Size.Medium" />
-                        </div>
+                        <label class="create-group-avatar @(createGroupAvatarUrl != null ? "has-image" : "")" for="groupAvatarInput">
+                            @if (createGroupAvatarUrl != null)
+                            {
+                                <img src="@createGroupAvatarUrl" alt="Group Avatar" class="group-avatar-preview" />
+                                <div class="avatar-overlay">
+                                    <MudIcon Icon="@Icons.Material.Filled.CameraAlt" Size="Size.Small" />
+                                </div>
+                            }
+                            else
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.CameraAlt" Size="Size.Medium" />
+                            }
+                            <InputFile id="groupAvatarInput" OnChange="OnGroupAvatarSelected" accept="image/*" style="display: none;" />
+                        </label>
                         <div class="create-group-name-input">
                             <input type="text"
                                    placeholder="Enter chat name"
                                    @bind="newChannelRequest.Name"
                                    @bind:event="oninput"
-                                   class="group-name-field" />
+                                   maxlength="100"
+                                   class="group-name-field @(newChannelRequest.Name?.Length > 100 ? "invalid" : "")" />
+                            <span class="char-counter @(newChannelRequest.Name?.Length > 100 ? "exceeded" : "")">@(newChannelRequest.Name?.Length ?? 0)/100</span>
                         </div>
                     </div>
 
@@ -311,11 +324,15 @@
 
                                 <!-- Description -->
                                 <div class="settings-group">
-                                    <label class="settings-label">Description</label>
-                                    <textarea class="description-textarea"
+                                    <div class="settings-label-row">
+                                        <label class="settings-label">Description</label>
+                                        <span class="char-counter @(newChannelRequest.Description?.Length > 500 ? "exceeded" : "")">@(newChannelRequest.Description?.Length ?? 0)/500</span>
+                                    </div>
+                                    <textarea class="description-textarea @(newChannelRequest.Description?.Length > 500 ? "invalid" : "")"
                                               placeholder="Enter chat description"
                                               @bind="newChannelRequest.Description"
                                               @bind:event="oninput"
+                                              maxlength="500"
                                               rows="4"></textarea>
                                 </div>
                             </div>
@@ -325,7 +342,7 @@
 
                 <!-- Fixed Footer with Buttons -->
                 <div class="create-group-footer">
-                    <button class="btn-create-chat" @onclick="CreateGroupChannel" disabled="@isCreatingChannel">
+                    <button class="btn-create-chat" @onclick="CreateGroupChannel" disabled="@(isCreatingChannel || IsCreateGroupFormInvalid)">
                         @if (isCreatingChannel)
                         {
                             <div class="loading-spinner small"></div>
@@ -335,7 +352,7 @@
                             <span>CREATE CHAT</span>
                         }
                     </button>
-                    <button class="btn-cancel-chat" @onclick="CloseCreateGroupPanel">CANCEL</button>
+                    <button class="btn-cancel-chat" @onclick="CancelCreateGroupPanel">CANCEL</button>
                 </div>
             </div>
         }
