@@ -28,91 +28,258 @@
                           OnLoadMore="LoadMoreConversationItems"/>
     </div>
 
-    <!-- Main Panel: Chat Area -->
+    <!-- Main Panel: Chat Area or Create Group Panel -->
     <div class="messages-main">
-        <ChatArea IsEmpty="@IsEmpty"
-                  IsDirectMessage="@isDirectMessage"
-                  CurrentUserId="@currentUserId"
-                  ConversationId="@(selectedConversationId ?? selectedChannelId)"
-                  ChannelId="@selectedChannelId"
-                  CacheVersion="@messageCacheVersion"
-                  DirectMessages="@directMessages"
-                  RecipientId="@recipientUserId"
-                  RecipientName="@recipientName"
-                  RecipientAvatarUrl="@recipientAvatarUrl"
-                  IsRecipientOnline="@isRecipientOnline"
-                  IsNotesConversation="@isNotesConversation"
-                  IsPinned="@selectedConversationIsPinned"
-                  IsMuted="@selectedConversationIsMuted"
-                  IsMarkedReadLater="@selectedConversationIsMarkedReadLater"
-                  ChannelMessages="@channelMessages"
-                  ChannelName="@selectedChannelName"
-                  ChannelDescription="@selectedChannelDescription"
-                  ChannelType="@selectedChannelType"
-                  MemberCount="@selectedChannelMemberCount"
-                  PinnedCount="@pinnedChannelMessageCount"
-                  PinnedDirectMessageCount="@pinnedDirectMessageCount"
-                  PinnedChannelMessages="@pinnedChannelMessages"
-                  PinnedDirectMessages="@pinnedDirectMessages"
-                  OnNavigateToPinnedMessage="NavigateToPinnedMessage"
-                  IsChannelAdmin="@isChannelAdmin"
-                  IsLoading="@isLoadingMessages"
-                  IsLoadingMoreMessages="@isLoadingMoreMessages"
-                  HasMoreMessages="@hasMoreMessages"
-                  HasMoreNewerMessages="@hasMoreNewerMessages"
-                  IsSending="@isSendingMessage"
-                  TypingUsers="@typingUsers"
-                  IsReplying="@isReplying"
-                  ReplyToMessageId="@replyToMessageId"
-                  ReplyToSenderName="@replyToSenderName"
-                  ReplyToContent="@replyToContent"
-                  ReplyToFileId="@replyToFileId"
-                  ReplyToFileName="@replyToFileName"
-                  ReplyToFileContentType="@replyToFileContentType"
-                  UserSearchResults="@memberSearchResults"
-                  IsSearchingUsers="@isSearchingMembersForAdd"
-                  UnreadSeparatorAfterMessageId="@unreadSeparatorAfterMessageId"
-                  LastReadLaterMessageId="@lastReadLaterMessageId"
-                  IsSelectMode="@isSelectingMessageBuble"
-                  SelectedMessageIds="@selectedMessageIds"
-                  CanDeleteSelected="@CanDeleteSelected()"
-                  OnSendMessage="SendMessage"
-                  OnSendWithFiles="HandleSendWithFiles"
-                  OnEditMessage="EditMessage"
-                  OnDeleteMessage="DeleteMessage"
-                  OnAddReaction="AddReaction"
-                  OnMentionClick="HandleMentionClick"
-                  OnReply="HandleReply"
-                  OnForward="HandleForward"
-                  OnCancelReply="CancelReply"
-                  OnTyping="HandleTyping"
-                  OnLoadMore="LoadMoreMessages"
-                  OnLoadNewer="LoadNewerMessages"
-                  OnPinDirectMessage="HandlePinDirectMessage"
-                  OnUnpinDirectMessage="HandleUnpinDirectMessage"
-                  OnPinChannelMessage="HandlePinChannelMessage"
-                  OnUnpinChannelMessage="HandleUnpinChannelMessage"
-                  OnSearchUsers="SearchUsersForAddMember"
-                  OnAddMember="AddMemberToChannel"
-                  OnMarkAsLater="HandleToggleMarkAsLaterClick"
-                  OnSelectToggle="HandleSelectToggle"
-                  OnCancelSelection="ToggleSelectMode"
-                  OnDeleteSelected="DeleteSelectedMessages"
-                  OnForwardSelected="ForwardSelectedMessages"
-                  FavoriteMessageIds="@favoriteMessageIds"
-                  OnToggleFavorite="HandleToggleFavorite"
-                  OnToggleSearchPanel="ToggleSearchPanel"
-                  OnToggleSidebar="ToggleSidebar"
-                  IsSearchPanelOpen="@showSearchPanel"
-                  IsSidebarOpen="@showSidebar"
-                  IsViewingAroundMessage="@isViewingAroundMessage"
-                  OnScrollToBottom="ScrollToBottomAsync"
-                  InitialDraft="@currentDraft"
-                  OnDraftChanged="HandleDraftChanged"
-                  IsChannel="@(!isDirectMessage)"
-                  ChannelMembers="@currentChannelMembers"
-                  ConversationPartner="@currentConversationPartner"
-                  OnSearchMentionUsers="SearchUsersForMention" />
+        @if (showCreateGroupPanel)
+        {
+            <!-- Create Group Panel (Bitrix24 Style) -->
+            <div class="create-group-panel">
+                <div class="create-group-content">
+                    <!-- Group Avatar & Name -->
+                    <div class="create-group-header-section">
+                        <div class="create-group-avatar">
+                            <MudIcon Icon="@Icons.Material.Filled.CameraAlt" Size="Size.Medium" />
+                        </div>
+                        <div class="create-group-name-input">
+                            <input type="text"
+                                   placeholder="Enter chat name"
+                                   @bind="newChannelRequest.Name"
+                                   @bind:event="oninput"
+                                   class="group-name-field" />
+                        </div>
+                    </div>
+
+                    <!-- Members Section -->
+                    <div class="create-group-members-section">
+                        <label class="members-label">Members <span class="members-hint">(add a person or a department)</span></label>
+                        <div class="members-input-container">
+                            @foreach (var member in createGroupSelectedMembers)
+                            {
+                                <div class="selected-member-chip" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(member.Id);">
+                                    @if (!string.IsNullOrEmpty(member.AvatarUrl))
+                                    {
+                                        <img src="@member.AvatarUrl" alt="@member.FullName" class="chip-avatar" />
+                                    }
+                                    else
+                                    {
+                                        <span class="chip-avatar-placeholder">@StringHelper.GetInitials(member.FullName)</span>
+                                    }
+                                    <span class="chip-name">@member.FullName</span>
+                                    <button class="chip-remove" @onclick="() => RemoveCreateGroupMember(member.Id)">
+                                        <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" />
+                                    </button>
+                                </div>
+                            }
+                            <button class="add-member-trigger" @onclick="ToggleCreateGroupMemberSearch">
+                                <span>+ Add</span>
+                            </button>
+                        </div>
+
+                        @if (showCreateGroupMemberSearch)
+                        {
+                            <div class="member-search-dropdown">
+                                <input type="text"
+                                       placeholder="Search users..."
+                                       value="@createGroupMemberSearchQuery"
+                                       @oninput="OnCreateGroupMemberSearchInput"
+                                       class="member-search-input" />
+                                @if (isSearchingCreateGroupMembers)
+                                {
+                                    <div class="member-search-loading">
+                                        <div class="loading-spinner small"></div>
+                                        <span>Searching...</span>
+                                    </div>
+                                }
+                                else if (createGroupMemberSearchResults.Any())
+                                {
+                                    <div class="member-search-results-list">
+                                        @foreach (var user in createGroupMemberSearchResults)
+                                        {
+                                            <div class="member-search-result-item" @onclick="() => AddCreateGroupMember(user)">
+                                                <div class="member-result-avatar" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(user.Id);">
+                                                    @if (!string.IsNullOrEmpty(user.AvatarUrl))
+                                                    {
+                                                        <img src="@user.AvatarUrl" alt="@user.FullName" />
+                                                    }
+                                                    else
+                                                    {
+                                                        <span>@StringHelper.GetInitials(user.FullName)</span>
+                                                    }
+                                                </div>
+                                                <div class="member-result-info">
+                                                    <span class="member-result-name">@user.FullName</span>
+                                                    <span class="member-result-email">@user.Email</span>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                                else if (!string.IsNullOrEmpty(createGroupMemberSearchQuery) && createGroupMemberSearchQuery.Length >= 2)
+                                {
+                                    <div class="member-search-empty">
+                                        <span>No users found</span>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Chat Settings Section -->
+                    <div class="create-group-settings-section">
+                        <div class="settings-header" @onclick="ToggleChatSettings">
+                            <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small" Class="settings-icon" />
+                            <span class="settings-title">Chat settings</span>
+                            <MudIcon Icon="@(showChatSettings ? Icons.Material.Filled.KeyboardArrowUp : Icons.Material.Filled.KeyboardArrowDown)"
+                                     Size="Size.Small"
+                                     Class="settings-expand-icon" />
+                        </div>
+
+                        @if (showChatSettings)
+                        {
+                            <div class="settings-content">
+                                <!-- Chat Type -->
+                                <div class="settings-group">
+                                    <label class="settings-label">Chat type</label>
+                                    <div class="chat-type-options">
+                                        <label class="chat-type-option">
+                                            <input type="radio"
+                                                   name="chatType"
+                                                   checked="@(newChannelRequest.Type == ChannelType.Private)"
+                                                   @onchange="() => newChannelRequest.Type = ChannelType.Private" />
+                                            <div class="option-content">
+                                                <span class="option-title">Private</span>
+                                                <span class="option-description">This chat will not be visible in the chat list. Chat members can only be added manually. Perfect for private communications.</span>
+                                            </div>
+                                        </label>
+                                        <label class="chat-type-option">
+                                            <input type="radio"
+                                                   name="chatType"
+                                                   checked="@(newChannelRequest.Type == ChannelType.Public)"
+                                                   @onchange="() => newChannelRequest.Type = ChannelType.Public" />
+                                            <div class="option-content">
+                                                <span class="option-title">Public</span>
+                                                <span class="option-description">This chat is visible to everyone in the chat list. Anyone can join. Perfect for interdepartmental communication and general conversations.</span>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Description -->
+                                <div class="settings-group">
+                                    <label class="settings-label">Description</label>
+                                    <textarea class="description-textarea"
+                                              placeholder="Enter chat description"
+                                              @bind="newChannelRequest.Description"
+                                              @bind:event="oninput"
+                                              rows="4"></textarea>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <!-- Fixed Footer with Buttons -->
+                <div class="create-group-footer">
+                    <button class="btn-create-chat" @onclick="CreateGroupChannel" disabled="@isCreatingChannel">
+                        @if (isCreatingChannel)
+                        {
+                            <div class="loading-spinner small"></div>
+                        }
+                        else
+                        {
+                            <span>CREATE CHAT</span>
+                        }
+                    </button>
+                    <button class="btn-cancel-chat" @onclick="CloseCreateGroupPanel">CANCEL</button>
+                </div>
+            </div>
+        }
+        else
+        {
+            <ChatArea IsEmpty="@IsEmpty"
+                      IsDirectMessage="@isDirectMessage"
+                      CurrentUserId="@currentUserId"
+                      ConversationId="@(selectedConversationId ?? selectedChannelId)"
+                      ChannelId="@selectedChannelId"
+                      CacheVersion="@messageCacheVersion"
+                      DirectMessages="@directMessages"
+                      RecipientId="@recipientUserId"
+                      RecipientName="@recipientName"
+                      RecipientAvatarUrl="@recipientAvatarUrl"
+                      IsRecipientOnline="@isRecipientOnline"
+                      IsNotesConversation="@isNotesConversation"
+                      IsPinned="@selectedConversationIsPinned"
+                      IsMuted="@selectedConversationIsMuted"
+                      IsMarkedReadLater="@selectedConversationIsMarkedReadLater"
+                      ChannelMessages="@channelMessages"
+                      ChannelName="@selectedChannelName"
+                      ChannelDescription="@selectedChannelDescription"
+                      ChannelType="@selectedChannelType"
+                      MemberCount="@selectedChannelMemberCount"
+                      PinnedCount="@pinnedChannelMessageCount"
+                      PinnedDirectMessageCount="@pinnedDirectMessageCount"
+                      PinnedChannelMessages="@pinnedChannelMessages"
+                      PinnedDirectMessages="@pinnedDirectMessages"
+                      OnNavigateToPinnedMessage="NavigateToPinnedMessage"
+                      IsChannelAdmin="@isChannelAdmin"
+                      IsLoading="@isLoadingMessages"
+                      IsLoadingMoreMessages="@isLoadingMoreMessages"
+                      HasMoreMessages="@hasMoreMessages"
+                      HasMoreNewerMessages="@hasMoreNewerMessages"
+                      IsSending="@isSendingMessage"
+                      TypingUsers="@typingUsers"
+                      IsReplying="@isReplying"
+                      ReplyToMessageId="@replyToMessageId"
+                      ReplyToSenderName="@replyToSenderName"
+                      ReplyToContent="@replyToContent"
+                      ReplyToFileId="@replyToFileId"
+                      ReplyToFileName="@replyToFileName"
+                      ReplyToFileContentType="@replyToFileContentType"
+                      UserSearchResults="@memberSearchResults"
+                      IsSearchingUsers="@isSearchingMembersForAdd"
+                      UnreadSeparatorAfterMessageId="@unreadSeparatorAfterMessageId"
+                      LastReadLaterMessageId="@lastReadLaterMessageId"
+                      IsSelectMode="@isSelectingMessageBuble"
+                      SelectedMessageIds="@selectedMessageIds"
+                      CanDeleteSelected="@CanDeleteSelected()"
+                      OnSendMessage="SendMessage"
+                      OnSendWithFiles="HandleSendWithFiles"
+                      OnEditMessage="EditMessage"
+                      OnDeleteMessage="DeleteMessage"
+                      OnAddReaction="AddReaction"
+                      OnMentionClick="HandleMentionClick"
+                      OnReply="HandleReply"
+                      OnForward="HandleForward"
+                      OnCancelReply="CancelReply"
+                      OnTyping="HandleTyping"
+                      OnLoadMore="LoadMoreMessages"
+                      OnLoadNewer="LoadNewerMessages"
+                      OnPinDirectMessage="HandlePinDirectMessage"
+                      OnUnpinDirectMessage="HandleUnpinDirectMessage"
+                      OnPinChannelMessage="HandlePinChannelMessage"
+                      OnUnpinChannelMessage="HandleUnpinChannelMessage"
+                      OnSearchUsers="SearchUsersForAddMember"
+                      OnAddMember="AddMemberToChannel"
+                      OnMarkAsLater="HandleToggleMarkAsLaterClick"
+                      OnSelectToggle="HandleSelectToggle"
+                      OnCancelSelection="ToggleSelectMode"
+                      OnDeleteSelected="DeleteSelectedMessages"
+                      OnForwardSelected="ForwardSelectedMessages"
+                      FavoriteMessageIds="@favoriteMessageIds"
+                      OnToggleFavorite="HandleToggleFavorite"
+                      OnToggleSearchPanel="ToggleSearchPanel"
+                      OnToggleSidebar="ToggleSidebar"
+                      IsSearchPanelOpen="@showSearchPanel"
+                      IsSidebarOpen="@showSidebar"
+                      IsViewingAroundMessage="@isViewingAroundMessage"
+                      OnScrollToBottom="ScrollToBottomAsync"
+                      InitialDraft="@currentDraft"
+                      OnDraftChanged="HandleDraftChanged"
+                      IsChannel="@(!isDirectMessage)"
+                      ChannelMembers="@currentChannelMembers"
+                      ConversationPartner="@currentConversationPartner"
+                      OnSearchMentionUsers="SearchUsersForMention" />
+        }
     </div>
 
     <!-- Right Panel Container (Sidebar and Search Panel share same space) -->

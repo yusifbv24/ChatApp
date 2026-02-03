@@ -1,3 +1,4 @@
+using ChatApp.Blazor.Client.Models.Auth;
 using ChatApp.Blazor.Client.Models.Common;
 using ChatApp.Blazor.Client.Models.Messages;
 using ChatApp.Blazor.Client.Models.Search;
@@ -35,12 +36,11 @@ public partial class Messages
 
     /// <summary>
     /// Yeni channel dialog-unu aç.
+    /// İndi Create Group panelini açır (Bitrix24 style).
     /// </summary>
     private void OpenNewChannelDialog()
     {
-        showNewChannelDialog = true;
-        newChannelRequest = new Models.Messages.CreateChannelRequest();
-        StateHasChanged();
+        OpenCreateGroupPanel();
     }
 
     /// <summary>
@@ -50,6 +50,221 @@ public partial class Messages
     {
         showNewChannelDialog = false;
         StateHasChanged();
+    }
+
+    /// <summary>
+    /// Create Group panelini aç.
+    /// Aktiv conversation bağlanır və panel göstərilir.
+    /// </summary>
+    private void OpenCreateGroupPanel()
+    {
+        // Aktiv conversation-u bağla
+        selectedConversationId = null;
+        selectedChannelId = null;
+        directMessages.Clear();
+        channelMessages.Clear();
+
+        // Panel state-ini sıfırla
+        showCreateGroupPanel = true;
+        newChannelRequest = new Models.Messages.CreateChannelRequest { Type = ChannelType.Private };
+        createGroupSelectedMembers.Clear();
+        createGroupMemberSearchQuery = string.Empty;
+        createGroupMemberSearchResults.Clear();
+        showCreateGroupMemberSearch = false;
+        showChatSettings = true;
+
+        // Dialog-u bağla (əgər açıqdırsa)
+        showNewChannelDialog = false;
+
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Create Group panelini bağla.
+    /// </summary>
+    private void CloseCreateGroupPanel()
+    {
+        showCreateGroupPanel = false;
+        _createGroupSearchCts?.Cancel();
+        _createGroupSearchCts?.Dispose();
+        _createGroupSearchCts = null;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Create Group panel-də member search dropdown-u toggle et.
+    /// </summary>
+    private void ToggleCreateGroupMemberSearch()
+    {
+        showCreateGroupMemberSearch = !showCreateGroupMemberSearch;
+        if (!showCreateGroupMemberSearch)
+        {
+            createGroupMemberSearchQuery = string.Empty;
+            createGroupMemberSearchResults.Clear();
+        }
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Create Group panel-də Chat Settings bölməsini toggle et.
+    /// </summary>
+    private void ToggleChatSettings()
+    {
+        showChatSettings = !showChatSettings;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Create Group panel-də üzv axtarışı.
+    /// </summary>
+    private async Task OnCreateGroupMemberSearchInput(ChangeEventArgs e)
+    {
+        createGroupMemberSearchQuery = e.Value?.ToString() ?? string.Empty;
+
+        _createGroupSearchCts?.Cancel();
+        _createGroupSearchCts?.Dispose();
+        _createGroupSearchCts = new CancellationTokenSource();
+        var token = _createGroupSearchCts.Token;
+
+        if (string.IsNullOrWhiteSpace(createGroupMemberSearchQuery) || createGroupMemberSearchQuery.Length < 2)
+        {
+            createGroupMemberSearchResults.Clear();
+            isSearchingCreateGroupMembers = false;
+            StateHasChanged();
+            return;
+        }
+
+        try
+        {
+            await Task.Delay(300, token);
+        }
+        catch (TaskCanceledException)
+        {
+            return;
+        }
+
+        await SearchCreateGroupMembers(token);
+    }
+
+    /// <summary>
+    /// Create Group panel-də üzvləri axtar.
+    /// </summary>
+    private async Task SearchCreateGroupMembers(CancellationToken token)
+    {
+        if (token.IsCancellationRequested) return;
+
+        isSearchingCreateGroupMembers = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await UserService.SearchUsersAsync(createGroupMemberSearchQuery);
+
+            if (token.IsCancellationRequested) return;
+
+            if (result.IsSuccess)
+            {
+                // Artıq əlavə edilmiş üzvləri və özümü çıxar
+                var selectedIds = createGroupSelectedMembers.Select(m => m.Id).ToHashSet();
+                selectedIds.Add(currentUserId);
+
+                createGroupMemberSearchResults = result.Value?
+                    .Where(u => !selectedIds.Contains(u.Id))
+                    .ToList() ?? [];
+            }
+            else
+            {
+                createGroupMemberSearchResults.Clear();
+            }
+        }
+        catch
+        {
+            createGroupMemberSearchResults.Clear();
+        }
+        finally
+        {
+            if (!token.IsCancellationRequested)
+            {
+                isSearchingCreateGroupMembers = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Create Group panel-ə üzv əlavə et.
+    /// </summary>
+    private void AddCreateGroupMember(UserSearchResultDto user)
+    {
+        if (!createGroupSelectedMembers.Any(m => m.Id == user.Id))
+        {
+            createGroupSelectedMembers.Add(user);
+        }
+        // Axtarış nəticələrindən çıxar
+        createGroupMemberSearchResults.RemoveAll(u => u.Id == user.Id);
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Create Group panel-dən üzv sil.
+    /// </summary>
+    private void RemoveCreateGroupMember(Guid userId)
+    {
+        createGroupSelectedMembers.RemoveAll(m => m.Id == userId);
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Create Group panelindən channel yarat.
+    /// </summary>
+    private async Task CreateGroupChannel()
+    {
+        if (string.IsNullOrWhiteSpace(newChannelRequest.Name))
+        {
+            ShowError("Please enter a chat name");
+            return;
+        }
+
+        isCreatingChannel = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await ChannelService.CreateChannelAsync(newChannelRequest);
+            if (result.IsSuccess)
+            {
+                var channelId = result.Value;
+
+                // Seçilmiş üzvləri əlavə et
+                foreach (var member in createGroupSelectedMembers)
+                {
+                    await ChannelService.AddMemberAsync(channelId, member.Id);
+                }
+
+                CloseCreateGroupPanel();
+                await LoadConversationsAndChannels();
+
+                // Yaradılan channel-ı seç
+                var channel = channelConversations.FirstOrDefault(c => c.Id == channelId);
+                if (channel != null)
+                {
+                    await SelectChannel(channel);
+                }
+            }
+            else
+            {
+                ShowError(result.Error ?? "Failed to create chat");
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowError("Failed to create chat: " + ex.Message);
+        }
+        finally
+        {
+            isCreatingChannel = false;
+            StateHasChanged();
+        }
     }
 
     #endregion

@@ -443,6 +443,47 @@ public partial class Messages : IAsyncDisposable
     /// </summary>
     private bool showNewChannelDialog;
 
+    /// <summary>
+    /// Create Group panel açıqdır?
+    /// ChatArea yerinə Create Group paneli göstərilir.
+    /// </summary>
+    private bool showCreateGroupPanel;
+
+    /// <summary>
+    /// Create Group panel-ə əlavə ediləcək üzvlər.
+    /// </summary>
+    private List<UserSearchResultDto> createGroupSelectedMembers = [];
+
+    /// <summary>
+    /// Create Group panel-də üzv axtarış sorğusu.
+    /// </summary>
+    private string createGroupMemberSearchQuery = string.Empty;
+
+    /// <summary>
+    /// Create Group panel-də üzv axtarılır?
+    /// </summary>
+    private bool isSearchingCreateGroupMembers;
+
+    /// <summary>
+    /// Create Group panel-də üzv axtarış nəticələri.
+    /// </summary>
+    private List<UserSearchResultDto> createGroupMemberSearchResults = [];
+
+    /// <summary>
+    /// Create Group panel-də axtarış cancellation token.
+    /// </summary>
+    private CancellationTokenSource? _createGroupSearchCts;
+
+    /// <summary>
+    /// Create Group panel-də member search dropdown açıq?
+    /// </summary>
+    private bool showCreateGroupMemberSearch;
+
+    /// <summary>
+    /// Create Group panel-də Chat Settings bölməsi açıq?
+    /// </summary>
+    private bool showChatSettings = true;
+
     #endregion
 
     #region Search State - Axtarış state-i
