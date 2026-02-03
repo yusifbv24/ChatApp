@@ -53,73 +53,215 @@
                     <div class="create-group-members-section">
                         <label class="members-label">Members <span class="members-hint">(add a person or a department)</span></label>
                         <div class="members-input-container">
+                            <!-- Group Creator (always first, cannot be removed) -->
+                            <div class="selected-member-chip creator-chip">
+                                @if (!string.IsNullOrEmpty(UserState.AvatarUrl))
+                                {
+                                    <img src="@UserState.AvatarUrl" alt="@UserState.FullName" class="chip-avatar" />
+                                }
+                                else
+                                {
+                                    <div class="chip-avatar-placeholder" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(currentUserId);">
+                                        <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Class="creator-icon" />
+                                    </div>
+                                }
+                                <span class="chip-name">@UserState.FullName</span>
+                            </div>
+
+                            <!-- Selected Members -->
                             @foreach (var member in createGroupSelectedMembers)
                             {
-                                <div class="selected-member-chip" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(member.Id);">
-                                    @if (!string.IsNullOrEmpty(member.AvatarUrl))
+                                <div class="selected-member-chip @(IsSelectedDepartment(member.Id) ? "department-chip" : "")">
+                                    @if (IsSelectedDepartment(member.Id))
+                                    {
+                                        <div class="chip-avatar-placeholder department-avatar">
+                                            <MudIcon Icon="@Icons.Material.Filled.Groups" Size="Size.Small" />
+                                        </div>
+                                    }
+                                    else if (!string.IsNullOrEmpty(member.AvatarUrl))
                                     {
                                         <img src="@member.AvatarUrl" alt="@member.FullName" class="chip-avatar" />
                                     }
                                     else
                                     {
-                                        <span class="chip-avatar-placeholder">@StringHelper.GetInitials(member.FullName)</span>
+                                        <div class="chip-avatar-placeholder" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(member.Id);">
+                                            <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Class="member-icon" />
+                                        </div>
                                     }
                                     <span class="chip-name">@member.FullName</span>
-                                    <button class="chip-remove" @onclick="() => RemoveCreateGroupMember(member.Id)">
+                                    <button class="chip-remove" @onclick="() => RemoveCreateGroupMember(member.Id)" @onclick:stopPropagation="true">
                                         <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" />
                                     </button>
                                 </div>
                             }
+
+                            <!-- Add Button -->
                             <button class="add-member-trigger" @onclick="ToggleCreateGroupMemberSearch">
                                 <span>+ Add</span>
                             </button>
                         </div>
 
+                        <!-- Member Search Dropdown -->
                         @if (showCreateGroupMemberSearch)
                         {
-                            <div class="member-search-dropdown">
-                                <input type="text"
-                                       placeholder="Search users..."
-                                       value="@createGroupMemberSearchQuery"
-                                       @oninput="OnCreateGroupMemberSearchInput"
-                                       class="member-search-input" />
-                                @if (isSearchingCreateGroupMembers)
-                                {
-                                    <div class="member-search-loading">
-                                        <div class="loading-spinner small"></div>
-                                        <span>Searching...</span>
-                                    </div>
-                                }
-                                else if (createGroupMemberSearchResults.Any())
-                                {
-                                    <div class="member-search-results-list">
-                                        @foreach (var user in createGroupMemberSearchResults)
+                            <div class="member-picker-dropdown">
+                                <!-- Search Input -->
+                                <div class="picker-search-container">
+                                    <input type="text"
+                                           placeholder="Search..."
+                                           value="@createGroupMemberSearchQuery"
+                                           @oninput="OnCreateGroupMemberSearchInput"
+                                           class="picker-search-input" />
+                                </div>
+
+                                <!-- Tabs -->
+                                <div class="picker-tabs">
+                                    <button class="picker-tab @(memberPickerTab == "recent" ? "active" : "")"
+                                            @onclick="@(() => SetMemberPickerTab("recent"))">
+                                        <MudIcon Icon="@Icons.Material.Filled.Search" Size="Size.Small" />
+                                        <span>Recent</span>
+                                    </button>
+                                    <button class="picker-tab @(memberPickerTab == "departments" ? "active" : "")"
+                                            @onclick="@(() => SetMemberPickerTab("departments"))">
+                                        <MudIcon Icon="@Icons.Material.Filled.Business" Size="Size.Small" />
+                                        <span>Departments</span>
+                                    </button>
+                                </div>
+
+                                <!-- Content -->
+                                <div class="picker-content">
+                                    @if (isSearchingCreateGroupMembers)
+                                    {
+                                        <div class="picker-loading">
+                                            <div class="loading-spinner small"></div>
+                                            <span>Searching...</span>
+                                        </div>
+                                    }
+                                    else if (memberPickerTab == "recent")
+                                    {
+                                        <!-- Recent Users -->
+                                        @if (createGroupMemberSearchResults.Any())
                                         {
-                                            <div class="member-search-result-item" @onclick="() => AddCreateGroupMember(user)">
-                                                <div class="member-result-avatar" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(user.Id);">
-                                                    @if (!string.IsNullOrEmpty(user.AvatarUrl))
-                                                    {
-                                                        <img src="@user.AvatarUrl" alt="@user.FullName" />
-                                                    }
-                                                    else
-                                                    {
-                                                        <span>@StringHelper.GetInitials(user.FullName)</span>
-                                                    }
-                                                </div>
-                                                <div class="member-result-info">
-                                                    <span class="member-result-name">@user.FullName</span>
-                                                    <span class="member-result-email">@user.Email</span>
-                                                </div>
+                                            <div class="picker-list">
+                                                @foreach (var user in createGroupMemberSearchResults)
+                                                {
+                                                    var isSelected = createGroupSelectedMembers.Any(m => m.Id == user.Id);
+                                                    <div class="picker-item @(isSelected ? "selected" : "")" @onclick="() => ToggleCreateGroupMember(user)">
+                                                        <div class="picker-item-avatar" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(user.Id);">
+                                                            @if (!string.IsNullOrEmpty(user.AvatarUrl))
+                                                            {
+                                                                <img src="@user.AvatarUrl" alt="@user.FullName" />
+                                                            }
+                                                            else
+                                                            {
+                                                                <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" />
+                                                            }
+                                                        </div>
+                                                        <span class="picker-item-name">@user.FullName</span>
+                                                        @if (isSelected)
+                                                        {
+                                                            <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Class="picker-item-check" />
+                                                        }
+                                                    </div>
+                                                }
                                             </div>
                                         }
-                                    </div>
-                                }
-                                else if (!string.IsNullOrEmpty(createGroupMemberSearchQuery) && createGroupMemberSearchQuery.Length >= 2)
-                                {
-                                    <div class="member-search-empty">
-                                        <span>No users found</span>
-                                    </div>
-                                }
+                                        else if (!string.IsNullOrEmpty(createGroupMemberSearchQuery) && createGroupMemberSearchQuery.Length >= 2)
+                                        {
+                                            <div class="picker-empty">
+                                                <span>No users found</span>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div class="picker-hint">
+                                                <span>Type to search users...</span>
+                                            </div>
+                                        }
+                                    }
+                                    else if (memberPickerTab == "departments")
+                                    {
+                                        <!-- Departments -->
+                                        @if (isLoadingDepartments)
+                                        {
+                                            <div class="picker-loading">
+                                                <div class="loading-spinner small"></div>
+                                                <span>Loading departments...</span>
+                                            </div>
+                                        }
+                                        else if (createGroupDepartments.Any())
+                                        {
+                                            <div class="picker-list">
+                                                @foreach (var dept in GetFilteredDepartments())
+                                                {
+                                                    var isExpanded = expandedDepartmentIds.Contains(dept.Id);
+                                                    var isSelected = selectedDepartmentIds.Contains(dept.Id);
+                                                    <div class="picker-department">
+                                                        <div class="picker-item department-item @(isSelected ? "selected" : "")" @onclick="() => ToggleDepartmentSelection(dept)">
+                                                            <div class="picker-item-avatar department-avatar">
+                                                                <MudIcon Icon="@Icons.Material.Filled.Groups" Size="Size.Small" />
+                                                            </div>
+                                                            <div class="picker-item-info">
+                                                                <span class="picker-dept-label">Department</span>
+                                                                <span class="picker-item-name">@dept.Name</span>
+                                                            </div>
+                                                            @if (isSelected)
+                                                            {
+                                                                <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Class="picker-item-check" />
+                                                            }
+                                                            <button class="dept-expand-btn" @onclick="() => ToggleDepartmentExpand(dept.Id)" @onclick:stopPropagation="true">
+                                                                <MudIcon Icon="@(isExpanded ? Icons.Material.Filled.KeyboardArrowUp : Icons.Material.Filled.KeyboardArrowDown)" Size="Size.Small" />
+                                                            </button>
+                                                        </div>
+
+                                                        @if (isExpanded)
+                                                        {
+                                                            <div class="dept-users-list">
+                                                                @if (departmentUsersCache.TryGetValue(dept.Id, out var users))
+                                                                {
+                                                                    @foreach (var user in users.Where(u => u.UserId != currentUserId))
+                                                                    {
+                                                                        var userSelected = createGroupSelectedMembers.Any(m => m.Id == user.UserId);
+                                                                        <div class="picker-item dept-user-item @(userSelected ? "selected" : "")"
+                                                                             @onclick="() => ToggleDepartmentUser(user)">
+                                                                            <div class="picker-item-avatar" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(user.UserId);">
+                                                                                @if (!string.IsNullOrEmpty(user.AvatarUrl))
+                                                                                {
+                                                                                    <img src="@user.AvatarUrl" alt="@user.FullName" />
+                                                                                }
+                                                                                else
+                                                                                {
+                                                                                    <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" />
+                                                                                }
+                                                                            </div>
+                                                                            <span class="picker-item-name">@user.FullName</span>
+                                                                            @if (userSelected)
+                                                                            {
+                                                                                <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Class="picker-item-check" />
+                                                                            }
+                                                                        </div>
+                                                                    }
+                                                                }
+                                                                else
+                                                                {
+                                                                    <div class="picker-loading">
+                                                                        <div class="loading-spinner small"></div>
+                                                                    </div>
+                                                                }
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                }
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div class="picker-empty">
+                                                <span>No departments found</span>
+                                            </div>
+                                        }
+                                    }
+                                </div>
                             </div>
                         }
                     </div>

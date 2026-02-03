@@ -1,3 +1,4 @@
+using ChatApp.Blazor.Client.Features.Admin.Services;
 using ChatApp.Blazor.Client.Features.Auth.Services;
 using ChatApp.Blazor.Client.Features.Files.Services;
 using ChatApp.Blazor.Client.Features.Messages.Components;
@@ -5,6 +6,7 @@ using ChatApp.Blazor.Client.Features.Messages.Services;
 using ChatApp.Blazor.Client.Infrastructure.SignalR;
 using ChatApp.Blazor.Client.Models.Auth;
 using ChatApp.Blazor.Client.Models.Messages;
+using ChatApp.Blazor.Client.Models.Organization;
 using ChatApp.Blazor.Client.State;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
@@ -24,6 +26,8 @@ public partial class Messages : IAsyncDisposable
     [Inject] private ISearchService SearchService { get; set; } = default!;
 
     [Inject] private ISignalRService SignalRService { get; set; } = default!;
+
+    [Inject] private IDepartmentService DepartmentService { get; set; } = default!;
 
     [Inject] private UserState UserState { get; set; } = default!;
 
@@ -481,8 +485,39 @@ public partial class Messages : IAsyncDisposable
 
     /// <summary>
     /// Create Group panel-də Chat Settings bölməsi açıq?
+    /// Default collapsed.
     /// </summary>
-    private bool showChatSettings = true;
+    private bool showChatSettings = false;
+
+    /// <summary>
+    /// Member picker aktiv tab (recent/departments).
+    /// </summary>
+    private string memberPickerTab = "recent";
+
+    /// <summary>
+    /// Departments siyahısı.
+    /// </summary>
+    private List<DepartmentDto> createGroupDepartments = [];
+
+    /// <summary>
+    /// Departments yüklənir?
+    /// </summary>
+    private bool isLoadingDepartments;
+
+    /// <summary>
+    /// Expanded department IDs.
+    /// </summary>
+    private HashSet<Guid> expandedDepartmentIds = [];
+
+    /// <summary>
+    /// Selected department IDs (bütün department seçildikdə).
+    /// </summary>
+    private HashSet<Guid> selectedDepartmentIds = [];
+
+    /// <summary>
+    /// Department users cache.
+    /// </summary>
+    private Dictionary<Guid, List<DepartmentUserDto>> departmentUsersCache = [];
 
     #endregion
 

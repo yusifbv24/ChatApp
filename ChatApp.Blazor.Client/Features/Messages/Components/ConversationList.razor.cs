@@ -168,11 +168,6 @@ public partial class ConversationList : IAsyncDisposable
     }
 
     /// <summary>
-    /// New chat menu-su açıqdır?
-    /// </summary>
-    private bool showNewMenu = false;
-
-    /// <summary>
     /// More menu açıqdır?
     /// </summary>
     private bool showMoreMenu = false;
@@ -502,26 +497,6 @@ public partial class ConversationList : IAsyncDisposable
 
     #endregion
 
-    #region Menu Methods
-
-    /// <summary>
-    /// New chat menu-sunu toggle edir.
-    /// </summary>
-    private void ToggleNewMenu()
-    {
-        showNewMenu = !showNewMenu;
-    }
-
-    /// <summary>
-    /// New chat menu-sunu bağlayır.
-    /// </summary>
-    private void CloseNewMenu()
-    {
-        showNewMenu = false;
-    }
-
-    #endregion
-
     #region Search Methods
 
     /// <summary>
@@ -575,7 +550,6 @@ public partial class ConversationList : IAsyncDisposable
     /// </summary>
     private async Task OnNewChannelClick()
     {
-        showNewMenu = false;
         await OnNewChannel.InvokeAsync();
     }
 

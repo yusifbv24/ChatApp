@@ -23,25 +23,12 @@
         </div>
 
         <!-- Create Chat Button -->
-        <div class="new-chat-wrapper">
-            @if (UserState.HasPermission("Channels.Create"))
-            {
-                <button class="toolbar-btn toolbar-btn-primary" @onclick="ToggleNewMenu" title="Create group">
-                    <MudIcon Icon="@Icons.Material.Filled.EditNote" Size="Size.Small" />
-                </button>
-            }
-
-            @if (showNewMenu)
-            {
-                <div class="new-menu-overlay" @onclick="CloseNewMenu"></div>
-                <div class="new-menu">
-                    <button class="new-menu-item" @onclick="OnNewChannelClick">
-                        <MudIcon Icon="@Icons.Material.Filled.Group" Size="Size.Small" />
-                        <span>New Group</span>
-                    </button>
-                </div>
-            }
-        </div>
+        @if (UserState.HasPermission("Channels.Create"))
+        {
+            <button class="toolbar-btn toolbar-btn-primary" @onclick="OnNewChannelClick" title="Create group">
+                <MudIcon Icon="@Icons.Material.Filled.EditNote" Size="Size.Small" />
+            </button>
+        }
     </div>
 
 
@@ -390,7 +377,7 @@
                 <p>@(string.IsNullOrEmpty(SearchTerm) ? "No chats yet" : "No results found")</p>
                 @if (string.IsNullOrEmpty(SearchTerm))
                 {
-                    <button class="empty-action-btn" @onclick="() => { showNewMenu = true; }">Start a chat</button>
+                    <button class="empty-action-btn" @onclick="OnNewChannelClick">Start a chat</button>
                 }
             </div>
         }

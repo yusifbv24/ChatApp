@@ -1,6 +1,7 @@
 using ChatApp.Blazor.Client.Models.Auth;
 using ChatApp.Blazor.Client.Models.Common;
 using ChatApp.Blazor.Client.Models.Messages;
+using ChatApp.Blazor.Client.Models.Organization;
 using ChatApp.Blazor.Client.Models.Search;
 using ChatApp.Shared.Kernel;
 using Microsoft.AspNetCore.Components;
@@ -71,7 +72,12 @@ public partial class Messages
         createGroupMemberSearchQuery = string.Empty;
         createGroupMemberSearchResults.Clear();
         showCreateGroupMemberSearch = false;
-        showChatSettings = true;
+        showChatSettings = false; // Default collapsed
+
+        // Member picker state-ini sıfırla
+        memberPickerTab = "recent";
+        expandedDepartmentIds.Clear();
+        selectedDepartmentIds.Clear();
 
         // Dialog-u bağla (əgər açıqdırsa)
         showNewChannelDialog = false;
@@ -211,7 +217,193 @@ public partial class Messages
     private void RemoveCreateGroupMember(Guid userId)
     {
         createGroupSelectedMembers.RemoveAll(m => m.Id == userId);
+        // Department seçimini də sil
+        selectedDepartmentIds.Remove(userId);
         StateHasChanged();
+    }
+
+    /// <summary>
+    /// Create Group panel-də üzv toggle et (seçili isə sil, deyilsə əlavə et).
+    /// </summary>
+    private void ToggleCreateGroupMember(UserSearchResultDto user)
+    {
+        var existing = createGroupSelectedMembers.FirstOrDefault(m => m.Id == user.Id);
+        if (existing != null)
+        {
+            createGroupSelectedMembers.Remove(existing);
+        }
+        else
+        {
+            createGroupSelectedMembers.Add(user);
+        }
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Member picker tab dəyişdir.
+    /// </summary>
+    private async Task SetMemberPickerTab(string tab)
+    {
+        memberPickerTab = tab;
+
+        if (tab == "departments" && !createGroupDepartments.Any())
+        {
+            await LoadDepartmentsForPicker();
+        }
+
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Departments yüklə.
+    /// </summary>
+    private async Task LoadDepartmentsForPicker()
+    {
+        isLoadingDepartments = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await DepartmentService.GetAllDepartmentsAsync();
+            if (result.IsSuccess && result.Value != null)
+            {
+                createGroupDepartments = result.Value;
+            }
+        }
+        catch
+        {
+            createGroupDepartments = [];
+        }
+        finally
+        {
+            isLoadingDepartments = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Department expand/collapse toggle.
+    /// </summary>
+    private async Task ToggleDepartmentExpand(Guid departmentId)
+    {
+        if (expandedDepartmentIds.Contains(departmentId))
+        {
+            expandedDepartmentIds.Remove(departmentId);
+        }
+        else
+        {
+            expandedDepartmentIds.Add(departmentId);
+
+            // Department users yüklə (əgər cache-də yoxdursa)
+            if (!departmentUsersCache.ContainsKey(departmentId))
+            {
+                await LoadDepartmentUsers(departmentId);
+            }
+        }
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Department users yüklə.
+    /// </summary>
+    private async Task LoadDepartmentUsers(Guid departmentId)
+    {
+        try
+        {
+            // GetDepartmentUsersAsync-dan istifadə et
+            var result = await UserService.GetDepartmentUsersAsync(1, 100);
+            if (result.IsSuccess && result.Value?.Items != null)
+            {
+                // Filter by departmentId
+                var users = result.Value.Items
+                    .Where(u => u.DepartmentId == departmentId)
+                    .ToList();
+                departmentUsersCache[departmentId] = users;
+            }
+            else
+            {
+                departmentUsersCache[departmentId] = [];
+            }
+        }
+        catch
+        {
+            departmentUsersCache[departmentId] = [];
+        }
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Department seçimi toggle (bütün department).
+    /// </summary>
+    private async Task ToggleDepartmentSelection(DepartmentDto dept)
+    {
+        if (selectedDepartmentIds.Contains(dept.Id))
+        {
+            // Deselect department
+            selectedDepartmentIds.Remove(dept.Id);
+            // Department-i selected members-dan sil
+            createGroupSelectedMembers.RemoveAll(m => m.Id == dept.Id);
+        }
+        else
+        {
+            // Select department
+            selectedDepartmentIds.Add(dept.Id);
+            // Department-i chip kimi əlavə et
+            createGroupSelectedMembers.Add(new UserSearchResultDto(
+                dept.Id,
+                dept.Name,
+                string.Empty,
+                string.Empty,
+                null,
+                null
+            ));
+        }
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Department user toggle.
+    /// </summary>
+    private void ToggleDepartmentUser(DepartmentUserDto user)
+    {
+        var existing = createGroupSelectedMembers.FirstOrDefault(m => m.Id == user.UserId);
+        if (existing != null)
+        {
+            createGroupSelectedMembers.Remove(existing);
+        }
+        else
+        {
+            createGroupSelectedMembers.Add(new UserSearchResultDto(
+                user.UserId,
+                user.FullName,
+                string.Empty,
+                user.Email,
+                user.AvatarUrl,
+                user.PositionName
+            ));
+        }
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Bu ID department-dir?
+    /// </summary>
+    private bool IsSelectedDepartment(Guid id)
+    {
+        return selectedDepartmentIds.Contains(id);
+    }
+
+    /// <summary>
+    /// Filter departments (axtarışa görə).
+    /// </summary>
+    private List<DepartmentDto> GetFilteredDepartments()
+    {
+        if (string.IsNullOrWhiteSpace(createGroupMemberSearchQuery))
+            return createGroupDepartments;
+
+        return createGroupDepartments
+            .Where(d => d.Name.Contains(createGroupMemberSearchQuery, StringComparison.OrdinalIgnoreCase))
+            .ToList();
     }
 
     /// <summary>
