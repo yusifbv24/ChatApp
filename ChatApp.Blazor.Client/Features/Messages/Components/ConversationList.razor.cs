@@ -104,11 +104,6 @@ public partial class ConversationList : IAsyncDisposable
     [Parameter] public EventCallback<ChannelDto> OnChannelSelected { get; set; }
 
     /// <summary>
-    /// Yeni conversation yaratmaq callback-i.
-    /// </summary>
-    [Parameter] public EventCallback OnNewConversation { get; set; }
-
-    /// <summary>
     /// Yeni channel yaratmaq callback-i.
     /// </summary>
     [Parameter] public EventCallback OnNewChannel { get; set; }
@@ -573,15 +568,6 @@ public partial class ConversationList : IAsyncDisposable
         {
             await OnDepartmentUserSelected.InvokeAsync(item.DepartmentUser);
         }
-    }
-
-    /// <summary>
-    /// New conversation click handler.
-    /// </summary>
-    private async Task OnNewConversationClick()
-    {
-        showNewMenu = false;
-        await OnNewConversation.InvokeAsync();
     }
 
     /// <summary>

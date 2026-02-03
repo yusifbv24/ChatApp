@@ -1,63 +1,45 @@
 <div class="conversation-list">
-    <!-- Header with New Button -->
-    <div class="conversation-list-header">
-        <h2>Chats</h2>
-        <div class="new-chat-wrapper">
-            @if(UserState.HasPermission("Messages.Send") || UserState.HasPermission("Channels.Create"))
+    <!-- Header Toolbar (Bitrix24 style) -->
+    <div class="conversation-toolbar">
+        <!-- Filter Button -->
+        <button class="toolbar-btn" title="Filter">
+            <MudIcon Icon="@Icons.Material.Outlined.FilterList" Size="Size.Small" />
+        </button>
+
+        <!-- Search Input -->
+        <div class="toolbar-search">
+            <MudIcon Icon="@Icons.Material.Filled.Search" Class="toolbar-search-icon" Size="Size.Small" />
+            <input type="text"
+                   class="toolbar-search-input"
+                   placeholder="Find employee or chat"
+                   @bind="SearchTerm"
+                   @bind:event="oninput" />
+            @if (!string.IsNullOrEmpty(SearchTerm))
             {
-                <button class="new-chat-btn" @onclick="ToggleNewMenu">
-                    <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" />
+                <button class="toolbar-search-clear" @onclick="ClearSearch">
+                    <MudIcon Icon="@Icons.Material.Filled.Clear" Size="Size.Small" />
                 </button>
             }
-            
+        </div>
+
+        <!-- Create Chat Button -->
+        <div class="new-chat-wrapper">
+            @if (UserState.HasPermission("Channels.Create"))
+            {
+                <button class="toolbar-btn toolbar-btn-primary" @onclick="ToggleNewMenu" title="Create group">
+                    <MudIcon Icon="@Icons.Material.Filled.EditNote" Size="Size.Small" />
+                </button>
+            }
+
             @if (showNewMenu)
             {
                 <div class="new-menu-overlay" @onclick="CloseNewMenu"></div>
                 <div class="new-menu">
-                    @if (UserState.HasPermission("Messages.Send"))
-                    {
-                        <button class="new-menu-item" @onclick="OnNewConversationClick">
-                            <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" />
-                            <div class="new-menu-item-text">
-                                <span class="new-menu-item-title">New Message</span>
-                                <span class="new-menu-item-desc">Start a private conversation</span>
-                            </div>
-                        </button>
-                    }
-                    
-                    @if (UserState.HasPermission("Channels.Create"))
-                    {
-                        <button class="new-menu-item" @onclick="OnNewChannelClick">
-                            <MudIcon Icon="@Icons.Material.Filled.Group" Size="Size.Small" />
-                            <div class="new-menu-item-text">
-                                <span class="new-menu-item-title">New Group</span>
-                                <span class="new-menu-item-desc">Create a group chat</span>
-                            </div>
-                        </button>
-                    }
-                
+                    <button class="new-menu-item" @onclick="OnNewChannelClick">
+                        <MudIcon Icon="@Icons.Material.Filled.Group" Size="Size.Small" />
+                        <span>New Group</span>
+                    </button>
                 </div>
-            }
-        
-        </div>
-    </div>
-
-
-    <!-- Search Bar -->
-    <div class="conversation-search">
-        <div class="search-input-wrapper">
-            <MudIcon Icon="@Icons.Material.Filled.Search" Class="search-icon" Size="Size.Small"/>
-            <input type="text"
-                   class="search-input"
-                   placeholder="Search or start new chat"
-                   @bind="SearchTerm"
-                   @bind:event="oninput" />
-
-            @if (!string.IsNullOrEmpty(SearchTerm))
-            {
-                <button class="search-clear" @onclick="ClearSearch">
-                    <MudIcon Icon="@Icons.Material.Filled.Clear" Size="Size.Small" />
-                </button>
             }
         </div>
     </div>
