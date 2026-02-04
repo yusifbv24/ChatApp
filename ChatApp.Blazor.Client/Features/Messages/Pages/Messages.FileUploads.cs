@@ -1,6 +1,7 @@
 using ChatApp.Blazor.Client.Models.Files;
 using ChatApp.Blazor.Client.Models.Messages;
 using ChatApp.Shared.Kernel;
+using Microsoft.JSInterop;
 
 namespace ChatApp.Blazor.Client.Features.Messages.Pages;
 
@@ -143,6 +144,10 @@ public partial class Messages
 
         StateHasChanged();
 
+        // Fayl göndərildikdən sonra aşağıya scroll et
+        await Task.Delay(50); // DOM update üçün qısa delay
+        await JS.InvokeVoidAsync("chatAppUtils.scrollToBottomById", "chat-messages");
+
         // Bütün upload-ları paralel işlət
         await Task.WhenAll(uploadTasks);
     }
@@ -185,11 +190,13 @@ public partial class Messages
 
             if (cancellationToken.IsCancellationRequested)
             {
-                // Cancelled - mesajı sil
+                // Cancelled - mesajı sil və conversation list-i yenilə
                 await InvokeAsync(() =>
                 {
                     directMessages.RemoveAll(m => m.TempId == tempId);
+                    pendingDirectMessages.Remove(tempId);
                     _activeUploads.Remove(tempId);
+                    RefreshConversationListAfterCancel(conversationId);
                     InvalidateMessageCache();
                     StateHasChanged();
                 });
@@ -297,11 +304,13 @@ public partial class Messages
         }
         catch (OperationCanceledException)
         {
-            // Cancelled
+            // Cancelled - mesajı sil və conversation list-i yenilə
             await InvokeAsync(() =>
             {
                 directMessages.RemoveAll(m => m.TempId == tempId);
+                pendingDirectMessages.Remove(tempId);
                 _activeUploads.Remove(tempId);
+                RefreshConversationListAfterCancel(conversationId);
                 InvalidateMessageCache();
                 StateHasChanged();
             });
@@ -409,6 +418,10 @@ public partial class Messages
 
         StateHasChanged();
 
+        // Fayl göndərildikdən sonra aşağıya scroll et
+        await Task.Delay(50); // DOM update üçün qısa delay
+        await JS.InvokeVoidAsync("chatAppUtils.scrollToBottomById", "chat-messages");
+
         // Bütün upload-ları paralel işlət
         await Task.WhenAll(uploadTasks);
     }
@@ -451,11 +464,13 @@ public partial class Messages
 
             if (cancellationToken.IsCancellationRequested)
             {
-                // Cancelled - mesajı sil
+                // Cancelled - mesajı sil və channel list-i yenilə
                 await InvokeAsync(() =>
                 {
                     channelMessages.RemoveAll(m => m.TempId == tempId);
+                    pendingChannelMessages.Remove(tempId);
                     _activeUploads.Remove(tempId);
+                    RefreshChannelListAfterCancel(channelId);
                     InvalidateMessageCache();
                     StateHasChanged();
                 });
@@ -552,11 +567,13 @@ public partial class Messages
         }
         catch (OperationCanceledException)
         {
-            // Cancelled
+            // Cancelled - mesajı sil və channel list-i yenilə
             await InvokeAsync(() =>
             {
                 channelMessages.RemoveAll(m => m.TempId == tempId);
+                pendingChannelMessages.Remove(tempId);
                 _activeUploads.Remove(tempId);
+                RefreshChannelListAfterCancel(channelId);
                 InvalidateMessageCache();
                 StateHasChanged();
             });
@@ -589,6 +606,123 @@ public partial class Messages
         {
             cts.Cancel();
             // Mesaj UploadAndSend metodunda silinəcək
+        }
+    }
+
+    /// <summary>
+    /// Fayl upload cancel olduqda conversation list-i əvvəlki mesajla yenilə.
+    /// </summary>
+    private void RefreshConversationListAfterCancel(Guid conversationId)
+    {
+        // Son mesajı tap (cancel olunan mesaj artıq silindi)
+        var lastMessage = directMessages
+            .Where(m => m.ConversationId == conversationId)
+            .OrderByDescending(m => m.CreatedAtUtc)
+            .FirstOrDefault();
+
+        var conversation = directConversations.FirstOrDefault(c => c.Id == conversationId);
+        if (conversation == null) return;
+
+        if (lastMessage != null)
+        {
+            // Əvvəlki mesajla yenilə
+            var preview = GetFilePreview(lastMessage);
+            var status = lastMessage.SenderId == currentUserId
+                ? (lastMessage.IsRead ? "Read" : "Sent")
+                : null;
+
+            UpdateListItemWhere(
+                ref directConversations,
+                c => c.Id == conversationId,
+                c => c with
+                {
+                    LastMessageContent = preview,
+                    LastMessageAtUtc = lastMessage.CreatedAtUtc,
+                    LastMessageSenderId = lastMessage.SenderId,
+                    LastMessageStatus = status,
+                    LastMessageId = lastMessage.Id
+                }
+            );
+        }
+        else
+        {
+            // Heç mesaj yoxdur - boş göstər (LastMessageAtUtc non-nullable olduğu üçün default saxlayırıq)
+            UpdateListItemWhere(
+                ref directConversations,
+                c => c.Id == conversationId,
+                c => c with
+                {
+                    LastMessageContent = null,
+                    LastMessageSenderId = null,
+                    LastMessageStatus = null,
+                    LastMessageId = null
+                }
+            );
+        }
+    }
+
+    /// <summary>
+    /// Fayl upload cancel olduqda channel list-i əvvəlki mesajla yenilə.
+    /// </summary>
+    private void RefreshChannelListAfterCancel(Guid channelId)
+    {
+        // Son mesajı tap (cancel olunan mesaj artıq silindi)
+        var lastMessage = channelMessages
+            .Where(m => m.ChannelId == channelId)
+            .OrderByDescending(m => m.CreatedAtUtc)
+            .FirstOrDefault();
+
+        var channel = channelConversations.FirstOrDefault(c => c.Id == channelId);
+        if (channel == null) return;
+
+        if (lastMessage != null)
+        {
+            // Əvvəlki mesajla yenilə
+            var preview = GetFilePreview(lastMessage);
+            string? status = null;
+            if (lastMessage.SenderId == currentUserId)
+            {
+                var totalMembers = channel.MemberCount - 1;
+                if (totalMembers == 0)
+                    status = "Sent";
+                else if (lastMessage.ReadByCount >= totalMembers)
+                    status = "Read";
+                else if (lastMessage.ReadByCount > 0)
+                    status = "Delivered";
+                else
+                    status = "Sent";
+            }
+
+            UpdateListItemWhere(
+                ref channelConversations,
+                c => c.Id == channelId,
+                c => c with
+                {
+                    LastMessageContent = preview,
+                    LastMessageAtUtc = lastMessage.CreatedAtUtc,
+                    LastMessageSenderId = lastMessage.SenderId,
+                    LastMessageSenderAvatarUrl = lastMessage.SenderAvatarUrl,
+                    LastMessageStatus = status,
+                    LastMessageId = lastMessage.Id
+                }
+            );
+        }
+        else
+        {
+            // Heç mesaj yoxdur - boş göstər
+            UpdateListItemWhere(
+                ref channelConversations,
+                c => c.Id == channelId,
+                c => c with
+                {
+                    LastMessageContent = null,
+                    LastMessageAtUtc = null,
+                    LastMessageSenderId = null,
+                    LastMessageSenderAvatarUrl = null,
+                    LastMessageStatus = null,
+                    LastMessageId = null
+                }
+            );
         }
     }
 
