@@ -685,13 +685,20 @@ public partial class MessageInput : IAsyncDisposable
     private async Task HandleFileSelection(InputFileChangeEventArgs e)
     {
         const long maxFileSize = 100 * 1024 * 1024; // 100MB
+        const int maxFileCount = 10; // Maksimum fayl sayı
         var imageExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp" };
 
         selectedFiles.Clear();
 
         try
         {
-            foreach (var browserFile in e.GetMultipleFiles(20)) // Max 20 files
+            var allFiles = e.GetMultipleFiles(maxFileCount + 1); // +1 to detect overflow
+            if (allFiles.Count > maxFileCount)
+            {
+                Snackbar.Add($"Maksimum {maxFileCount} fayl seçə bilərsiniz", Severity.Warning);
+            }
+
+            foreach (var browserFile in allFiles.Take(maxFileCount))
             {
                 // Validate file size
                 if (browserFile.Size > maxFileSize)
@@ -747,11 +754,20 @@ public partial class MessageInput : IAsyncDisposable
                 selectedFiles.Add(selectedFile);
             }
 
-            // Show file selection panel if files were selected
+            // Əgər fayl seçilibsə
             if (selectedFiles.Count > 0)
             {
-                showFileSelectionPanel = true;
-                StateHasChanged();
+                if (selectedFiles.Count == 1)
+                {
+                    // 1 fayl seçilibsə - panel açılmadan birbaşa göndər
+                    await HandleSendWithFiles((selectedFiles.ToList(), MessageText));
+                }
+                else
+                {
+                    // 1-dən çox fayl seçilibsə - panel açılsın
+                    showFileSelectionPanel = true;
+                    StateHasChanged();
+                }
             }
         }
         catch (Exception ex)
