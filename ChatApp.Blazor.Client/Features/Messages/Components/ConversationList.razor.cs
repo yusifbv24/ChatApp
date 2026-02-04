@@ -1109,7 +1109,7 @@ public partial class ConversationList : IAsyncDisposable
     /// <summary>
     /// Mark all as read handler for channels - marks all unread messages as read and clears ALL read later flags.
     /// Clears both conversation-level (IsMarkedReadLater) and message-level (LastReadLaterMessageId) marks.
-    /// PERFORMANCE FIX: Removed console logging, single StateHasChanged.
+    /// Also decrements global unread message count in AppState.
     /// </summary>
     private async Task MarkChannelAllAsRead(Guid channelId)
     {
@@ -1117,6 +1117,7 @@ public partial class ConversationList : IAsyncDisposable
         if (index < 0) return;
 
         var originalChannel = Channels[index];
+        var unreadCountToDecrement = originalChannel.UnreadCount;
 
         // Optimistic UI: Clear all flags immediately
         Channels[index] = originalChannel with
@@ -1125,6 +1126,13 @@ public partial class ConversationList : IAsyncDisposable
             LastReadLaterMessageId = null,
             UnreadCount = 0
         };
+
+        // Decrement global unread count
+        if (unreadCountToDecrement > 0)
+        {
+            AppState.DecrementUnreadMessages(unreadCountToDecrement);
+        }
+
         InvalidateCache();
         StateHasChanged();
 
@@ -1143,6 +1151,13 @@ public partial class ConversationList : IAsyncDisposable
                         LastReadLaterMessageId = originalChannel.LastReadLaterMessageId,
                         UnreadCount = originalChannel.UnreadCount
                     };
+
+                    // Revert global unread count
+                    if (unreadCountToDecrement > 0)
+                    {
+                        AppState.UnreadMessageCount += unreadCountToDecrement;
+                    }
+
                     InvalidateCache();
                 }
             }
@@ -1158,6 +1173,13 @@ public partial class ConversationList : IAsyncDisposable
                     LastReadLaterMessageId = originalChannel.LastReadLaterMessageId,
                     UnreadCount = originalChannel.UnreadCount
                 };
+
+                // Revert global unread count
+                if (unreadCountToDecrement > 0)
+                {
+                    AppState.UnreadMessageCount += unreadCountToDecrement;
+                }
+
                 InvalidateCache();
             }
         }
@@ -1166,7 +1188,7 @@ public partial class ConversationList : IAsyncDisposable
     /// <summary>
     /// Mark all as read handler for conversations - marks all unread messages as read and clears ALL read later flags.
     /// Clears both conversation-level (IsMarkedReadLater) and message-level (LastReadLaterMessageId) marks.
-    /// PERFORMANCE FIX: Removed console logging, single StateHasChanged.
+    /// Also decrements global unread message count in AppState.
     /// </summary>
     private async Task MarkConversationAllAsRead(Guid conversationId)
     {
@@ -1174,6 +1196,7 @@ public partial class ConversationList : IAsyncDisposable
         if (index < 0) return;
 
         var originalConversation = Conversations[index];
+        var unreadCountToDecrement = originalConversation.UnreadCount;
 
         // Optimistic UI: Clear all flags immediately
         Conversations[index] = originalConversation with
@@ -1182,6 +1205,13 @@ public partial class ConversationList : IAsyncDisposable
             LastReadLaterMessageId = null,
             UnreadCount = 0
         };
+
+        // Decrement global unread count
+        if (unreadCountToDecrement > 0)
+        {
+            AppState.DecrementUnreadMessages(unreadCountToDecrement);
+        }
+
         InvalidateCache();
         StateHasChanged();
 
@@ -1200,6 +1230,13 @@ public partial class ConversationList : IAsyncDisposable
                         LastReadLaterMessageId = originalConversation.LastReadLaterMessageId,
                         UnreadCount = originalConversation.UnreadCount
                     };
+
+                    // Revert global unread count
+                    if (unreadCountToDecrement > 0)
+                    {
+                        AppState.UnreadMessageCount += unreadCountToDecrement;
+                    }
+
                     InvalidateCache();
                 }
             }
@@ -1215,6 +1252,13 @@ public partial class ConversationList : IAsyncDisposable
                     LastReadLaterMessageId = originalConversation.LastReadLaterMessageId,
                     UnreadCount = originalConversation.UnreadCount
                 };
+
+                // Revert global unread count
+                if (unreadCountToDecrement > 0)
+                {
+                    AppState.UnreadMessageCount += unreadCountToDecrement;
+                }
+
                 InvalidateCache();
             }
         }

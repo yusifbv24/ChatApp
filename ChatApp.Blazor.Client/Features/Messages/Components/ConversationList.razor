@@ -211,13 +211,13 @@
                         @if (showMoreMenu && moreMenuItemId == item.Id)
                         {
                             <div class="conversation-more-menu" @onclick:stopPropagation="true">
-                                @if (item.LastReadLaterMessageId.HasValue || item.IsMarkedReadLater)
+                                @if (item.UnreadCount > 0 || item.LastReadLaterMessageId.HasValue || item.IsMarkedReadLater)
                                 {
                                     <button class="menu-item" @onclick="async () => { await MarkChannelAllAsRead(item.Id); CloseMoreMenu(); }">
                                         <span>Mark all as read</span>
                                     </button>
                                 }
-                                else
+                                @if (item.UnreadCount == 0 && !item.LastReadLaterMessageId.HasValue && !item.IsMarkedReadLater)
                                 {
                                     <button class="menu-item" @onclick="async () => { await ToggleMarkChannelAsReadLater(item.Id); CloseMoreMenu(); }">
                                         <span>Mark to read later</span>
@@ -352,13 +352,13 @@
                         @if (showMoreMenu && moreMenuItemId == item.Id)
                         {
                             <div class="conversation-more-menu" @onclick:stopPropagation="true">
-                                @if (item.LastReadLaterMessageId.HasValue || item.IsMarkedReadLater)
+                                @if (item.UnreadCount > 0 || item.LastReadLaterMessageId.HasValue || item.IsMarkedReadLater)
                                 {
                                     <button class="menu-item" @onclick="async () => { await MarkConversationAllAsRead(item.Id); CloseMoreMenu(); }">
                                         <span>Mark all as read</span>
                                     </button>
                                 }
-                                else
+                                @if (item.UnreadCount == 0 && !item.LastReadLaterMessageId.HasValue && !item.IsMarkedReadLater)
                                 {
                                     <button class="menu-item" @onclick="async () => { await ToggleMarkConversationAsReadLater(item.Id); CloseMoreMenu(); }">
                                         <span>Mark to read later</span>
