@@ -60,7 +60,7 @@ Identity | Channels | DirectMessages | Files | Notifications | Search | Settings
 4. **Explain Changes**: High-level summary at each step
 5. **Document Results**: Add review section to `tasks/todo.md`
 6. **Capture Lessons**: Update `tasks/lessons.md` after corrections
-
+7. **Dont build**: Əgər sadəcə frontenddə iş görürsənsə, backend proyektini build etmə və ya əksinə.
 ## Core Principles
 
 - **Simplicity First**: Make every change as simple as possible. Impact minimal code.

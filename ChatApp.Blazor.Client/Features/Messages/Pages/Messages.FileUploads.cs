@@ -1,22 +1,32 @@
 using ChatApp.Blazor.Client.Models.Files;
 using ChatApp.Blazor.Client.Models.Messages;
+using ChatApp.Shared.Kernel;
 
 namespace ChatApp.Blazor.Client.Features.Messages.Pages;
 
 public partial class Messages
 {
+    #region File Upload State - Aktiv upload-lar
+
+    /// <summary>
+    /// Aktiv upload-ların tracking dictionary-si.
+    /// Key: TempId (mesaj), Value: CancellationTokenSource
+    /// </summary>
+    private readonly Dictionary<Guid, CancellationTokenSource> _activeUploads = new();
+
+    #endregion
+
     #region File Upload - Fayl yükləmə
 
     /// <summary>
-    /// Fayllarla mesaj göndərir.
-    /// Bütün fayllar paralel olaraq upload edilir, sonra hər fayl üçün ayrı mesaj göndərilir.
+    /// Fayllarla mesaj göndərir - Bitrix24 style optimistic UI.
+    /// 1. Əvvəlcə optimistic mesaj UI-da göstərilir (upload state ilə)
+    /// 2. Sonra fayl upload başlayır
+    /// 3. Upload bitdikdə mesaj backend-ə göndərilir
     /// </summary>
     private async Task HandleSendWithFiles((List<SelectedFile> Files, string Message) data)
     {
         if (data.Files == null || data.Files.Count == 0) return;
-
-        isSendingMessage = true;
-        StateHasChanged();
 
         try
         {
@@ -38,332 +48,548 @@ public partial class Messages
                 await LoadConversationsAndChannels();
             }
 
-            // Upload faylları paralel
-            var uploadTasks = data.Files.Select(file => UploadSingleFile(file));
-            var uploadResults = await Task.WhenAll(uploadTasks);
-
-            // Uğurlu upload-ları fil filtr et
-            var successfulUploads = uploadResults
-                .Where(r => r.IsSuccess && !string.IsNullOrEmpty(r.FileId))
-                .ToList();
-
-            if (successfulUploads.Count == 0)
-            {
-                ShowError("All file uploads failed");
-                return;
-            }
-
-            // Hər fayl üçün ayrı mesaj göndər
+            // Hər fayl üçün ayrı optimistic mesaj yarat və upload başlat
             if (isDirectMessage && selectedConversationId.HasValue)
             {
-                await SendDirectMessagesWithFiles(successfulUploads, data.Message);
+                await SendDirectMessagesWithFilesOptimistic(data.Files, data.Message);
             }
             else if (!isDirectMessage && selectedChannelId.HasValue)
             {
-                await SendChannelMessagesWithFiles(successfulUploads, data.Message);
+                await SendChannelMessagesWithFilesOptimistic(data.Files, data.Message);
             }
-
-            // Draft cleared by MessageInput after send
         }
         catch (Exception ex)
         {
             ShowError($"Failed to send files: {ex.Message}");
         }
-        finally
-        {
-            isSendingMessage = false;
-            StateHasChanged();
-        }
     }
 
     /// <summary>
-    /// Tək fayl upload edir və SelectedFile state-ini yeniləyir.
+    /// Direct message - Optimistic UI ilə fayl göndərmə.
     /// </summary>
-    private async Task<(bool IsSuccess, string? FileId, SelectedFile File)> UploadSingleFile(SelectedFile file)
-    {
-        try
-        {
-            file.State = UploadState.Uploading;
-            file.UploadProgress = 0;
-            StateHasChanged();
-
-            // Pass conversation/channel context for proper file organization
-            var uploadResult = await FileService.UploadFileAsync(
-                file.BrowserFile,
-                selectedConversationId,
-                selectedChannelId);
-
-            if (uploadResult.IsSuccess && uploadResult.Value != null)
-            {
-                file.State = UploadState.Completed;
-                file.UploadProgress = 100;
-                file.UploadedFileId = uploadResult.Value.FileId.ToString();
-                StateHasChanged();
-
-                return (true, uploadResult.Value.FileId.ToString(), file);
-            }
-            else
-            {
-                file.State = UploadState.Failed;
-                file.ErrorMessage = uploadResult.Error ?? "Upload failed";
-                StateHasChanged();
-
-                return (false, null, file);
-            }
-        }
-        catch (Exception ex)
-        {
-            file.State = UploadState.Failed;
-            file.ErrorMessage = ex.Message;
-            StateHasChanged();
-
-            return (false, null, file);
-        }
-    }
-
-    /// <summary>
-    /// PERFORMANCE: Direct message-lər üçün fayllarla mesaj göndərir.
-    /// Batch API istifadə edərək bütün mesajları bir request-də göndərir (N request → 1 request).
-    /// </summary>
-    private async Task SendDirectMessagesWithFiles(
-        List<(bool IsSuccess, string? FileId, SelectedFile File)> uploadResults,
-        string messageText)
+    private async Task SendDirectMessagesWithFilesOptimistic(List<SelectedFile> files, string messageText)
     {
         if (!selectedConversationId.HasValue) return;
 
-        // Build batch request
-        var batchMessages = uploadResults
-            .Where(r => !string.IsNullOrEmpty(r.FileId))
-            .Select((r, index) => new BatchMessageItem
-            {
-                Content = (index == 0 && !string.IsNullOrWhiteSpace(messageText)) ? messageText : string.Empty,
-                FileId = r.FileId
-            })
-            .ToList();
+        var conversationId = selectedConversationId.Value;
+        var messageTime = DateTime.UtcNow;
 
-        if (batchMessages.Count == 0) return;
+        // Hər fayl üçün optimistic mesaj yarat
+        var uploadTasks = new List<Task>();
 
-        var batchRequest = new BatchSendMessagesRequest
+        for (int i = 0; i < files.Count; i++)
         {
-            Messages = batchMessages,
-            ReplyToMessageId = null,
-            IsForwarded = false,
-            Mentions = []
-        };
+            var file = files[i];
+            var tempId = Guid.NewGuid();
+            var cts = new CancellationTokenSource();
+            var content = (i == 0 && !string.IsNullOrWhiteSpace(messageText)) ? messageText : string.Empty;
 
-        // PERFORMANCE: Single API call instead of N calls
-        var result = await ConversationService.SendBatchMessagesAsync(selectedConversationId.Value, batchRequest);
+            // Track active upload
+            _activeUploads[tempId] = cts;
+            file.CancellationTokenSource = cts;
+            file.AssociatedMessageId = tempId;
 
-        if (result.IsSuccess && result.Value != null)
-        {
-            var messageIds = result.Value;
-            var messageTime = DateTime.UtcNow;
+            // OPTIMISTIC UI - Mesajı dərhal göstər (uploading state ilə)
+            var optimisticMessage = new DirectMessageDto(
+                tempId,                                         // Temporary ID
+                conversationId,
+                currentUserId,
+                UserState.CurrentUser?.Email ?? "",
+                UserState.CurrentUser?.FullName ?? "",
+                UserState.CurrentUser?.AvatarUrl,
+                recipientUserId,
+                content,
+                null,                                           // FileId - hələ yoxdur
+                file.FileName,                                  // FileName
+                file.ContentType,                               // FileContentType
+                file.SizeInBytes,                               // FileSizeInBytes
+                false,                                          // IsEdited
+                false,                                          // IsDeleted
+                false,                                          // IsRead
+                false,                                          // IsPinned
+                0,                                              // ReactionCount
+                messageTime.AddMilliseconds(i),                 // CreatedAtUtc (ordered)
+                null,                                           // EditedAtUtc
+                null,                                           // PinnedAtUtc
+                null, null, null, null, null, null,             // Reply fields
+                false,                                          // IsForwarded
+                null,                                           // Reactions
+                null,                                           // Mentions
+                MessageStatus.Pending,                          // Status - Pending (uploading)
+                tempId,                                         // TempId
+                UploadState.Uploading,                          // FileUploadState
+                0,                                              // FileUploadProgress
+                cts);                                           // FileUploadCts
 
-            // Create optimistic UI messages for each
-            for (int i = 0; i < messageIds.Count && i < uploadResults.Count; i++)
+            directMessages.Add(optimisticMessage);
+
+            // CRITICAL: SignalR handler-ın dublikatı tanıması üçün pending dictionary-ə əlavə et
+            // SignalR handler SenderId + Content ilə match edir
+            pendingDirectMessages[tempId] = optimisticMessage;
+
+            // Conversation list-i yenilə (sonuncu fayl üçün)
+            if (i == files.Count - 1)
             {
-                var (_, fileId, file) = uploadResults[i];
-                var messageId = messageIds[i];
-                var content = (i == 0 && !string.IsNullOrWhiteSpace(messageText)) ? messageText : string.Empty;
-
-                // Pending read receipt yoxla
-                bool hasReadReceipt = pendingReadReceipts.TryGetValue(messageId, out _);
-
-                // OPTİMİSTİC UI
-                var newMessage = new DirectMessageDto(
-                    messageId,
-                    selectedConversationId.Value,
-                    currentUserId,
-                    UserState.CurrentUser?.Email ?? "",
-                    UserState.CurrentUser?.FullName ?? "",
-                    UserState.CurrentUser?.AvatarUrl,
-                    recipientUserId,
-                    content,
-                    fileId,                                         // FileId
-                    file.FileName,                                  // FileName
-                    file.ContentType,                               // FileContentType
-                    file.SizeInBytes,                               // FileSizeInBytes
-                    false,                                          // IsEdited
-                    false,                                          // IsDeleted
-                    hasReadReceipt,                                 // IsRead
-                    false,                                          // IsPinned
-                    0,                                              // ReactionCount
-                    messageTime,                                    // CreatedAtUtc
-                    null,                                           // EditedAtUtc
-                    null,                                           // PinnedAtUtc
-                    null,                                           // ReplyToMessageId
-                    null,                                           // ReplyToContent
-                    null,                                           // ReplyToSenderName
-                    null,                                           // ReplyToFileId
-                    null,                                           // ReplyToFileName
-                    null,                                           // ReplyToFileContentType
-                    false,                                          // IsForwarded
-                    null);                                          // Reactions
-
-                // Dublikat yoxla
-                if (!directMessages.Any(m => m.Id == messageId))
-                {
-                    directMessages.Add(newMessage);
-                }
-
-                // Pending receipt istifadə olundusa, sil
-                if (hasReadReceipt)
-                {
-                    pendingReadReceipts.Remove(messageId);
-                }
+                var preview = file.ContentType?.StartsWith("image/") == true ? "[Image]" : "[File]";
+                if (!string.IsNullOrWhiteSpace(content)) preview += $" {content}";
+                UpdateConversationLocally(conversationId, preview, messageTime);
             }
 
-            // Conversation list-i yenilə (sonuncu mesaj ilə)
-            if (uploadResults.Count > 0 && messageIds.Count > 0)
-            {
-                var lastIndex = uploadResults.Count - 1;
-                var (_, lastFileId, lastFile) = uploadResults[lastIndex];
-                var lastContent = !string.IsNullOrWhiteSpace(messageText) ? messageText : string.Empty;
-
-                var lastMessage = new DirectMessageDto(
-                    messageIds[messageIds.Count - 1],
-                    selectedConversationId.Value,
-                    currentUserId,
-                    UserState.CurrentUser?.Email ?? "",
-                    UserState.CurrentUser?.FullName ?? "",
-                    UserState.CurrentUser?.AvatarUrl,
-                    recipientUserId,
-                    lastContent,
-                    lastFileId,
-                    lastFile.FileName,
-                    lastFile.ContentType,
-                    lastFile.SizeInBytes,
-                    false, false, false, false, 0,
-                    messageTime,
-                    null, null, null, null, null, null, null, null, false, null);
-
-                var preview = GetFilePreview(lastMessage);
-                UpdateConversationLocally(selectedConversationId.Value, preview, messageTime);
-            }
-        }
-        else
-        {
-            ShowError($"Failed to send batch messages: {result.Error}");
+            // Upload task-ı başlat (paralel)
+            var fileIndex = i;
+            var fileContent = content;
+            uploadTasks.Add(UploadAndSendDirectMessage(file, tempId, conversationId, fileContent, cts.Token));
         }
 
         StateHasChanged();
+
+        // Bütün upload-ları paralel işlət
+        await Task.WhenAll(uploadTasks);
     }
 
     /// <summary>
-    /// Channel mesajları üçün fayllarla mesaj göndərir.
-    /// Hər fayl üçün ayrı mesaj yaradılır.
+    /// Tək fayl upload edib mesaj göndərir (Direct Message).
     /// </summary>
-    private async Task SendChannelMessagesWithFiles(
-        List<(bool IsSuccess, string? FileId, SelectedFile File)> uploadResults,
-        string messageText)
+    private async Task UploadAndSendDirectMessage(
+        SelectedFile file,
+        Guid tempId,
+        Guid conversationId,
+        string content,
+        CancellationToken cancellationToken)
     {
-        if (!selectedChannelId.HasValue) return;
-
-        // İlk mesajda mətn var (əgər user yazdısa), qalanları boş content ilə göndər
-        for (int i = 0; i < uploadResults.Count; i++)
+        try
         {
-            var (_, fileId, file) = uploadResults[i];
-            if (fileId == null) continue;
+            // Upload progress callback
+            var progressCallback = new Progress<int>(progress =>
+            {
+                InvokeAsync(() =>
+                {
+                    var message = directMessages.FirstOrDefault(m => m.TempId == tempId);
+                    if (message != null)
+                    {
+                        var index = directMessages.IndexOf(message);
+                        directMessages[index] = message with { FileUploadProgress = progress };
+                        InvalidateMessageCache();
+                        StateHasChanged();
+                    }
+                });
+            });
 
-            // Yalnız ilk mesajda user-in yazdığı mətn göndər, qalanları boş göndər
-            var content = (i == 0 && !string.IsNullOrWhiteSpace(messageText)) ? messageText : string.Empty;
+            // Upload file
+            var uploadResult = await FileService.UploadFileWithProgressAsync(
+                file.BrowserFile,
+                selectedConversationId,
+                selectedChannelId,
+                progressCallback,
+                cancellationToken);
 
-            var result = await ChannelService.SendMessageAsync(
-                selectedChannelId.Value,
+            if (cancellationToken.IsCancellationRequested)
+            {
+                // Cancelled - mesajı sil
+                await InvokeAsync(() =>
+                {
+                    directMessages.RemoveAll(m => m.TempId == tempId);
+                    _activeUploads.Remove(tempId);
+                    InvalidateMessageCache();
+                    StateHasChanged();
+                });
+                return;
+            }
+
+            if (!uploadResult.IsSuccess || uploadResult.Value == null)
+            {
+                // Upload failed - mesajı failed state-ə keçir
+                await InvokeAsync(() =>
+                {
+                    var message = directMessages.FirstOrDefault(m => m.TempId == tempId);
+                    if (message != null)
+                    {
+                        var index = directMessages.IndexOf(message);
+                        directMessages[index] = message with
+                        {
+                            Status = MessageStatus.Failed,
+                            FileUploadState = UploadState.Failed
+                        };
+                        InvalidateMessageCache();
+                    }
+                    _activeUploads.Remove(tempId);
+                    StateHasChanged();
+                });
+                return;
+            }
+
+            var fileId = uploadResult.Value.FileId.ToString();
+
+            // Upload completed - update state
+            await InvokeAsync(() =>
+            {
+                var message = directMessages.FirstOrDefault(m => m.TempId == tempId);
+                if (message != null)
+                {
+                    var index = directMessages.IndexOf(message);
+                    directMessages[index] = message with
+                    {
+                        FileUploadState = UploadState.Completed,
+                        FileUploadProgress = 100
+                    };
+                    InvalidateMessageCache();
+                    StateHasChanged();
+                }
+            });
+
+            // Send message to backend
+            var result = await ConversationService.SendMessageAsync(
+                conversationId,
                 content,
                 fileId: fileId,
                 replyToMessageId: null,
                 isForwarded: false);
 
-            if (result.IsSuccess)
+            await InvokeAsync(() =>
             {
-                var messageTime = DateTime.UtcNow;
-                var messageId = result.Value;
-
-                // Race condition yoxla
-                if (pendingMessageAdds.Contains(messageId))
+                var message = directMessages.FirstOrDefault(m => m.TempId == tempId);
+                if (message != null)
                 {
-                    // SignalR artıq əlavə edir
-                }
-                else if (channelMessages.Any(m => m.Id == messageId))
-                {
-                    // SignalR artıq əlavə edib
-                }
-                else
-                {
-                    // Pending marker qoy
-                    pendingMessageAdds.Add(messageId);
+                    var index = directMessages.IndexOf(message);
 
-                    var totalMembers = Math.Max(0, selectedChannelMemberCount - 1);
-
-                    // OPTİMİSTİK UI
-                    var newMessage = new ChannelMessageDto(
-                        messageId,
-                        selectedChannelId.Value,
-                        currentUserId,
-                        UserState.CurrentUser?.Email ?? "",
-                        UserState.CurrentUser?.FullName ?? "",
-                        UserState.CurrentUser?.AvatarUrl,
-                        content,
-                        fileId,                                     // FileId
-                        file.FileName,                              // FileName
-                        file.ContentType,                           // FileContentType
-                        file.SizeInBytes,                           // FileSizeInBytes
-                        false,                                      // IsEdited
-                        false,                                      // IsDeleted
-                        false,                                      // IsPinned
-                        0,                                          // ReactionCount
-                        messageTime,                                // CreatedAtUtc
-                        null,                                       // EditedAtUtc
-                        null,                                       // PinnedAtUtc
-                        null,                                       // ReplyToMessageId
-                        null,                                       // ReplyToContent
-                        null,                                       // ReplyToSenderName
-                        null,                                       // ReplyToFileId
-                        null,                                       // ReplyToFileName
-                        null,                                       // ReplyToFileContentType
-                        false,                                      // IsForwarded
-                        0,                                          // ReadByCount
-                        totalMembers,                               // TotalMemberCount
-                        [],                                         // ReadBy
-                        []);                                        // Reactions
-
-                    channelMessages.Add(newMessage);
-
-                    // Pending marker sil
-                    pendingMessageAdds.Remove(messageId);
-                }
-
-                // Channel list-i yenilə (yalnız sonuncu mesaj üçün)
-                if (i == uploadResults.Count - 1)
-                {
-                    // File preview hesabla (conversation list üçün sadə format)
-                    string preview;
-                    if (fileId != null)
+                    if (result.IsSuccess)
                     {
-                        if (file.ContentType != null && file.ContentType.StartsWith("image/"))
+                        // Success - update with real ID
+                        directMessages[index] = message with
                         {
-                            preview = string.IsNullOrWhiteSpace(content) ? "[Image]" : $"[Image] {content}";
-                        }
-                        else
-                        {
-                            preview = string.IsNullOrWhiteSpace(content) ? "[File]" : $"[File] {content}";
-                        }
+                            Id = result.Value,
+                            FileId = fileId,
+                            Status = MessageStatus.Sent,
+                            FileUploadState = null,  // Clear upload state
+                            FileUploadCts = null
+                        };
+
+                        // Conversation list status-u yenilə
+                        UpdateListItemWhere(
+                            ref directConversations,
+                            c => c.Id == conversationId && c.LastMessageSenderId == currentUserId && c.LastMessageStatus == "Pending",
+                            c => c with { LastMessageStatus = "Sent", LastMessageId = result.Value }
+                        );
                     }
                     else
                     {
-                        preview = content;
+                        // Failed
+                        directMessages[index] = message with
+                        {
+                            Status = MessageStatus.Failed,
+                            FileUploadState = UploadState.Failed
+                        };
+
+                        // Conversation list status-u yenilə
+                        UpdateListItemWhere(
+                            ref directConversations,
+                            c => c.Id == conversationId && c.LastMessageSenderId == currentUserId && c.LastMessageStatus == "Pending",
+                            c => c with { LastMessageStatus = "Failed" }
+                        );
                     }
-                    UpdateChannelLocally(selectedChannelId.Value, preview, messageTime, UserState.CurrentUser?.FullName);
+
+                    InvalidateMessageCache();
                 }
-            }
-            else
+
+                _activeUploads.Remove(tempId);
+                StateHasChanged();
+            });
+        }
+        catch (OperationCanceledException)
+        {
+            // Cancelled
+            await InvokeAsync(() =>
             {
-                ShowError($"Failed to send message with file {file.FileName}: {result.Error}");
+                directMessages.RemoveAll(m => m.TempId == tempId);
+                _activeUploads.Remove(tempId);
+                InvalidateMessageCache();
+                StateHasChanged();
+            });
+        }
+        catch (Exception)
+        {
+            // Error
+            await InvokeAsync(() =>
+            {
+                var message = directMessages.FirstOrDefault(m => m.TempId == tempId);
+                if (message != null)
+                {
+                    var index = directMessages.IndexOf(message);
+                    directMessages[index] = message with
+                    {
+                        Status = MessageStatus.Failed,
+                        FileUploadState = UploadState.Failed
+                    };
+                    InvalidateMessageCache();
+                }
+                _activeUploads.Remove(tempId);
+                StateHasChanged();
+            });
+        }
+    }
+
+    /// <summary>
+    /// Channel message - Optimistic UI ilə fayl göndərmə.
+    /// </summary>
+    private async Task SendChannelMessagesWithFilesOptimistic(List<SelectedFile> files, string messageText)
+    {
+        if (!selectedChannelId.HasValue) return;
+
+        var channelId = selectedChannelId.Value;
+        var messageTime = DateTime.UtcNow;
+        var totalMembers = Math.Max(0, selectedChannelMemberCount - 1);
+
+        // Hər fayl üçün optimistic mesaj yarat
+        var uploadTasks = new List<Task>();
+
+        for (int i = 0; i < files.Count; i++)
+        {
+            var file = files[i];
+            var tempId = Guid.NewGuid();
+            var cts = new CancellationTokenSource();
+            var content = (i == 0 && !string.IsNullOrWhiteSpace(messageText)) ? messageText : string.Empty;
+
+            // Track active upload
+            _activeUploads[tempId] = cts;
+            file.CancellationTokenSource = cts;
+            file.AssociatedMessageId = tempId;
+
+            // OPTIMISTIC UI - Mesajı dərhal göstər (uploading state ilə)
+            var optimisticMessage = new ChannelMessageDto(
+                tempId,                                         // Temporary ID
+                channelId,
+                currentUserId,
+                UserState.CurrentUser?.Email ?? "",
+                UserState.CurrentUser?.FullName ?? "",
+                UserState.CurrentUser?.AvatarUrl,
+                content,
+                null,                                           // FileId - hələ yoxdur
+                file.FileName,                                  // FileName
+                file.ContentType,                               // FileContentType
+                file.SizeInBytes,                               // FileSizeInBytes
+                false,                                          // IsEdited
+                false,                                          // IsDeleted
+                false,                                          // IsPinned
+                0,                                              // ReactionCount
+                messageTime.AddMilliseconds(i),                 // CreatedAtUtc (ordered)
+                null,                                           // EditedAtUtc
+                null,                                           // PinnedAtUtc
+                null, null, null, null, null, null,             // Reply fields
+                false,                                          // IsForwarded
+                0,                                              // ReadByCount
+                totalMembers,                                   // TotalMemberCount
+                [],                                             // ReadBy
+                [],                                             // Reactions
+                [],                                             // Mentions
+                MessageStatus.Pending,                          // Status - Pending (uploading)
+                tempId,                                         // TempId
+                UploadState.Uploading,                          // FileUploadState
+                0,                                              // FileUploadProgress
+                cts);                                           // FileUploadCts
+
+            channelMessages.Add(optimisticMessage);
+
+            // CRITICAL: SignalR handler-ın dublikatı tanıması üçün pending dictionary-ə əlavə et
+            // SignalR handler SenderId + Content ilə match edir
+            pendingChannelMessages[tempId] = optimisticMessage;
+
+            // Channel list-i yenilə (sonuncu fayl üçün)
+            if (i == files.Count - 1)
+            {
+                var preview = file.ContentType?.StartsWith("image/") == true ? "[Image]" : "[File]";
+                if (!string.IsNullOrWhiteSpace(content)) preview += $" {content}";
+                UpdateChannelLocally(channelId, preview, messageTime, UserState.CurrentUser?.FullName);
             }
+
+            // Upload task-ı başlat (paralel)
+            var fileIndex = i;
+            var fileContent = content;
+            uploadTasks.Add(UploadAndSendChannelMessage(file, tempId, channelId, fileContent, totalMembers, cts.Token));
         }
 
         StateHasChanged();
+
+        // Bütün upload-ları paralel işlət
+        await Task.WhenAll(uploadTasks);
+    }
+
+    /// <summary>
+    /// Tək fayl upload edib mesaj göndərir (Channel Message).
+    /// </summary>
+    private async Task UploadAndSendChannelMessage(
+        SelectedFile file,
+        Guid tempId,
+        Guid channelId,
+        string content,
+        int totalMembers,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            // Upload progress callback
+            var progressCallback = new Progress<int>(progress =>
+            {
+                InvokeAsync(() =>
+                {
+                    var message = channelMessages.FirstOrDefault(m => m.TempId == tempId);
+                    if (message != null)
+                    {
+                        message.FileUploadProgress = progress;
+                        InvalidateMessageCache();
+                        StateHasChanged();
+                    }
+                });
+            });
+
+            // Upload file
+            var uploadResult = await FileService.UploadFileWithProgressAsync(
+                file.BrowserFile,
+                selectedConversationId,
+                selectedChannelId,
+                progressCallback,
+                cancellationToken);
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                // Cancelled - mesajı sil
+                await InvokeAsync(() =>
+                {
+                    channelMessages.RemoveAll(m => m.TempId == tempId);
+                    _activeUploads.Remove(tempId);
+                    InvalidateMessageCache();
+                    StateHasChanged();
+                });
+                return;
+            }
+
+            if (!uploadResult.IsSuccess || uploadResult.Value == null)
+            {
+                // Upload failed
+                await InvokeAsync(() =>
+                {
+                    var message = channelMessages.FirstOrDefault(m => m.TempId == tempId);
+                    if (message != null)
+                    {
+                        message.Status = MessageStatus.Failed;
+                        message.FileUploadState = UploadState.Failed;
+                        InvalidateMessageCache();
+                    }
+                    _activeUploads.Remove(tempId);
+                    StateHasChanged();
+                });
+                return;
+            }
+
+            var fileId = uploadResult.Value.FileId.ToString();
+
+            // Upload completed - update state
+            await InvokeAsync(() =>
+            {
+                var message = channelMessages.FirstOrDefault(m => m.TempId == tempId);
+                if (message != null)
+                {
+                    message.FileUploadState = UploadState.Completed;
+                    message.FileUploadProgress = 100;
+                    InvalidateMessageCache();
+                    StateHasChanged();
+                }
+            });
+
+            // Send message to backend
+            var result = await ChannelService.SendMessageAsync(
+                channelId,
+                content,
+                fileId: fileId,
+                replyToMessageId: null,
+                isForwarded: false);
+
+            await InvokeAsync(() =>
+            {
+                var message = channelMessages.FirstOrDefault(m => m.TempId == tempId);
+                if (message != null)
+                {
+                    var index = channelMessages.IndexOf(message);
+
+                    if (result.IsSuccess)
+                    {
+                        // Success - update with real ID
+                        channelMessages[index] = message with
+                        {
+                            Id = result.Value,
+                            FileId = fileId,
+                            Status = MessageStatus.Sent,
+                            FileUploadState = null,  // Clear upload state
+                            FileUploadCts = null
+                        };
+
+                        // Channel list status-u yenilə
+                        UpdateListItemWhere(
+                            ref channelConversations,
+                            c => c.Id == channelId && c.LastMessageSenderId == currentUserId && c.LastMessageStatus == "Pending",
+                            c => c with { LastMessageStatus = "Sent", LastMessageId = result.Value }
+                        );
+                    }
+                    else
+                    {
+                        // Failed
+                        message.Status = MessageStatus.Failed;
+                        message.FileUploadState = UploadState.Failed;
+
+                        // Channel list status-u yenilə
+                        UpdateListItemWhere(
+                            ref channelConversations,
+                            c => c.Id == channelId && c.LastMessageSenderId == currentUserId && c.LastMessageStatus == "Pending",
+                            c => c with { LastMessageStatus = "Failed" }
+                        );
+                    }
+
+                    InvalidateMessageCache();
+                }
+
+                _activeUploads.Remove(tempId);
+                StateHasChanged();
+            });
+        }
+        catch (OperationCanceledException)
+        {
+            // Cancelled
+            await InvokeAsync(() =>
+            {
+                channelMessages.RemoveAll(m => m.TempId == tempId);
+                _activeUploads.Remove(tempId);
+                InvalidateMessageCache();
+                StateHasChanged();
+            });
+        }
+        catch (Exception)
+        {
+            // Error
+            await InvokeAsync(() =>
+            {
+                var message = channelMessages.FirstOrDefault(m => m.TempId == tempId);
+                if (message != null)
+                {
+                    message.Status = MessageStatus.Failed;
+                    message.FileUploadState = UploadState.Failed;
+                    InvalidateMessageCache();
+                }
+                _activeUploads.Remove(tempId);
+                StateHasChanged();
+            });
+        }
+    }
+
+    /// <summary>
+    /// Fayl upload-ını ləğv et.
+    /// UI-dan çağrılır (cancel button).
+    /// </summary>
+    public void CancelFileUpload(Guid tempId)
+    {
+        if (_activeUploads.TryGetValue(tempId, out var cts))
+        {
+            cts.Cancel();
+            // Mesaj UploadAndSend metodunda silinəcək
+        }
     }
 
     #endregion

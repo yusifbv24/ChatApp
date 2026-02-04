@@ -87,11 +87,65 @@
                         </div>
                     }
 
-                    @* Show file attachment if exists *@
-                    @if (!string.IsNullOrEmpty(FileId))
+                    @* Show file attachment if exists (or uploading) *@
+                    @if (!string.IsNullOrEmpty(FileId) || FileUploadState == Models.Files.UploadState.Uploading)
                     {
-                        <div class="message-file-attachment">
-                            @if (IsFileImage)
+                        <div class="message-file-attachment @(FileUploadState == Models.Files.UploadState.Uploading ? "uploading" : "")">
+                            @if (FileUploadState == Models.Files.UploadState.Uploading)
+                            {
+                                @* File is uploading - show progress with cancel button (Bitrix24 style) *@
+                                <div class="file-upload-progress-container">
+                                    @if (IsFileImage)
+                                    {
+                                        @* Image uploading - show placeholder with overlay *@
+                                        <div class="file-image-uploading">
+                                            <div class="upload-overlay">
+                                                <div class="upload-progress-circle">
+                                                    <svg viewBox="0 0 36 36" class="circular-progress">
+                                                        <path class="circle-bg"
+                                                              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                                        <path class="circle-progress"
+                                                              stroke-dasharray="@FileUploadProgress, 100"
+                                                              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                                    </svg>
+                                                    <button class="cancel-upload-btn" @onclick="HandleCancelUpload" @onclick:stopPropagation="true" title="Cancel upload">
+                                                        <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div class="upload-filename">@TruncateFileName(FileName)</div>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        @* File uploading - show file icon with progress *@
+                                        <div class="file-uploading">
+                                            <div class="file-icon-with-progress">
+                                                <div class="file-icon @GetFileIconClass()">
+                                                    <MudIcon Icon="@GetFileIcon()" Size="Size.Large" />
+                                                </div>
+                                                <div class="upload-progress-circle small">
+                                                    <svg viewBox="0 0 36 36" class="circular-progress">
+                                                        <path class="circle-bg"
+                                                              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                                        <path class="circle-progress"
+                                                              stroke-dasharray="@FileUploadProgress, 100"
+                                                              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                                    </svg>
+                                                    <button class="cancel-upload-btn" @onclick="HandleCancelUpload" @onclick:stopPropagation="true" title="Cancel upload">
+                                                        <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div class="file-info">
+                                                <div class="file-name" title="@FileName">@TruncateFileName(FileName)</div>
+                                                <div class="file-upload-status">Uploading... @FileUploadProgress%</div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            else if (IsFileImage)
                             {
                                 <!-- Image preview with lazy loading and skeleton -->
                                 <div class="file-image-container"
@@ -127,7 +181,7 @@
                     }
 
                     <!-- Message text (only show if not empty and has file) -->
-                    @if (!string.IsNullOrEmpty(FileId) && !string.IsNullOrWhiteSpace(Content))
+                    @if ((!string.IsNullOrEmpty(FileId) || FileUploadState == Models.Files.UploadState.Uploading) && !string.IsNullOrWhiteSpace(Content))
                     {
                         <div class="message-text">@((MarkupString)ParseLinks(Content))</div>
                     }

@@ -6262,3 +6262,155 @@
     .btn-cancel-chat:hover {
         color: #333;
     }
+
+/* ===================================
+   FILE UPLOAD PROGRESS (Bitrix24 style)
+   =================================== */
+
+.message-file-attachment.uploading {
+    opacity: 0.9;
+}
+
+.file-upload-progress-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Image uploading state */
+.file-image-uploading {
+    position: relative;
+    min-width: 200px;
+    min-height: 150px;
+    background: var(--gray-100);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.upload-overlay {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.upload-progress-circle {
+    position: relative;
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.upload-progress-circle.small {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 48px;
+    height: 48px;
+}
+
+.circular-progress {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.circle-bg {
+    fill: none;
+    stroke: var(--gray-300);
+    stroke-width: 3;
+}
+
+.circle-progress {
+    fill: none;
+    stroke: var(--primary);
+    stroke-width: 3;
+    stroke-linecap: round;
+    transition: stroke-dasharray 0.2s ease;
+}
+
+.cancel-upload-btn {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.6);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    transition: background 0.2s ease;
+}
+
+.cancel-upload-btn:hover {
+    background: rgba(0, 0, 0, 0.8);
+}
+
+.cancel-upload-btn .mud-icon-root {
+    font-size: 16px;
+}
+
+.upload-filename {
+    font-size: 12px;
+    color: var(--gray-600);
+    text-align: center;
+    max-width: 180px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* File uploading state (non-image) */
+.file-uploading {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: var(--gray-50);
+    border-radius: 8px;
+    min-width: 200px;
+}
+
+.file-icon-with-progress {
+    position: relative;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.file-icon-with-progress .file-icon {
+    opacity: 0.5;
+}
+
+.file-uploading .file-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.file-upload-status {
+    font-size: 11px;
+    color: var(--gray-500);
+    margin-top: 2px;
+}
+
+/* Failed upload state */
+.message-wrapper.pending .message-file-attachment {
+    opacity: 0.8;
+}
+
+.message-wrapper .message-bubble .failed-icon {
+    color: var(--danger) !important;
+}

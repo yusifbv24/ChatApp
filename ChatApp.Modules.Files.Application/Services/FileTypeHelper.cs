@@ -1,4 +1,4 @@
-﻿using ChatApp.Modules.Files.Domain.Enums;
+using ChatApp.Modules.Files.Domain.Enums;
 
 namespace ChatApp.Modules.Files.Application.Services
 {

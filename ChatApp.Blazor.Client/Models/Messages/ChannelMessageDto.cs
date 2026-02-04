@@ -1,4 +1,5 @@
-﻿using ChatApp.Shared.Kernel;
+﻿using ChatApp.Blazor.Client.Models.Files;
+using ChatApp.Shared.Kernel;
 
 namespace ChatApp.Blazor.Client.Models.Messages
 {
@@ -34,7 +35,11 @@ namespace ChatApp.Blazor.Client.Models.Messages
         List<ChannelMessageReactionDto>? Reactions = null,
         List<ChannelMessageMentionDto>? Mentions = null,
         MessageStatus Status = MessageStatus.Sent,
-        Guid? TempId = null)
+        Guid? TempId = null,
+        // File upload state (for optimistic UI)
+        UploadState? FileUploadState = null,
+        int FileUploadProgress = 0,
+        CancellationTokenSource? FileUploadCts = null)
     {
         // Mutable properties for real-time updates
         public int ReadByCount { get; set; } = ReadByCount;
@@ -42,6 +47,10 @@ namespace ChatApp.Blazor.Client.Models.Messages
         public MessageStatus Status { get; set; } = Status;
         public List<ChannelMessageReactionDto> Reactions { get; init; } = Reactions ?? [];
         public List<ChannelMessageMentionDto> Mentions { get; init; } = Mentions ?? [];
+        // Mutable upload state
+        public UploadState? FileUploadState { get; set; } = FileUploadState;
+        public int FileUploadProgress { get; set; } = FileUploadProgress;
+        public CancellationTokenSource? FileUploadCts { get; set; } = FileUploadCts;
     }
 
     public record ChannelMessageMentionDto(

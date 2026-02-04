@@ -324,6 +324,12 @@ public partial class ChatArea : IAsyncDisposable
     /// </summary>
     [Parameter] public EventCallback<Guid> OnMarkAsLater { get; set; }
 
+    /// <summary>
+    /// Cancel upload callback-i (file upload ləğv ediləndə).
+    /// TempId ötürülür ki, Messages səhifəsi hansı upload-ın ləğv edildiyini bilsin.
+    /// </summary>
+    [Parameter] public EventCallback<Guid> OnCancelUpload { get; set; }
+
     #endregion
 
     #region Parameters - Event Callbacks (Channel Admin)

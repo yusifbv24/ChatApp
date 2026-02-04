@@ -279,7 +279,7 @@
 
                                 @* FLASH FIX: Use TempId for stable key (prevents component re-mount when pending → confirmed) *@
                                 <MessageBubble @key="message.TempId ?? message.Id"
-                                       MessageId="message.Id"
+                                       MessageId="message.TempId ?? message.Id"
                                        Content="@message.Content"
                                        FileId="@message.FileId"
                                        FileName="@message.FileName"
@@ -312,6 +312,8 @@
                                        LastReadLaterMessageId="@LastReadLaterMessageId"
                                        IsSelectMode="@IsSelectMode"
                                        IsSelected="@SelectedMessageIds.Contains(message.Id)"
+                                       FileUploadState="@message.FileUploadState"
+                                       FileUploadProgress="@message.FileUploadProgress"
                                        OnSelectToggle="OnSelectToggle"
                                        OnMentionClick="HandleMentionClick"
                                        OnEdit="()=>StartEditMessage(message.Id,message.Content)"
@@ -323,6 +325,7 @@
                                        OnToggleFavorite="()=>OnToggleFavorite.InvokeAsync(message.Id)"
                                        OnMarkAsLater="OnMarkAsLater"
                                        OnReplyClick="HandleReplyClick"
+                                       OnCancelUpload="OnCancelUpload"
                                        OnActionCompleted="RefocusInput"
                                        ScrollVersion="@scrollVersion"
                                        ScrollToBottom="ScrollToBottomAsync" />
@@ -369,7 +372,7 @@
 
                                 @* FLASH FIX: Use TempId for stable key (prevents component re-mount when pending → confirmed) *@
                                 <MessageBubble @key="message.TempId ?? message.Id"
-                                       MessageId="message.Id"
+                                       MessageId="message.TempId ?? message.Id"
                                        Content="@message.Content"
                                        FileId="@message.FileId"
                                        FileName="@message.FileName"
@@ -403,6 +406,8 @@
                                        LastReadLaterMessageId="@LastReadLaterMessageId"
                                        IsSelectMode="@IsSelectMode"
                                        IsSelected="@SelectedMessageIds.Contains(message.Id)"
+                                       FileUploadState="@message.FileUploadState"
+                                       FileUploadProgress="@message.FileUploadProgress"
                                        OnSelectToggle="OnSelectToggle"
                                        OnMentionClick="HandleMentionClick"
                                        OnEdit="() => StartEditMessage(message.Id, message.Content)"
@@ -414,6 +419,7 @@
                                        OnToggleFavorite="()=>OnToggleFavorite.InvokeAsync(message.Id)"
                                        OnMarkAsLater="OnMarkAsLater"
                                        OnReplyClick="HandleReplyClick"
+                                       OnCancelUpload="OnCancelUpload"
                                        OnActionCompleted="RefocusInput"
                                        ScrollVersion="@scrollVersion"
                                        ScrollToBottom="ScrollToBottomAsync" />

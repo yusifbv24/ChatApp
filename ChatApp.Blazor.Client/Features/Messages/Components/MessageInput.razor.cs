@@ -655,6 +655,31 @@ public partial class MessageInput : IAsyncDisposable
     }
 
     /// <summary>
+    /// Backend tərəfindən qəbul edilən content type-lar.
+    /// FileTypeHelper.ContentTypeMapping ilə sinxron olmalıdır.
+    /// </summary>
+    private static readonly HashSet<string> AllowedContentTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        // Images
+        "image/jpg", "image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml", "image/bmp",
+        // Documents
+        "application/pdf", "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.ms-powerpoint",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "text/plain", "text/csv",
+        // Videos
+        "video/mp4", "video/mpeg", "video/quicktime", "video/x-msvideo", "video/webm",
+        // Audio
+        "audio/mpeg", "audio/wav", "audio/ogg", "audio/webm",
+        // Archives
+        "application/zip", "application/x-rar-compressed", "application/x-7z-compressed",
+        "application/x-tar", "application/gzip"
+    };
+
+    /// <summary>
     /// File selection handler with validation and preview generation.
     /// </summary>
     private async Task HandleFileSelection(InputFileChangeEventArgs e)
@@ -672,6 +697,13 @@ public partial class MessageInput : IAsyncDisposable
                 if (browserFile.Size > maxFileSize)
                 {
                     Snackbar.Add($"{browserFile.Name} exceeds 100MB limit", Severity.Warning);
+                    continue;
+                }
+
+                // Validate content type - backend yalnız bu tipləri qəbul edir
+                if (!AllowedContentTypes.Contains(browserFile.ContentType))
+                {
+                    Snackbar.Add($"{browserFile.Name}: Bu fayl tipi dəstəklənmir ({browserFile.ContentType})", Severity.Warning);
                     continue;
                 }
 
@@ -745,14 +777,16 @@ public partial class MessageInput : IAsyncDisposable
     {
         try
         {
-            // Invoke parent callback with files and message
-            await OnSendWithFiles.InvokeAsync(data);
-
-            // Close panel and clear files
+            // OPTIMISTIC UI: Əvvəlcə paneli bağla, sonra upload başlasın
+            // Bu istifadəçiyə dərhal UI feedback verir
             showFileSelectionPanel = false;
             selectedFiles.Clear();
             MessageText = string.Empty;
             StateHasChanged();
+
+            // İndi parent callback-i çağır (upload arxa fonda başlayacaq)
+            // fire-and-forget pattern - await etmirik ki, panel bloklanmasın
+            _ = OnSendWithFiles.InvokeAsync(data);
         }
         catch (Exception ex)
         {

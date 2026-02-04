@@ -68,11 +68,16 @@ public partial class FileSelectionPanel : ComponentBase
             return;
 
         IsSending = true;
-        StateHasChanged();
 
-        await OnSend.InvokeAsync((SelectedFiles, MessageText));
+        // Faylları və mesajı kopyala (panel bağlandıqdan sonra istifadə üçün)
+        var filesToSend = SelectedFiles.ToList();
+        var messageToSend = MessageText;
 
-        IsSending = false;
+        // Panel dərhal bağlanır - optimistic UI pattern
+        // Upload prosesi arxa fonda davam edəcək
+        await OnSend.InvokeAsync((filesToSend, messageToSend));
+
+        // NOT: IsSending = false etmirik çünki panel artıq bağlanıb
     }
 
     private string GetFileIcon(string extension)

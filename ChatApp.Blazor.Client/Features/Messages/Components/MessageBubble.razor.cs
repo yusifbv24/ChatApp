@@ -308,6 +308,25 @@ public partial class MessageBubble : IAsyncDisposable
     /// </summary>
     [Parameter] public EventCallback OnToggleFavorite { get; set; }
 
+    /// <summary>
+    /// Cancel upload callback-i (file upload ləğv ediləndə).
+    /// </summary>
+    [Parameter] public EventCallback<Guid> OnCancelUpload { get; set; }
+
+    #endregion
+
+    #region Parameters - File Upload State
+
+    /// <summary>
+    /// Fayl upload state-i (Pending, Uploading, Completed, Failed, Cancelled).
+    /// </summary>
+    [Parameter] public Models.Files.UploadState? FileUploadState { get; set; }
+
+    /// <summary>
+    /// Fayl upload progress (0-100).
+    /// </summary>
+    [Parameter] public int FileUploadProgress { get; set; }
+
     #endregion
 
     #region Private Fields - Element References
@@ -911,6 +930,17 @@ public partial class MessageBubble : IAsyncDisposable
     #endregion
 
     #region Action Handlers
+
+    /// <summary>
+    /// Cancel upload click handler (Bitrix24 style cancel button).
+    /// </summary>
+    private async Task HandleCancelUpload()
+    {
+        if (OnCancelUpload.HasDelegate)
+        {
+            await OnCancelUpload.InvokeAsync(MessageId);
+        }
+    }
 
     /// <summary>
     /// Edit click handler.

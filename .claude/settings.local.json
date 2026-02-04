@@ -47,7 +47,8 @@
       "Bash(del \"C:\\\\Users\\\\ybaghiyev\\\\Desktop\\\\ChatApp\\\\ChatApp.Blazor.Client\\\\Infrastructure\\\\Http\\\\JwtAuthorizationMessageHandler.cs\")",
       "Bash(grep:*)",
       "Bash(powershell:*)",
-      "Bash(tree:*)"
+      "Bash(tree:*)",
+      "Bash(ls:*)"
     ],
     "deny": [],
     "ask": []

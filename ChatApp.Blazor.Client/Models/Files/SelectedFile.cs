@@ -23,6 +23,12 @@ public class SelectedFile
 
     // Preview (for images)
     public string? PreviewDataUrl { get; set; }
+
+    // Cancellation support (for upload cancellation)
+    public CancellationTokenSource? CancellationTokenSource { get; set; }
+
+    // Əlaqəli mesaj ID-si (optimistic UI üçün)
+    public Guid? AssociatedMessageId { get; set; }
 }
 
 public enum UploadState

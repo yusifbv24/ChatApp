@@ -1,4 +1,5 @@
-﻿using ChatApp.Shared.Kernel;
+﻿using ChatApp.Blazor.Client.Models.Files;
+using ChatApp.Shared.Kernel;
 
 namespace ChatApp.Blazor.Client.Models.Messages
 {
@@ -33,7 +34,11 @@ namespace ChatApp.Blazor.Client.Models.Messages
         List<MessageReactionDto>? Reactions = null,
         List<MessageMentionDto>? Mentions = null,
         MessageStatus Status = MessageStatus.Sent,
-        Guid? TempId = null);
+        Guid? TempId = null,
+        // File upload state (for optimistic UI)
+        UploadState? FileUploadState = null,
+        int FileUploadProgress = 0,
+        CancellationTokenSource? FileUploadCts = null);
 
     public record MessageReactionDto(
         string Emoji,

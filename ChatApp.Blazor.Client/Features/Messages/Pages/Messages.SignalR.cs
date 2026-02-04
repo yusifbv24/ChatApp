@@ -127,7 +127,13 @@ public partial class Messages
                 // FIX: Use ToList() to avoid InvalidOperationException on dictionary modification
                 foreach (var kvp in pendingDirectMessages.ToList())
                 {
-                    if (kvp.Value.SenderId == message.SenderId && kvp.Value.Content == message.Content)
+                    // Match by SenderId AND (Content OR FileName for file messages)
+                    var contentMatch = kvp.Value.SenderId == message.SenderId && kvp.Value.Content == message.Content;
+                    var fileMatch = kvp.Value.SenderId == message.SenderId &&
+                                    !string.IsNullOrEmpty(kvp.Value.FileName) &&
+                                    kvp.Value.FileName == message.FileName;
+
+                    if (contentMatch || fileMatch)
                     {
                         pendingMessage = kvp.Value;
                         pendingIndex = directMessages.FindIndex(m => m.TempId == kvp.Key);
@@ -288,7 +294,13 @@ public partial class Messages
                 // FIX: Use ToList() to avoid InvalidOperationException on dictionary modification
                 foreach (var kvp in pendingChannelMessages.ToList())
                 {
-                    if (kvp.Value.SenderId == message.SenderId && kvp.Value.Content == message.Content)
+                    // Match by SenderId AND (Content OR FileName for file messages)
+                    var contentMatch = kvp.Value.SenderId == message.SenderId && kvp.Value.Content == message.Content;
+                    var fileMatch = kvp.Value.SenderId == message.SenderId &&
+                                    !string.IsNullOrEmpty(kvp.Value.FileName) &&
+                                    kvp.Value.FileName == message.FileName;
+
+                    if (contentMatch || fileMatch)
                     {
                         pendingMessage = kvp.Value;
                         pendingIndex = channelMessages.FindIndex(m => m.TempId == kvp.Key);

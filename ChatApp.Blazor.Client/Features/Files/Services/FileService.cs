@@ -182,6 +182,99 @@ public class FileService : IFileService
         }
     }
 
+    public async Task<Result<FileUploadResult>> UploadFileWithProgressAsync(
+        IBrowserFile file,
+        Guid? conversationId = null,
+        Guid? channelId = null,
+        IProgress<int>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            // Validate file size (100 MB for general files)
+            const long maxGeneralFileSize = 100 * 1024 * 1024;
+            if (file.Size > maxGeneralFileSize)
+            {
+                return Result.Failure<FileUploadResult>($"File size must be less than {maxGeneralFileSize / 1024 / 1024} MB");
+            }
+
+            // Report initial progress
+            progress?.Report(0);
+
+            // Read file into memory with progress
+            using var memoryStream = new MemoryStream();
+            await using var fileStream = file.OpenReadStream(maxGeneralFileSize, cancellationToken);
+
+            var buffer = new byte[81920]; // 80KB buffer
+            var totalBytesRead = 0L;
+            var totalBytes = file.Size;
+            int bytesRead;
+
+            // Read with progress (reading phase - 0-50%)
+            while ((bytesRead = await fileStream.ReadAsync(buffer, cancellationToken)) > 0)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                await memoryStream.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken);
+                totalBytesRead += bytesRead;
+
+                // Report reading progress (0-50%)
+                var readProgress = (int)((double)totalBytesRead / totalBytes * 50);
+                progress?.Report(readProgress);
+            }
+
+            // Create multipart form data
+            memoryStream.Position = 0;
+            using var content = new MultipartFormDataContent();
+            using var streamContent = new StreamContent(memoryStream);
+
+            streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
+            content.Add(streamContent, "File", file.Name);
+
+            // Add conversation/channel context
+            if (conversationId.HasValue)
+            {
+                content.Add(new StringContent(conversationId.Value.ToString()), "ConversationId");
+            }
+            if (channelId.HasValue)
+            {
+                content.Add(new StringContent(channelId.Value.ToString()), "ChannelId");
+            }
+
+            // Report upload starting (50%)
+            progress?.Report(50);
+
+            // Send request
+            var response = await _httpClient.PostAsync("/api/files/upload", content, cancellationToken);
+
+            // Report upload complete (100%)
+            progress?.Report(100);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<FileUploadResult>(cancellationToken);
+                if (result == null)
+                {
+                    return Result.Failure<FileUploadResult>("Failed to parse upload response");
+                }
+                return Result.Success(result);
+            }
+
+            // Extract error message
+            var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+            var error = System.Text.Json.JsonSerializer.Deserialize<ErrorResponse>(errorContent);
+            return Result.Failure<FileUploadResult>(error?.Error ?? $"Upload failed with status code {response.StatusCode}");
+        }
+        catch (OperationCanceledException)
+        {
+            throw; // Re-throw cancellation
+        }
+        catch (Exception ex)
+        {
+            return Result.Failure<FileUploadResult>($"Upload failed: {ex.Message}");
+        }
+    }
+
     public async Task<Result<FileUploadResult>> UploadChannelAvatarAsync(byte[] fileData, string fileName, string contentType, Guid channelId, CancellationToken cancellationToken = default)
     {
         try
