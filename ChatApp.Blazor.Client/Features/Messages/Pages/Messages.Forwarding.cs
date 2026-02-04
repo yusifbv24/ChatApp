@@ -274,7 +274,7 @@ public partial class Messages
                 channel.Id,
                 null,
                 channel.Name,
-                null,
+                channel.AvatarUrl,
                 IsChannel: true,
                 IsPrivate: channel.Type == ChannelType.Private,
                 channel.LastMessageAtUtc));

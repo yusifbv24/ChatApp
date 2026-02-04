@@ -342,7 +342,14 @@
                 else
                 {
                     <div class="sidebar-avatar-container">
-                        <div class="sidebar-avatar-placeholder" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(ChannelId ?? Guid.Empty);">@StringHelper.GetInitials(ChannelName)</div>
+                        @if (!string.IsNullOrEmpty(ChannelAvatarUrl))
+                        {
+                            <img src="@ChannelAvatarUrl" alt="@ChannelName" class="sidebar-avatar" />
+                        }
+                        else
+                        {
+                            <div class="sidebar-avatar-placeholder" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(ChannelId ?? Guid.Empty);">@StringHelper.GetInitials(ChannelName)</div>
+                        }
                     </div>
                     <div class="sidebar-user-name">@(string.IsNullOrEmpty(ChannelName) ? "Unknown Group" : ChannelName)</div>
                     <div class="sidebar-user-role">@MemberCount members</div>

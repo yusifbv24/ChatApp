@@ -255,6 +255,12 @@ public partial class Messages
             ToggleSelectMode();
         }
 
+        // Create group paneli açıqdırsa bağla
+        if (showCreateGroupPanel)
+        {
+            CloseCreateGroupPanel();
+        }
+
         // GUARD: Race condition prevention
         if (_isConversationSelecting || _disposed)
         {
@@ -586,6 +592,12 @@ public partial class Messages
         if (isSelectingMessageBuble)
         {
             ToggleSelectMode();
+        }
+
+        // Create group paneli açıqdırsa bağla
+        if (showCreateGroupPanel)
+        {
+            CloseCreateGroupPanel();
         }
 
         // GUARD checks

@@ -460,6 +460,7 @@
                              RecipientAvatarUrl="@recipientAvatarUrl"
                              IsNotesConversation="@isNotesConversation"
                              ChannelName="@selectedChannelName"
+                             ChannelAvatarUrl="@selectedChannelAvatarUrl"
                              MemberCount="@selectedChannelMemberCount"
                              CurrentUserChannelRole="@currentUserChannelRole"
                              ConversationId="@selectedConversationId"
@@ -662,13 +663,13 @@
                     {
                         <div class="forward-chat-item">
                             <div class="forward-chat-avatar @(item.IsChannel ? "channel-type" : "")" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(item.OtherUserId ?? item.Id);">
-                                @if (item.IsChannel)
-                                {
-                                    <MudIcon Icon="@(item.IsPrivate ? Icons.Material.Filled.Lock : Icons.Material.Filled.Group)" Size="Size.Small" />
-                                }
-                                else if (!string.IsNullOrEmpty(item.AvatarUrl))
+                                @if (!string.IsNullOrEmpty(item.AvatarUrl))
                                 {
                                     <img src="@item.AvatarUrl" alt="@item.Name" />
+                                }
+                                else if (item.IsChannel)
+                                {
+                                    <MudIcon Icon="@(item.IsPrivate ? Icons.Material.Filled.Lock : Icons.Material.Filled.Group)" Size="Size.Small" />
                                 }
                                 else
                                 {

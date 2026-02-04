@@ -63,6 +63,11 @@ public partial class Sidebar
     [Parameter] public string ChannelName { get; set; } = string.Empty;
 
     /// <summary>
+    /// Channel avatar URL-i.
+    /// </summary>
+    [Parameter] public string? ChannelAvatarUrl { get; set; }
+
+    /// <summary>
     /// Channel üzv sayı.
     /// </summary>
     [Parameter] public int MemberCount { get; set; }
