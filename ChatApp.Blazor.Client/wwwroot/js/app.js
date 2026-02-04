@@ -707,3 +707,65 @@ window.disposeConversationMenuOutsideClickHandler = function(conversationId) {
         }
     }
 };
+
+// Filter menu outside click handler
+window.setupFilterMenuOutsideClickHandler = function(dotNetHelper) {
+    const menuKey = 'filter-menu';
+
+    // FIRST: Close all other open menus
+    Object.keys(window._allMenuHandlers).forEach(otherKey => {
+        if (otherKey !== menuKey) {
+            const otherData = window._allMenuHandlers[otherKey];
+            if (otherData && otherData.dotNetHelper) {
+                try {
+                    otherData.dotNetHelper.invokeMethodAsync(otherData.closeMethod)
+                        .catch(() => {});
+                } catch (e) {}
+            }
+            if (otherData && otherData.handler) {
+                document.removeEventListener('click', otherData.handler);
+            }
+            delete window._allMenuHandlers[otherKey];
+        }
+    });
+
+    // If handler exists, remove it first
+    if (window._allMenuHandlers[menuKey]) {
+        const existing = window._allMenuHandlers[menuKey];
+        if (existing.handler) {
+            document.removeEventListener('click', existing.handler);
+        }
+        delete window._allMenuHandlers[menuKey];
+    }
+
+    const handler = function(e) {
+        if (!window._allMenuHandlers[menuKey]) {
+            document.removeEventListener('click', handler);
+            return;
+        }
+
+        // Check if click is inside filter dropdown panel or filter button
+        const clickedOnPanel = e.target.closest('.filter-dropdown-panel');
+        const clickedOnButton = e.target.closest('.filter-button-container .toolbar-btn');
+
+        // If click is outside both panel and button, close the menu
+        if (!clickedOnPanel && !clickedOnButton) {
+            try {
+                dotNetHelper.invokeMethodAsync('OnFilterMenuOutsideClick')
+                    .catch(() => {});
+            } catch (err) {
+                console.error('[ERROR] Failed to invoke OnFilterMenuOutsideClick:', err);
+            }
+        }
+    };
+
+    // Add handler on next tick to avoid catching the opening click event
+    setTimeout(() => {
+        window._allMenuHandlers[menuKey] = {
+            handler: handler,
+            dotNetHelper: dotNetHelper,
+            closeMethod: 'OnFilterMenuOutsideClick'
+        };
+        document.addEventListener('click', handler);
+    }, 0);
+};

@@ -182,6 +182,11 @@ public partial class ConversationList : IAsyncDisposable
     /// </summary>
     private Guid? hoveredItemId = null;
 
+    /// <summary>
+    /// Filter panel açıqdır?
+    /// </summary>
+    private bool showFilterPanel = false;
+
     #endregion
 
     #region Private Fields - Cache
@@ -510,6 +515,94 @@ public partial class ConversationList : IAsyncDisposable
 
     #endregion
 
+    #region Filter Panel Methods
+
+    private DotNetObjectReference<ConversationList>? _filterMenuRef;
+
+    /// <summary>
+    /// Filter paneli açıb-bağlayır.
+    /// JS _allMenuHandlers pattern digər açıq panelləri avtomatik bağlayır.
+    /// </summary>
+    private async Task ToggleFilterPanel()
+    {
+        if (showFilterPanel)
+        {
+            showFilterPanel = false;
+        }
+        else
+        {
+            showFilterPanel = true;
+
+            // JS handler digər menu-ları avtomatik bağlayır (_allMenuHandlers pattern)
+            try
+            {
+                _filterMenuRef ??= DotNetObjectReference.Create(this);
+                await JSRuntime.InvokeVoidAsync("setupFilterMenuOutsideClickHandler", _filterMenuRef);
+            }
+            catch
+            {
+                // Silently handle JS interop errors
+            }
+        }
+    }
+
+    /// <summary>
+    /// JS callback - filter panel dışına klik edildikdə və ya digər menu açıldıqda.
+    /// </summary>
+    [JSInvokable]
+    public void OnFilterMenuOutsideClick()
+    {
+        if (showFilterPanel)
+        {
+            showFilterPanel = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Bütün oxunmamış mesajları oxunmuş kimi işarələyir.
+    /// </summary>
+    private async Task MarkAllAsRead()
+    {
+        showFilterPanel = false;
+
+        // Bütün conversation-ları mark et
+        foreach (var conv in Conversations.Where(c => c.UnreadCount > 0).ToList())
+        {
+            var result = await ConversationService.MarkAllMessagesAsReadAsync(conv.Id);
+            if (result.IsSuccess)
+            {
+                var index = Conversations.FindIndex(c => c.Id == conv.Id);
+                if (index >= 0)
+                {
+                    Conversations[index] = Conversations[index] with { UnreadCount = 0, IsMarkedReadLater = false, LastReadLaterMessageId = null };
+                }
+            }
+        }
+
+        // Bütün channel-ları mark et
+        foreach (var channel in Channels.Where(c => c.UnreadCount > 0).ToList())
+        {
+            var result = await ChannelService.MarkAllChannelMessagesAsReadAsync(channel.Id);
+            if (result.IsSuccess)
+            {
+                var index = Channels.FindIndex(c => c.Id == channel.Id);
+                if (index >= 0)
+                {
+                    Channels[index] = Channels[index] with { UnreadCount = 0, IsMarkedReadLater = false, LastReadLaterMessageId = null };
+                }
+            }
+        }
+
+        // Global unread badge-i yenilə
+        AppState.UnreadMessageCount = 0;
+
+        InvalidateCache();
+        StateHasChanged();
+    }
+
+    #endregion
+
     #region Selection Methods
 
     /// <summary>
@@ -562,20 +655,21 @@ public partial class ConversationList : IAsyncDisposable
 
     /// <summary>
     /// More menu toggle.
+    /// JS _allMenuHandlers pattern digər açıq panelləri avtomatik bağlayır.
     /// </summary>
     private async Task ToggleMoreMenu(Guid itemId)
     {
         if (showMoreMenu && moreMenuItemId == itemId)
         {
-            CloseMoreMenu();
+            showMoreMenu = false;
+            moreMenuItemId = null;
         }
         else
         {
             showMoreMenu = true;
             moreMenuItemId = itemId;
 
-            // Setup outside click detection when opening menu
-            // JS will automatically close all other open menus (including message menus)
+            // JS handler digər menu-ları avtomatik bağlayır (_allMenuHandlers pattern)
             try
             {
                 _conversationMenuRef ??= DotNetObjectReference.Create(this);
@@ -598,7 +692,7 @@ public partial class ConversationList : IAsyncDisposable
     }
 
     /// <summary>
-    /// JS callback - called when clicking outside conversation more menu.
+    /// JS callback - more menu dışına klik edildikdə və ya digər menu açıldıqda.
     /// </summary>
     [JSInvokable]
     public void OnConversationMenuOutsideClick()

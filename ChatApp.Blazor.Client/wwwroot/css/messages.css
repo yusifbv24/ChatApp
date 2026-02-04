@@ -72,6 +72,64 @@
             transform: scale(1.05);
         }
 
+    .toolbar-btn.active {
+        background: var(--gray-100);
+        color: var(--primary);
+    }
+
+/* Filter Button Container */
+.filter-button-container {
+    position: relative;
+}
+
+.filter-dropdown-panel {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    width: 190px;
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    z-index: 1001;
+    border: 1px solid var(--gray-200);
+    animation: fadeInDown 0.15s ease-out;
+    overflow: hidden;
+}
+
+    .filter-dropdown-panel .menu-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        padding: 12px 16px;
+        border: none;
+        background: none;
+        cursor: pointer;
+        transition: background var(--transition-base);
+        font-size: 14px;
+        color: var(--gray-700);
+        text-align: left;
+    }
+
+        .filter-dropdown-panel .menu-item:hover {
+            background: var(--gray-50);
+        }
+
+        /* Single button - all corners rounded */
+        .filter-dropdown-panel .menu-item:only-child {
+            border-radius: var(--radius-lg);
+        }
+
+        /* First button - top rounded corners */
+        .filter-dropdown-panel .menu-item:first-child {
+            border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+        }
+
+        /* Last button - bottom rounded corners */
+        .filter-dropdown-panel .menu-item:last-child {
+            border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+        }
+
 .toolbar-search {
     flex: 1;
     display: flex;

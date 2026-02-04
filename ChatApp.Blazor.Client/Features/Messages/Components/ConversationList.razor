@@ -1,10 +1,24 @@
 <div class="conversation-list">
     <!-- Header Toolbar (Bitrix24 style) -->
     <div class="conversation-toolbar">
-        <!-- Filter Button -->
-        <button class="toolbar-btn" title="Filter">
-            <MudIcon Icon="@Icons.Material.Outlined.FilterList" Size="Size.Small" />
-        </button>
+        <!-- Filter Button with Dropdown -->
+        <div class="filter-button-container">
+            <button class="toolbar-btn @(showFilterPanel ? "active" : "")"
+                    title="Filter"
+                    @onclick="ToggleFilterPanel"
+                    @onclick:stopPropagation="true">
+                <MudIcon Icon="@Icons.Material.Outlined.FilterList" Size="Size.Small" />
+            </button>
+
+            @if (showFilterPanel)
+            {
+                <div class="filter-dropdown-panel" @onclick:stopPropagation="true">
+                    <button class="menu-item" @onclick="MarkAllAsRead">
+                        <span>Mark all as read</span>
+                    </button>
+                </div>
+            }
+        </div>
 
         <!-- Search Input -->
         <div class="toolbar-search">
