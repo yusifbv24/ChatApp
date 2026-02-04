@@ -5276,14 +5276,15 @@
 /* Add cursor pointer to image container */
 .file-image-container {
     cursor: pointer;
-    display: inline;
+    display: inline-block;
+    position: relative;
 }
 
 .file-image-container:hover .file-image-preview {
     opacity: 0.95;
 }
 
-/* Image loading spinner */
+/* Image loading spinner - şəkil yüklənənə qədər göstərilir */
 .image-loading-spinner {
     position: absolute;
     top: 50%;

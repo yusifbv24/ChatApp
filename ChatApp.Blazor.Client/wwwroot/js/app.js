@@ -62,12 +62,18 @@ window.chatAppUtils = {
         }
     },
 
-    // Scroll container to bottom by ID (used for Jump to Latest)
+    // Scroll container to bottom by ID (used for Jump to Latest, file send)
+    // OPTIMIZED: Uses rAF for stable scroll
     scrollToBottomById: (elementId) => {
         const element = document.getElementById(elementId);
-        if (element) {
-            element.scrollTop = element.scrollHeight;
-        }
+        if (!element) return;
+
+        // Double rAF for stable DOM
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                element.scrollTop = element.scrollHeight;
+            });
+        });
     },
 
     // Scroll to bottom instantly without flash effect
@@ -93,30 +99,71 @@ window.chatAppUtils = {
     },
 
     // Scroll to bottom and show element (called after render)
-    // Uses scroll correction pattern - scrolls multiple times to handle dynamic content
-    // Container remains HIDDEN until final scroll is complete
-    scrollToBottomAndShow: (elementId) => {
+    // Şəkillərin yüklənməsini gözləyir, timeout ilə
+    scrollToBottomAndShow: (elementId, timeoutMs = 500) => {
         const element = document.getElementById(elementId);
         if (!element) return;
 
-        // Double rAF - wait for DOM to be fully rendered
-        requestAnimationFrame(() => {
+        const performScroll = () => {
+            element.scrollTop = element.scrollHeight;
+            element.style.visibility = 'visible';
+        };
+
+        const images = element.querySelectorAll('img');
+
+        // Şəkil yoxdursa, dərhal scroll et
+        if (images.length === 0) {
             requestAnimationFrame(() => {
-                // First scroll (container still hidden)
-                element.scrollTop = element.scrollHeight;
-
-                // Scroll correction at 50ms (container still hidden)
-                setTimeout(() => {
-                    element.scrollTop = element.scrollHeight;
-                }, 50);
-
-                // Final correction + SHOW (only after all scrolls complete)
-                setTimeout(() => {
-                    element.scrollTop = element.scrollHeight;
-                    element.style.visibility = 'visible';
-                }, 150);
+                requestAnimationFrame(() => performScroll());
             });
+            return;
+        }
+
+        let loadedCount = 0;
+        const totalCount = images.length;
+        let completed = false;
+
+        const checkComplete = () => {
+            if (completed) return;
+            if (loadedCount >= totalCount) {
+                completed = true;
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => performScroll());
+                });
+            }
+        };
+
+        // Timeout - şəkillər yüklənməsə belə scroll et
+        const timeout = setTimeout(() => {
+            if (!completed) {
+                completed = true;
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => performScroll());
+                });
+            }
+        }, timeoutMs);
+
+        images.forEach(img => {
+            // Artıq yüklənmiş (cache-dən)
+            if (img.complete && img.naturalHeight > 0) {
+                loadedCount++;
+                checkComplete();
+            } else {
+                // Yüklənməyi gözlə
+                const onLoad = () => {
+                    loadedCount++;
+                    if (loadedCount >= totalCount) {
+                        clearTimeout(timeout);
+                    }
+                    checkComplete();
+                };
+                img.addEventListener('load', onLoad, { once: true });
+                img.addEventListener('error', onLoad, { once: true });
+            }
         });
+
+        // Bütün şəkillər artıq cache-dən yükləniblər
+        checkComplete();
     },
 
     // Scroll to element by ID (used for unread separator)

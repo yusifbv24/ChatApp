@@ -1,5 +1,4 @@
 using ChatApp.Blazor.Client.Models.Auth;
-using ChatApp.Blazor.Client.Models.Common;
 using ChatApp.Blazor.Client.Models.Messages;
 using Microsoft.JSInterop;
 
@@ -499,9 +498,10 @@ public partial class Messages
                 // CRITICAL: Pinned header render olsun ƏVVƏL scroll etmədən
                 // Əks halda pinned header sonra render olur və scroll position yuxarı itələnir
                 StateHasChanged();
-                await Task.Delay(50); // Pinned header DOM-a əlavə olunması üçün
+                await Task.Yield(); // Blazor render cycle tamamlansın
 
                 // Scroll and show (no flash - container was hidden during load)
+                // JS funksiyası şəkillərin yüklənməsini gözləyir (max 400ms)
                 await JS.InvokeVoidAsync("chatAppUtils.scrollToBottomAndShow", "chat-messages");
             }
 
@@ -861,9 +861,10 @@ public partial class Messages
                 // CRITICAL: Pinned header render olsun ƏVVƏL scroll etmədən
                 // Əks halda pinned header sonra render olur və scroll position yuxarı itələnir
                 StateHasChanged();
-                await Task.Delay(50); // Pinned header DOM-a əlavə olunması üçün
+                await Task.Yield(); // Blazor render cycle tamamlansın
 
                 // Scroll and show (no flash - container was hidden during load)
+                // JS funksiyası şəkillərin yüklənməsini gözləyir (max 400ms)
                 await JS.InvokeVoidAsync("chatAppUtils.scrollToBottomAndShow", "chat-messages");
             }
 
@@ -1231,7 +1232,8 @@ public partial class Messages
                     await MarkDirectMessagesAsReadAsync(result.Value.Where(m => !m.IsRead && m.SenderId != currentUserId).ToList());
 
                     StateHasChanged();
-                    await Task.Delay(500); // DOM render + potential image loading
+                    await Task.Yield(); // Blazor render cycle tamamlansın
+                    await Task.Delay(100); // DOM stabillik üçün
 
                     // Separator varsa separator-a, yoxdursa mesaja scroll et
                     try
@@ -1317,7 +1319,8 @@ public partial class Messages
                     ).ToList());
 
                     StateHasChanged();
-                    await Task.Delay(500); // DOM render + potential image loading
+                    await Task.Yield(); // Blazor render cycle tamamlansın
+                    await Task.Delay(100); // DOM stabillik üçün
 
                     // Separator varsa separator-a, yoxdursa mesaja scroll et
                     try
