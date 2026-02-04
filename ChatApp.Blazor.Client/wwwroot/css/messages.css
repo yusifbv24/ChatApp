@@ -6211,7 +6211,7 @@
     justify-content: center;
     align-items: center;
     gap: 16px;
-    padding: 20px 24px;
+    padding: 16px 24px;
     background: var(--white);
     border-top: 1px solid #e5e5e5;
     flex-shrink: 0;

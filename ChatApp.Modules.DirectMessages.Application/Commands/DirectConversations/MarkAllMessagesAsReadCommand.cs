@@ -1,5 +1,8 @@
 using ChatApp.Modules.DirectMessages.Application.Interfaces;
+using ChatApp.Modules.DirectMessages.Domain.Events;
+using ChatApp.Shared.Infrastructure.SignalR.Services;
 using ChatApp.Shared.Kernel.Common;
+using ChatApp.Shared.Kernel.Interfaces;
 using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -26,13 +29,19 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectConversation
     public class MarkAllMessagesAsReadCommandHandler : IRequestHandler<MarkAllMessagesAsReadCommand, Result<int>>
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IEventBus _eventBus;
+        private readonly ISignalRNotificationService _signalRNotificationService;
         private readonly ILogger<MarkAllMessagesAsReadCommandHandler> _logger;
 
         public MarkAllMessagesAsReadCommandHandler(
             IUnitOfWork unitOfWork,
+            IEventBus eventBus,
+            ISignalRNotificationService signalRNotificationService,
             ILogger<MarkAllMessagesAsReadCommandHandler> logger)
         {
             _unitOfWork = unitOfWork;
+            _eventBus = eventBus;
+            _signalRNotificationService = signalRNotificationService;
             _logger = logger;
         }
 
@@ -67,6 +76,12 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectConversation
                 if (member == null)
                     return Result.Failure<int>("Conversation member not found");
 
+                // Get unread messages before marking (needed for SignalR notifications)
+                var unreadMessages = await _unitOfWork.Messages.GetUnreadMessagesForUserAsync(
+                    request.ConversationId,
+                    request.UserId,
+                    cancellationToken);
+
                 // Mark all unread messages as read
                 var markedCount = await _unitOfWork.Messages.MarkAllAsReadAsync(
                     request.ConversationId,
@@ -78,6 +93,24 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectConversation
                 member.UnmarkConversationAsReadLater();
 
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                // Send SignalR notifications for each marked message
+                foreach (var message in unreadMessages)
+                {
+                    await _signalRNotificationService.NotifyMessageReadAsync(
+                        message.ConversationId,
+                        message.Id,
+                        request.UserId,
+                        message.SenderId);
+
+                    // Publish domain event for internal processing
+                    await _eventBus.PublishAsync(
+                        new MessageReadEvent(
+                            message.Id,
+                            message.ConversationId,
+                            request.UserId),
+                        cancellationToken);
+                }
 
                 _logger?.LogInformation(
                     "Marked {Count} messages as read in conversation {ConversationId} for user {UserId}",

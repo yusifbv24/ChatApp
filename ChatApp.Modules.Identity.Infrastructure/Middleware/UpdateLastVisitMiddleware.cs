@@ -14,17 +14,20 @@ namespace ChatApp.Modules.Identity.Infrastructure.Middleware
     public class UpdateLastVisitMiddleware
     {
         private readonly RequestDelegate _next;
+        private readonly IServiceScopeFactory _scopeFactory;
         private readonly ILogger<UpdateLastVisitMiddleware> _logger;
 
         public UpdateLastVisitMiddleware(
             RequestDelegate next,
+            IServiceScopeFactory scopeFactory,
             ILogger<UpdateLastVisitMiddleware> logger)
         {
             _next = next;
+            _scopeFactory = scopeFactory;
             _logger = logger;
         }
 
-        public async Task InvokeAsync(HttpContext context, IServiceProvider serviceProvider)
+        public async Task InvokeAsync(HttpContext context)
         {
             // First, let the request continue
             await _next(context);
@@ -39,12 +42,13 @@ namespace ChatApp.Modules.Identity.Infrastructure.Middleware
                 if (!string.IsNullOrEmpty(userIdClaim) && Guid.TryParse(userIdClaim, out var userId))
                 {
                     // Fire-and-forget: update LastVisit in background
+                    // Use IServiceScopeFactory (singleton) instead of IServiceProvider (request-scoped)
                     _ = Task.Run(async () =>
                     {
                         try
                         {
                             // Create a new scope for the background task
-                            using var scope = serviceProvider.CreateScope();
+                            using var scope = _scopeFactory.CreateScope();
                             var identityContext = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
 
                             var user = await identityContext.Users

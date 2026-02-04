@@ -1,4 +1,6 @@
 using ChatApp.Modules.Channels.Application.Interfaces;
+using ChatApp.Modules.Channels.Domain.Entities;
+using ChatApp.Shared.Infrastructure.SignalR.Services;
 using ChatApp.Shared.Kernel.Common;
 using FluentValidation;
 using MediatR;
@@ -26,13 +28,16 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMembers
     public class MarkAllChannelMessagesAsReadCommandHandler : IRequestHandler<MarkAllChannelMessagesAsReadCommand, Result<int>>
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ISignalRNotificationService _signalRNotificationService;
         private readonly ILogger<MarkAllChannelMessagesAsReadCommandHandler> _logger;
 
         public MarkAllChannelMessagesAsReadCommandHandler(
             IUnitOfWork unitOfWork,
+            ISignalRNotificationService signalRNotificationService,
             ILogger<MarkAllChannelMessagesAsReadCommandHandler> logger)
         {
             _unitOfWork = unitOfWork;
+            _signalRNotificationService = signalRNotificationService;
             _logger = logger;
         }
 
@@ -48,34 +53,66 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMembers
                     request.UserId,
                     cancellationToken);
 
-                if (member == null)
+                if (member == null || !member.IsActive)
                     return Result.Failure<int>("User is not a member of this channel");
 
-                _logger?.LogInformation(
-                    "[BEFORE MARK ALL] Channel {ChannelId} User {UserId}: IsMarkedReadLater={IsMarkedReadLater}, LastReadLaterMessageId={LastReadLaterMessageId}",
-                    request.ChannelId,
-                    request.UserId,
-                    member.IsMarkedReadLater,
-                    member.LastReadLaterMessageId);
+                // Get all unread message IDs for this user in the channel (for SignalR notification)
+                var unreadMessageIds = await _unitOfWork.ChannelMessageReads
+                    .GetUnreadMessageIdsAsync(request.ChannelId, request.UserId, cancellationToken);
 
-                // Mark all unread messages as read
-                var markedCount = await _unitOfWork.ChannelMessages.MarkAllAsReadAsync(
-                    request.ChannelId,
-                    request.UserId,
-                    cancellationToken);
+                // Filter out messages sent by the user (don't mark own messages as read)
+                var messagesToMark = await _unitOfWork.ChannelMessages
+                    .GetChannelMessagesAsync(request.ChannelId, int.MaxValue, null, cancellationToken);
+
+                var filteredMessageIds = messagesToMark
+                    .Where(m => unreadMessageIds.Contains(m.Id) && m.SenderId != request.UserId)
+                    .Select(m => m.Id)
+                    .ToList();
+
+                var markedCount = 0;
+
+                if (filteredMessageIds.Count != 0)
+                {
+                    // Create ChannelMessageRead records for all unread messages
+                    var readRecords = filteredMessageIds
+                        .Select(messageId => new ChannelMessageRead(messageId, request.UserId))
+                        .ToList();
+
+                    // Bulk insert read records
+                    await _unitOfWork.ChannelMessageReads.BulkInsertAsync(readRecords, cancellationToken);
+                    markedCount = filteredMessageIds.Count;
+                }
 
                 // Clear ALL read later flags (both conversation-level and message-level)
                 member.UnmarkMessageAsLater();          // LastReadLaterMessageId = null
                 member.UnmarkConversationAsReadLater(); // IsMarkedReadLater = false
 
-                var savedChanges = await _unitOfWork.SaveChangesAsync(cancellationToken);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                _logger?.LogInformation(
-                    "[AFTER MARK ALL] Channel {ChannelId} User {UserId}: Marked {MarkedCount} messages, SaveChangesAsync returned {SavedChanges} entities updated",
-                    request.ChannelId,
-                    request.UserId,
-                    markedCount,
-                    savedChanges);
+                // Send SignalR notifications if any messages were marked
+                if (filteredMessageIds.Count != 0)
+                {
+                    // Get current read counts for all messages in a single query (bulk operation)
+                    var messageReadCounts = await _unitOfWork.ChannelMessageReads
+                        .GetReadByCountsAsync(filteredMessageIds, cancellationToken);
+
+                    // Get all active channel members for hybrid notification
+                    var members = await _unitOfWork.ChannelMembers.GetChannelMembersAsync(
+                        request.ChannelId,
+                        cancellationToken);
+
+                    var memberUserIds = members
+                        .Where(m => m.IsActive)
+                        .Select(m => m.UserId)
+                        .ToList();
+
+                    // Broadcast read status update to all channel members with HYBRID pattern
+                    await _signalRNotificationService.NotifyChannelMessagesReadToMembersAsync(
+                        request.ChannelId,
+                        memberUserIds,
+                        request.UserId,
+                        messageReadCounts);
+                }
 
                 _logger?.LogInformation(
                     "Marked {MarkedCount} messages as read and cleared read later flags for channel {ChannelId} and user {UserId}",
