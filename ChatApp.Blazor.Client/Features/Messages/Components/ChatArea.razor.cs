@@ -852,14 +852,27 @@ public partial class ChatArea : IAsyncDisposable
     #region Lifecycle Helper Methods
 
     /// <summary>
-    /// Conversation/channel dəyişdikdə pinned index-i sıfırlayır.
+    /// Conversation/channel dəyişdikdə UI state-ləri sıfırlayır.
     /// </summary>
     private void ResetPinnedIndexIfConversationChanged()
     {
         if (ConversationId != _previousConversationId || ChannelId != _previousChannelId)
         {
+            // Pinned state reset
             currentPinnedIndex = 0;
             showPinnedDropdown = false;
+
+            // Scroll state reset - CRITICAL: conversation dəyişdikdə köhnə scroll state qalmamalıdır
+            showScrollToBottom = false;
+            newMessagesCount = 0;
+            _shouldScrollToBottom = false;
+
+            // Edit state reset
+            isEditing = false;
+            editingMessageId = Guid.Empty;
+            editingContent = string.Empty;
+
+            // Track dəyişənləri
             _previousConversationId = ConversationId;
             _previousChannelId = ChannelId;
 
