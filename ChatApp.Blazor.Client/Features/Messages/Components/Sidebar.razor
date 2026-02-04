@@ -222,9 +222,16 @@
                     {
                         <div class="shared-channel-item" @onclick="() => NavigateToSharedChannel(channel.Id)">
                             <div class="shared-channel-avatar">
-                                <div class="shared-channel-avatar-placeholder" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(channel.Id);">
-                                    @StringHelper.GetInitials(channel.Name)
-                                </div>
+                                @if (!string.IsNullOrEmpty(channel.AvatarUrl))
+                                {
+                                    <img src="@channel.AvatarUrl" alt="@channel.Name" class="shared-channel-avatar-img" />
+                                }
+                                else
+                                {
+                                    <div class="shared-channel-avatar-placeholder" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(channel.Id);">
+                                        @StringHelper.GetInitials(channel.Name)
+                                    </div>
+                                }
                             </div>
                             <div class="shared-channel-info">
                                 <div class="shared-channel-name">@channel.Name</div>

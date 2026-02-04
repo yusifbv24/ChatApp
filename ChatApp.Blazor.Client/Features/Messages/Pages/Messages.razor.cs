@@ -187,6 +187,11 @@ public partial class Messages : IAsyncDisposable
     private string selectedChannelName = string.Empty;
 
     /// <summary>
+    /// Seçilmiş channel-ın avatar URL-i.
+    /// </summary>
+    private string? selectedChannelAvatarUrl;
+
+    /// <summary>
     /// Seçilmiş channel-ın təsviri.
     /// </summary>
     private string? selectedChannelDescription;
@@ -520,14 +525,30 @@ public partial class Messages : IAsyncDisposable
     private Dictionary<Guid, List<DepartmentUserDto>> departmentUsersCache = [];
 
     /// <summary>
-    /// Create Group avatar URL (preview).
+    /// Create Group avatar URL (preview - base64).
     /// </summary>
     private string? createGroupAvatarUrl;
 
     /// <summary>
-    /// Create Group avatar file ID (uploaded).
+    /// Create Group avatar file ID (uploaded - yalnız channel yaradıldıqdan sonra set olunur).
     /// </summary>
     private Guid? createGroupAvatarFileId;
+
+    /// <summary>
+    /// Create Group avatar file data (temporary - backend-ə göndərilməmiş).
+    /// Channel yaradıldıqdan sonra bu data istifadə olunub upload edilir.
+    /// </summary>
+    private byte[]? createGroupAvatarFileData;
+
+    /// <summary>
+    /// Create Group avatar file name (temporary).
+    /// </summary>
+    private string? createGroupAvatarFileName;
+
+    /// <summary>
+    /// Create Group avatar content type (temporary).
+    /// </summary>
+    private string? createGroupAvatarContentType;
 
     /// <summary>
     /// Create Group form validation:

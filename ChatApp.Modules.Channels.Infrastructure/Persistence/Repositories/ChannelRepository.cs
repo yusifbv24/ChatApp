@@ -160,6 +160,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                     channel.IsArchived,
                     channel.CreatedAtUtc,
                     channel.ArchivedAtUtc,
+                    channel.AvatarUrl,
                     LastMessageContent = lastMessage == null ? null :
                         lastMessage.IsDeleted ? "This message was deleted" :
                         lastMessage.FileId != null ?
@@ -271,6 +272,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                     c.IsArchived,
                     c.CreatedAtUtc,
                     c.ArchivedAtUtc,
+                    c.AvatarUrl,
                     c.LastMessageContent,
                     c.LastMessageAtUtc,
                     c.UnreadCount,

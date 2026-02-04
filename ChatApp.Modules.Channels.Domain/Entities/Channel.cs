@@ -11,6 +11,7 @@ namespace ChatApp.Modules.Channels.Domain.Entities
         public Guid CreatedBy { get; private set; }
         public bool IsArchived { get; private set; }
         public DateTime? ArchivedAtUtc { get; private set; }
+        public string? AvatarUrl { get; private set; }
 
         // Navigation properties
         private readonly List<ChannelMember> _members = [];
@@ -62,6 +63,12 @@ namespace ChatApp.Modules.Channels.Domain.Entities
                 throw new ArgumentException("Description cannot exceed 500 characters", nameof(newDescription));
 
             Description = newDescription;
+            UpdateTimestamp();
+        }
+
+        public void UpdateAvatarUrl(string? avatarUrl)
+        {
+            AvatarUrl = avatarUrl;
             UpdateTimestamp();
         }
 

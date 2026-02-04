@@ -182,5 +182,53 @@ public class FileService : IFileService
         }
     }
 
+    public async Task<Result<FileUploadResult>> UploadChannelAvatarAsync(byte[] fileData, string fileName, string contentType, Guid channelId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            // Validate file type
+            if (!contentType.StartsWith("image/"))
+            {
+                return Result.Failure<FileUploadResult>("Only image files are allowed for channel avatars");
+            }
+
+            // Validate file size
+            if (fileData.Length > MaxFileSize)
+            {
+                return Result.Failure<FileUploadResult>($"File size must be less than {MaxFileSize / 1024 / 1024} MB");
+            }
+
+            // Create multipart form data
+            using var content = new MultipartFormDataContent();
+            using var memoryStream = new MemoryStream(fileData);
+            using var streamContent = new StreamContent(memoryStream);
+
+            streamContent.Headers.ContentType = new MediaTypeHeaderValue(contentType);
+            content.Add(streamContent, "File", fileName);
+
+            // Send request
+            var response = await _httpClient.PostAsync($"/api/files/upload/channel-avatar/{channelId}", content, cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<FileUploadResult>(cancellationToken);
+                if (result == null)
+                {
+                    return Result.Failure<FileUploadResult>("Failed to parse upload response");
+                }
+                return Result.Success(result);
+            }
+
+            // Extract error message
+            var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+            var error = System.Text.Json.JsonSerializer.Deserialize<ErrorResponse>(errorContent);
+            return Result.Failure<FileUploadResult>(error?.Error ?? $"Upload failed with status code {response.StatusCode}");
+        }
+        catch (Exception ex)
+        {
+            return Result.Failure<FileUploadResult>($"Upload failed: {ex.Message}");
+        }
+    }
+
     private record ErrorResponse(string? Error);
 }

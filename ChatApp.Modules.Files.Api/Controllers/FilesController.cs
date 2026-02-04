@@ -143,6 +143,53 @@ namespace ChatApp.Modules.Files.Api.Controllers
 
 
         /// <summary>
+        /// Upload channel avatar (stored in /avatars/channels/{channelId}/)
+        /// </summary>
+        [HttpPost("upload/channel-avatar/{channelId:guid}")]
+        [RequirePermission("Files.Upload")]
+        [RequestSizeLimit(10 * 1024 * 1024)] // 10 MB for avatars
+        [ProducesResponseType(typeof(FileUploadResult), StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<IActionResult> UploadChannelAvatar(
+            [FromRoute] Guid channelId,
+            [FromForm] UploadFileRequest request,
+            CancellationToken cancellationToken)
+        {
+            var currentUserId = GetCurrentUserId();
+            if (currentUserId == Guid.Empty)
+                return Unauthorized();
+
+            // Validate it's an image
+            if (!request.File.ContentType.StartsWith("image/"))
+            {
+                return BadRequest(new { error = "Only image files are allowed for channel avatars" });
+            }
+
+            var result = await _mediator.Send(
+                new UploadFileCommand(
+                    request.File,
+                    currentUserId,
+                    null,
+                    null,
+                    false,
+                    true,  // IsChannelAvatar
+                    channelId),  // ChannelAvatarTargetId
+                cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return CreatedAtAction(
+                nameof(GetFile),
+                new { fileId = result.Value!.FileId },
+                result.Value);
+        }
+
+
+
+        /// <summary>
         /// Get file metadata by ID
         /// </summary>
         [HttpGet("{fileId:guid}")]

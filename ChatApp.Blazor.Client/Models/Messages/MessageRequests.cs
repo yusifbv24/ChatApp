@@ -104,5 +104,7 @@ namespace ChatApp.Blazor.Client.Models.Messages
         public string? Description { get; set; }
 
         public ChannelType? Type { get; set; }
+
+        public string? AvatarUrl { get; set; }
     }
 }

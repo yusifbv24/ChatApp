@@ -43,6 +43,10 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Configurations
                 .HasColumnName("archived_at_utc")
                 .HasColumnType("timestamp with time zone");
 
+            builder.Property(c => c.AvatarUrl)
+                .HasColumnName("avatar_url")
+                .HasMaxLength(500);
+
             builder.Property(c => c.CreatedAtUtc)
                 .HasColumnName("created_at_utc")
                 .HasColumnType("timestamp with time zone")

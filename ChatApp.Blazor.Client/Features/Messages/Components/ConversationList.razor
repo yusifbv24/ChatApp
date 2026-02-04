@@ -79,8 +79,15 @@
                          @onmouseleave="HandleMouseLeave"
                          @oncontextmenu:preventDefault="true"
                          @oncontextmenu="()=> HandleContextMenu(item.Id)">
-                        <div class="conversation-avatar group-avatar" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(item.Id);">
-                            <span class="group-initials">@StringHelper.GetInitials(item.Name)</span>
+                        <div class="conversation-avatar group-avatar">
+                            @if (!string.IsNullOrEmpty(item.AvatarUrl))
+                            {
+                                <img src="@item.AvatarUrl" alt="@item.Name" />
+                            }
+                            else
+                            {
+                                <div class="avatar-placeholder" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(item.Id);">@StringHelper.GetInitials(item.Name)</div>
+                            }
                         </div>
                         <div class="conversation-info">
                             <div class="conversation-header">

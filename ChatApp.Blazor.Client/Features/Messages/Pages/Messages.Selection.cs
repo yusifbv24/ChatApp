@@ -153,6 +153,7 @@ public partial class Messages
         IsArchived: false,
         CreatedAtUtc: item.CreatedAtUtc ?? DateTime.UtcNow,
         ArchivedAtUtc: null,
+        AvatarUrl: item.AvatarUrl,
         LastMessageContent: item.LastMessage,
         LastMessageAtUtc: item.LastMessageAtUtc,
         UnreadCount: item.UnreadCount,
@@ -748,6 +749,7 @@ public partial class Messages
             isDirectMessage = false;
             isNotesConversation = false; // Channel-də Notes yoxdur
             selectedChannelName = channel.Name;
+            selectedChannelAvatarUrl = channel.AvatarUrl;
             selectedChannelDescription = channel.Description;
             selectedChannelType = channel.Type;
             selectedChannelMemberCount = channel.MemberCount;

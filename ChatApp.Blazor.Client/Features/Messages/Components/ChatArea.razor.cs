@@ -124,6 +124,11 @@ public partial class ChatArea : IAsyncDisposable
     [Parameter] public string ChannelName { get; set; } = string.Empty;
 
     /// <summary>
+    /// Channel avatar URL-i.
+    /// </summary>
+    [Parameter] public string? ChannelAvatarUrl { get; set; }
+
+    /// <summary>
     /// Channel təsviri - sidebar-da istifadə olunur.
     /// </summary>
     [Parameter] public string? ChannelDescription { get; set; }

@@ -10,6 +10,7 @@
         bool IsArchived,
         DateTime CreatedAtUtc,
         DateTime? ArchivedAtUtc,
+        string? AvatarUrl = null,
         string? LastMessageContent = null,
         DateTime? LastMessageAtUtc = null,
         int UnreadCount = 0,

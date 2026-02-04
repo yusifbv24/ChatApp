@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ChatApp.Modules.Channels.Infrastructure.Migrations
 {
     [DbContext(typeof(ChannelsDbContext))]
-    [Migration("20260130080918_InitialCreate")]
+    [Migration("20260204062739_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -69,6 +69,11 @@ namespace ChatApp.Modules.Channels.Infrastructure.Migrations
                     b.Property<DateTime?>("ArchivedAtUtc")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("archived_at_utc");
+
+                    b.Property<string>("AvatarUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("avatar_url");
 
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone")

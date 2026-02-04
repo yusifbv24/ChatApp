@@ -21,7 +21,9 @@ namespace ChatApp.Modules.Files.Application.Commands.UploadFile
         Guid UploadedBy,
         Guid? ChannelId=null,
         Guid? ConversationId=null,
-        bool IsProfilePicture=false
+        bool IsProfilePicture=false,
+        bool IsChannelAvatar=false,
+        Guid? ChannelAvatarTargetId=null
     ):IRequest<Result<FileUploadResult>>;
 
 
@@ -101,6 +103,8 @@ namespace ChatApp.Modules.Files.Application.Commands.UploadFile
                     request.ConversationId,
                     request.UploadedBy,
                     request.IsProfilePicture,
+                    request.IsChannelAvatar,
+                    request.ChannelAvatarTargetId,
                     fileType,
                     cancellationToken);
 
@@ -240,7 +244,7 @@ namespace ChatApp.Modules.Files.Application.Commands.UploadFile
 
 
 
-        private async Task ProcessImageAsync(IFormFile file,FileMetadata fileMetadata,string storagePath)
+        private static async Task ProcessImageAsync(IFormFile file,FileMetadata fileMetadata,string storagePath)
         {
             using var image = await Image.LoadAsync(file.OpenReadStream());
 
@@ -270,18 +274,26 @@ namespace ChatApp.Modules.Files.Application.Commands.UploadFile
         }
 
 
-        private Task<string> DetermineStorageDirectoryAsync(
+        private static Task<string> DetermineStorageDirectoryAsync(
             Guid? channelId,
             Guid? conversationId,
             Guid uploadedBy,
             bool IsProfilePicture,
+            bool IsChannelAvatar,
+            Guid? channelAvatarTargetId,
             FileType fileType,
             CancellationToken cancellationToken)
         {
             // Profile pictures go to dedicated folder
             if (IsProfilePicture)
             {
-                return Task.FromResult($"avatars/{uploadedBy}");
+                return Task.FromResult($"avatars/conversations/{uploadedBy}");
+            }
+
+            // Channel avatars go to /avatars/channels/{channelId}/
+            if (IsChannelAvatar && channelAvatarTargetId.HasValue)
+            {
+                return Task.FromResult($"avatars/channels/{channelAvatarTargetId.Value}");
             }
 
             // File type subfolder
@@ -310,7 +322,5 @@ namespace ChatApp.Modules.Files.Application.Commands.UploadFile
             // Generic uploads (no context): generic/{fileType}/
             return Task.FromResult($"generic/{fileTypeFolder}");
         }
-
-
     }
 }

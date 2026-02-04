@@ -25,4 +25,9 @@ public interface IFileService
     /// Upload a file
     /// </summary>
     Task<Result<FileUploadResult>> UploadFileAsync(IBrowserFile file, Guid? conversationId = null, Guid? channelId = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Upload a channel avatar from byte array (stored in /avatars/channels/{channelId}/)
+    /// </summary>
+    Task<Result<FileUploadResult>> UploadChannelAvatarAsync(byte[] fileData, string fileName, string contentType, Guid channelId, CancellationToken cancellationToken = default);
 }

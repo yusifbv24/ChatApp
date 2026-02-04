@@ -63,7 +63,14 @@
                 else
                 {
                     <div class="header-avatar">
-                        <div class="avatar-placeholder channel-avatar" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(ChannelId ?? Guid.Empty);">@StringHelper.GetInitials(ChannelName)</div>
+                        @if (!string.IsNullOrEmpty(ChannelAvatarUrl))
+                        {
+                            <img src="@ChannelAvatarUrl" alt="@ChannelName" class="channel-avatar-img" />
+                        }
+                        else
+                        {
+                            <div class="avatar-placeholder channel-avatar" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(ChannelId ?? Guid.Empty);">@StringHelper.GetInitials(ChannelName)</div>
+                        }
                     </div>
                     <div class="header-details">
                         <div class="header-name-wrapper">

@@ -40,7 +40,8 @@ namespace ChatApp.Modules.Channels.Application.Queries.GetPublicChannels
                         c.Members.Count(m => m.IsActive),
                         c.IsArchived,
                         c.CreatedAtUtc,
-                        c.ArchivedAtUtc
+                        c.ArchivedAtUtc,
+                        c.AvatarUrl
                     ))
                     .OrderByDescending(c => c.CreatedAtUtc)
                     .ToList();

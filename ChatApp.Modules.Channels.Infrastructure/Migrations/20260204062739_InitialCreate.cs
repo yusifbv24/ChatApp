@@ -22,6 +22,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Migrations
                     created_by = table.Column<Guid>(type: "uuid", nullable: false),
                     is_archived = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
                     archived_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    avatar_url = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
                     created_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     updated_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },

@@ -96,39 +96,30 @@ public partial class Messages
         _createGroupSearchCts?.Dispose();
         _createGroupSearchCts = null;
 
-        // Avatar state-ini sıfırla
+        // Avatar state-ini sıfırla (bütün temporary data)
         createGroupAvatarUrl = null;
         createGroupAvatarFileId = null;
+        createGroupAvatarFileData = null;
+        createGroupAvatarFileName = null;
+        createGroupAvatarContentType = null;
 
         StateHasChanged();
     }
 
     /// <summary>
     /// Create Group panelini ləğv et (Cancel butonu).
-    /// Əgər avatar yüklənibsə, silinir.
+    /// Avatar artıq backend-ə yüklənmir (temporary saxlanılır), buna görə silməyə ehtiyac yoxdur.
     /// </summary>
-    private async Task CancelCreateGroupPanel()
+    private void CancelCreateGroupPanel()
     {
-        // Əgər avatar yüklənibsə, sil
-        if (createGroupAvatarFileId.HasValue)
-        {
-            try
-            {
-                // TODO: FileService.DeleteFileAsync çağır (əgər mövcuddursa)
-                // Hələlik sadəcə state-i sıfırla
-                await Task.CompletedTask; // Placeholder for async operation
-            }
-            catch
-            {
-                // Silmə uğursuz olsa da paneli bağla
-            }
-        }
-
+        // Temporary avatar data CloseCreateGroupPanel-da təmizlənir
         CloseCreateGroupPanel();
     }
 
     /// <summary>
     /// Create Group avatar seçildikdə.
+    /// Fayl backend-ə göndərilmir, sadəcə temporary olaraq saxlanılır.
+    /// Channel yaradıldıqdan sonra CreateGroupChannel() metodunda upload olunur.
     /// </summary>
     private async Task OnGroupAvatarSelected(InputFileChangeEventArgs e)
     {
@@ -151,28 +142,29 @@ public partial class Messages
 
         try
         {
-            // Preview üçün base64 URL yarat
+            // Faylı oxu və temporary saxla
             using var memoryStream = new MemoryStream();
             await file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024).CopyToAsync(memoryStream);
             var buffer = memoryStream.ToArray();
+
+            // Preview üçün base64 URL yarat
             createGroupAvatarUrl = $"data:{file.ContentType};base64,{Convert.ToBase64String(buffer)}";
 
-            // Faylı upload et
-            var result = await FileService.UploadFileAsync(file);
-            if (result.IsSuccess && result.Value != null)
-            {
-                createGroupAvatarFileId = result.Value.FileId;
-            }
-            else
-            {
-                ShowError(result.Error ?? "Failed to upload avatar");
-                createGroupAvatarUrl = null;
-            }
+            // Temporary file data saxla (backend-ə sonra göndəriləcək)
+            createGroupAvatarFileData = buffer;
+            createGroupAvatarFileName = file.Name;
+            createGroupAvatarContentType = file.ContentType;
+
+            // FileId hələlik null (channel yaradıldıqdan sonra upload olunacaq)
+            createGroupAvatarFileId = null;
         }
         catch (Exception ex)
         {
-            ShowError("Failed to upload avatar: " + ex.Message);
+            ShowError("Failed to process avatar: " + ex.Message);
             createGroupAvatarUrl = null;
+            createGroupAvatarFileData = null;
+            createGroupAvatarFileName = null;
+            createGroupAvatarContentType = null;
         }
 
         StateHasChanged();
@@ -531,6 +523,7 @@ public partial class Messages
 
     /// <summary>
     /// Create Group panelindən channel yarat.
+    /// Avatar channel yaradıldıqdan sonra upload olunur.
     /// </summary>
     private async Task CreateGroupChannel()
     {
@@ -554,6 +547,37 @@ public partial class Messages
                 foreach (var member in createGroupSelectedMembers)
                 {
                     await ChannelService.AddMemberAsync(channelId, member.Id);
+                }
+
+                // Avatar upload et (əgər seçilibsə)
+                if (createGroupAvatarFileData != null &&
+                    !string.IsNullOrEmpty(createGroupAvatarFileName) &&
+                    !string.IsNullOrEmpty(createGroupAvatarContentType))
+                {
+                    var avatarResult = await FileService.UploadChannelAvatarAsync(
+                        createGroupAvatarFileData,
+                        createGroupAvatarFileName,
+                        createGroupAvatarContentType,
+                        channelId);
+
+                    if (avatarResult.IsSuccess && avatarResult.Value != null)
+                    {
+                        // Channel-ın AvatarUrl-unu yenilə
+                        var updateResult = await ChannelService.UpdateChannelAsync(channelId, new UpdateChannelRequest
+                        {
+                            AvatarUrl = avatarResult.Value.DownloadUrl
+                        });
+
+                        if (updateResult.IsFailure)
+                        {
+                            ShowError("Channel created but avatar URL update failed");
+                        }
+                    }
+                    else
+                    {
+                        // Avatar upload uğursuz olsa da channel yaradılıb, sadəcə xəbərdarlıq göstər
+                        ShowError("Channel created but avatar upload failed: " + avatarResult.Error);
+                    }
                 }
 
                 CloseCreateGroupPanel();

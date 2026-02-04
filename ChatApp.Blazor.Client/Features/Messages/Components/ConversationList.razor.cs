@@ -457,6 +457,7 @@ public partial class ConversationList : IAsyncDisposable
         {
             Id = channel.Id,
             Name = channel.Name,
+            AvatarUrl = channel.AvatarUrl,
             LastMessage = channel.LastMessageContent,
             LastActivityTime = channel.LastMessageAtUtc ?? channel.CreatedAtUtc,
             UnreadCount = channel.UnreadCount,

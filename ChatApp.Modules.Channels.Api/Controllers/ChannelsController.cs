@@ -199,6 +199,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
                 request.Name,
                 request.Description,
                 request.Type,
+                request.AvatarUrl,
                 userId);
 
             var result = await _mediator.Send(command, cancellationToken);

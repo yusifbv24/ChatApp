@@ -237,7 +237,7 @@ public class UnifiedConversationsController(IMediator mediator) : ControllerBase
         Id: c.Id,
         Type: UnifiedChatItemType.Channel,
         Name: c.Name,
-        AvatarUrl: null,
+        AvatarUrl: c.AvatarUrl,
         LastMessage: c.LastMessageContent,
         LastMessageAtUtc: c.LastMessageAtUtc,
         UnreadCount: c.UnreadCount,

@@ -14,6 +14,7 @@ namespace ChatApp.Modules.Channels.Application.Commands.Channels
         string? Name,
         string? Description,
         ChannelType? Type,
+        string? AvatarUrl,
         Guid RequestedBy
     ) : IRequest<Result>;
 
@@ -116,6 +117,11 @@ namespace ChatApp.Modules.Channels.Application.Commands.Channels
                 if (request.Type.HasValue)
                 {
                     channel.ChangeType(request.Type.Value);
+                }
+
+                if (request.AvatarUrl != null)
+                {
+                    channel.UpdateAvatarUrl(request.AvatarUrl);
                 }
 
                 await _unitOfWork.Channels.UpdateAsync(channel, cancellationToken);
