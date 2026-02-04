@@ -530,11 +530,6 @@ public partial class Messages : IAsyncDisposable
     private string? createGroupAvatarUrl;
 
     /// <summary>
-    /// Create Group avatar file ID (uploaded - yalnız channel yaradıldıqdan sonra set olunur).
-    /// </summary>
-    private Guid? createGroupAvatarFileId;
-
-    /// <summary>
     /// Create Group avatar file data (temporary - backend-ə göndərilməmiş).
     /// Channel yaradıldıqdan sonra bu data istifadə olunub upload edilir.
     /// </summary>
@@ -666,7 +661,6 @@ public partial class Messages : IAsyncDisposable
     /// Forward dialog-unda axtarış sorğusu.
     /// </summary>
     private string forwardSearchQuery = string.Empty;
-    private static readonly Dictionary<string, string> value = [];
 
     #endregion
 
@@ -676,7 +670,7 @@ public partial class Messages : IAsyncDisposable
     /// Qaralama mesajları.
     /// key: "conv_{id}" / "chan_{id}" / "pending_{userId}"
     /// </summary>
-    private readonly Dictionary<string, string> messageDrafts = value;
+    private readonly Dictionary<string, string> messageDrafts = [];
 
     /// <summary>
     /// Cari qaralama.

@@ -28,7 +28,7 @@
                 <span>Searching...</span>
             </div>
         }
-        else if (searchResults != null && searchResults.Results.Any())
+        else if (searchResults?.Results?.Any() == true)
         {
             <div class="search-results-list">
                 @foreach (var group in GroupedResults)

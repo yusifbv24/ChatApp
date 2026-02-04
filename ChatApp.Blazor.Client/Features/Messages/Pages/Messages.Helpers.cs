@@ -98,7 +98,6 @@ public partial class Messages
 
         // Avatar state-ini sıfırla (bütün temporary data)
         createGroupAvatarUrl = null;
-        createGroupAvatarFileId = null;
         createGroupAvatarFileData = null;
         createGroupAvatarFileName = null;
         createGroupAvatarContentType = null;
@@ -155,8 +154,6 @@ public partial class Messages
             createGroupAvatarFileName = file.Name;
             createGroupAvatarContentType = file.ContentType;
 
-            // FileId hələlik null (channel yaradıldıqdan sonra upload olunacaq)
-            createGroupAvatarFileId = null;
         }
         catch (Exception ex)
         {

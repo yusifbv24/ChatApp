@@ -76,20 +76,6 @@ window.chatAppUtils = {
         });
     },
 
-    // Scroll to bottom instantly without flash effect
-    // Uses double rAF pattern to ensure DOM is fully rendered before scroll
-    scrollToBottomInstant: (elementId) => {
-        const element = document.getElementById(elementId);
-        if (!element) return;
-
-        // Double rAF pattern - ensures Blazor + browser render cycles complete
-        requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-                element.scrollTop = element.scrollHeight;
-            });
-        });
-    },
-
     // Hide element before render (called before StateHasChanged)
     hideElement: (elementId) => {
         const element = document.getElementById(elementId);

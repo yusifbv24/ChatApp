@@ -48,7 +48,10 @@
       "Bash(grep:*)",
       "Bash(powershell:*)",
       "Bash(tree:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(wc:*)",
+      "Bash(tr:*)",
+      "Bash(__NEW_LINE_11210cc517fd9361__ comm -23 /tmp/defined.txt /tmp/used.txt)"
     ],
     "deny": [],
     "ask": []

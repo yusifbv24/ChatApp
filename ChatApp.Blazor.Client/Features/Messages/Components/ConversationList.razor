@@ -200,7 +200,9 @@
                                     }
                                     <button class="conversation-more-btn @(hoveredItemId == item.Id || showMoreMenu && moreMenuItemId == item.Id ? "visible" : "")"
                                             @onclick:stopPropagation="true"
-                                            @onclick="()=> ToggleMoreMenu(item.Id)">
+                                            @onclick="()=> ToggleMoreMenu(item.Id)"
+                                            aria-label="More options"
+                                            title="More options">
                                         <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" />
                                     </button>
                                 </div>
@@ -341,7 +343,9 @@
                                     }
                                     <button class="conversation-more-btn @(hoveredItemId == item.Id || showMoreMenu && moreMenuItemId == item.Id ? "visible" : "")"
                                             @onclick:stopPropagation="true"
-                                            @onclick="()=> ToggleMoreMenu(item.Id)">
+                                            @onclick="()=> ToggleMoreMenu(item.Id)"
+                                            aria-label="More options"
+                                            title="More options">
                                         <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" />
                                     </button>
                                 </div>

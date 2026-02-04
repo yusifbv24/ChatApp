@@ -1765,10 +1765,6 @@
     animation: messageHighlight 2s ease-out;
 }
 
-.read-icon {
-    color: #60A5FA !important;
-}
-
 .edited-label {
     font-size: 11px;
     font-style: italic;
@@ -5040,13 +5036,6 @@
     overflow: hidden;
 }
 
-/* Image preview container */
-.file-image-container {
-    display: inline;
-    text-decoration: none;
-    color: inherit;
-}
-
 .file-image-preview {
     max-width: 100%;
     max-height: 300px;
@@ -5673,17 +5662,11 @@
         border-bottom-color: #f44336;
     }
 
-/* Character Counter */
-.char-counter {
-    font-size: 11px;
-    color: #a8adb4;
-    margin-left: 8px;
+/* Character counter exceeded variant */
+.char-counter.exceeded {
+    color: #f44336;
+    font-weight: 500;
 }
-
-    .char-counter.exceeded {
-        color: #f44336;
-        font-weight: 500;
-    }
 
 .create-group-name-input .char-counter {
     position: absolute;

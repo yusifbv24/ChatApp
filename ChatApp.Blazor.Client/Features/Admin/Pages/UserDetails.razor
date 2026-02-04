@@ -655,13 +655,13 @@
             }
             user = result.Value;
 
-            if (posTask.Result.IsSuccess)
+            if (posTask.Result.IsSuccess && posTask.Result.Value is not null)
                 allPositions = posTask.Result.Value;
 
-            if (deptTask.Result.IsSuccess)
+            if (deptTask.Result.IsSuccess && deptTask.Result.Value is not null)
                 allDepartments = deptTask.Result.Value;
 
-            if (usersTask.Result.IsSuccess)
+            if (usersTask.Result.IsSuccess && usersTask.Result.Value is not null)
                 allUsers = usersTask.Result.Value;
         }
         catch (Exception ex)
@@ -804,7 +804,7 @@
             var result = await FileService.UploadProfilePictureAsync(file, UserId);
             if (result.IsSuccess)
             {
-                var avatarUrl = result.Value.ThumbnailUrl ?? result.Value.DownloadUrl;
+                var avatarUrl = result.Value?.ThumbnailUrl ?? result.Value?.DownloadUrl;
                 var updateReq = new UpdateUserRequest
                 {
                     FirstName = user!.FirstName,

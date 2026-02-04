@@ -285,7 +285,7 @@
             var hierarchyResult = await OrganizationService.GetOrganizationHierarchyAsync();
             if (hierarchyResult.IsSuccess)
             {
-                var allNodes = FlattenNodes(hierarchyResult.Value);
+                var allNodes = FlattenNodes(hierarchyResult.Value ?? new());
                 var deptNode = allNodes.FirstOrDefault(n => n.Type == NodeType.Department && n.Id == DepartmentId);
 
                 departmentUsers = deptNode?.Children
