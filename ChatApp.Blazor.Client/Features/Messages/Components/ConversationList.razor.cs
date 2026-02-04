@@ -787,9 +787,11 @@ public partial class ConversationList : IAsyncDisposable
     {
         return status switch
         {
+            "Pending" => Icons.Material.Filled.Schedule,     // Saat ikonu (göndərilir...)
             "Sent" => Icons.Material.Filled.Check,           // Tək checkmark
             "Delivered" => Icons.Material.Filled.DoneAll,    // İkiqat checkmark (boz)
             "Read" => Icons.Material.Filled.DoneAll,         // İkiqat checkmark (mavi - CSS ilə)
+            "Failed" => Icons.Material.Filled.ErrorOutline,  // Xəta ikonu
             _ => Icons.Material.Filled.Check
         };
     }

@@ -1026,6 +1026,8 @@ public partial class Messages
                     await InvokeAsync(() =>
                     {
                         var message = directMessages.FirstOrDefault(m => m.TempId == tempId);
+                        string listStatus = "Sent"; // Default
+
                         if (message != null)
                         {
                             var index = directMessages.IndexOf(message);
@@ -1039,8 +1041,18 @@ public partial class Messages
                             };
                             directMessages[index] = updatedMessage;
                             InvalidateMessageCache();
-                            StateHasChanged();
+
+                            listStatus = newStatus == MessageStatus.Read ? "Read" : "Sent";
                         }
+
+                        // FIX: Conversation list status-u da yenilə (Pending → Sent)
+                        UpdateListItemWhere(
+                            ref directConversations,
+                            c => c.Id == conversationId && c.LastMessageSenderId == currentUserId && c.LastMessageStatus == "Pending",
+                            c => c with { LastMessageStatus = listStatus, LastMessageId = realId }
+                        );
+
+                        StateHasChanged();
                     });
 
                     return realId;
@@ -1069,8 +1081,16 @@ public partial class Messages
                 var failedMessage = message with { Status = MessageStatus.Failed };
                 directMessages[index] = failedMessage;
                 InvalidateMessageCache();
-                StateHasChanged();
             }
+
+            // FIX: Conversation list status-u da yenilə (Pending → Failed)
+            UpdateListItemWhere(
+                ref directConversations,
+                c => c.Id == conversationId && c.LastMessageSenderId == currentUserId && c.LastMessageStatus == "Pending",
+                c => c with { LastMessageStatus = "Failed" }
+            );
+
+            StateHasChanged();
         });
 
         return null;
@@ -1125,8 +1145,18 @@ public partial class Messages
                             };
                             channelMessages[index] = updatedMessage;
                             InvalidateMessageCache();
-                            StateHasChanged();
+
+                            // FIX: Channel list status-u da yenilə (Pending → Sent)
+                            string listStatus = newStatus == MessageStatus.Read ? "Read" :
+                                                newStatus == MessageStatus.Delivered ? "Delivered" : "Sent";
+                            UpdateListItemWhere(
+                                ref channelConversations,
+                                c => c.Id == channelId && c.LastMessageSenderId == currentUserId && c.LastMessageStatus == "Pending",
+                                c => c with { LastMessageStatus = listStatus, LastMessageId = realId }
+                            );
                         }
+
+                        StateHasChanged();
                     });
 
                     return realId;
@@ -1155,8 +1185,16 @@ public partial class Messages
                 var failedMessage = message with { Status = MessageStatus.Failed };
                 channelMessages[index] = failedMessage;
                 InvalidateMessageCache();
-                StateHasChanged();
             }
+
+            // FIX: Channel list status-u da yenilə (Pending → Failed)
+            UpdateListItemWhere(
+                ref channelConversations,
+                c => c.Id == channelId && c.LastMessageSenderId == currentUserId && c.LastMessageStatus == "Pending",
+                c => c with { LastMessageStatus = "Failed" }
+            );
+
+            StateHasChanged();
         });
 
         return null;

@@ -867,7 +867,9 @@ public partial class Messages
             {
                 LastMessageContent = lastMessage,
                 LastMessageAtUtc = messageTime,
-                LastMessageSenderId = currentUserId
+                LastMessageSenderId = currentUserId,
+                // OPTIMISTIC UI: Status "Pending" ilə başlayır, backend cavabından sonra "Sent"/"Read" olur
+                LastMessageStatus = "Pending"
             };
 
             MoveItemToTop(ref directConversations, updatedConversation, c => c.Id == conversationId);
@@ -888,7 +890,9 @@ public partial class Messages
             {
                 LastMessageContent = lastMessage,
                 LastMessageAtUtc = messageTime,
-                LastMessageSenderId = currentUserId
+                LastMessageSenderId = currentUserId,
+                // OPTIMISTIC UI: Status "Pending" ilə başlayır, backend cavabından sonra "Sent"/"Delivered"/"Read" olur
+                LastMessageStatus = "Pending"
             };
 
             MoveItemToTop(ref channelConversations, updatedChannel, c => c.Id == channelId);
