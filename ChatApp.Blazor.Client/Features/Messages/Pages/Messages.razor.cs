@@ -855,39 +855,51 @@ public partial class Messages : IAsyncDisposable
                 {
                     await SelectDirectConversation(notesConversation);
                 }
-                // FIX: No error if Notes not found (should always exist, but silently fail)
                 return;
             }
 
-            // Email və ya ad ilə user search et (other users üçün)
+            // OPTIMIZATION: Əvvəlcə mövcud conversation-larda yoxla (API çağırışı olmadan)
+            var existingConversation = directConversations.FirstOrDefault(c =>
+                c.OtherUserFullName.Equals(username, StringComparison.OrdinalIgnoreCase) ||
+                c.OtherUserEmail.Equals(username, StringComparison.OrdinalIgnoreCase));
+
+            if (existingConversation != null)
+            {
+                await SelectDirectConversation(existingConversation);
+                return;
+            }
+
+            // Mövcud conversation yoxdursa, API-dən user axtar
             var searchResult = await UserService.SearchUsersAsync(username);
 
             if (searchResult.IsSuccess && searchResult.Value != null && searchResult.Value.Count > 0)
             {
-                // İlk uyğun user-i tap (exact match)
+                // İlk uyğun user-i tap (exact match TƏKCƏLİ, sonra contains)
                 var user = searchResult.Value.FirstOrDefault(u =>
                     u.FullName.Equals(username, StringComparison.OrdinalIgnoreCase) ||
                     u.Email.Equals(username, StringComparison.OrdinalIgnoreCase));
 
+                // Exact match tapılmadısa, contains ilə yoxla
+                user ??= searchResult.Value.FirstOrDefault(u =>
+                    u.FullName.Contains(username, StringComparison.OrdinalIgnoreCase) ||
+                    u.Email.Contains(username, StringComparison.OrdinalIgnoreCase));
+
+                // Hələ də yoxdursa, ilk nəticəni götür
+                user ??= searchResult.Value.FirstOrDefault();
+
                 if (user != null)
                 {
-                    // Other user mention: Open conversation with them
+                    // userSearchResults-a əlavə et (StartConversationWithUser oradan oxuyur)
                     userSearchResults = searchResult.Value;
                     await StartConversationWithUser(user.Id);
                 }
-                else
-                {
-                    ShowError("User not found");
-                }
             }
-            else
-            {
-                ShowError("User not found");
-            }
+            // NOTE: Error göstərmə - istifadəçi tapılmadısa sessiz keç
+            // (conversation açılmır, amma error snackbar da göstərilmir)
         }
-        catch (Exception ex)
+        catch
         {
-            ShowError($"Failed to open conversation: {ex.Message}");
+            // Silently handle errors - mention click fail etdikdə error göstərmə
         }
     }
 

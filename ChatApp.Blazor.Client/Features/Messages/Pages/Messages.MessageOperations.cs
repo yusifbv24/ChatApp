@@ -1,3 +1,4 @@
+using ChatApp.Blazor.Client.Models.Auth;
 using ChatApp.Blazor.Client.Models.Common;
 using ChatApp.Blazor.Client.Models.Messages;
 using ChatApp.Shared.Kernel;
@@ -956,6 +957,7 @@ public partial class Messages
     /// <summary>
     /// Mention-a klik edildikdə həmin şəxslə conversation aç.
     /// Özünə mention etsə, Notes conversation-u aç.
+    /// ALIGNED: ConversationList-dən istifadəçi seçimi ilə eyni davranış (pending conversation).
     /// </summary>
     private async Task HandleMentionClick(Guid userId)
     {
@@ -965,7 +967,6 @@ public partial class Messages
             var notesConversation = directConversations.FirstOrDefault(c => c.IsNotes);
             if (notesConversation != null)
             {
-                // Use SelectDirectConversation for proper state management + scroll
                 await SelectDirectConversation(notesConversation);
             }
             return;
@@ -973,47 +974,46 @@ public partial class Messages
 
         try
         {
-            // Start conversation with this user
-
             // Check if conversation already exists in the list (OtherUserId match)
             var existingConversation = directConversations.FirstOrDefault(c => c.OtherUserId == userId);
 
             if (existingConversation != null)
             {
-                // Conversation exists, use SelectDirectConversation for proper state management + scroll
+                // Conversation exists, use SelectDirectConversation for proper state management
                 await SelectDirectConversation(existingConversation);
             }
             else
             {
-                // Start new conversation (pending conversation until first message)
-                // Backend StartConversationAsync artıq user yoxlamasını edir
-                var result = await ConversationService.StartConversationAsync(userId);
+                // ALIGNED: Pending conversation pattern istifadə et (ConversationList ilə eyni)
+                // Backend-dən user məlumatlarını al
+                var userResult = await UserService.GetUserByIdAsync(userId);
 
-                if (result.IsSuccess && result.Value != Guid.Empty)
+                if (userResult.IsSuccess && userResult.Value != null)
                 {
-                    // Reload conversation list (yeni conversation əlavə olunub)
-                    await LoadConversationsAndChannels();
+                    var userDetail = userResult.Value;
 
-                    // Find the new conversation
-                    var newConversation = directConversations.FirstOrDefault(c => c.Id == result.Value);
-                    if (newConversation != null)
-                    {
-                        // Use SelectDirectConversation for proper state management + scroll
-                        await SelectDirectConversation(newConversation);
-                    }
+                    // UserDetailDto → UserSearchResultDto çevir (StartConversationWithUser tələb edir)
+                    var searchUser = new UserSearchResultDto(
+                        Id: userDetail.Id,
+                        FirstName: userDetail.FirstName,
+                        LastName: userDetail.LastName,
+                        Email: userDetail.Email,
+                        AvatarUrl: userDetail.AvatarUrl,
+                        Position: userDetail.Position
+                    );
+
+                    // userSearchResults-a əlavə et (StartConversationWithUser oradan oxuyur)
+                    userSearchResults = [searchUser];
+
+                    // Pending conversation aç (conversation yaratmır, yalnız UI hazırlayır)
+                    await StartConversationWithUser(userId);
                 }
-                else
-                {
-                    // Backend error (user not found, silinib, və s.)
-                    errorMessage = result.Error ?? "Failed to start conversation with this user";
-                    StateHasChanged();
-                }
+                // NOTE: Error göstərmə - istifadəçi tapılmadısa sessiz keç
             }
         }
         catch
         {
-            errorMessage = "An error occurred while opening the conversation";
-            StateHasChanged();
+            // Silently handle errors - mention click fail etdikdə error göstərmə
         }
     }
 
