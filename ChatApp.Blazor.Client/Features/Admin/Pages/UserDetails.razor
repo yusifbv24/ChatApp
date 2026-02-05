@@ -1,20 +1,12 @@
 @page "/admin/user/{UserId:guid}"
 @attribute [Authorize]
-@using ChatApp.Blazor.Client.Helpers
-@using ChatApp.Blazor.Client.Models.Organization
-@using ChatApp.Blazor.Client.Models.Auth
-@using ChatApp.Blazor.Client.Models.Files
-@using ChatApp.Blazor.Client.Features.Admin.Services
-@using ChatApp.Blazor.Client.Features.Auth.Services
-@using ChatApp.Blazor.Client.Features.Files.Services
-@using Microsoft.AspNetCore.Components.Forms
 
 @inject IUserService UserService
 @inject IPositionService PositionService
 @inject IDepartmentService DepartmentService
 @inject IFileService FileService
 @inject NavigationManager Navigation
-@inject ChatApp.Blazor.Client.Infrastructure.Auth.CustomAuthStateProvider AuthStateProvider
+@inject CustomAuthStateProvider AuthStateProvider
 
 <PageTitle>User Details - ChatApp</PageTitle>
 

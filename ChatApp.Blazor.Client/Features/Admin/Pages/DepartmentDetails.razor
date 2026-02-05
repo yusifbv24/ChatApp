@@ -1,10 +1,5 @@
 @page "/admin/department/{DepartmentId:guid}"
 @attribute [Authorize]
-@using ChatApp.Blazor.Client.Helpers
-@using ChatApp.Blazor.Client.Models.Organization
-@using ChatApp.Blazor.Client.Models.Auth
-@using ChatApp.Blazor.Client.Features.Admin.Services
-@using ChatApp.Blazor.Client.Features.Auth.Services
 
 @inject IDepartmentService DepartmentService
 @inject IOrganizationService OrganizationService
