@@ -460,7 +460,7 @@
             </button>
         }
 
-        <!-- Message Input or Selection Toolbar -->
+        <!-- Message Input or Selection Toolbar or Join Banner -->
         @if (IsSelectMode)
         {
             <SelectionToolbar SelectedCount="@SelectedMessageIds.Count"
@@ -468,6 +468,25 @@
                              OnCancel="OnCancelSelection"
                              OnDelete="OnDeleteSelected"
                              OnForward="OnForwardSelected" />
+        }
+        else if (!IsDirectMessage && !IsCurrentUserChannelMember)
+        {
+            <!-- Join Channel Banner (Public channel, user not a member) -->
+            <div class="join-channel-banner">
+                <div class="join-channel-content">
+                    <div class="join-channel-icon">
+                        <MudIcon Icon="@Icons.Material.Outlined.GroupAdd" Size="Size.Medium" />
+                    </div>
+                    <div class="join-channel-text">
+                        <span class="join-channel-title">Join this channel to send messages</span>
+                        <span class="join-channel-description">You can view messages but need to join to participate</span>
+                    </div>
+                </div>
+                <button class="join-channel-btn" @onclick="() => OnJoinChannel.InvokeAsync()">
+                    <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Size="Size.Small" />
+                    <span>Join Channel</span>
+                </button>
+            </div>
         }
         else
         {

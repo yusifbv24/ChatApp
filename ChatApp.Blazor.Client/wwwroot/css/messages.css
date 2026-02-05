@@ -2514,6 +2514,82 @@
 }
 
 /* ===================================
+   JOIN CHANNEL BANNER
+   =================================== */
+
+.join-channel-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border-top: 1px solid var(--gray-200);
+}
+
+.join-channel-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+}
+
+.join-channel-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    background: #00ACE3;
+    border-radius: 50%;
+    color: var(--white);
+    flex-shrink: 0;
+}
+
+.join-channel-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.join-channel-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.join-channel-description {
+    font-size: 12px;
+    color: var(--gray-500);
+}
+
+.join-channel-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: #00ACE3;
+    color: var(--white);
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.join-channel-btn:hover {
+    background: #009ACC;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 172, 227, 0.3);
+}
+
+.join-channel-btn:active {
+    transform: translateY(0);
+}
+
+/* ===================================
    MESSAGE INPUT
    =================================== */
 

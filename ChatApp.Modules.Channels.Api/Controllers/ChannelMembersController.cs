@@ -155,6 +155,34 @@ namespace ChatApp.Modules.Channels.Api.Controllers
 
 
         /// <summary>
+        /// Join a public channel (self-join)
+        /// </summary>
+        [HttpPost("join")]
+        [RequirePermission("Channels.Read")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> JoinChannel(
+            [FromRoute] Guid channelId,
+            CancellationToken cancellationToken)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == Guid.Empty)
+                return Unauthorized();
+
+            var result = await _mediator.Send(
+                new JoinChannelCommand(channelId, userId),
+                cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return Ok(new { message = "You have joined the channel successfully" });
+        }
+
+
+
+        /// <summary>
         /// Leave a channel (for user)
         /// </summary>
         [HttpPost("leave")]

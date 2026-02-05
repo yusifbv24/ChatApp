@@ -778,6 +778,7 @@ public partial class Messages
             // Channel yaradıcısı avtomatik admin-dir
             isChannelAdmin = channel.CreatedBy == currentUserId;
             currentUserChannelRole = isChannelAdmin ? MemberRole.Owner : MemberRole.Member;
+            isCurrentUserChannelMember = isChannelAdmin; // Yaradıcı həmişə üzvdür
 
             // Mention data: Channel üçün member-lər (@All MessageInput-da dinamik əlavə olunur)
             currentConversationPartner = null; // Channel-da conversation partner yoxdur
@@ -787,16 +788,16 @@ public partial class Messages
             var channelDetails = await ChannelService.GetChannelAsync(channel.Id);
             if (channelDetails.IsSuccess && channelDetails.Value != null)
             {
+                // Member check - istifadəçi channel-ın üzvüdür?
+                var currentMember = channelDetails.Value.Members.FirstOrDefault(m => m.UserId == currentUserId);
+                isCurrentUserChannelMember = currentMember != null;
+
                 // Yaradıcı deyilsə, role-u yoxla (admin check)
-                if (!isChannelAdmin)
+                if (!isChannelAdmin && currentMember != null)
                 {
-                    var currentMember = channelDetails.Value.Members.FirstOrDefault(m => m.UserId == currentUserId);
-                    if (currentMember != null)
-                    {
-                        currentUserChannelRole = currentMember.Role;
-                        isChannelAdmin = currentMember.Role == MemberRole.Admin ||
-                                        currentMember.Role == MemberRole.Owner;
-                    }
+                    currentUserChannelRole = currentMember.Role;
+                    isChannelAdmin = currentMember.Role == MemberRole.Admin ||
+                                    currentMember.Role == MemberRole.Owner;
                 }
 
                 // Channel member-lərini mention üçün əlavə et
@@ -1532,6 +1533,82 @@ public partial class Messages
         catch (Exception ex)
         {
             throw new Exception(ex.Message);
+        }
+    }
+
+    #endregion
+
+    #region Join Channel - Public channel-a qoşulma
+
+    /// <summary>
+    /// Public channel-a qoşulur.
+    /// Channel-a join etdikdən sonra message input aktiv olur.
+    /// </summary>
+    private async Task HandleJoinChannel()
+    {
+        if (!selectedChannelId.HasValue) return;
+
+        try
+        {
+            var result = await ChannelService.JoinChannelAsync(selectedChannelId.Value);
+            if (result.IsSuccess)
+            {
+                // Join uğurlu - state-i yenilə
+                isCurrentUserChannelMember = true;
+                selectedChannelMemberCount++;
+
+                // Conversation list-də channel-ı tap və ya əlavə et
+                var channelIndex = channelConversations.FindIndex(c => c.Id == selectedChannelId.Value);
+                if (channelIndex >= 0)
+                {
+                    // Mövcud channel - member count yenilə
+                    var newList = new List<ChannelDto>(channelConversations);
+                    newList[channelIndex] = channelConversations[channelIndex] with
+                    {
+                        MemberCount = selectedChannelMemberCount
+                    };
+                    channelConversations = newList;
+                }
+                else
+                {
+                    // Channel list-də yoxdur (axtarışdan gəldi) - əlavə et
+                    var newChannel = new ChannelDto(
+                        Id: selectedChannelId.Value,
+                        Name: selectedChannelName,
+                        Description: selectedChannelDescription,
+                        Type: selectedChannelType,
+                        CreatedBy: Guid.Empty, // Bilinmir
+                        MemberCount: selectedChannelMemberCount,
+                        IsArchived: false,
+                        CreatedAtUtc: DateTime.UtcNow,
+                        ArchivedAtUtc: null,
+                        AvatarUrl: selectedChannelAvatarUrl
+                    );
+
+                    // Yeni list yarat (reference change üçün - cache invalidation)
+                    channelConversations = [newChannel, .. channelConversations];
+                }
+
+                // Channel members siyahısına özümü əlavə et (mention üçün)
+                currentChannelMembers.Add(new MentionUserDto
+                {
+                    Id = currentUserId,
+                    Name = UserState.FullName ?? "You",
+                    AvatarUrl = UserState.AvatarUrl,
+                    IsMember = true,
+                    IsAll = false
+                });
+
+                StateHasChanged();
+            }
+            else
+            {
+                ShowError(result.Error ?? "Failed to join channel");
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Failed to join channel: {ex.Message}");
         }
     }
 

@@ -149,6 +149,18 @@ public partial class ChatArea : IAsyncDisposable
     /// </summary>
     [Parameter] public bool IsChannelAdmin { get; set; }
 
+    /// <summary>
+    /// Hazırki istifadəçi channel-ın üzvüdür?
+    /// Public channel-da false ola bilər (join etməyib).
+    /// </summary>
+    [Parameter] public bool IsCurrentUserChannelMember { get; set; } = true;
+
+    /// <summary>
+    /// Channel-a join etmə callback-i.
+    /// Public channel-da üzv olmayanda göstərilir.
+    /// </summary>
+    [Parameter] public EventCallback OnJoinChannel { get; set; }
+
     #endregion
 
     #region Parameters - Pinned Messages

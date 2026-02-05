@@ -222,6 +222,12 @@ public partial class Messages : IAsyncDisposable
     private MemberRole currentUserChannelRole;
 
     /// <summary>
+    /// Cari istifadəçi channel-ın üzvüdür?
+    /// Public channel-da false ola bilər (join etməyib).
+    /// </summary>
+    private bool isCurrentUserChannelMember;
+
+    /// <summary>
     /// Seçilmiş conversation/channel pinlənmişdir?
     /// </summary>
     private bool selectedConversationIsPinned;
