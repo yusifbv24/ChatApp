@@ -499,6 +499,16 @@ public partial class ChatArea : IAsyncDisposable
     /// </summary>
     [Parameter] public bool CanDeleteSelected { get; set; }
 
+    /// <summary>
+    /// İstifadəçinin mesaj redaktə etmə icazəsi var?
+    /// </summary>
+    [Parameter] public bool CanEditMessage { get; set; }
+
+    /// <summary>
+    /// İstifadəçinin mesaj silmə icazəsi var?
+    /// </summary>
+    [Parameter] public bool CanDeleteMessage { get; set; }
+
     #endregion
 
     #region Parameters - Favorites

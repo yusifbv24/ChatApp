@@ -372,7 +372,7 @@
                             <span>Copy</span>
                             <MudIcon Icon="@Icons.Material.Outlined.ContentCopy" Size="Size.Small" />
                         </button>
-                        @if (IsOwn && !IsForwarded && !(HasFileOnly()))
+                        @if (IsOwn && CanEditMessage && !IsForwarded && !(HasFileOnly()))
                         {
                             <button class="menu-item" @onclick="OnEditClick">
                                 <span>Edit</span>
@@ -421,7 +421,7 @@
                                 </div>
                             }
                         </div>
-                        @if (IsOwn)
+                        @if (IsOwn && CanDeleteMessage)
                         {
                             <button class="menu-item delete-item" @onclick="OnDeleteClick">
                                 <span>Delete</span>

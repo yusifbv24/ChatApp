@@ -130,6 +130,20 @@ public partial class Messages : IAsyncDisposable
 
     #endregion
 
+    #region Permissions State - İcazə state-i
+
+    /// <summary>
+    /// İstifadəçinin mesaj redaktə etmə icazəsi var?
+    /// </summary>
+    private bool canEditMessage => UserState.HasPermission(Permissions.MessagesEdit);
+
+    /// <summary>
+    /// İstifadəçinin mesaj silmə icazəsi var?
+    /// </summary>
+    private bool canDeleteMessage => UserState.HasPermission(Permissions.MessagesDelete);
+
+    #endregion
+
     #region Direct Message State - DM state-i
 
     /// <summary>

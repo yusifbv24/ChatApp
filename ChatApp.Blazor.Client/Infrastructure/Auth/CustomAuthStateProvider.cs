@@ -1,5 +1,6 @@
 using ChatApp.Blazor.Client.Infrastructure.Http;
 using ChatApp.Blazor.Client.Models.Auth;
+using ChatApp.Blazor.Client.State;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.JSInterop;
 using System.Net;
@@ -16,13 +17,15 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
     private readonly HttpClient _httpClient;
     private readonly IJSRuntime _jsRuntime;
     private readonly TokenRefreshService _tokenRefreshService;
+    private readonly UserState _userState;
     private UserDetailDto? _cachedUser;
 
-    public CustomAuthStateProvider(HttpClient httpClient, IJSRuntime jsRuntime, TokenRefreshService tokenRefreshService)
+    public CustomAuthStateProvider(HttpClient httpClient, IJSRuntime jsRuntime, TokenRefreshService tokenRefreshService, UserState userState)
     {
         _httpClient = httpClient;
         _jsRuntime = jsRuntime;
         _tokenRefreshService = tokenRefreshService;
+        _userState = userState;
     }
 
     public override async Task<AuthenticationState> GetAuthenticationStateAsync()
@@ -160,24 +163,12 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
     }
 
     /// <summary>
-    /// Checks if user has a specific permission
+    /// Checks if user has a specific permission (uses UserState which stays in sync)
     /// </summary>
-    public async Task<bool> HasPermissionAsync(string permission)
+    public Task<bool> HasPermissionAsync(string permission)
     {
-        var user = await GetCurrentUserAsync();
-
-        if (user == null)
-        {
-            return false;
-        }
-
-        // Only Super Admin bypasses all permission checks
-        if (user.IsSuperAdmin)
-        {
-            return true;
-        }
-
-        // Check specific permission in user's permissions list
-        return user.Permissions.Contains(permission);
+        // Delegate to UserState which is the single source of truth
+        // and stays updated when user data changes
+        return Task.FromResult(_userState.HasPermission(permission));
     }
 }

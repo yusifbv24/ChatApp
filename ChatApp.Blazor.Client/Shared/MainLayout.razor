@@ -253,16 +253,8 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // Load current user into UserState if not already loaded
-        if (UserState.CurrentUser == null)
-        {
-            // Fetch user from API to get the latest data including avatar URL
-            var result = await UserService.GetCurrentUserAsync();
-            if (result.IsSuccess && result.Value != null)
-            {
-                UserState.CurrentUser = result.Value;
-            }
-        }
+        // NOTE: User is already loaded in App.razor - no need to fetch again here
+        // This prevents duplicate /api/users/me calls
 
         // Initialize SignalR connection immediately after user is loaded
         // This fixes Problem 1: User appears online to others immediately after login

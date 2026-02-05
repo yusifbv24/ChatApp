@@ -560,7 +560,6 @@
     private List<PositionDto> allPositions = new();
     private List<PositionDto> filteredPositions = new();
     private List<DepartmentDto> allDepartments = new();
-    private List<UserListItemDto> allUsers = new();
     private List<string> allPermissions = new();
 
     private bool isLoading = true;
@@ -634,9 +633,8 @@
             var userTask = UserService.GetUserByIdAsync(UserId);
             var posTask = PositionService.GetAllPositionsAsync();
             var deptTask = DepartmentService.GetAllDepartmentsAsync();
-            var usersTask = UserService.GetUsersAsync(1, 1000);
 
-            await Task.WhenAll(userTask, posTask, deptTask, usersTask);
+            await Task.WhenAll(userTask, posTask, deptTask);
 
             var result = userTask.Result;
             if (!result.IsSuccess)
@@ -652,9 +650,6 @@
 
             if (deptTask.Result.IsSuccess && deptTask.Result.Value is not null)
                 allDepartments = deptTask.Result.Value;
-
-            if (usersTask.Result.IsSuccess && usersTask.Result.Value is not null)
-                allUsers = usersTask.Result.Value;
         }
         catch (Exception ex)
         {

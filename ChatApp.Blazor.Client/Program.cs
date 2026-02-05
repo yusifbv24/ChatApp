@@ -45,6 +45,9 @@ builder.Services.AddMudServices(config =>
     config.SnackbarConfiguration.SnackbarVariant = MudBlazor.Variant.Filled;
 });
 
+// State Management (must be registered before CustomAuthStateProvider which depends on UserState)
+builder.Services.AddStateManagement();
+
 // Authentication & Authorization (using secure HttpOnly cookies)
 builder.Services.AddAuthorizationCore();
 builder.Services.AddScoped<CustomAuthStateProvider>();
@@ -73,8 +76,5 @@ builder.Services.AddScoped<ISignalRService, SignalRService>();
 
 // Feature Services
 builder.Services.AddFeatureServices();
-
-// State Management
-builder.Services.AddStateManagement();
 
 await builder.Build().RunAsync();

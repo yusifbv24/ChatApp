@@ -84,6 +84,16 @@ public partial class MessageBubble : IAsyncDisposable
     [Parameter] public bool IsOwn { get; set; }
 
     /// <summary>
+    /// İstifadəçinin mesaj redaktə etmə icazəsi var?
+    /// </summary>
+    [Parameter] public bool CanEditMessage { get; set; }
+
+    /// <summary>
+    /// İstifadəçinin mesaj silmə icazəsi var?
+    /// </summary>
+    [Parameter] public bool CanDeleteMessage { get; set; }
+
+    /// <summary>
     /// Mesaj redaktə edilib?
     /// </summary>
     [Parameter] public bool IsEdited { get; set; }
