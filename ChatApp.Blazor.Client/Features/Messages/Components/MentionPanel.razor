@@ -1,4 +1,5 @@
 @inject IJSRuntime JS
+@using ChatApp.Blazor.Client.Helpers
 
 <div class="mention-panel" @ref="mentionPanelRef">
     @* Search input hidden - user types after @ in main textarea *@
@@ -34,8 +35,8 @@
                             }
                             else
                             {
-                                <div class="mention-avatar-placeholder">
-                                    @user.Name.Substring(0, 1).ToUpper()
+                                <div class="mention-avatar-placeholder" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(user.Id);">
+                                    @StringHelper.GetInitials(user.Name)
                                 </div>
                             }
                         </div>
