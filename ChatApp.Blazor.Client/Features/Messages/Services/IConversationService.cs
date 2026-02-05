@@ -1,10 +1,16 @@
-﻿using ChatApp.Blazor.Client.Models.Common;
+﻿using ChatApp.Blazor.Client.Models.Auth;
+using ChatApp.Blazor.Client.Models.Common;
 using ChatApp.Blazor.Client.Models.Messages;
 
 namespace ChatApp.Blazor.Client.Features.Messages.Services
 {
     public interface IConversationService
     {
+        /// <summary>
+        /// İstifadəçi axtarışı (conversation başlatmaq üçün).
+        /// </summary>
+        Task<Result<List<UserSearchResultDto>>> SearchUsersAsync(string query);
+
         Task<Result<UnifiedConversationListResponse>> GetUnifiedListAsync(int pageNumber = 1, int pageSize = 20);
 
         Task<Result<Guid>> StartConversationAsync(Guid otherUserId);

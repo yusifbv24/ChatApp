@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using ChatApp.Blazor.Client.Models.Auth;
 using ChatApp.Blazor.Client.Models.Messages;
 using ChatApp.Blazor.Client.State;
 using ChatApp.Blazor.Client.Features.Messages.Services;
@@ -151,6 +152,31 @@ public partial class ConversationList : IAsyncDisposable
     #region Private Fields - UI State
 
     /// <summary>
+    /// Search mode aktivdir? (input-a focus olduqda true).
+    /// </summary>
+    private bool isSearchMode = false;
+
+    /// <summary>
+    /// User search nəticələri.
+    /// </summary>
+    private List<UserSearchResultDto> userSearchResults = [];
+
+    /// <summary>
+    /// Channel search nəticələri.
+    /// </summary>
+    private List<ChannelDto> channelSearchResults = [];
+
+    /// <summary>
+    /// Search yüklənir?
+    /// </summary>
+    private bool isSearchingUsers = false;
+
+    /// <summary>
+    /// User search üçün debounce timer.
+    /// </summary>
+    private CancellationTokenSource? _userSearchCts;
+
+    /// <summary>
     /// Axtarış termini.
     /// </summary>
     private string _searchTerm = string.Empty;
@@ -162,7 +188,15 @@ public partial class ConversationList : IAsyncDisposable
             if (_searchTerm != value)
             {
                 _searchTerm = value;
-                InvalidateCache();
+                // Search mode-da API-dən user axtar
+                if (isSearchMode)
+                {
+                    _ = SearchUsersAsync(value);
+                }
+                else
+                {
+                    InvalidateCache();
+                }
             }
         }
     }
@@ -506,11 +540,140 @@ public partial class ConversationList : IAsyncDisposable
     #region Search Methods
 
     /// <summary>
+    /// Search input-a focus olduqda - search mode aktivləşir.
+    /// </summary>
+    private void EnterSearchMode()
+    {
+        isSearchMode = true;
+    }
+
+    /// <summary>
+    /// Search input-dan blur olduqda - search mode bağlanır (əgər boşdursa).
+    /// </summary>
+    private async Task HandleSearchBlur()
+    {
+        // Kiçik delay - user search result-a klik edə bilsin
+        await Task.Delay(200);
+
+        if (string.IsNullOrWhiteSpace(_searchTerm))
+        {
+            ExitSearchMode();
+        }
+    }
+
+    /// <summary>
+    /// Search mode-dan çıxır.
+    /// </summary>
+    private void ExitSearchMode()
+    {
+        isSearchMode = false;
+        SearchTerm = string.Empty;
+        userSearchResults.Clear();
+        channelSearchResults.Clear();
+        _userSearchCts?.Cancel();
+    }
+
+    /// <summary>
     /// Axtarışı təmizləyir.
     /// </summary>
     private void ClearSearch()
     {
-        SearchTerm = string.Empty;
+        ExitSearchMode();
+    }
+
+    /// <summary>
+    /// Unified search - həm users, həm channels (API-dən).
+    /// </summary>
+    private async Task SearchUsersAsync(string query)
+    {
+        if (string.IsNullOrWhiteSpace(query) || query.Length < 2)
+        {
+            userSearchResults.Clear();
+            channelSearchResults.Clear();
+            return;
+        }
+
+        // Əvvəlki sorğunu cancel et
+        _userSearchCts?.Cancel();
+        _userSearchCts = new CancellationTokenSource();
+        var token = _userSearchCts.Token;
+
+        try
+        {
+            // Debounce - 300ms gözlə
+            await Task.Delay(300, token);
+
+            isSearchingUsers = true;
+            StateHasChanged();
+
+            // Paralel olaraq həm users, həm channels axtar
+            var userTask = ConversationService.SearchUsersAsync(query);
+            var channelTask = ChannelService.SearchChannelsAsync(query);
+
+            await Task.WhenAll(userTask, channelTask);
+
+            if (token.IsCancellationRequested) return;
+
+            var userResult = await userTask;
+            var channelResult = await channelTask;
+
+            userSearchResults = userResult.IsSuccess && userResult.Value != null
+                ? userResult.Value
+                : [];
+
+            channelSearchResults = channelResult.IsSuccess && channelResult.Value != null
+                ? channelResult.Value
+                : [];
+        }
+        catch (TaskCanceledException)
+        {
+            // Debounce cancel - normal
+        }
+        catch
+        {
+            userSearchResults.Clear();
+            channelSearchResults.Clear();
+        }
+        finally
+        {
+            isSearchingUsers = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Search result-dan user seçildi.
+    /// </summary>
+    private async Task SelectSearchedUser(UserSearchResultDto user)
+    {
+        // DepartmentUserDto-ya çevir (record constructor istifadə et)
+        var deptUser = new DepartmentUserDto(
+            UserId: user.Id,
+            FullName: user.FullName,
+            Email: user.Email,
+            AvatarUrl: user.AvatarUrl,
+            PositionName: user.Position,
+            DepartmentId: null,
+            DepartmentName: null
+        );
+
+        // Search mode-dan çıx
+        ExitSearchMode();
+
+        // Parent-ə bildir
+        await OnDepartmentUserSelected.InvokeAsync(deptUser);
+    }
+
+    /// <summary>
+    /// Search result-dan channel seçildi.
+    /// </summary>
+    private async Task SelectSearchedChannel(ChannelDto channel)
+    {
+        // Search mode-dan çıx
+        ExitSearchMode();
+
+        // Parent-ə bildir
+        await OnChannelSelected.InvokeAsync(channel);
     }
 
     #endregion

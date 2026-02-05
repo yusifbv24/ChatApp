@@ -1,4 +1,5 @@
 ﻿using ChatApp.Blazor.Client.Infrastructure.Http;
+using ChatApp.Blazor.Client.Models.Auth;
 using ChatApp.Blazor.Client.Models.Common;
 using ChatApp.Blazor.Client.Models.Messages;
 
@@ -6,7 +7,11 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
 {
     public class ConversationService(IApiClient _apiClient) : IConversationService
     {
-
+        /// <inheritdoc />
+        public async Task<Result<List<UserSearchResultDto>>> SearchUsersAsync(string query)
+        {
+            return await _apiClient.GetAsync<List<UserSearchResultDto>>($"/api/users/search?q={Uri.EscapeDataString(query)}");
+        }
 
         public async Task<Result> DeleteMessageAsync(Guid conversationId, Guid messageId)
         {

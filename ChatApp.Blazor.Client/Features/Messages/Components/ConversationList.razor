@@ -21,16 +21,18 @@
         </div>
 
         <!-- Search Input -->
-        <div class="toolbar-search">
+        <div class="toolbar-search @(isSearchMode ? "search-active" : "")">
             <MudIcon Icon="@Icons.Material.Filled.Search" Class="toolbar-search-icon" Size="Size.Small" />
             <input type="text"
                    class="toolbar-search-input"
                    placeholder="Find employee or chat"
                    @bind="SearchTerm"
-                   @bind:event="oninput" />
-            @if (!string.IsNullOrEmpty(SearchTerm))
+                   @bind:event="oninput"
+                   @onfocus="EnterSearchMode"
+                   @onblur="HandleSearchBlur" />
+            @if (!string.IsNullOrEmpty(SearchTerm) || isSearchMode)
             {
-                <button class="toolbar-search-clear" @onclick="ClearSearch">
+                <button class="toolbar-search-clear" @onclick="ClearSearch" @onclick:stopPropagation="true">
                     <MudIcon Icon="@Icons.Material.Filled.Clear" Size="Size.Small" />
                 </button>
             }
@@ -46,8 +48,139 @@
     </div>
 
 
-    <!-- Unified Conversation List -->
-    <div class="conversation-items" @onscroll="HandleScroll">
+    <!-- Search Mode: Unified Search Results (Users + Channels) -->
+    @if (isSearchMode)
+    {
+        <div class="conversation-items search-results-container">
+            @if (isSearchingUsers)
+            {
+                <div class="search-loading">
+                    <div class="search-loading-spinner"></div>
+                    <span>Searching...</span>
+                </div>
+            }
+            else if (string.IsNullOrWhiteSpace(SearchTerm))
+            {
+                <div class="search-empty-state">
+                    <div class="search-empty-icon">
+                        <MudIcon Icon="@Icons.Material.Outlined.Search" Size="Size.Large" />
+                    </div>
+                    <span class="search-empty-text">Search for people or channels</span>
+                    <span class="search-empty-hint">Type at least 2 characters to search</span>
+                </div>
+            }
+            else if (!userSearchResults.Any() && !channelSearchResults.Any())
+            {
+                <div class="search-empty-state">
+                    <div class="search-empty-icon no-results">
+                        <MudIcon Icon="@Icons.Material.Outlined.SearchOff" Size="Size.Large" />
+                    </div>
+                    <span class="search-empty-text">No results found</span>
+                    <span class="search-empty-hint">Try a different search term</span>
+                </div>
+            }
+            else
+            {
+                <!-- Channels Section -->
+                @if (channelSearchResults.Any())
+                {
+                    <div class="search-section">
+                        <div class="search-section-header">
+                            <MudIcon Icon="@Icons.Material.Outlined.Tag" Size="Size.Small" Class="section-icon" />
+                            <span>Channels</span>
+                            <span class="section-count">@channelSearchResults.Count</span>
+                        </div>
+                        <div class="search-section-items">
+                            @foreach (var channel in channelSearchResults)
+                            {
+                                <div class="search-result-item channel-item" @onclick="() => SelectSearchedChannel(channel)">
+                                    <div class="search-result-avatar">
+                                        @if (!string.IsNullOrEmpty(channel.AvatarUrl))
+                                        {
+                                            <img src="@channel.AvatarUrl" alt="@channel.Name" />
+                                        }
+                                        else
+                                        {
+                                            <div class="avatar-placeholder channel-avatar" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(channel.Id);">
+                                                @StringHelper.GetInitials(channel.Name)
+                                            </div>
+                                        }
+                                    </div>
+                                    <div class="search-result-info">
+                                        <div class="search-result-name">
+                                            <span>@channel.Name</span>
+                                        </div>
+                                        <div class="search-result-meta">
+                                            <span class="meta-item">
+                                                <MudIcon Icon="@Icons.Material.Outlined.People" Size="Size.Small" />
+                                                @channel.MemberCount members
+                                            </span>
+                                            @if (!string.IsNullOrEmpty(channel.Description))
+                                            {
+                                                <span class="meta-description">@channel.Description</span>
+                                            }
+                                        </div>
+                                    </div>
+                                    <div class="search-result-action">
+                                        <MudIcon Icon="@Icons.Material.Outlined.ArrowForward" Size="Size.Small" />
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+
+                <!-- People Section -->
+                @if (userSearchResults.Any())
+                {
+                    <div class="search-section">
+                        <div class="search-section-header">
+                            <MudIcon Icon="@Icons.Material.Outlined.People" Size="Size.Small" Class="section-icon" />
+                            <span>People</span>
+                            <span class="section-count">@userSearchResults.Count</span>
+                        </div>
+                        <div class="search-section-items">
+                            @foreach (var user in userSearchResults)
+                            {
+                                <div class="search-result-item user-item" @onclick="() => SelectSearchedUser(user)">
+                                    <div class="search-result-avatar">
+                                        @if (!string.IsNullOrEmpty(user.AvatarUrl))
+                                        {
+                                            <img src="@user.AvatarUrl" alt="@user.FullName" />
+                                        }
+                                        else
+                                        {
+                                            <div class="avatar-placeholder" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(user.Id);">
+                                                @StringHelper.GetInitials(user.FullName)
+                                            </div>
+                                        }
+                                    </div>
+                                    <div class="search-result-info">
+                                        <div class="search-result-name">
+                                            <span>@user.FullName</span>
+                                        </div>
+                                        @if (!string.IsNullOrEmpty(user.Position))
+                                        {
+                                            <div class="search-result-meta">
+                                                <span class="meta-position">@user.Position</span>
+                                            </div>
+                                        }
+                                    </div>
+                                    <div class="search-result-action">
+                                        <MudIcon Icon="@Icons.Material.Outlined.Chat" Size="Size.Small" />
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    }
+    else
+    {
+        <!-- Normal Mode: Unified Conversation List -->
+        <div class="conversation-items" @onscroll="HandleScroll">
         @if (IsLoading)
         {
             <div class="conversation-loading">
@@ -407,11 +540,12 @@
             </div>
         }
 
-        @if (IsLoadingMore)
-        {
-            <div class="conversation-loading-more">
-                <div class="loading-spinner small"></div>
-            </div>
-        }
-    </div>
+            @if (IsLoadingMore)
+            {
+                <div class="conversation-loading-more">
+                    <div class="loading-spinner small"></div>
+                </div>
+            }
+        </div>
+    }
 </div>
