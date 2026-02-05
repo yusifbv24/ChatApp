@@ -34,6 +34,9 @@ public partial class Messages
             // PENDING CONVERSATION - əvvəlcə yarat
             if (isPendingConversation && pendingUser != null)
             {
+                // OPTIMIZATION: pendingUser məlumatlarını saxla (aşağıda null ediləcək)
+                var capturedPendingUser = pendingUser;
+
                 var createResult = await ConversationService.StartConversationAsync(pendingUser.Id);
                 if (!createResult.IsSuccess)
                 {
@@ -46,7 +49,34 @@ public partial class Messages
                 pendingUser = null;
 
                 await SignalRService.JoinConversationAsync(selectedConversationId.Value);
-                await LoadConversationsAndChannels();
+
+                // OPTIMIZATION: Tam list yeniləmək əvəzinə, yeni conversation-u lokal əlavə et
+                var newConversation = new DirectConversationDto(
+                    Id: selectedConversationId.Value,
+                    OtherUserId: capturedPendingUser.Id,
+                    OtherUserEmail: capturedPendingUser.Email,
+                    OtherUserFullName: capturedPendingUser.FullName,
+                    OtherUserAvatarUrl: capturedPendingUser.AvatarUrl,
+                    LastMessageContent: null,
+                    LastMessageAtUtc: DateTime.UtcNow,
+                    UnreadCount: 0,
+                    HasUnreadMentions: false,
+                    LastReadLaterMessageId: null,
+                    LastMessageSenderId: currentUserId,
+                    LastMessageStatus: "Pending",
+                    LastMessageId: null,
+                    FirstUnreadMessageId: null,
+                    IsNotes: false,
+                    IsPinned: false,
+                    IsMuted: false,
+                    IsMarkedReadLater: false
+                );
+
+                // List-in əvvəlinə əlavə et (reference change for Blazor change detection)
+                directConversations = [newConversation, .. directConversations];
+
+                // RecipientUserId-ni set et (fayl göndərmək üçün lazımdır)
+                recipientUserId = capturedPendingUser.Id;
             }
 
             // Hər fayl üçün ayrı optimistic mesaj yarat və upload başlat
