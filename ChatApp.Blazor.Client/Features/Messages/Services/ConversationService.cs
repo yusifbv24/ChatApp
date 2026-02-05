@@ -195,7 +195,7 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
             var mentions = mentionedUsers?.Select(m => new MentionRequest
             {
                 UserId = m.Value,
-                UserName = m.Key,
+                UserFullName = m.Key,
                 IsAllMention = false
             }).ToList() ?? new List<MentionRequest>();
 

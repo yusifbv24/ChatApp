@@ -327,7 +327,7 @@ namespace ChatApp.Modules.Channels.Api.Controllers
             if (request.Mentions != null && request.Mentions.Count > 0)
             {
                 mentions = request.Mentions
-                    .Select(m => new BackendChannelMentionRequest(m.UserId, m.UserName, m.IsAllMention))
+                    .Select(m => new BackendChannelMentionRequest(m.UserId, m.UserFullName, m.IsAllMention))
                     .ToList();
             }
 

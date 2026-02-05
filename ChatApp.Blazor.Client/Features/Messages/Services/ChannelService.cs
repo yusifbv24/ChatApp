@@ -153,7 +153,7 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
             var mentions = mentionedUsers?.Select(m => new MentionRequest
             {
                 UserId = m.Value == Guid.Empty ? (Guid?)null : m.Value,
-                UserName = m.Key,
+                UserFullName = m.Key,
                 IsAllMention = m.Key.Equals("All", StringComparison.OrdinalIgnoreCase)
             }).ToList() ?? new List<MentionRequest>();
 

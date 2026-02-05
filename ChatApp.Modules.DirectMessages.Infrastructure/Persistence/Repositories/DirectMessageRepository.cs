@@ -116,7 +116,7 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
             // Load mentions for this message
             var mentions = await _context.DirectMessageMentions
                 .Where(m => m.MessageId == id)
-                .Select(m => new MessageMentionDto(m.MentionedUserId, m.MentionedUserName))
+                .Select(m => new MessageMentionDto(m.MentionedUserId, m.MentionedUserFullName))
                 .ToListAsync(cancellationToken);
 
             return new DirectMessageDto(
@@ -248,7 +248,7 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 .Select(g => new
                 {
                     MessageId = g.Key,
-                    Mentions = g.Select(m => new MessageMentionDto(m.MentionedUserId, m.MentionedUserName)).ToList()
+                    Mentions = g.Select(m => new MessageMentionDto(m.MentionedUserId, m.MentionedUserFullName)).ToList()
                 })
                 .ToDictionaryAsync(x => x.MessageId, x => x.Mentions, cancellationToken);
 
@@ -401,7 +401,7 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 .Select(g => new
                 {
                     MessageId = g.Key,
-                    Mentions = g.Select(m => new MessageMentionDto(m.MentionedUserId, m.MentionedUserName)).ToList()
+                    Mentions = g.Select(m => new MessageMentionDto(m.MentionedUserId, m.MentionedUserFullName)).ToList()
                 })
                 .ToDictionaryAsync(x => x.MessageId, x => x.Mentions, cancellationToken);
 
@@ -529,7 +529,7 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 .Select(g => new
                 {
                     MessageId = g.Key,
-                    Mentions = g.Select(m => new MessageMentionDto(m.MentionedUserId, m.MentionedUserName)).ToList()
+                    Mentions = g.Select(m => new MessageMentionDto(m.MentionedUserId, m.MentionedUserFullName)).ToList()
                 })
                 .ToDictionaryAsync(x => x.MessageId, x => x.Mentions, cancellationToken);
 
@@ -657,7 +657,7 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 .Select(g => new
                 {
                     MessageId = g.Key,
-                    Mentions = g.Select(m => new MessageMentionDto(m.MentionedUserId, m.MentionedUserName)).ToList()
+                    Mentions = g.Select(m => new MessageMentionDto(m.MentionedUserId, m.MentionedUserFullName)).ToList()
                 })
                 .ToDictionaryAsync(x => x.MessageId, x => x.Mentions, cancellationToken);
 
@@ -828,7 +828,7 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 .Select(g => new
                 {
                     MessageId = g.Key,
-                    Mentions = g.Select(m => new MessageMentionDto(m.MentionedUserId, m.MentionedUserName)).ToList()
+                    Mentions = g.Select(m => new MessageMentionDto(m.MentionedUserId, m.MentionedUserFullName)).ToList()
                 })
                 .ToDictionaryAsync(x => x.MessageId, x => x.Mentions, cancellationToken);
 

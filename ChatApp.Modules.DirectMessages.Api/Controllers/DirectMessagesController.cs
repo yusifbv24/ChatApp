@@ -263,7 +263,7 @@ namespace ChatApp.Modules.DirectMessages.Api.Controllers
                 return Unauthorized();
 
             // Map DTO mentions to domain mentions
-            var mentions = request.Mentions?.Select(m => new BackendMentionRequest(m.UserId, m.UserName)).ToList();
+            var mentions = request.Mentions?.Select(m => new BackendMentionRequest(m.UserId, m.UserFullName)).ToList();
 
             var command = new SendBatchDirectMessagesCommand(
                 conversationId,
@@ -305,7 +305,7 @@ namespace ChatApp.Modules.DirectMessages.Api.Controllers
             {
                 mentions = request.Mentions
                     .Where(m => m.UserId != Guid.Empty)
-                    .Select(m => new BackendMentionRequest(m.UserId, m.UserName))
+                    .Select(m => new BackendMentionRequest(m.UserId, m.UserFullName))
                     .ToList();
             }
 

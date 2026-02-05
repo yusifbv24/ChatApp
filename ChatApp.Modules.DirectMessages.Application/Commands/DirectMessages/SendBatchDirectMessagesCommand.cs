@@ -229,7 +229,7 @@ public class SendBatchDirectMessagesCommandHandler : IRequestHandler<SendBatchDi
                 var directMessageMention = new DirectMessageMention(
                     message.Id,
                     mention.UserId,
-                    mention.UserName);
+                    mention.UserFullName);
                 message.Mentions.Add(directMessageMention);
             }
         }

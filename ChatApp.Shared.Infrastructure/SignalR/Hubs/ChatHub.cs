@@ -77,7 +77,7 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Hubs
             if (userId == Guid.Empty)
                 return;
 
-            var fullName = GetUsername(); // ClaimTypes.Name now contains FullName
+            var fullName = GetFullName(); // ClaimTypes.Name now contains FullName
 
             // Get channel members from cache
             var memberUserIds = await _channelMemberCache.GetChannelMemberIdsAsync(channelId);
@@ -207,7 +207,7 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Hubs
             return userId;
         }
 
-        private string GetUsername()
+        private string GetFullName()
         {
             return Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Someone";
         }

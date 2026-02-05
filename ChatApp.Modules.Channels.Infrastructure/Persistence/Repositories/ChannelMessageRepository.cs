@@ -89,7 +89,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
             // Load mentions for this message
             var mentions = await _context.ChannelMessageMentions
                 .Where(m => m.MessageId == id)
-                .Select(m => new ChannelMessageMentionDto(m.MentionedUserId, m.MentionedUserName, m.IsAllMention))
+                .Select(m => new ChannelMessageMentionDto(m.MentionedUserId, m.MentionedUserFullName, m.IsAllMention))
                 .ToListAsync(cancellationToken);
 
             // Load reactions for this message
@@ -259,7 +259,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 .Select(g => new
                 {
                     MessageId = g.Key,
-                    Mentions = g.Select(m => new ChannelMessageMentionDto(m.MentionedUserId, m.MentionedUserName, m.IsAllMention)).ToList()
+                    Mentions = g.Select(m => new ChannelMessageMentionDto(m.MentionedUserId, m.MentionedUserFullName, m.IsAllMention)).ToList()
                 })
                 .ToDictionaryAsync(x => x.MessageId, x => x.Mentions, cancellationToken);
 
@@ -441,7 +441,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 .Select(g => new
                 {
                     MessageId = g.Key,
-                    Mentions = g.Select(m => new ChannelMessageMentionDto(m.MentionedUserId, m.MentionedUserName, m.IsAllMention)).ToList()
+                    Mentions = g.Select(m => new ChannelMessageMentionDto(m.MentionedUserId, m.MentionedUserFullName, m.IsAllMention)).ToList()
                 })
                 .ToDictionaryAsync(x => x.MessageId, x => x.Mentions, cancellationToken);
 
@@ -599,7 +599,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 .Select(g => new
                 {
                     MessageId = g.Key,
-                    Mentions = g.Select(m => new ChannelMessageMentionDto(m.MentionedUserId, m.MentionedUserName, m.IsAllMention)).ToList()
+                    Mentions = g.Select(m => new ChannelMessageMentionDto(m.MentionedUserId, m.MentionedUserFullName, m.IsAllMention)).ToList()
                 })
                 .ToDictionaryAsync(x => x.MessageId, x => x.Mentions, cancellationToken);
 
@@ -757,7 +757,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 .Select(g => new
                 {
                     MessageId = g.Key,
-                    Mentions = g.Select(m => new ChannelMessageMentionDto(m.MentionedUserId, m.MentionedUserName, m.IsAllMention)).ToList()
+                    Mentions = g.Select(m => new ChannelMessageMentionDto(m.MentionedUserId, m.MentionedUserFullName, m.IsAllMention)).ToList()
                 })
                 .ToDictionaryAsync(x => x.MessageId, x => x.Mentions, cancellationToken);
 
@@ -911,7 +911,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
             var mentions = await _context.ChannelMessageMentions
                 .Where(m => messageIds.Contains(m.MessageId))
                 .GroupBy(m => m.MessageId)
-                .Select(g => new { MessageId = g.Key, Mentions = g.Select(m => new ChannelMessageMentionDto(m.MentionedUserId, m.MentionedUserName, m.IsAllMention)).ToList() })
+                .Select(g => new { MessageId = g.Key, Mentions = g.Select(m => new ChannelMessageMentionDto(m.MentionedUserId, m.MentionedUserFullName, m.IsAllMention)).ToList() })
                 .ToDictionaryAsync(x => x.MessageId, x => x.Mentions, cancellationToken);
 
             // Step 3: Map to DTOs

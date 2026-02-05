@@ -21,7 +21,7 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectMessages
         List<MentionRequest>? Mentions = null
     ):IRequest<Result<Guid>>;
 
-    public record MentionRequest(Guid UserId, string UserName);
+    public record MentionRequest(Guid UserId, string UserFullName);
 
 
 
@@ -130,7 +130,7 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectMessages
                         var mention = new DirectMessageMention(
                             message.Id,
                             mentionReq.UserId,
-                            mentionReq.UserName);
+                            mentionReq.UserFullName);
 
                         message.Mentions.Add(mention);
                     }

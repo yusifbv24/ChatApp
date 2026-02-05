@@ -31,10 +31,10 @@ document.addEventListener('click', (e) => {
     // Handle mention clicks (event delegation)
     const mention = e.target.closest('.message-mention');
     if (mention) {
-        const username = mention.getAttribute('data-username');
-        if (username) {
-            // Dispatch custom event with username
-            window.dispatchEvent(new CustomEvent('mentionClicked', { detail: { username } }));
+        const fullName = mention.getAttribute('data-fullname');
+        if (fullName) {
+            // Dispatch custom event with fullName
+            window.dispatchEvent(new CustomEvent('mentionClicked', { detail: { fullName } }));
         }
     }
 });
@@ -432,8 +432,8 @@ window.chatAppUtils = {
     // Subscribe to mention click events
     subscribeToMentionClick: (dotNetHelper) => {
         const handler = (e) => {
-            if (e.detail && e.detail.username) {
-                dotNetHelper.invokeMethodAsync('HandleMentionClick', e.detail.username);
+            if (e.detail && e.detail.fullName) {
+                dotNetHelper.invokeMethodAsync('HandleMentionClick', e.detail.fullName);
             }
         };
         window.addEventListener('mentionClicked', handler);
@@ -469,7 +469,6 @@ window.initializeMentionClickHandlers = function(dotNetHelper) {
         while (target && target !== document.body) {
             if (target.classList && target.classList.contains('message-mention')) {
                 const userId = target.getAttribute('data-userid');
-                const username = target.getAttribute('data-username');
 
                 if (userId) {
                     try {

@@ -5,7 +5,7 @@ namespace ChatApp.Blazor.Client.Models.Messages
     public class MentionRequest
     {
         public Guid? UserId { get; set; }
-        public string UserName { get; set; } = string.Empty;
+        public string UserFullName { get; set; } = string.Empty;
         public bool IsAllMention { get; set; } = false;
     }
 

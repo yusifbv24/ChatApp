@@ -93,13 +93,13 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // Load saved username from localStorage if exists
+        // Load saved email from localStorage if exists
         try
         {
-            var savedUsername = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "rememberedEmail");
-            if (!string.IsNullOrEmpty(savedUsername))
+            var savedEmail = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "rememberedEmail");
+            if (!string.IsNullOrEmpty(savedEmail))
             {
-                loginModel.Email = savedUsername;
+                loginModel.Email = savedEmail;
                 loginModel.RememberMe = true;
             }
         }
@@ -132,7 +132,7 @@
 
             if (result.IsSuccess)
             {
-                // Save or clear username and rememberMe preference based on RememberMe checkbox
+                // Save or clear email and rememberMe preference based on RememberMe checkbox
                 if (loginModel.RememberMe)
                 {
                     await JSRuntime.InvokeVoidAsync("localStorage.setItem", "rememberedEmail", loginModel.Email);

@@ -3,13 +3,13 @@ using ChatApp.Shared.Kernel.Common;
 namespace ChatApp.Modules.Channels.Domain.Entities
 {
     /// <summary>
-    /// Represents a mention (@UserName or @All) in a channel message.
+    /// Represents a mention (@FullName or @All) in a channel message.
     /// </summary>
     public class ChannelMessageMention : Entity
     {
         public Guid MessageId { get; private set; }
         public Guid? MentionedUserId { get; private set; } // Null for @All
-        public string MentionedUserName { get; private set; } = string.Empty;
+        public string MentionedUserFullName { get; private set; } = string.Empty;
         public bool IsAllMention { get; private set; }
 
         // Navigation property
@@ -17,13 +17,13 @@ namespace ChatApp.Modules.Channels.Domain.Entities
 
         private ChannelMessageMention() : base() { }
 
-        public ChannelMessageMention(Guid messageId, Guid? mentionedUserId, string mentionedUserName, bool isAllMention = false) : base()
+        public ChannelMessageMention(Guid messageId, Guid? mentionedUserId, string mentionedUserFullName, bool isAllMention = false) : base()
         {
-            if (string.IsNullOrWhiteSpace(mentionedUserName))
-                throw new ArgumentException("Mentioned user name cannot be empty", nameof(mentionedUserName));
+            if (string.IsNullOrWhiteSpace(mentionedUserFullName))
+                throw new ArgumentException("Mentioned user full name cannot be empty", nameof(mentionedUserFullName));
 
-            if (mentionedUserName.Length > 255)
-                throw new ArgumentException("Mentioned user name cannot exceed 255 characters", nameof(mentionedUserName));
+            if (mentionedUserFullName.Length > 255)
+                throw new ArgumentException("Mentioned user full name cannot exceed 255 characters", nameof(mentionedUserFullName));
 
             // Validation: @All should have null userId and isAllMention=true
             if (isAllMention && mentionedUserId.HasValue)
@@ -34,7 +34,7 @@ namespace ChatApp.Modules.Channels.Domain.Entities
 
             MessageId = messageId;
             MentionedUserId = mentionedUserId;
-            MentionedUserName = mentionedUserName;
+            MentionedUserFullName = mentionedUserFullName;
             IsAllMention = isAllMention;
         }
     }

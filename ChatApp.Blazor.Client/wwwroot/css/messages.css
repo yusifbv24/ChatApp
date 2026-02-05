@@ -1781,7 +1781,7 @@
     color: rgba(255, 255, 255, 0.85);
 }
 
-/* Message mentions (UserName without @) */
+/* Message mentions (FullName without @) */
 .message-mention {
     color: var(--primary-600);
     font-weight: 500;

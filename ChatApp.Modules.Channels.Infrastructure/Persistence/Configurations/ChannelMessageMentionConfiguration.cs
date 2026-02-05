@@ -22,8 +22,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Configurations
             builder.Property(m => m.MentionedUserId)
                 .HasColumnName("mentioned_user_id");
 
-            builder.Property(m => m.MentionedUserName)
-                .HasColumnName("mentioned_user_name")
+            builder.Property(m => m.MentionedUserFullName)
+                .HasColumnName("mentioned_user_name") // Keep DB column name for backward compatibility
                 .IsRequired()
                 .HasMaxLength(255);
 

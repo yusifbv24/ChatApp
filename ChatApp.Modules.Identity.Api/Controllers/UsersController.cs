@@ -81,7 +81,7 @@ namespace ChatApp.Modules.Identity.Api.Controllers
 
 
         /// <summary>
-        /// Searches users by username or display name
+        /// Searches users by full name (first name or last name)
         /// Any authenticated user can search for other users (for messaging purposes)
         /// </summary>
         [HttpGet("search")]

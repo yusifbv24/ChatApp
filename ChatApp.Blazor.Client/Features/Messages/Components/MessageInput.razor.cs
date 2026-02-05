@@ -263,9 +263,9 @@ public partial class MessageInput : IAsyncDisposable
     private string mentionSearchQuery = string.Empty;
 
     /// <summary>
-    /// Mention edilmiş istifadəçilər (UserName -> UserId mapping).
+    /// Mention edilmiş istifadəçilər (FullName -> UserId mapping).
     /// </summary>
-    private Dictionary<string, Guid> mentionedUsers = new();
+    private readonly Dictionary<string, Guid> mentionedUsers = new();
 
     /// <summary>
     /// Mention mode disabled olub-olmadığı (Esc və ya outside click ilə disabled edilir).

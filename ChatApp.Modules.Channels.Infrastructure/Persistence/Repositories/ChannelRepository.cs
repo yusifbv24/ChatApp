@@ -32,7 +32,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
 
         public async Task<ChannelDetailsDto?> GetChannelDetailsByIdAsync(Guid id, CancellationToken cancellationToken = default)
         {
-            // Get channel with creator username
+            // Get channel with creator full name
             var channelWithCreator = await (from channel in _context.Channels
                                             join creator in _context.Set<UserReadModel>() on channel.CreatedBy equals creator.Id
                                             where channel.Id == id

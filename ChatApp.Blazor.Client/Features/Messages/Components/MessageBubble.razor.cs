@@ -570,7 +570,7 @@ public partial class MessageBubble : IAsyncDisposable
         var encoded = WebUtility.HtmlEncode(text);
 
         // Mentions field-indən mention edilmiş user adlarını al
-        var mentionNames = new Dictionary<string, Guid>(); // UserName -> UserId
+        var mentionNames = new Dictionary<string, Guid>(); // FullName -> UserId
 
         // DirectMessage və ChannelMessage fərqli mention type-ları var
         if (Mentions != null)
@@ -616,7 +616,7 @@ public partial class MessageBubble : IAsyncDisposable
             encoded = Regex.Replace(
                 encoded,
                 pattern,
-                match => $"<span class=\"{clickableClass}\" data-userid=\"{mention.Value}\" data-username=\"{mention.Key}\" style=\"cursor: {cursorStyle};\">{mention.Key}</span>",
+                match => $"<span class=\"{clickableClass}\" data-userid=\"{mention.Value}\" data-fullname=\"{mention.Key}\" style=\"cursor: {cursorStyle};\">{mention.Key}</span>",
                 RegexOptions.IgnoreCase);
         }
 

@@ -837,18 +837,15 @@ public partial class Messages : IAsyncDisposable
     }
 
     /// <summary>
-    /// Mention-a klik edildikdə JS-dən çağrılır.
-    /// Email-ə əsasən conversation açır.
     /// </summary>
     [JSInvokable]
-    public async Task HandleMentionClick(string username)
+    public async Task HandleMentionClick(string fullName)
     {
         try
         {
-            // FIX: Self-mention check - Əgər öz adına mention edirsə, birbaşa Notes aç
+            // Self-mention check - Əgər öz adına mention edirsə, birbaşa Notes aç
             if (UserState.CurrentUser != null &&
-                (username.Equals(UserState.Email, StringComparison.OrdinalIgnoreCase) ||
-                 username.Equals(UserState.FullName, StringComparison.OrdinalIgnoreCase)))
+                fullName.Equals(UserState.FullName, StringComparison.OrdinalIgnoreCase))
             {
                 var notesConversation = directConversations.FirstOrDefault(c => c.IsNotes);
                 if (notesConversation != null)
@@ -860,8 +857,7 @@ public partial class Messages : IAsyncDisposable
 
             // OPTIMIZATION: Əvvəlcə mövcud conversation-larda yoxla (API çağırışı olmadan)
             var existingConversation = directConversations.FirstOrDefault(c =>
-                c.OtherUserFullName.Equals(username, StringComparison.OrdinalIgnoreCase) ||
-                c.OtherUserEmail.Equals(username, StringComparison.OrdinalIgnoreCase));
+                c.OtherUserFullName.Equals(fullName, StringComparison.OrdinalIgnoreCase));
 
             if (existingConversation != null)
             {
@@ -869,20 +865,18 @@ public partial class Messages : IAsyncDisposable
                 return;
             }
 
-            // Mövcud conversation yoxdursa, API-dən user axtar
-            var searchResult = await UserService.SearchUsersAsync(username);
+            // Mövcud conversation yoxdursa, API-dən user axtar (yalnız fullName ilə)
+            var searchResult = await UserService.SearchUsersAsync(fullName);
 
             if (searchResult.IsSuccess && searchResult.Value != null && searchResult.Value.Count > 0)
             {
-                // İlk uyğun user-i tap (exact match TƏKCƏLİ, sonra contains)
+                // İlk uyğun user-i tap (exact match, sonra contains)
                 var user = searchResult.Value.FirstOrDefault(u =>
-                    u.FullName.Equals(username, StringComparison.OrdinalIgnoreCase) ||
-                    u.Email.Equals(username, StringComparison.OrdinalIgnoreCase));
+                    u.FullName.Equals(fullName, StringComparison.OrdinalIgnoreCase));
 
                 // Exact match tapılmadısa, contains ilə yoxla
                 user ??= searchResult.Value.FirstOrDefault(u =>
-                    u.FullName.Contains(username, StringComparison.OrdinalIgnoreCase) ||
-                    u.Email.Contains(username, StringComparison.OrdinalIgnoreCase));
+                    u.FullName.Contains(fullName, StringComparison.OrdinalIgnoreCase));
 
                 // Hələ də yoxdursa, ilk nəticəni götür
                 user ??= searchResult.Value.FirstOrDefault();
@@ -894,12 +888,10 @@ public partial class Messages : IAsyncDisposable
                     await StartConversationWithUser(user.Id);
                 }
             }
-            // NOTE: Error göstərmə - istifadəçi tapılmadısa sessiz keç
-            // (conversation açılmır, amma error snackbar da göstərilmir)
         }
         catch
         {
-            // Silently handle errors - mention click fail etdikdə error göstərmə
+            // Silently handle errors
         }
     }
 

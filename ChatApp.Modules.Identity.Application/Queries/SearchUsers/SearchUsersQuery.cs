@@ -28,11 +28,11 @@ public class SearchUsersQueryHandler(
 
             var searchTerm = query.SearchTerm.ToLower();
 
+            // Search only by FirstName and LastName (FullName)
             var users = await unitOfWork.Users
                 .Where(u => u.IsActive &&
                     (EF.Functions.Like(u.FirstName.ToLower(), $"%{searchTerm}%") ||
-                     EF.Functions.Like(u.LastName.ToLower(), $"%{searchTerm}%") ||
-                     EF.Functions.Like(u.Email.ToLower(), $"%{searchTerm}%")))
+                     EF.Functions.Like(u.LastName.ToLower(), $"%{searchTerm}%")))
                 .Select(u => new UserSearchResultDto(
                     u.Id,
                     u.FirstName,
