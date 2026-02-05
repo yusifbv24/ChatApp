@@ -345,6 +345,16 @@ public partial class Sidebar
     private bool IsChannelAdminOrOwner => CurrentUserChannelRole == MemberRole.Admin || CurrentUserChannelRole == MemberRole.Owner;
 
     /// <summary>
+    /// İstifadəçinin kanal idarə etmə icazəsi var?
+    /// </summary>
+    [Parameter] public bool CanManageChannels { get; set; }
+
+    /// <summary>
+    /// İstifadəçinin kanal silmə icazəsi var?
+    /// </summary>
+    [Parameter] public bool CanDeleteChannels { get; set; }
+
+    /// <summary>
     /// Qruplanmış DM favorites - cache-lənmiş.
     /// </summary>
     private List<IGrouping<DateTime, FavoriteDirectMessageDto>> GroupedDirectFavorites

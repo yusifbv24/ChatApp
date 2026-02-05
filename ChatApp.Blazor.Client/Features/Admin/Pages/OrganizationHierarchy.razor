@@ -25,14 +25,17 @@
                 <MudIcon Icon="@Icons.Material.Filled.WorkOutline" Size="Size.Small" />
                 <span>Positions</span>
             </button>
-            <button class="admin-btn admin-btn-primary" @onclick="() => OpenCreateDepartmentDialog(null, null, null)">
-                <MudIcon Icon="@Icons.Material.Filled.BusinessCenter" Size="Size.Small" />
-                <span>New Department</span>
-            </button>
-            <button class="admin-btn admin-btn-primary" @onclick="() => OpenCreateUserDialog(null, null)">
-                <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Size="Size.Small" />
-                <span>New User</span>
-            </button>
+            @if (canCreateUsers)
+            {
+                <button class="admin-btn admin-btn-primary" @onclick="() => OpenCreateDepartmentDialog(null, null, null)">
+                    <MudIcon Icon="@Icons.Material.Filled.BusinessCenter" Size="Size.Small" />
+                    <span>New Department</span>
+                </button>
+                <button class="admin-btn admin-btn-primary" @onclick="() => OpenCreateUserDialog(null, null)">
+                    <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Size="Size.Small" />
+                    <span>New User</span>
+                </button>
+            }
         </div>
     </div>
 
@@ -673,9 +676,12 @@
                         }
                     </div>
                     <div class="org-node-actions">
-                        <button class="org-action-btn" title="Add Department" @onclick="() => OpenCreateDepartmentDialog(null, null, node.Id)">
-                            <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" />
-                        </button>
+                        @if (canCreateUsers)
+                        {
+                            <button class="org-action-btn" title="Add Department" @onclick="() => OpenCreateDepartmentDialog(null, null, node.Id)">
+                                <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" />
+                            </button>
+                        }
                     </div>
                 </div>
 
@@ -721,18 +727,27 @@
                         <button class="org-action-btn" title="View Details" @onclick="() => NavigateToDepartment(node.Id)">
                             <MudIcon Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" />
                         </button>
-                        <button class="org-action-btn" title="Add User to this Department" @onclick="() => OpenCreateUserDialog(node.Id, node.Name)">
-                            <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Size="Size.Small" />
-                        </button>
-                        <button class="org-action-btn" title="Add Sub-Department" @onclick="() => OpenCreateDepartmentDialog(node.Id, node.Name)">
-                            <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" />
-                        </button>
-                        <button class="org-action-btn" title="Edit Department" @onclick="() => OpenEditDepartmentDialog(node)">
-                            <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" />
-                        </button>
-                        <button class="org-action-btn admin-action-danger" title="Delete Department" @onclick="() => OpenDeleteDepartmentDialog(node)">
-                            <MudIcon Icon="@Icons.Material.Filled.Delete" Size="Size.Small" />
-                        </button>
+                        @if (canCreateUsers)
+                        {
+                            <button class="org-action-btn" title="Add User to this Department" @onclick="() => OpenCreateUserDialog(node.Id, node.Name)">
+                                <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Size="Size.Small" />
+                            </button>
+                            <button class="org-action-btn" title="Add Sub-Department" @onclick="() => OpenCreateDepartmentDialog(node.Id, node.Name)">
+                                <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" />
+                            </button>
+                        }
+                        @if (canUpdateUsers)
+                        {
+                            <button class="org-action-btn" title="Edit Department" @onclick="() => OpenEditDepartmentDialog(node)">
+                                <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" />
+                            </button>
+                        }
+                        @if (canDeleteUsers)
+                        {
+                            <button class="org-action-btn admin-action-danger" title="Delete Department" @onclick="() => OpenDeleteDepartmentDialog(node)">
+                                <MudIcon Icon="@Icons.Material.Filled.Delete" Size="Size.Small" />
+                            </button>
+                        }
                     </div>
                 </div>
 
@@ -781,12 +796,18 @@
                         <button class="org-action-btn" title="View Details" @onclick="() => NavigateToUser(node.Id)">
                             <MudIcon Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" />
                         </button>
-                        <button class="org-action-btn" title="Edit User" @onclick="() => OpenEditUserDialog(node)">
-                            <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" />
-                        </button>
-                        <button class="org-action-btn admin-action-danger" title="Delete User" @onclick="() => OpenDeleteUserDialog(node)">
-                            <MudIcon Icon="@Icons.Material.Filled.Delete" Size="Size.Small" />
-                        </button>
+                        @if (canUpdateUsers)
+                        {
+                            <button class="org-action-btn" title="Edit User" @onclick="() => OpenEditUserDialog(node)">
+                                <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" />
+                            </button>
+                        }
+                        @if (canDeleteUsers)
+                        {
+                            <button class="org-action-btn admin-action-danger" title="Delete User" @onclick="() => OpenDeleteUserDialog(node)">
+                                <MudIcon Icon="@Icons.Material.Filled.Delete" Size="Size.Small" />
+                            </button>
+                        }
                     </div>
                 </div>
             }

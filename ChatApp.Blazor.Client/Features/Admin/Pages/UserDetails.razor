@@ -49,18 +49,24 @@
 
                 @* Avatar hover overlay *@
                 <div class="avatar-overlay @(showAvatarActions ? "visible" : "")">
-                    <label class="avatar-overlay-btn" title="Upload avatar">
-                        <InputFile OnChange="OnAvatarSelected" accept="image/*" style="display:none;" />
-                        <MudIcon Icon="@Icons.Material.Filled.CameraAlt" Size="Size.Small" />
-                    </label>
+                    @if (canUpdateUsers)
+                    {
+                        <label class="avatar-overlay-btn" title="Upload avatar">
+                            <InputFile OnChange="OnAvatarSelected" accept="image/*" style="display:none;" />
+                            <MudIcon Icon="@Icons.Material.Filled.CameraAlt" Size="Size.Small" />
+                        </label>
+                    }
                     @if (!string.IsNullOrEmpty(user.AvatarUrl))
                     {
                         <button class="avatar-overlay-btn" title="View avatar" @onclick="ViewAvatar">
                             <MudIcon Icon="@Icons.Material.Filled.ZoomIn" Size="Size.Small" />
                         </button>
-                        <button class="avatar-overlay-btn avatar-overlay-btn-danger" title="Remove avatar" @onclick="RemoveAvatar">
-                            <MudIcon Icon="@Icons.Material.Filled.Delete" Size="Size.Small" />
-                        </button>
+                        @if (canUpdateUsers)
+                        {
+                            <button class="avatar-overlay-btn avatar-overlay-btn-danger" title="Remove avatar" @onclick="RemoveAvatar">
+                                <MudIcon Icon="@Icons.Material.Filled.Delete" Size="Size.Small" />
+                            </button>
+                        }
                     }
                 </div>
 
@@ -95,25 +101,31 @@
                 </div>
             </div>
             <div class="detail-actions-bar">
-                <button class="admin-btn @(user.IsActive ? "admin-btn-danger" : "admin-btn-primary")" @onclick="ToggleActiveStatus" disabled="@isTogglingStatus">
-                    @if (isTogglingStatus)
-                    {
-                        <span class="admin-btn-spinner"></span>
-                    }
-                    else
-                    {
-                        <MudIcon Icon="@(user.IsActive ? Icons.Material.Filled.Block : Icons.Material.Filled.CheckCircle)" Size="Size.Small" />
-                    }
-                    <span>@(user.IsActive ? "Deactivate" : "Activate")</span>
-                </button>
-                <button class="admin-btn admin-btn-primary" @onclick="OpenEditDialog">
-                    <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" />
-                    <span>Edit User</span>
-                </button>
-                <button class="admin-btn admin-btn-secondary" @onclick="OpenChangePasswordDialog">
-                    <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" />
-                    <span>Change Password</span>
-                </button>
+                @if (canDeleteUsers)
+                {
+                    <button class="admin-btn @(user.IsActive ? "admin-btn-danger" : "admin-btn-primary")" @onclick="ToggleActiveStatus" disabled="@isTogglingStatus">
+                        @if (isTogglingStatus)
+                        {
+                            <span class="admin-btn-spinner"></span>
+                        }
+                        else
+                        {
+                            <MudIcon Icon="@(user.IsActive ? Icons.Material.Filled.Block : Icons.Material.Filled.CheckCircle)" Size="Size.Small" />
+                        }
+                        <span>@(user.IsActive ? "Deactivate" : "Activate")</span>
+                    </button>
+                }
+                @if (canUpdateUsers)
+                {
+                    <button class="admin-btn admin-btn-primary" @onclick="OpenEditDialog">
+                        <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" />
+                        <span>Edit User</span>
+                    </button>
+                    <button class="admin-btn admin-btn-secondary" @onclick="OpenChangePasswordDialog">
+                        <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" />
+                        <span>Change Password</span>
+                    </button>
+                }
             </div>
         </div>
 
@@ -219,18 +231,24 @@
                                     <MudIcon Icon="@Icons.Material.Filled.Star" Size="Size.Small" />
                                     Yes
                                 </span>
-                                <button class="admin-btn admin-btn-danger" style="margin-left:0.5rem;padding:0.25rem 0.5rem;font-size:0.75rem;" @onclick="RemoveAsHead" disabled="@isTogglingHead">
-                                    @if (isTogglingHead) { <span class="admin-btn-spinner"></span> }
-                                    Remove
-                                </button>
+                                @if (canUpdateUsers)
+                                {
+                                    <button class="admin-btn admin-btn-danger" style="margin-left:0.5rem;padding:0.25rem 0.5rem;font-size:0.75rem;" @onclick="RemoveAsHead" disabled="@isTogglingHead">
+                                        @if (isTogglingHead) { <span class="admin-btn-spinner"></span> }
+                                        Remove
+                                    </button>
+                                }
                             }
                             else if (user.DepartmentId.HasValue)
                             {
                                 <span class="admin-text-muted">No</span>
-                                <button class="admin-btn admin-btn-primary" style="margin-left:0.5rem;padding:0.25rem 0.5rem;font-size:0.75rem;" @onclick="MakeHead" disabled="@isTogglingHead">
-                                    @if (isTogglingHead) { <span class="admin-btn-spinner"></span> }
-                                    Make Head
-                                </button>
+                                @if (canUpdateUsers)
+                                {
+                                    <button class="admin-btn admin-btn-primary" style="margin-left:0.5rem;padding:0.25rem 0.5rem;font-size:0.75rem;" @onclick="MakeHead" disabled="@isTogglingHead">
+                                        @if (isTogglingHead) { <span class="admin-btn-spinner"></span> }
+                                        Make Head
+                                    </button>
+                                }
                             }
                             else
                             {
@@ -577,6 +595,8 @@
     private bool canReadPermissions;
     private bool canAssignPermissions;
     private bool canRevokePermissions;
+    private bool canUpdateUsers;
+    private bool canDeleteUsers;
 
     // Edit dialog
     private bool showEditDialog;
@@ -616,6 +636,8 @@
             canReadPermissions = await AuthStateProvider.HasPermissionAsync(Permissions.PermissionsRead);
             canAssignPermissions = await AuthStateProvider.HasPermissionAsync(Permissions.PermissionsAssign);
             canRevokePermissions = await AuthStateProvider.HasPermissionAsync(Permissions.PermissionsRevoke);
+            canUpdateUsers = await AuthStateProvider.HasPermissionAsync(Permissions.UsersUpdate);
+            canDeleteUsers = await AuthStateProvider.HasPermissionAsync(Permissions.UsersDelete);
 
             await LoadUserAsync();
         }

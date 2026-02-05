@@ -4,6 +4,7 @@
 @inject IPositionService PositionService
 @inject IDepartmentService DepartmentService
 @inject NavigationManager Navigation
+@inject UserState UserState
 
 <PageTitle>Positions - ChatApp</PageTitle>
 
@@ -21,10 +22,13 @@
                 <MudIcon Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small" />
                 <span>Back</span>
             </button>
-            <button class="admin-btn admin-btn-primary" @onclick="OpenCreateDialog">
-                <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" />
-                <span>New Position</span>
-            </button>
+            @if (UserState.HasPermission(Permissions.UsersCreate))
+            {
+                <button class="admin-btn admin-btn-primary" @onclick="OpenCreateDialog">
+                    <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" />
+                    <span>New Position</span>
+                </button>
+            }
         </div>
     </div>
 
@@ -79,7 +83,7 @@
                     </div>
                     <h3>No positions found</h3>
                     <p>@(string.IsNullOrEmpty(searchTerm) ? "Create your first position to get started." : "Try adjusting your search terms.")</p>
-                    @if (string.IsNullOrEmpty(searchTerm))
+                    @if (string.IsNullOrEmpty(searchTerm) && UserState.HasPermission(Permissions.UsersCreate))
                     {
                         <button class="admin-btn admin-btn-primary" @onclick="OpenCreateDialog">
                             <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" />
@@ -119,12 +123,18 @@
                                             </div>
                                         </div>
                                         <div class="pos-item-actions">
-                                            <button class="pos-action-btn" title="Edit" @onclick="() => OpenEditDialog(pos)">
-                                                <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" />
-                                            </button>
-                                            <button class="pos-action-btn pos-action-btn-danger" title="Delete" @onclick="() => OpenDeleteDialog(pos)">
-                                                <MudIcon Icon="@Icons.Material.Filled.Delete" Size="Size.Small" />
-                                            </button>
+                                            @if (UserState.HasPermission(Permissions.UsersUpdate))
+                                            {
+                                                <button class="pos-action-btn" title="Edit" @onclick="() => OpenEditDialog(pos)">
+                                                    <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" />
+                                                </button>
+                                            }
+                                            @if (UserState.HasPermission(Permissions.UsersDelete))
+                                            {
+                                                <button class="pos-action-btn pos-action-btn-danger" title="Delete" @onclick="() => OpenDeleteDialog(pos)">
+                                                    <MudIcon Icon="@Icons.Material.Filled.Delete" Size="Size.Small" />
+                                                </button>
+                                            }
                                         </div>
                                     </div>
                                 }

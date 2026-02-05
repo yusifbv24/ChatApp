@@ -282,7 +282,7 @@
                             }
                             else
                             {
-                                @if (IsChannelAdminOrOwner)
+                                @if (IsChannelAdminOrOwner && CanManageChannels)
                                 {
                                     <button class="menu-item" @onclick="HandleAddMembers">
                                         <span>Add members</span>
@@ -304,7 +304,7 @@
                                     <span>Leave</span>
                                 </button>
                             }
-                            @if (!IsDirectMessage && IsChannelOwner)
+                            @if (!IsDirectMessage && IsChannelOwner && CanDeleteChannels)
                             {
                                 <button class="menu-item delete-item" @onclick="HandleDeleteChannel">
                                     <span>Delete</span>

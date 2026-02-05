@@ -86,6 +86,11 @@ public partial class OrganizationHierarchy
     private bool isDeletingDepartment = false;
     private string? deleteDepartmentMessage;
 
+    // Permissions
+    private bool canCreateUsers => UserState.HasPermission(Permissions.UsersCreate);
+    private bool canUpdateUsers => UserState.HasPermission(Permissions.UsersUpdate);
+    private bool canDeleteUsers => UserState.HasPermission(Permissions.UsersDelete);
+
     protected override async Task OnInitializedAsync()
     {
         await Task.WhenAll(

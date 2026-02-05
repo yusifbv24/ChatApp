@@ -48,9 +48,12 @@
     else
     {
         <div class="input-bubble">
-            <button class="input-icon-btn attach-btn" title="Attach file" @onclick="OnAttachClick" disabled="@IsSending">
-                <MudIcon Icon="@Icons.Material.Filled.AttachFile" Size="Size.Small" />
-            </button>
+            @if (UserState.HasPermission(Permissions.FilesUpload))
+            {
+                <button class="input-icon-btn attach-btn" title="Attach file" @onclick="OnAttachClick" disabled="@IsSending">
+                    <MudIcon Icon="@Icons.Material.Filled.AttachFile" Size="Size.Small" />
+                </button>
+            }
 
             <!-- Hidden file input -->
             <InputFile @ref="fileInputRef" OnChange="HandleFileSelection" multiple style="display: none;" />

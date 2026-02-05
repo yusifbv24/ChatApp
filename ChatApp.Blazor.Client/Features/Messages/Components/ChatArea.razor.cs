@@ -509,6 +509,11 @@ public partial class ChatArea : IAsyncDisposable
     /// </summary>
     [Parameter] public bool CanDeleteMessage { get; set; }
 
+    /// <summary>
+    /// İstifadəçinin fayl yükləmə (download) icazəsi var?
+    /// </summary>
+    [Parameter] public bool CanDownloadFile { get; set; }
+
     #endregion
 
     #region Parameters - Favorites

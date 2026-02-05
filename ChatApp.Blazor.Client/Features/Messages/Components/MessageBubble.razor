@@ -383,8 +383,8 @@
                             <span>Forward</span>
                             <MudIcon Icon="@Icons.Material.Outlined.Redo" Size="Size.Small" />
                         </button>
-                        @* Download button - only for messages with files *@
-                        @if (!string.IsNullOrEmpty(FileId))
+                        @* Download button - only for messages with files and user has permission *@
+                        @if (!string.IsNullOrEmpty(FileId) && CanDownloadFile)
                         {
                             <a href="@FileDownloadUrl" download="@FileName" class="menu-item menu-item-link" @onclick="CloseMoreMenu">
                                 <span>Download</span>

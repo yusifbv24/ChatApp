@@ -94,6 +94,11 @@ public partial class MessageBubble : IAsyncDisposable
     [Parameter] public bool CanDeleteMessage { get; set; }
 
     /// <summary>
+    /// İstifadəçinin fayl yükləmə (download) icazəsi var?
+    /// </summary>
+    [Parameter] public bool CanDownloadFile { get; set; }
+
+    /// <summary>
     /// Mesaj redaktə edilib?
     /// </summary>
     [Parameter] public bool IsEdited { get; set; }

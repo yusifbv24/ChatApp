@@ -142,6 +142,21 @@ public partial class Messages : IAsyncDisposable
     /// </summary>
     private bool canDeleteMessage => UserState.HasPermission(Permissions.MessagesDelete);
 
+    /// <summary>
+    /// İstifadəçinin fayl yükləmə (download) icazəsi var?
+    /// </summary>
+    private bool canDownloadFile => UserState.HasPermission(Permissions.FilesDownload);
+
+    /// <summary>
+    /// İstifadəçinin kanal idarə etmə icazəsi var?
+    /// </summary>
+    private bool canManageChannels => UserState.HasPermission(Permissions.ChannelsManage);
+
+    /// <summary>
+    /// İstifadəçinin kanal silmə icazəsi var?
+    /// </summary>
+    private bool canDeleteChannels => UserState.HasPermission(Permissions.ChannelsDelete);
+
     #endregion
 
     #region Direct Message State - DM state-i

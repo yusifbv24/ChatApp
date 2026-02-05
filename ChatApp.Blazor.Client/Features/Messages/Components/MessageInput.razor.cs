@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.JSInterop;
 using ChatApp.Blazor.Client.State;
+using ChatApp.Blazor.Client.Models.Auth;
 using ChatApp.Blazor.Client.Models.Files;
 using ChatApp.Blazor.Client.Models.Messages;
 using MudBlazor;

@@ -5,6 +5,7 @@
 @inject IOrganizationService OrganizationService
 @inject IUserService UserService
 @inject NavigationManager Navigation
+@inject UserState UserState
 
 <PageTitle>Department Details - ChatApp</PageTitle>
 
@@ -43,10 +44,13 @@
                 <p class="detail-page-header-subtitle">Department</p>
             </div>
             <div class="detail-actions-bar">
-                <button class="admin-btn admin-btn-primary" @onclick="OpenEditDialog">
-                    <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" />
-                    <span>Edit Department</span>
-                </button>
+                @if (UserState.HasPermission(Permissions.UsersUpdate))
+                {
+                    <button class="admin-btn admin-btn-primary" @onclick="OpenEditDialog">
+                        <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" />
+                        <span>Edit Department</span>
+                    </button>
+                }
             </div>
         </div>
 
