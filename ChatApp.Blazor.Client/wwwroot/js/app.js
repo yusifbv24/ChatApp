@@ -450,6 +450,43 @@ window.chatAppUtils = {
             clientHeight: el.clientHeight,
             scrollHeight: el.scrollHeight
         };
+    },
+
+    // Subscribe to Escape key events for closing panels
+    subscribeToEscapeKey: (dotNetHelper) => {
+        const handler = (e) => {
+            if (e.key === 'Escape') {
+                const activeElement = document.activeElement;
+                const isInputFocused = activeElement &&
+                    (activeElement.tagName === 'INPUT' ||
+                     activeElement.tagName === 'TEXTAREA' ||
+                     activeElement.isContentEditable);
+
+                // Əgər input/textarea focus-dadırsa, əvvəlcə blur et
+                if (isInputFocused) {
+                    activeElement.blur();
+                    return;
+                }
+
+                // Input focus-da deyilsə, Blazor-a panel bağlama üçün xəbər ver
+                dotNetHelper.invokeMethodAsync('HandleEscapeKey')
+                    .catch(() => {
+                        // Ignore errors from disposed components
+                    });
+            }
+        };
+
+        document.addEventListener('keydown', handler);
+
+        // Store handler reference for cleanup
+        window._escapeKeyHandler = handler;
+
+        return {
+            dispose: () => {
+                document.removeEventListener('keydown', handler);
+                window._escapeKeyHandler = null;
+            }
+        };
     }
 };
 

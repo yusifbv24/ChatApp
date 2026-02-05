@@ -1536,6 +1536,44 @@ public partial class ConversationList : IAsyncDisposable
 
     #endregion
 
+    #region Public Methods - ESC Key Handler Support
+
+    /// <summary>
+    /// Açıq panelləri bağlamağa çalışır.
+    /// ESC key handler tərəfindən çağrılır.
+    /// Return: true = nəsə bağlandı, false = heç nə bağlanmadı
+    /// </summary>
+    public bool TryCloseOpenPanels()
+    {
+        // Priority 1: More menu
+        if (showMoreMenu)
+        {
+            CloseMoreMenu();
+            StateHasChanged();
+            return true;
+        }
+
+        // Priority 2: Filter panel
+        if (showFilterPanel)
+        {
+            showFilterPanel = false;
+            StateHasChanged();
+            return true;
+        }
+
+        // Priority 3: Search mode
+        if (isSearchMode)
+        {
+            ExitSearchMode();
+            StateHasChanged();
+            return true;
+        }
+
+        return false;
+    }
+
+    #endregion
+
     #region IAsyncDisposable
 
     /// <summary>

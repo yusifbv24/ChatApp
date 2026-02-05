@@ -404,6 +404,11 @@ public partial class Messages : IAsyncDisposable
     private IJSObjectReference? visibilitySubscription;
 
     /// <summary>
+    /// JS ESC key subscription reference.
+    /// </summary>
+    private IJSObjectReference? escapeKeySubscription;
+
+    /// <summary>
     /// .NET reference (JS-dən C# metodunu çağırmaq üçün).
     /// </summary>
     private DotNetObjectReference<Messages>? dotNetReference;
@@ -732,6 +737,16 @@ public partial class Messages : IAsyncDisposable
 
     #endregion
 
+    #region Component References - Komponent referansları
+
+    /// <summary>
+    /// ConversationList komponenti referansı.
+    /// ESC key handler üçün istifadə olunur.
+    /// </summary>
+    private ConversationList? conversationListRef;
+
+    #endregion
+
     #region Sidebar State - Sidebar state-i
 
     /// <summary>
@@ -831,6 +846,11 @@ public partial class Messages : IAsyncDisposable
             // Mention click listener (using dotNetReference)
             await JS.InvokeVoidAsync("chatAppUtils.subscribeToMentionClick", dotNetReference);
 
+            // ESC key listener (panel bağlama üçün)
+            escapeKeySubscription = await JS.InvokeAsync<IJSObjectReference>(
+                "chatAppUtils.subscribeToEscapeKey",
+                dotNetReference);
+
             // İlkin visibility state
             isPageVisible = await JS.InvokeAsync<bool>("chatAppUtils.isPageVisible");
         }
@@ -913,6 +933,97 @@ public partial class Messages : IAsyncDisposable
 
         // State dəyişikliyini bildir (UI yenilənməsi üçün)
         await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// ESC düyməsinə basıldıqda JS-dən çağrılır.
+    /// Açıq panelləri prioritet sırasına görə bağlayır.
+    /// Qeyd: Input focus-dadırsa JS tərəfində blur edilir, bu metod çağrılmır.
+    /// </summary>
+    [JSInvokable]
+    public async Task HandleEscapeKey()
+    {
+        if (_disposed) return;
+
+        // Priority sırası ilə panelləri bağla (hər ESC basımında yalnız bir panel bağlanır)
+
+        // Priority 1: Forward dialog
+        if (showForwardDialog)
+        {
+            CancelForward();
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        // Priority 2: Profile panel
+        if (showProfilePanel)
+        {
+            showProfilePanel = false;
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        // Priority 3: Search panel
+        if (showSearchPanel)
+        {
+            CloseSearchPanel();
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        // Priority 4: Sidebar
+        if (showSidebar)
+        {
+            CloseSidebar();
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        // Priority 5: Create Group panel
+        if (showCreateGroupPanel)
+        {
+            CloseCreateGroupPanel();
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        // Priority 6: New conversation dialog
+        if (showNewConversationDialog)
+        {
+            CloseNewConversationDialog();
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        // Priority 7: New channel dialog
+        if (showNewChannelDialog)
+        {
+            CloseNewChannelDialog();
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        // Priority 8: Select mode (isSelectingMessageBuble)
+        if (isSelectingMessageBuble)
+        {
+            ToggleSelectMode();
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        // Priority 9: ConversationList panelləri (more menu, filter, search mode)
+        if (conversationListRef?.TryCloseOpenPanels() == true)
+        {
+            return;
+        }
+
+        // Priority 10: Aktiv conversation/channel-ı bağla
+        if (selectedConversationId.HasValue || selectedChannelId.HasValue || isPendingConversation)
+        {
+            CloseConversation();
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
     }
 
     /// <summary>
@@ -1008,6 +1119,20 @@ public partial class Messages : IAsyncDisposable
             {
                 await visibilitySubscription.InvokeVoidAsync("dispose");
                 await visibilitySubscription.DisposeAsync();
+            }
+            catch
+            {
+                // Silently handle dispose errors
+            }
+        }
+
+        // ESC key subscription-ı dispose et
+        if (escapeKeySubscription != null)
+        {
+            try
+            {
+                await escapeKeySubscription.InvokeVoidAsync("dispose");
+                await escapeKeySubscription.DisposeAsync();
             }
             catch
             {
