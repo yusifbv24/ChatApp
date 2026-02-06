@@ -4026,7 +4026,7 @@
 
 .forward-dialog {
     width: 400px;
-    height: 560px; /* Increased from 480px to show 8 items instead of 5-6 */
+    height: 650px;
     display: flex;
     flex-direction: column;
 }
@@ -4046,32 +4046,82 @@
     letter-spacing: -0.01em;
 }
 
+.forward-search-wrapper {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--gray-100);
+}
+
 .forward-search-container {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 12px 20px;
-    border-bottom: 1px solid var(--gray-100);
+    background: var(--gray-100);
+    border-radius: 20px;
+    padding: 0 12px;
+    height: 36px;
+    border: 2px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.forward-search-container:focus-within,
+.forward-search-container.search-active {
+    background: var(--white);
+    border-color: #00ACE3;
+    box-shadow: 0 0 0 3px rgba(0, 172, 227, 0.1);
+}
+
+.forward-search-container.search-active .forward-search-icon {
+    color: #00ACE3;
 }
 
 .forward-search-icon {
     color: var(--gray-400);
     flex-shrink: 0;
+    transition: color 0.2s ease;
 }
 
 .forward-search-input {
     flex: 1;
     border: none;
     outline: none;
-    font-size: 14px;
-    font-weight: 300;
-    color: var(--gray-700);
+    font-size: 13px;
+    color: var(--gray-900);
     background: transparent;
+    padding: 8px;
+    min-width: 0;
 }
 
 .forward-search-input::placeholder {
     color: var(--gray-400);
-    font-weight: 300;
+}
+
+.forward-search-clear {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: var(--gray-400);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 50%;
+    transition: all var(--transition-fast);
+    flex-shrink: 0;
+}
+
+.forward-search-clear:hover {
+    background: var(--gray-200);
+    color: var(--gray-600);
+}
+
+.forward-search-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px;
+    gap: 12px;
+    color: var(--gray-500);
+    font-size: 13px;
 }
 
 .forward-dialog-body {
@@ -4095,6 +4145,10 @@
     gap: 2px;
 }
 
+.forward-section {
+    margin-bottom: 16px;
+}
+
 .forward-chat-item {
     display: flex;
     align-items: center;
@@ -4102,37 +4156,11 @@
     padding: 10px 12px;
     border-radius: var(--radius-md);
     transition: background 0.15s ease;
+    cursor: pointer;
 }
 
 .forward-chat-item:hover {
     background: var(--gray-50);
-}
-
-.forward-send-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    border: none;
-    border-radius: 50%;
-    background: var(--primary-color);
-    color: white;
-    cursor: pointer;
-    opacity: 0;
-    transition: opacity 0.15s ease, transform 0.15s ease;
-}
-
-.forward-chat-item:hover .forward-send-btn {
-    opacity: 1;
-}
-
-.forward-send-btn:hover {
-    transform: scale(1.05);
-}
-
-.forward-send-btn .mud-icon-root {
-    font-size: 16px;
 }
 
 .forward-chat-avatar {
@@ -4164,22 +4192,57 @@
     color: white;
 }
 
-.forward-chat-name {
+.forward-chat-info {
     flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.forward-chat-name {
     font-size: 14px;
     font-weight: 400;
     color: var(--gray-800);
     letter-spacing: -0.01em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.forward-chat-subtitle {
+    font-size: 12px;
+    color: var(--gray-500);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.forward-chat-time {
+    font-size: 12px;
+    color: var(--gray-400);
+    flex-shrink: 0;
+}
+
+.forward-chat-avatar.notes-avatar {
+    background: linear-gradient(135deg, #00ACE3 0%, #0088B5 100%);
+    color: white;
 }
 
 .forward-empty-state {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 32px 16px;
+    padding: 48px 16px;
+    gap: 12px;
     color: var(--gray-400);
     font-size: 14px;
-    font-weight: 300;
+}
+
+.forward-empty-state .mud-icon-root {
+    font-size: 48px;
+    color: var(--gray-300);
 }
 
 /* Unread separator */

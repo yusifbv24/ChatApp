@@ -45,15 +45,19 @@ namespace ChatApp.Modules.Channels.Application.Queries.GetChannelMessages
                     return Result.Failure<List<ChannelMessageDto>>("Channel not found");
                 }
 
-                // Verify user is a member
-                var isMember = await _unitOfWork.Channels.IsUserMemberAsync(
-                    request.ChannelId,
-                    request.RequestedBy,
-                    cancellationToken);
-
-                if (!isMember)
+                // Public channel-da mesajları hər kəs görə bilər
+                // Private channel-da yalnız üzvlər görə bilər
+                if (channel.Type == Domain.Enums.ChannelType.Private)
                 {
-                    return Result.Failure<List<ChannelMessageDto>>("You must be a member to view channel messages");
+                    var isMember = await _unitOfWork.Channels.IsUserMemberAsync(
+                        request.ChannelId,
+                        request.RequestedBy,
+                        cancellationToken);
+
+                    if (!isMember)
+                    {
+                        return Result.Failure<List<ChannelMessageDto>>("You must be a member to view private channel messages");
+                    }
                 }
 
                 // Get messages (repository will handle pagination and joining with user data)

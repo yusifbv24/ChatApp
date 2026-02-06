@@ -114,7 +114,7 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMessages
                         var mention = new ChannelMessageMention(
                             message.Id,
                             mentionReq.UserId,
-                            mentionReq.UserFullName,
+                            mentionReq.UserName,
                             mentionReq.IsAllMention);
 
                         message.AddMention(mention);

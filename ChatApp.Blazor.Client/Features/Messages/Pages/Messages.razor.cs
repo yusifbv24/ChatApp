@@ -702,6 +702,26 @@ public partial class Messages : IAsyncDisposable
     /// </summary>
     private string forwardSearchQuery = string.Empty;
 
+    /// <summary>
+    /// Forward dialog-da search aktiv?
+    /// </summary>
+    private bool isForwardSearchActive;
+
+    /// <summary>
+    /// Forward dialog-da search yüklənir?
+    /// </summary>
+    private bool isForwardSearching;
+
+    /// <summary>
+    /// Forward dialog-da axtarış nəticəsi - istifadəçilər.
+    /// </summary>
+    private List<UserSearchResultDto> forwardUserSearchResults = [];
+
+    /// <summary>
+    /// Forward dialog-da axtarış nəticəsi - channel-lar.
+    /// </summary>
+    private List<ChannelDto> forwardChannelSearchResults = [];
+
     #endregion
 
     #region Draft State - Draft state-i

@@ -1,3 +1,5 @@
+using System.Globalization;
+using ChatApp.Blazor.Client.Models.Auth;
 using ChatApp.Blazor.Client.Models.Messages;
 
 namespace ChatApp.Blazor.Client.Features.Messages.Pages;
@@ -46,7 +48,125 @@ public partial class Messages
         forwardingDirectMessage = null;
         forwardingChannelMessage = null;
         forwardSearchQuery = string.Empty;
+        isForwardSearchActive = false;
+        isForwardSearching = false;
+        forwardUserSearchResults = [];
+        forwardChannelSearchResults = [];
         StateHasChanged();
+    }
+
+    /// <summary>
+    /// Forward search input-a focus olundu.
+    /// </summary>
+    private void EnterForwardSearchMode()
+    {
+        isForwardSearchActive = true;
+    }
+
+    /// <summary>
+    /// Forward search input focus itirdi.
+    /// </summary>
+    private async Task HandleForwardSearchBlur()
+    {
+        await Task.Delay(200); // Click-ləri tutmaq üçün
+        if (string.IsNullOrWhiteSpace(forwardSearchQuery))
+        {
+            isForwardSearchActive = false;
+            forwardUserSearchResults = [];
+            forwardChannelSearchResults = [];
+        }
+    }
+
+    /// <summary>
+    /// Forward search sorğusunu icra et.
+    /// </summary>
+    private async Task HandleForwardSearchInput()
+    {
+        if (string.IsNullOrWhiteSpace(forwardSearchQuery) || forwardSearchQuery.Length < 2)
+        {
+            forwardUserSearchResults = [];
+            forwardChannelSearchResults = [];
+            return;
+        }
+
+        isForwardSearching = true;
+        StateHasChanged();
+
+        try
+        {
+            // Paralel axtarış
+            var userTask = ConversationService.SearchUsersAsync(forwardSearchQuery);
+            var channelTask = ChannelService.SearchChannelsAsync(forwardSearchQuery);
+
+            await Task.WhenAll(userTask, channelTask);
+
+            var userResult = await userTask;
+            var channelResult = await channelTask;
+
+            forwardUserSearchResults = userResult.IsSuccess && userResult.Value != null
+                ? userResult.Value
+                : [];
+
+            forwardChannelSearchResults = channelResult.IsSuccess && channelResult.Value != null
+                ? channelResult.Value
+                : [];
+        }
+        catch
+        {
+            forwardUserSearchResults = [];
+            forwardChannelSearchResults = [];
+        }
+        finally
+        {
+            isForwardSearching = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Forward search-i təmizlə.
+    /// </summary>
+    private void ClearForwardSearch()
+    {
+        forwardSearchQuery = string.Empty;
+        isForwardSearchActive = false;
+        forwardUserSearchResults = [];
+        forwardChannelSearchResults = [];
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Forward search-dən istifadəçiyə mesaj göndər.
+    /// </summary>
+    private async Task ForwardToSearchedUser(UserSearchResultDto user)
+    {
+        try
+        {
+            var content = forwardingDirectMessage?.Content ?? forwardingChannelMessage?.Content;
+            if (string.IsNullOrEmpty(content)) return;
+
+            // Conversation tap və ya yarat
+            var convResult = await ConversationService.StartConversationAsync(user.Id);
+            if (!convResult.IsSuccess)
+            {
+                ShowError("Failed to create conversation");
+                return;
+            }
+
+            await ForwardToConversation(convResult.Value);
+        }
+        catch (Exception ex)
+        {
+            ShowError("Failed to forward message: " + ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Forward search-dən channel-a mesaj göndər.
+    /// </summary>
+    private async Task ForwardToSearchedChannel(ChannelDto channel)
+    {
+        await ForwardToChannel(channel.Id);
     }
 
     /// <summary>
@@ -125,6 +245,13 @@ public partial class Messages
                 // Forward olunanda file attachment-lər transfer olunmur, ona görə preview sadəcə content-dir
                 UpdateConversationLocally(conversationId, content, messageTime);
 
+                // API uğurlu olduğu üçün statusu dərhal "Sent" edək
+                UpdateListItemWhere(
+                    ref directConversations,
+                    c => c.Id == conversationId && c.LastMessageSenderId == currentUserId && c.LastMessageStatus == "Pending",
+                    c => c with { LastMessageStatus = "Sent", LastMessageId = messageId }
+                );
+
                 // Seçim rejimindən çıx
                 if (isSelectingMessageBuble)
                 {
@@ -200,8 +327,8 @@ public partial class Messages
                         true,                                       // IsForwarded
                         0,                                          // ReadByCount
                         totalMembers,                               // TotalMemberCount
-                        new List<Guid>(),                           // ReadBy
-                        new List<ChannelMessageReactionDto>());
+                        [],                           // ReadBy
+                        []);
 
                     if (!channelMessages.Any(m => m.Id == messageId))
                     {
@@ -213,6 +340,13 @@ public partial class Messages
 
                 // Forward olunanda file attachment-lər transfer olunmur, ona görə preview sadəcə content-dir
                 UpdateChannelLocally(channelId, content, messageTime, UserState.CurrentUser?.FullName);
+
+                // API uğurlu olduğu üçün statusu dərhal "Sent" edək
+                UpdateListItemWhere(
+                    ref channelConversations,
+                    c => c.Id == channelId && c.LastMessageSenderId == currentUserId && c.LastMessageStatus == "Pending",
+                    c => c with { LastMessageStatus = "Sent", LastMessageId = messageId }
+                );
 
                 if (isSelectingMessageBuble)
                 {
@@ -237,7 +371,7 @@ public partial class Messages
     /// Forward dialog üçün item record-u.
     /// Conversation və channel-ları eyni list-də göstərmək üçün.
     /// </summary>
-    private record ForwardItem(Guid Id, Guid? OtherUserId, string Name, string? AvatarUrl, bool IsChannel, bool IsPrivate, DateTime? LastMessageAt);
+    private record ForwardItem(Guid Id, Guid? OtherUserId, string Name, string? Subtitle, string? AvatarUrl, bool IsChannel, bool IsPrivate, bool IsNotes, DateTime? LastMessageAt);
 
     /// <summary>
     /// Forward dialog üçün filter olunmuş item-ları qaytarır.
@@ -247,13 +381,29 @@ public partial class Messages
     /// </summary>
     private List<ForwardItem> GetFilteredForwardItems()
     {
+        var result = new List<ForwardItem>();
         var items = new List<ForwardItem>();
 
+        // Notes conversation-u ayrı saxla
+        var notesConv = directConversations.FirstOrDefault(c => c.IsNotes);
+        ForwardItem? notesItem = null;
+        if (notesConv != null)
+        {
+            notesItem = new ForwardItem(
+                notesConv.Id,
+                null,
+                "Notes",
+                "Visible to you only",
+                null,
+                IsChannel: false,
+                IsPrivate: false,
+                IsNotes: true,
+                notesConv.LastMessageAtUtc);
+        }
+
         // Direct Conversation-ları əlavə et (Notes-u çıxar)
-        // PERFORMANCE: Single pass with condition check
         foreach (var conv in directConversations)
         {
-            // SECURITY: Prevent self-forward to Notes conversation
             if (conv.IsNotes)
                 continue;
 
@@ -261,9 +411,11 @@ public partial class Messages
                 conv.Id,
                 conv.OtherUserId,
                 conv.OtherUserFullName,
+                "User",
                 conv.OtherUserAvatarUrl,
                 IsChannel: false,
                 IsPrivate: false,
+                IsNotes: false,
                 conv.LastMessageAtUtc));
         }
 
@@ -274,9 +426,11 @@ public partial class Messages
                 channel.Id,
                 null,
                 channel.Name,
+                "Group chat",
                 channel.AvatarUrl,
                 IsChannel: true,
                 IsPrivate: channel.Type == ChannelType.Private,
+                IsNotes: false,
                 channel.LastMessageAtUtc));
         }
 
@@ -287,9 +441,24 @@ public partial class Messages
         if (!string.IsNullOrWhiteSpace(forwardSearchQuery))
         {
             items = items.Where(x => x.Name.Contains(forwardSearchQuery, StringComparison.OrdinalIgnoreCase)).ToList();
+
+            // Notes da axtarışa uyğundursa əlavə et
+            if (notesItem != null && notesItem.Name.Contains(forwardSearchQuery, StringComparison.OrdinalIgnoreCase))
+            {
+                result.Add(notesItem);
+            }
+        }
+        else
+        {
+            // Axtarış yoxdursa, Notes həmişə yuxarıda
+            if (notesItem != null)
+            {
+                result.Add(notesItem);
+            }
         }
 
-        return items;
+        result.AddRange(items);
+        return result;
     }
 
     /// <summary>
@@ -366,6 +535,20 @@ public partial class Messages
         replyToFileName = null;
         replyToFileContentType = null;
         StateHasChanged();
+    }
+
+    #endregion
+
+    #region Forward Helpers
+
+    /// <summary>
+    /// Forward panel üçün tarix formatı.
+    /// Screenshot-dakı "jan 23" formatını istifadə edir.
+    /// </summary>
+    private static string FormatForwardTime(DateTime dateTime)
+    {
+        var localDateTime = dateTime.ToLocalTime();
+        return localDateTime.ToString("MMM d", CultureInfo.InvariantCulture).ToLower();
     }
 
     #endregion

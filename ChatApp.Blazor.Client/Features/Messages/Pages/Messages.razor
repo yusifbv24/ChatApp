@@ -655,49 +655,151 @@
                 </button>
             </div>
 
-            <div class="forward-search-container">
-                <MudIcon Icon="@Icons.Material.Filled.Search" Size="Size.Small" Class="forward-search-icon" />
-                <input type="text"
-                       class="forward-search-input"
-                       placeholder="Search..."
-                       @bind="forwardSearchQuery"
-                       @bind:event="oninput" />
+            <div class="forward-search-wrapper">
+                <div class="forward-search-container @(isForwardSearchActive ? "search-active" : "")">
+                    <MudIcon Icon="@Icons.Material.Filled.Search" Size="Size.Small" Class="forward-search-icon" />
+                    <input type="text"
+                           class="forward-search-input"
+                           placeholder="Find employee or chat"
+                           @bind="forwardSearchQuery"
+                           @bind:event="oninput"
+                           @bind:after="HandleForwardSearchInput"
+                           @onfocus="EnterForwardSearchMode"
+                           @onblur="HandleForwardSearchBlur" />
+                    @if (!string.IsNullOrEmpty(forwardSearchQuery) || isForwardSearchActive)
+                    {
+                        <button class="forward-search-clear" @onclick="ClearForwardSearch" @onclick:stopPropagation="true">
+                            <MudIcon Icon="@Icons.Material.Filled.Clear" Size="Size.Small" />
+                        </button>
+                    }
+                </div>
             </div>
 
             <div class="forward-dialog-body">
-                <span class="forward-section-label">Recent chats</span>
-
-                <div class="forward-chats-list">
-                    @foreach (var item in GetFilteredForwardItems())
+                @if (isForwardSearching)
+                {
+                    <div class="forward-search-loading">
+                        <div class="loading-spinner small"></div>
+                        <span>Searching...</span>
+                    </div>
+                }
+                else if (!string.IsNullOrWhiteSpace(forwardSearchQuery) && forwardSearchQuery.Length >= 2)
+                {
+                    @* Search results mode *@
+                    @if (!forwardChannelSearchResults.Any() && !forwardUserSearchResults.Any())
                     {
-                        <div class="forward-chat-item">
-                            <div class="forward-chat-avatar @(item.IsChannel ? "channel-type" : "")" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(item.OtherUserId ?? item.Id);">
-                                @if (!string.IsNullOrEmpty(item.AvatarUrl))
+                        <div class="forward-empty-state">
+                            <MudIcon Icon="@Icons.Material.Outlined.SearchOff" Size="Size.Large" />
+                            <span>No results found</span>
+                        </div>
+                    }
+                    else
+                    {
+                        @* Channels Section *@
+                        @if (forwardChannelSearchResults.Any())
+                        {
+                            <div class="forward-section">
+                                <span class="forward-section-label">Channels</span>
+                                <div class="forward-chats-list">
+                                    @foreach (var channel in forwardChannelSearchResults)
+                                    {
+                                        <div class="forward-chat-item" @onclick="() => ForwardToSearchedChannel(channel)">
+                                            <div class="forward-chat-avatar channel-type" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(channel.Id);">
+                                                @if (!string.IsNullOrEmpty(channel.AvatarUrl))
+                                                {
+                                                    <img src="@channel.AvatarUrl" alt="@channel.Name" />
+                                                }
+                                                else
+                                                {
+                                                    <span class="avatar-initials">@StringHelper.GetInitials(channel.Name)</span>
+                                                }
+                                            </div>
+                                            <div class="forward-chat-info">
+                                                <span class="forward-chat-name">@channel.Name</span>
+                                                <span class="forward-chat-subtitle">Group chat</span>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+
+                        @* Users Section *@
+                        @if (forwardUserSearchResults.Any())
+                        {
+                            <div class="forward-section">
+                                <span class="forward-section-label">People</span>
+                                <div class="forward-chats-list">
+                                    @foreach (var user in forwardUserSearchResults)
+                                    {
+                                        <div class="forward-chat-item" @onclick="() => ForwardToSearchedUser(user)">
+                                            <div class="forward-chat-avatar" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(user.Id);">
+                                                @if (!string.IsNullOrEmpty(user.AvatarUrl))
+                                                {
+                                                    <img src="@user.AvatarUrl" alt="@user.FullName" />
+                                                }
+                                                else
+                                                {
+                                                    <span class="avatar-initials">@StringHelper.GetInitials(user.FullName)</span>
+                                                }
+                                            </div>
+                                            <div class="forward-chat-info">
+                                                <span class="forward-chat-name">@user.FullName</span>
+                                                <span class="forward-chat-subtitle">@(user.Position ?? "User")</span>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    }
+                }
+                else
+                {
+                    @* Recent chats mode *@
+                    <span class="forward-section-label">Recent chats</span>
+
+                    <div class="forward-chats-list">
+                        @foreach (var item in GetFilteredForwardItems())
+                        {
+                            <div class="forward-chat-item" @onclick="() => HandleForwardItemClick(item)">
+                                @if (item.IsNotes)
                                 {
-                                    <img src="@item.AvatarUrl" alt="@item.Name" />
-                                }
-                                else if (item.IsChannel)
-                                {
-                                    <MudIcon Icon="@(item.IsPrivate ? Icons.Material.Filled.Lock : Icons.Material.Filled.Group)" Size="Size.Small" />
+                                    <div class="forward-chat-avatar notes-avatar">
+                                        <MudIcon Icon="@Icons.Material.Filled.Bookmark" Size="Size.Small" />
+                                    </div>
                                 }
                                 else
                                 {
-                                    <span class="avatar-initials">@StringHelper.GetInitials(item.Name)</span>
+                                    <div class="forward-chat-avatar @(item.IsChannel ? "channel-type" : "")" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(item.OtherUserId ?? item.Id);">
+                                        @if (!string.IsNullOrEmpty(item.AvatarUrl))
+                                        {
+                                            <img src="@item.AvatarUrl" alt="@item.Name" />
+                                        }
+                                        else
+                                        {
+                                            <span class="avatar-initials">@StringHelper.GetInitials(item.Name)</span>
+                                        }
+                                    </div>
+                                }
+                                <div class="forward-chat-info">
+                                    <span class="forward-chat-name">@item.Name</span>
+                                    <span class="forward-chat-subtitle">@item.Subtitle</span>
+                                </div>
+                                @if (item.LastMessageAt.HasValue)
+                                {
+                                    <span class="forward-chat-time">@FormatForwardTime(item.LastMessageAt.Value)</span>
                                 }
                             </div>
-                            <span class="forward-chat-name">@item.Name</span>
-                            <button class="forward-send-btn" @onclick="() => HandleForwardItemClick(item)">
-                                <MudIcon Icon="@Icons.Material.Filled.Send" Size="Size.Small" />
-                            </button>
+                        }
+                    </div>
+
+                    @if (!GetFilteredForwardItems().Any())
+                    {
+                        <div class="forward-empty-state">
+                            <span>No chats found</span>
                         </div>
                     }
-                </div>
-
-                @if (!GetFilteredForwardItems().Any())
-                {
-                    <div class="forward-empty-state">
-                        <span>No chats found</span>
-                    </div>
                 }
             </div>
         </div>

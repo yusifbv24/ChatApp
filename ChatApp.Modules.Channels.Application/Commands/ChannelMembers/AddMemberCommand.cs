@@ -109,7 +109,21 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMembers
                     MemberCount = channel.Members?.Count(m => m.IsActive) ?? 1,
                     IsArchived = channel.IsArchived,
                     CreatedAtUtc = channel.CreatedAtUtc,
-                    UnreadCount = 0
+                    ArchivedAtUtc = channel.ArchivedAtUtc,
+                    AvatarUrl = channel.AvatarUrl,
+                    LastMessageContent = (string?)null,
+                    LastMessageAtUtc = (DateTime?)null,
+                    UnreadCount = 0,
+                    HasUnreadMentions = false,
+                    LastReadLaterMessageId = (Guid?)null,
+                    LastMessageId = (Guid?)null,
+                    LastMessageSenderId = (Guid?)null,
+                    LastMessageStatus = (string?)null,
+                    LastMessageSenderAvatarUrl = (string?)null,
+                    FirstUnreadMessageId = (Guid?)null,
+                    IsPinned = false,
+                    IsMuted = false,
+                    IsMarkedReadLater = false
                 };
                 await _notificationService.NotifyMemberAddedToChannelAsync(request.UserId, channelDto);
 

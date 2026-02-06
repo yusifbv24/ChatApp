@@ -1449,7 +1449,15 @@ public partial class Messages
                     CloseConversation();
                 }
 
-                // Channel list-dən silmə SignalR tərəfindən handle olunur (HandleMemberLeftChannel)
+                // Channel list-dən sil (SignalR-dan asılı olmadan)
+                // Özümüz leave etdiyimiz üçün SignalR bildirişi özümüzə gəlməyəcək
+                var channelIndex = channelConversations.FindIndex(c => c.Id == channelId);
+                if (channelIndex >= 0)
+                {
+                    channelConversations.RemoveAt(channelIndex);
+                    channelConversations = new List<ChannelDto>(channelConversations);
+                    StateHasChanged();
+                }
             }
             else
             {
