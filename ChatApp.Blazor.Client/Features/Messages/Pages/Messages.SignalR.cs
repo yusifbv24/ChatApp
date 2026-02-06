@@ -259,8 +259,25 @@ public partial class Messages
             }
             else if (message.SenderId != currentUserId)
             {
-                // Bu halda kimsə bizə ilk dəfə mesaj yazıb
-                _ = LoadConversationsAndChannels();
+                // Yeni conversation yaradıb list-ə əlavə et (full reload əvəzinə)
+                var preview = GetFilePreview(message);
+                var newConversation = new DirectConversationDto(
+                    Id: message.ConversationId,
+                    OtherUserId: message.SenderId,
+                    OtherUserEmail: message.SenderEmail,
+                    OtherUserFullName: message.SenderFullName,
+                    OtherUserAvatarUrl: message.SenderAvatarUrl,
+                    LastMessageContent: preview,
+                    LastMessageAtUtc: message.CreatedAtUtc,
+                    UnreadCount: 1,
+                    LastMessageSenderId: message.SenderId,
+                    LastMessageId: message.Id
+                );
+
+                // List-in əvvəlinə əlavə et
+                directConversations.Insert(0, newConversation);
+                directConversations = new List<DirectConversationDto>(directConversations);
+                AppState.IncrementUnreadMessages();
             }
 
             StateHasChanged();
@@ -437,12 +454,6 @@ public partial class Messages
                     AppState.IncrementUnreadMessages();
                 }
             }
-            else if (message.SenderId != currentUserId)
-            {
-                // Channel listdə yoxdur (gizli idi) - list-i yenidən yüklə
-                _ = LoadConversationsAndChannels();
-            }
-
             StateHasChanged();
         });
     }
