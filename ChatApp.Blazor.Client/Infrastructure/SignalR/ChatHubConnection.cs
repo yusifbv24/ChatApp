@@ -1,49 +1,17 @@
+using ChatApp.Blazor.Client.Models.Enums;
 using Microsoft.AspNetCore.SignalR.Client;
-using Microsoft.Extensions.Logging;
+using Microsoft.JSInterop;
 using System.Net.Http.Json;
 
 namespace ChatApp.Blazor.Client.Infrastructure.SignalR;
-
-/// <summary>
-/// Production-grade retry policy with Exponential Backoff and Jitter.
-///
-/// PATTERN USED BY: WhatsApp, Slack, Discord, AWS SDK, Azure SDK
-///
-/// Benefits:
-/// 1. Exponential Backoff: Delays increase exponentially (1s -> 2s -> 4s -> 8s...)
-/// 2. Jitter: Random variance prevents "thundering herd" problem
-/// 3. Max Delay Cap: Never waits more than 60 seconds
-/// 4. Infinite Retry: Never gives up on reconnection
-/// </summary>
-public class ExponentialBackoffRetryPolicy : IRetryPolicy
-{
-    private const int MaxRetryDelaySeconds = 60; // Max 1 minute between retries
-    private const int BaseDelaySeconds = 1;      // Start with 1 second
-    private static readonly Random Jitter = new();
-
-    public TimeSpan? NextRetryDelay(RetryContext retryContext)
-    {
-        // Exponential backoff: 1s, 2s, 4s, 8s, 16s, 32s, 60s (capped)
-        var exponentialDelay = Math.Min(
-            MaxRetryDelaySeconds,
-            BaseDelaySeconds * Math.Pow(2, retryContext.PreviousRetryCount)
-        );
-
-        // Add jitter: ±25% randomness to prevent thundering herd
-        // Example: 8s delay becomes random between 6s-10s
-        var jitterFactor = 0.75 + (Jitter.NextDouble() * 0.5); // 0.75 to 1.25
-        var finalDelay = exponentialDelay * jitterFactor;
-
-        return TimeSpan.FromSeconds(finalDelay);
-    }
-}
 
 /// <summary>
 /// Implementation of SignalR chat hub connection
 ///
 /// Production Features:
 /// - Exponential Backoff with Jitter for reconnection
-/// - Proper logging via ILogger
+/// - Circuit Breaker pattern (AWS/Azure SDK style)
+/// - Network Status API integration (online/offline detection)
 /// - Connection health monitoring
 /// - Automatic token refresh
 /// - Thread-safe operations
@@ -52,7 +20,7 @@ public class ChatHubConnection : IChatHubConnection, IAsyncDisposable
 {
     private HubConnection? _hubConnection;
     private readonly HttpClient _httpClient;
-    private readonly ILogger<ChatHubConnection> _logger;
+    private readonly IJSRuntime _jsRuntime;
     private readonly string _hubUrl;
     private string? _cachedToken;
     private Timer? _tokenRefreshTimer;
@@ -62,6 +30,20 @@ public class ChatHubConnection : IChatHubConnection, IAsyncDisposable
     private bool _isManuallyDisconnecting;
     private int _connectionAttempts;
 
+    // Circuit Breaker state
+    private CircuitState _circuitState = CircuitState.Closed;
+    private int _consecutiveFailures;
+    private DateTime _circuitOpenedAt;
+    private const int CircuitBreakerThreshold = 5;           // Open circuit after 5 consecutive failures
+    private const int CircuitBreakerResetTimeSeconds = 300;  // 5 minutes before trying again
+
+    // Network & Visibility state
+    private bool _isOnline = true;
+    private DateTime _lastActiveTime = DateTime.UtcNow;
+    private IJSObjectReference? _networkSubscription;
+    private IJSObjectReference? _visibilitySubscription;
+    private DotNetObjectReference<ChatHubConnection>? _dotNetRef;
+
     // Connection lifecycle events
     public event Func<Exception?, Task>? Reconnecting;
     public event Func<string?, Task>? Reconnected;
@@ -70,10 +52,10 @@ public class ChatHubConnection : IChatHubConnection, IAsyncDisposable
     public ChatHubConnection(
         HttpClient httpClient,
         IConfiguration configuration,
-        ILogger<ChatHubConnection> logger)
+        IJSRuntime jsRuntime)
     {
         _httpClient = httpClient;
-        _logger = logger;
+        _jsRuntime = jsRuntime;
         var apiBaseUrl = configuration["ApiBaseAddress"] ?? "http://localhost:7000";
         _hubUrl = $"{apiBaseUrl}/hubs/chat";
     }
@@ -87,14 +69,15 @@ public class ChatHubConnection : IChatHubConnection, IAsyncDisposable
 
         _isManuallyDisconnecting = false;
         _connectionAttempts = 0;
+        _consecutiveFailures = 0;
+        _circuitState = CircuitState.Closed;
+
+        // Subscribe to browser Network Status API (online/offline detection)
+        await SubscribeToBrowserEventsAsync();
 
         // Fetch access token for SignalR (WebSockets don't automatically include cookies)
         _cachedToken = await GetAccessTokenAsync();
 
-        if (string.IsNullOrEmpty(_cachedToken))
-        {
-            _logger.LogWarning("Failed to get access token for SignalR connection");
-        }
 
         _hubConnection = new HubConnectionBuilder()
             .WithUrl(_hubUrl, options =>
@@ -113,8 +96,8 @@ public class ChatHubConnection : IChatHubConnection, IAsyncDisposable
                     }
                 };
             })
-            // Server timeout configuration
-            .WithServerTimeout(TimeSpan.FromMinutes(2.5))
+            // Server timeout - should be > server's ClientTimeoutInterval (30s)
+            .WithServerTimeout(TimeSpan.FromSeconds(45))
             // Production-grade retry with Exponential Backoff + Jitter
             .WithAutomaticReconnect(new ExponentialBackoffRetryPolicy())
             .Build();
@@ -123,9 +106,6 @@ public class ChatHubConnection : IChatHubConnection, IAsyncDisposable
         _hubConnection.Reconnecting += async (error) =>
         {
             _connectionAttempts++;
-            _logger.LogInformation("SignalR reconnecting (attempt {Attempt}). Error: {Error}",
-                _connectionAttempts, error?.Message);
-
             await RefreshTokenAsync();
 
             if (Reconnecting != null)
@@ -135,7 +115,6 @@ public class ChatHubConnection : IChatHubConnection, IAsyncDisposable
         _hubConnection.Reconnected += async (connectionId) =>
         {
             _connectionAttempts = 0; // Reset on successful connection
-            _logger.LogInformation("SignalR reconnected successfully. ConnectionId: {ConnectionId}", connectionId);
 
             if (Reconnected != null)
                 await Reconnected(connectionId);
@@ -143,15 +122,12 @@ public class ChatHubConnection : IChatHubConnection, IAsyncDisposable
 
         _hubConnection.Closed += async (error) =>
         {
-            _logger.LogWarning("SignalR connection closed. Error: {Error}", error?.Message);
-
             if (Closed != null)
                 await Closed(error);
 
             // If connection was closed unexpectedly, try to restart
             if (!_isManuallyDisconnecting && _hubConnection != null)
             {
-                _logger.LogInformation("Attempting to restart connection after unexpected close...");
                 await TryRestartConnectionAsync();
             }
         };
@@ -159,12 +135,11 @@ public class ChatHubConnection : IChatHubConnection, IAsyncDisposable
         try
         {
             await _hubConnection.StartAsync();
-            _logger.LogInformation("SignalR connection started successfully");
+            ResetCircuitBreaker(); // Reset on successful connection
         }
-        catch (Exception ex)
+        catch
         {
-            _logger.LogError(ex, "Failed to start SignalR connection");
-            // Schedule restart with exponential backoff
+            RecordFailure(); // Circuit breaker failure tracking
             _ = ScheduleRestartAsync();
         }
 
@@ -175,28 +150,31 @@ public class ChatHubConnection : IChatHubConnection, IAsyncDisposable
             try
             {
                 await RefreshTokenAsync();
-                _logger.LogDebug("Token refreshed successfully");
             }
-            catch (Exception ex)
+            catch
             {
-                _logger.LogWarning(ex, "Token refresh failed");
+                // Token refresh failed, will retry next interval
             }
         }, null, TimeSpan.FromMinutes(12), TimeSpan.FromMinutes(12));
 
         // Connection health check - verify connection is alive every 2 minutes
+        // Chat app: Always runs regardless of tab visibility (messages must arrive 24/7)
         _connectionCheckTimer = new Timer(async _ =>
         {
             try
             {
+                // Skip if offline or circuit is open
+                if (!_isOnline || (_circuitState == CircuitState.Open && !ShouldAttemptReset()))
+                    return;
+
                 if (_hubConnection?.State == HubConnectionState.Disconnected)
                 {
-                    _logger.LogInformation("Connection health check: Disconnected, attempting restart...");
                     await TryRestartConnectionAsync();
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                _logger.LogWarning(ex, "Connection health check error");
+                // Health check error, will retry next interval
             }
         }, null, TimeSpan.FromMinutes(2), TimeSpan.FromMinutes(2));
     }
@@ -223,16 +201,26 @@ public class ChatHubConnection : IChatHubConnection, IAsyncDisposable
 
     /// <summary>
     /// Schedules a restart with exponential backoff
+    /// Respects Circuit Breaker and Network Status
     /// </summary>
     private async Task ScheduleRestartAsync()
     {
         if (_isManuallyDisconnecting) return;
 
+        // Circuit Breaker check - don't retry if circuit is open
+        if (_circuitState == CircuitState.Open)
+        {
+            if (!ShouldAttemptReset())
+                return;
+            _circuitState = CircuitState.HalfOpen;
+        }
+
+        // Network Status check - don't retry if offline
+        if (!_isOnline)
+            return; // OnNetworkStatusChanged will trigger restart when online
+
         _connectionAttempts++;
         var delay = CalculateBackoffDelay(_connectionAttempts);
-
-        _logger.LogInformation("Scheduling connection restart in {Delay}s (attempt {Attempt})",
-            delay.TotalSeconds, _connectionAttempts);
 
         await Task.Delay(delay);
         await TryRestartConnectionAsync();
@@ -259,35 +247,32 @@ public class ChatHubConnection : IChatHubConnection, IAsyncDisposable
     /// <summary>
     /// Attempts to restart the connection if it's disconnected.
     /// Thread-safe - prevents concurrent restart attempts.
+    /// Respects Circuit Breaker pattern.
     /// </summary>
     private async Task TryRestartConnectionAsync()
     {
-        if (_isManuallyDisconnecting) return;
-        if (_hubConnection == null) return;
+        if (_isManuallyDisconnecting || _hubConnection == null || !_isOnline)
+            return;
 
         // Use lock to prevent concurrent restart attempts
         if (!await _connectionLock.WaitAsync(0))
-        {
-            _logger.LogDebug("Restart already in progress, skipping");
             return;
-        }
 
         try
         {
             if (_hubConnection.State != HubConnectionState.Disconnected)
-            {
                 return;
-            }
 
             await RefreshTokenAsync();
             await _hubConnection.StartAsync();
-            _connectionAttempts = 0; // Reset on success
-            _logger.LogInformation("Connection restarted successfully");
+
+            // Success! Reset everything
+            _connectionAttempts = 0;
+            ResetCircuitBreaker();
         }
-        catch (Exception ex)
+        catch
         {
-            _logger.LogWarning(ex, "Failed to restart connection (attempt {Attempt})", _connectionAttempts);
-            // Schedule another attempt with backoff
+            RecordFailure();
             _ = ScheduleRestartAsync();
         }
         finally
@@ -314,6 +299,129 @@ public class ChatHubConnection : IChatHubConnection, IAsyncDisposable
 
     private record SignalRTokenResponse(string? Token);
 
+    #region Circuit Breaker Methods
+
+    /// <summary>
+    /// Records a connection failure for Circuit Breaker pattern
+    /// Opens circuit after threshold failures
+    /// </summary>
+    private void RecordFailure()
+    {
+        _consecutiveFailures++;
+
+        if (_consecutiveFailures >= CircuitBreakerThreshold && _circuitState != CircuitState.Open)
+        {
+            _circuitState = CircuitState.Open;
+            _circuitOpenedAt = DateTime.UtcNow;
+        }
+    }
+
+    /// <summary>
+    /// Resets circuit breaker on successful connection
+    /// </summary>
+    private void ResetCircuitBreaker()
+    {
+        _circuitState = CircuitState.Closed;
+        _consecutiveFailures = 0;
+    }
+
+    /// <summary>
+    /// Checks if enough time has passed to attempt circuit reset
+    /// </summary>
+    private bool ShouldAttemptReset()
+    {
+        if (_circuitState != CircuitState.Open) return true;
+
+        var elapsed = (DateTime.UtcNow - _circuitOpenedAt).TotalSeconds;
+        return elapsed >= CircuitBreakerResetTimeSeconds;
+    }
+
+    #endregion
+
+    #region Browser Events (Network Status & Page Visibility)
+
+    /// <summary>
+    /// Subscribes to browser Network Status and Page Visibility events
+    /// Page Visibility is critical for sleep/wake detection - timers don't run during sleep
+    /// </summary>
+    private async Task SubscribeToBrowserEventsAsync()
+    {
+        try
+        {
+            _dotNetRef = DotNetObjectReference.Create(this);
+
+            // Network Status API - detect online/offline
+            _networkSubscription = await _jsRuntime.InvokeAsync<IJSObjectReference>(
+                "chatAppUtils.subscribeToNetworkChange", _dotNetRef);
+
+            // Page Visibility API - detect sleep/wake (critical for reconnection)
+            _visibilitySubscription = await _jsRuntime.InvokeAsync<IJSObjectReference>(
+                "chatAppUtils.subscribeToVisibilityChange", _dotNetRef);
+
+            _isOnline = await _jsRuntime.InvokeAsync<bool>("chatAppUtils.isOnline");
+            _lastActiveTime = DateTime.UtcNow;
+        }
+        catch
+        {
+            _isOnline = true;
+        }
+    }
+
+    /// <summary>
+    /// Called by JavaScript when network status changes (online/offline)
+    /// </summary>
+    [JSInvokable]
+    public async Task OnNetworkStatusChanged(bool isOnline)
+    {
+        var wasOffline = !_isOnline;
+        _isOnline = isOnline;
+
+        // Came back online - try to reconnect immediately
+        if (isOnline && wasOffline && !_isManuallyDisconnecting)
+        {
+            if (_hubConnection?.State == HubConnectionState.Disconnected)
+            {
+                // Reset circuit breaker on network restore
+                _circuitState = CircuitState.HalfOpen;
+                _consecutiveFailures = 0;
+                await TryRestartConnectionAsync();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Called by JavaScript when page visibility changes (tab visible/hidden or system wake/sleep)
+    /// CRITICAL: This fires immediately when system wakes from sleep - timers don't
+    /// </summary>
+    [JSInvokable]
+    public async Task OnVisibilityChanged(bool isVisible)
+    {
+        if (!isVisible || _isManuallyDisconnecting)
+            return;
+
+        // Page became visible - check if we were asleep
+        var timeSinceLastActive = DateTime.UtcNow - _lastActiveTime;
+        _lastActiveTime = DateTime.UtcNow;
+
+        // If more than 30 seconds passed, we likely woke from sleep
+        // Immediately check connection and refresh token
+        if (timeSinceLastActive.TotalSeconds > 30)
+        {
+            // Refresh token first (may have expired during sleep)
+            await RefreshTokenAsync();
+
+            // Check connection state and reconnect if needed
+            if (_hubConnection?.State == HubConnectionState.Disconnected && _isOnline)
+            {
+                _circuitState = CircuitState.HalfOpen;
+                _consecutiveFailures = 0;
+                await TryRestartConnectionAsync();
+            }
+        }
+    }
+
+    #endregion
+
     public async Task StopAsync()
     {
         _isManuallyDisconnecting = true;
@@ -332,7 +440,6 @@ public class ChatHubConnection : IChatHubConnection, IAsyncDisposable
             _cachedToken = null;
         }
 
-        Console.WriteLine("[SignalR] Connection stopped manually");
     }
 
     public Task<bool> IsConnectedAsync()
@@ -437,12 +544,35 @@ public class ChatHubConnection : IChatHubConnection, IAsyncDisposable
         _tokenRefreshTimer?.Dispose();
         _connectionCheckTimer?.Dispose();
 
+        // Dispose JavaScript subscriptions
+        try
+        {
+            if (_networkSubscription != null)
+            {
+                await _networkSubscription.InvokeVoidAsync("dispose");
+                await _networkSubscription.DisposeAsync();
+            }
+            if (_visibilitySubscription != null)
+            {
+                await _visibilitySubscription.InvokeVoidAsync("dispose");
+                await _visibilitySubscription.DisposeAsync();
+            }
+        }
+        catch
+        {
+            // Ignore disposal errors
+        }
+
+        _dotNetRef?.Dispose();
+
         if (_hubConnection != null)
         {
             await _hubConnection.DisposeAsync();
         }
 
-        // Dispose synchronization primitive
+        // Dispose synchronization primitives
         _tokenLock.Dispose();
+        _connectionLock.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

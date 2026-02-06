@@ -361,6 +361,35 @@ window.chatAppUtils = {
         };
     },
 
+    // Network Status API - Check if browser is online
+    // USED BY: WhatsApp Web, Slack, Discord for connection management
+    isOnline: () => {
+        return navigator.onLine;
+    },
+
+    // Subscribe to network status changes (online/offline)
+    subscribeToNetworkChange: (dotNetHelper) => {
+        const onlineHandler = () => {
+            dotNetHelper.invokeMethodAsync('OnNetworkStatusChanged', true)
+                .catch(() => { });
+        };
+
+        const offlineHandler = () => {
+            dotNetHelper.invokeMethodAsync('OnNetworkStatusChanged', false)
+                .catch(() => { });
+        };
+
+        window.addEventListener('online', onlineHandler);
+        window.addEventListener('offline', offlineHandler);
+
+        return {
+            dispose: () => {
+                window.removeEventListener('online', onlineHandler);
+                window.removeEventListener('offline', offlineHandler);
+            }
+        };
+    },
+
     // Get scroll position (for infinite scroll detection)
     getScrollTop: (element) => {
         if (!element) return 0;

@@ -128,11 +128,13 @@ builder.Services.AddSingleton<IChannelMemberCache, ChannelMemberCache>();
 builder.Services.AddSignalR(options =>
 {
     options.EnableDetailedErrors = builder.Environment.IsDevelopment();
-    // Keep-alive ping interval (server sends ping to client)
-    options.KeepAliveInterval = TimeSpan.FromSeconds(30);
-    // Client timeout (how long before server considers client disconnected)
-    // Set to 2 minutes to handle idle connections gracefully
-    options.ClientTimeoutInterval = TimeSpan.FromMinutes(2);
+    // Keep-alive ping interval - server sends ping to client every 15 seconds
+    // Reduced from 30s for faster dead connection detection
+    options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+    // Client timeout - if no response within 30 seconds, consider disconnected
+    // Must be at least 2x KeepAliveInterval (SignalR requirement)
+    // Reduced from 2 minutes for faster recovery after sleep/lock
+    options.ClientTimeoutInterval = TimeSpan.FromSeconds(30);
     options.HandshakeTimeout = TimeSpan.FromSeconds(15);
     options.MaximumReceiveMessageSize = 1024 * 1024; // 1MB
 });
