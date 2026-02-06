@@ -262,12 +262,29 @@
         {
             try
             {
+                Console.WriteLine("[MainLayout] Initializing SignalR connection...");
                 await SignalRService.InitializeAsync();
                 signalRInitialized = true;
+                Console.WriteLine("[MainLayout] SignalR connection initialized successfully");
             }
-            catch
+            catch (Exception ex)
             {
-                // Silently handle SignalR initialization errors
+                Console.WriteLine($"[MainLayout] SignalR initialization error: {ex.Message}");
+                // Don't silently fail - retry after a delay
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(5000);
+                    try
+                    {
+                        await SignalRService.InitializeAsync();
+                        signalRInitialized = true;
+                        Console.WriteLine("[MainLayout] SignalR retry successful");
+                    }
+                    catch (Exception retryEx)
+                    {
+                        Console.WriteLine($"[MainLayout] SignalR retry failed: {retryEx.Message}");
+                    }
+                });
             }
         }
 
