@@ -78,12 +78,18 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
 
             var totalCount = await baseQuery.CountAsync(cancellationToken);
 
-            // Paginated main query with all details
+            // Paginated main query with all details (including employee position)
             var conversationsQuery = await (from conv in baseQuery
                                         join member in _context.DirectConversationMembers
                                             on new { conv.Id, UserId = userId } equals new { Id = member.ConversationId, member.UserId }
+                                        // Calculate otherUserId first
                                         let otherUserId = conv.User1Id == userId ? conv.User2Id : conv.User1Id
-                                        join user in _context.Set<UserReadModel>() on otherUserId equals user.Id
+                                        // Join with OTHER user's data (not current user)
+                                        from user in _context.Set<UserReadModel>().Where(u => u.Id == otherUserId)
+                                        // Left join to employees table for OTHER user's position info
+                                        from emp in _context.Set<EmployeeReadModel>().Where(e => e.UserId == otherUserId).DefaultIfEmpty()
+                                        // Left join to positions table for position name
+                                        from pos in _context.Set<PositionReadModel>().Where(p => emp != null && p.Id == emp.PositionId).DefaultIfEmpty()
                                         let lastMessageInfo = (from m in _context.DirectMessages
                                            where m.ConversationId == conv.Id
                                            orderby m.CreatedAtUtc descending
@@ -99,8 +105,11 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                                             conv.IsNotes,
                                             OtherUserId = otherUserId,
                                             OtherUserEmail = user.Email,
-                                            user.FullName,
+                                            OtherUserFullName = user.FirstName + " " + user.LastName,
                                             user.AvatarUrl,
+                                            user.Role,
+                                            user.LastVisit,
+                                            PositionName = pos != null ? pos.Name : null,
                                             LastMessage = lastMessageInfo == null ? null :
                                                 lastMessageInfo.IsDeleted ? "This message was deleted" :
                                                 lastMessageInfo.FileId != null ?
@@ -168,8 +177,14 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                     status = c.LastMessageIsRead ? "Read" : "Sent";
                 }
 
+                // Role enum to string: 0 = User, 1 = Administrator
+                var roleName = c.Role == 1 ? "Administrator" : "User";
+
                 return new DirectConversationDto(
-                    c.Id, c.OtherUserId, c.OtherUserEmail, c.FullName, c.AvatarUrl,
+                    c.Id, c.OtherUserId, c.OtherUserEmail, c.OtherUserFullName, c.AvatarUrl,
+                    c.PositionName, // OtherUserPosition - from employees+positions join
+                    roleName, // OtherUserRole
+                    c.LastVisit, // OtherUserLastSeenAtUtc
                     c.LastMessage, c.LastMessageAtUtc,
                     unreadCountDictionary.TryGetValue(c.Id, out int unreadCount) ? unreadCount : 0,
                     hasUnreadMentionsDictionary.ContainsKey(c.Id) && hasUnreadMentionsDictionary[c.Id],

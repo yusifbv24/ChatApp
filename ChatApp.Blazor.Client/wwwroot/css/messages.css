@@ -1369,6 +1369,68 @@
     gap: 6px;
 }
 
+/* Last Seen & Online Badge in Header */
+.header-online-badge {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--success-color, #22c55e);
+    background: rgba(34, 197, 94, 0.1);
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+.header-lastseen {
+    font-size: 11px;
+    color: var(--gray-500);
+    font-weight: 400;
+}
+
+/* Channel Name Editable */
+.channel-name-editable {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.channel-name-editable .channel-name-edit-btn {
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s, visibility 0.2s;
+    background: transparent;
+    border: none;
+    padding: 4px;
+    border-radius: var(--radius-sm);
+    color: var(--gray-500);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.channel-name-editable.admin:hover .channel-name-edit-btn {
+    opacity: 1;
+    visibility: visible;
+}
+
+.channel-name-edit-btn:hover {
+    background: var(--gray-100);
+    color: var(--primary-color);
+}
+
+/* Channel Name Input */
+.channel-name-input {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--gray-900);
+    background: var(--gray-50);
+    border: 1px solid var(--primary-color);
+    border-radius: var(--radius-sm);
+    padding: 4px 8px;
+    outline: none;
+    min-width: 150px;
+    max-width: 300px;
+}
+
 .header-pin-icon {
     color: var(--gray-500);
     transform: rotate(45deg);

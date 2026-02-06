@@ -127,6 +127,9 @@ public partial class Messages
         OtherUserEmail: item.OtherUserEmail ?? string.Empty,
         OtherUserFullName: item.Name,
         OtherUserAvatarUrl: item.AvatarUrl,
+        OtherUserPosition: item.OtherUserPosition,
+        OtherUserRole: item.OtherUserRole,
+        OtherUserLastSeenAtUtc: item.OtherUserLastSeenAtUtc,
         LastMessageContent: item.LastMessage,
         LastMessageAtUtc: item.LastMessageAtUtc ?? DateTime.MinValue,
         UnreadCount: item.UnreadCount,
@@ -426,9 +429,25 @@ public partial class Messages
             isDirectMessage = true;
 
             recipientName = conversation.IsNotes ? "Notes" : conversation.OtherUserFullName;
-            recipientAvatarUrl = conversation.OtherUserAvatarUrl;
             recipientUserId = conversation.OtherUserId;
             isNotesConversation = conversation.IsNotes;
+
+            // Notes conversation-da recipient məlumatları lazım deyil - null edək
+            // Bu Edge browser-də state caching probleminin qarşısını alır
+            if (conversation.IsNotes)
+            {
+                recipientAvatarUrl = null;
+                recipientPosition = null;
+                recipientRole = null;
+                recipientLastSeenAt = null;
+            }
+            else
+            {
+                recipientAvatarUrl = conversation.OtherUserAvatarUrl;
+                recipientPosition = conversation.OtherUserPosition;
+                recipientRole = conversation.OtherUserRole;
+                recipientLastSeenAt = conversation.OtherUserLastSeenAtUtc;
+            }
 
             // Conversation preferences
             selectedConversationIsPinned = conversation.IsPinned;
@@ -1609,6 +1628,49 @@ public partial class Messages
         catch (Exception ex)
         {
             ShowError($"Failed to join channel: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Channel adını dəyişdirir.
+    /// Admin tərəfindən header-dan edit edilir.
+    /// </summary>
+    private async Task HandleChannelNameChanged(string newName)
+    {
+        if (!selectedChannelId.HasValue || string.IsNullOrWhiteSpace(newName)) return;
+
+        try
+        {
+            var result = await ChannelService.UpdateChannelAsync(selectedChannelId.Value, new UpdateChannelRequest
+            {
+                Name = newName.Trim()
+            });
+
+            if (result.IsSuccess)
+            {
+                // Local state-i yenilə
+                selectedChannelName = newName.Trim();
+
+                // Channel list-də yenilə
+                var channelIndex = channelConversations.FindIndex(c => c.Id == selectedChannelId.Value);
+                if (channelIndex >= 0)
+                {
+                    var updatedChannel = channelConversations[channelIndex] with { Name = newName.Trim() };
+                    var newList = new List<ChannelDto>(channelConversations);
+                    newList[channelIndex] = updatedChannel;
+                    channelConversations = newList;
+                }
+
+                StateHasChanged();
+            }
+            else
+            {
+                ShowError(result.Error ?? "Failed to update channel name");
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Failed to update channel name: {ex.Message}");
         }
     }
 

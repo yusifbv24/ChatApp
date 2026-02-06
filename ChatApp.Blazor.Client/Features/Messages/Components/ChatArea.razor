@@ -42,6 +42,17 @@
                     <div class="header-details">
                         <div class="header-name-wrapper">
                             <h3 class="header-name @(IsNotesConversation ? "notes-name" : "")">@RecipientName</h3>
+                            @if (!IsNotesConversation)
+                            {
+                                @if (IsRecipientOnline)
+                                {
+                                    <span class="header-online-badge">online</span>
+                                }
+                                else if (!string.IsNullOrEmpty(FormatLastSeen()))
+                                {
+                                    <span class="header-lastseen">@FormatLastSeen()</span>
+                                }
+                            }
                             @if (IsMuted)
                             {
                                 <MudIcon Icon="@Icons.Material.Outlined.VolumeOff" Class="header-mute-icon" Style="font-size: 14px;" />
@@ -55,7 +66,7 @@
                             }
                             else
                             {
-                                <span class="header-status">@(IsRecipientOnline ? "Online" : "Offline")</span>
+                                <span class="header-status">@GetRecipientStatus()</span>
                             }
                         }
                     </div>
@@ -74,7 +85,28 @@
                     </div>
                     <div class="header-details">
                         <div class="header-name-wrapper">
-                            <h3 class="header-name">@ChannelName</h3>
+                            @if (isEditingChannelName)
+                            {
+                                <input type="text"
+                                       class="channel-name-input"
+                                       @bind="editingChannelName"
+                                       @bind:event="oninput"
+                                       @onkeydown="HandleChannelNameKeyDown"
+                                       @onblur="SaveChannelName"
+                                       autofocus />
+                            }
+                            else
+                            {
+                                <div class="channel-name-editable @(IsChannelAdmin ? "admin" : "")">
+                                    <h3 class="header-name">@ChannelName</h3>
+                                    @if (IsChannelAdmin)
+                                    {
+                                        <button class="channel-name-edit-btn" @onclick="StartEditChannelName" @onclick:stopPropagation="true" title="Edit channel name">
+                                            <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" />
+                                        </button>
+                                    }
+                                </div>
+                            }
                             @if (IsMuted)
                             {
                                 <MudIcon Icon="@Icons.Material.Outlined.VolumeOff" Class="header-mute-icon" Style="font-size: 14px;" />

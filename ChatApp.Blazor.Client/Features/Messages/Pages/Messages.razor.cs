@@ -177,6 +177,21 @@ public partial class Messages : IAsyncDisposable
     private Guid recipientUserId;
 
     /// <summary>
+    /// Söhbət edilən şəxsin pozisiyası (vəzifəsi).
+    /// </summary>
+    private string? recipientPosition;
+
+    /// <summary>
+    /// Söhbət edilən şəxsin rolu.
+    /// </summary>
+    private string? recipientRole;
+
+    /// <summary>
+    /// Söhbət edilən şəxsin son aktiv olma vaxtı.
+    /// </summary>
+    private DateTime? recipientLastSeenAt;
+
+    /// <summary>
     /// Conversation Notes olduqda true (self-conversation).
     /// </summary>
     private bool isNotesConversation = false;

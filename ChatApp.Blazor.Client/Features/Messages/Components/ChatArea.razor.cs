@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 using ChatApp.Blazor.Client.Models.Messages;
 using ChatApp.Blazor.Client.Models.Auth;
@@ -85,6 +86,21 @@ public partial class ChatArea : IAsyncDisposable
     [Parameter] public bool IsRecipientOnline { get; set; }
 
     /// <summary>
+    /// Qarşı tərəfin pozisiyası (vəzifəsi) - Online əvəzinə göstərilir.
+    /// </summary>
+    [Parameter] public string? RecipientPosition { get; set; }
+
+    /// <summary>
+    /// Qarşı tərəfin rolu - pozisiya yoxdursa göstərilir.
+    /// </summary>
+    [Parameter] public string? RecipientRole { get; set; }
+
+    /// <summary>
+    /// Qarşı tərəfin son aktiv olma vaxtı - "Last seen yesterday at 17:06" formatında.
+    /// </summary>
+    [Parameter] public DateTime? RecipientLastSeenAt { get; set; }
+
+    /// <summary>
     /// Notes conversation olduqda true (self-conversation).
     /// Online status göstərilməməlidir.
     /// </summary>
@@ -160,6 +176,12 @@ public partial class ChatArea : IAsyncDisposable
     /// Public channel-da üzv olmayanda göstərilir.
     /// </summary>
     [Parameter] public EventCallback OnJoinChannel { get; set; }
+
+    /// <summary>
+    /// Channel adını dəyişmə callback-i.
+    /// Admin olduqda header-da edit icon görünür.
+    /// </summary>
+    [Parameter] public EventCallback<string> OnChannelNameChanged { get; set; }
 
     #endregion
 
@@ -738,6 +760,20 @@ public partial class ChatArea : IAsyncDisposable
     /// Əvvəlki channel ID - channel dəyişdikdə pin index reset üçün.
     /// </summary>
     private Guid? _previousChannelId;
+
+    #endregion
+
+    #region Private Fields - Channel Name Edit
+
+    /// <summary>
+    /// Channel adı edit modunda olub-olmadığı.
+    /// </summary>
+    private bool isEditingChannelName = false;
+
+    /// <summary>
+    /// Edit olunan channel adı.
+    /// </summary>
+    private string editingChannelName = string.Empty;
 
     #endregion
 
@@ -1769,6 +1805,160 @@ public partial class ChatArea : IAsyncDisposable
             return string.IsNullOrWhiteSpace(message.Content) ? "[File]" : $"[File] {message.Content}";
         }
         return message.Content;
+    }
+
+    #endregion
+
+    #region Channel Name Edit
+
+    /// <summary>
+    /// Channel adını edit etməyə başlayır.
+    /// </summary>
+    private void StartEditChannelName()
+    {
+        isEditingChannelName = true;
+        editingChannelName = ChannelName;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Channel adını saxlayır.
+    /// Validasiya: boş və ya yalnız boşluq olan adlar qəbul edilmir.
+    /// </summary>
+    private async Task SaveChannelName()
+    {
+        var trimmedName = editingChannelName?.Trim() ?? string.Empty;
+
+        // Boş və ya yalnız boşluq olan adlar qəbul edilmir
+        if (string.IsNullOrWhiteSpace(trimmedName))
+        {
+            CancelEditChannelName();
+            return;
+        }
+
+        // Ad dəyişməyibsə heç nə etmə
+        if (trimmedName == ChannelName)
+        {
+            CancelEditChannelName();
+            return;
+        }
+
+        await OnChannelNameChanged.InvokeAsync(trimmedName);
+        isEditingChannelName = false;
+        editingChannelName = string.Empty;
+    }
+
+    /// <summary>
+    /// Channel adı edit-i ləğv edir.
+    /// </summary>
+    private void CancelEditChannelName()
+    {
+        isEditingChannelName = false;
+        editingChannelName = string.Empty;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Channel name input-da Enter basıldıqda saxlayır, Escape basıldıqda ləğv edir.
+    /// </summary>
+    private async Task HandleChannelNameKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SaveChannelName();
+        }
+        else if (e.Key == "Escape")
+        {
+            CancelEditChannelName();
+        }
+    }
+
+    #endregion
+
+    #region Helper Methods - Last Seen Formatting
+
+    /// <summary>
+    /// Son aktiv olma vaxtını formatlanmış string-ə çevirir.
+    /// Format: "last seen today at 14:30", "last seen yesterday at 17:06", "last seen 3 hours ago"
+    /// </summary>
+    private string FormatLastSeen()
+    {
+        if (!RecipientLastSeenAt.HasValue)
+            return string.Empty;
+
+        var lastSeen = RecipientLastSeenAt.Value;
+
+        // Backend UTC olaraq göndərir, Kind unspecified ola bilər - UTC kimi qəbul et
+        if (lastSeen.Kind == DateTimeKind.Unspecified)
+        {
+            lastSeen = DateTime.SpecifyKind(lastSeen, DateTimeKind.Utc);
+        }
+
+        var now = DateTime.UtcNow;
+        var diff = now - lastSeen;
+
+        // Mənfi fərq (gələcək tarix) - boş qaytar
+        if (diff.TotalSeconds < 0)
+            return string.Empty;
+
+        // 1 dəqiqədən az - "last seen just now" göstər
+        // NOT: İstifadəçi online olduqda bu metod çağırılmır (IsRecipientOnline = true)
+        if (diff.TotalMinutes < 1)
+            return "last seen just now";
+
+        // 1 saat içində
+        if (diff.TotalHours < 1)
+        {
+            var minutes = (int)diff.TotalMinutes;
+            return minutes == 1 ? "last seen 1 minute ago" : $"last seen {minutes} minutes ago";
+        }
+
+        // Local time-a çevir (display üçün)
+        var localLastSeen = lastSeen.ToLocalTime();
+        var localNow = now.ToLocalTime();
+
+        // Bu gün
+        if (localLastSeen.Date == localNow.Date)
+        {
+            return $"last seen today at {localLastSeen:HH:mm}";
+        }
+
+        // Dünən
+        if (localLastSeen.Date == localNow.Date.AddDays(-1))
+        {
+            return $"last seen yesterday at {localLastSeen:HH:mm}";
+        }
+
+        // 7 gün içində
+        if (diff.TotalDays < 7)
+        {
+            var days = (int)diff.TotalDays;
+            return days == 1 ? "last seen 1 day ago" : $"last seen {days} days ago";
+        }
+
+        // 30 gün içində
+        if (diff.TotalDays < 30)
+        {
+            var weeks = (int)(diff.TotalDays / 7);
+            return weeks == 1 ? "last seen 1 week ago" : $"last seen {weeks} weeks ago";
+        }
+
+        // Daha köhnə - tarix göstər
+        return $"last seen {localLastSeen:MMM d, yyyy}";
+    }
+
+    /// <summary>
+    /// Recipient üçün status string-ini qaytarır (position və ya role).
+    /// </summary>
+    private string GetRecipientStatus()
+    {
+        if (!string.IsNullOrWhiteSpace(RecipientPosition))
+            return RecipientPosition;
+
+        if (!string.IsNullOrWhiteSpace(RecipientRole))
+            return RecipientRole;
+
+        return string.Empty;
     }
 
     #endregion

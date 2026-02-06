@@ -43,6 +43,9 @@ public record UnifiedChatItemDto(
     // DM-specific
     Guid? OtherUserId,
     string? OtherUserEmail,
+    string? OtherUserPosition,
+    string? OtherUserRole,
+    DateTime? OtherUserLastSeenAtUtc,
 
     // Channel-specific
     int? MemberCount,

@@ -41,9 +41,37 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence
                 entity.Property(e => e.LastName).HasColumnName("last_name");
                 entity.Property(e => e.Email).HasColumnName("email");
                 entity.Property(e => e.AvatarUrl).HasColumnName("avatar_url");
+                entity.Property(e => e.Role).HasColumnName("role");
+                entity.Property(e => e.LastVisit).HasColumnName("last_visit");
 
-                // Ignore computed property
+                // Ignore computed properties
                 entity.Ignore(e => e.FullName);
+                entity.Ignore(e => e.RoleName);
+
+                // Mark as query-only (no tracking, no inserts/updates)
+                entity.ToTable(tb => tb.ExcludeFromMigrations());
+            });
+
+            // Map Identity module's employees table (read-only for queries)
+            modelBuilder.Entity<EmployeeReadModel>(entity =>
+            {
+                entity.ToTable("employees");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("id");
+                entity.Property(e => e.UserId).HasColumnName("user_id");
+                entity.Property(e => e.PositionId).HasColumnName("position_id");
+
+                // Mark as query-only (no tracking, no inserts/updates)
+                entity.ToTable(tb => tb.ExcludeFromMigrations());
+            });
+
+            // Map Identity module's positions table (read-only for queries)
+            modelBuilder.Entity<PositionReadModel>(entity =>
+            {
+                entity.ToTable("positions");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("id");
+                entity.Property(e => e.Name).HasColumnName("name");
 
                 // Mark as query-only (no tracking, no inserts/updates)
                 entity.ToTable(tb => tb.ExcludeFromMigrations());

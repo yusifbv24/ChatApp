@@ -9,8 +9,8 @@ public static class AvatarHelper
     /// <summary>
     /// 10 rəng paleti - hər istifadəçi/channel üçün unikal rəng.
     /// </summary>
-    private static readonly string[] AvatarColors = new[]
-    {
+    private static readonly string[] AvatarColors =
+    [
         "#E63946", // Dark Red
         "#2A9D8F", // Dark Teal
         "#2891B5", // Dark Blue
@@ -21,7 +21,7 @@ public static class AvatarHelper
         "#5A9FCC", // Dark Sky Blue
         "#E89570", // Dark Peach
         "#7BC4C8"  // Dark Cyan
-    };
+    ];
 
     /// <summary>
     /// Guid-dən avatar background rəngi seçir.
