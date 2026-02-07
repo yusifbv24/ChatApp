@@ -91,6 +91,11 @@ public partial class Messages
                 // RACE CONDITION FIX: finally block-da CancelReply() çağrılır və field null olur
                 // Task.Run closure field-ə reference saxlayır, ona görə əvvəlcədən local copy lazımdır
                 var capturedReplyToMessageId = replyToMessageId;
+                var capturedReplyToContent = replyToContent;
+                var capturedReplyToSenderName = replyToSenderName;
+                var capturedReplyToFileId = replyToFileId;
+                var capturedReplyToFileName = replyToFileName;
+                var capturedReplyToFileContentType = replyToFileContentType;
 
                 // Mentions-ı include et
                 var optimisticMentions = mentionedUsers?.Select(m => new MessageMentionDto(m.Value, m.Key)).ToList();
@@ -109,6 +114,8 @@ public partial class Messages
                     null,                                           // FileName
                     null,                                           // FileContentType
                     null,                                           // FileSizeInBytes
+                    null,                                           // FileUrl
+                    null,                                           // ThumbnailUrl
                     false,                                          // IsEdited
                     false,                                          // IsDeleted
                     false,                                          // IsRead
@@ -118,11 +125,13 @@ public partial class Messages
                     null,                                           // EditedAtUtc
                     null,                                           // PinnedAtUtc
                     capturedReplyToMessageId,
-                    replyToContent,
-                    replyToSenderName,
-                    null,                                           // ReplyToFileId
-                    null,                                           // ReplyToFileName
-                    null,                                           // ReplyToFileContentType
+                    capturedReplyToContent,
+                    capturedReplyToSenderName,
+                    capturedReplyToFileId,                          // ReplyToFileId
+                    capturedReplyToFileName,                        // ReplyToFileName
+                    capturedReplyToFileContentType,                 // ReplyToFileContentType
+                    null,                                           // ReplyToFileUrl
+                    null,                                           // ReplyToThumbnailUrl
                     false,                                          // IsForwarded
                     null,                                           // Reactions
                     optimisticMentions,                             // Mentions
@@ -177,6 +186,11 @@ public partial class Messages
 
                 // RACE CONDITION FIX: finally block-da CancelReply() çağrılır və field null olur
                 var capturedReplyToMessageId = replyToMessageId;
+                var capturedReplyToContent = replyToContent;
+                var capturedReplyToSenderName = replyToSenderName;
+                var capturedReplyToFileId = replyToFileId;
+                var capturedReplyToFileName = replyToFileName;
+                var capturedReplyToFileContentType = replyToFileContentType;
 
                 // TotalMemberCount = üzvlər - sender
                 var totalMembers = Math.Max(0, selectedChannelMemberCount - 1);
@@ -198,6 +212,8 @@ public partial class Messages
                     null,                                       // FileName
                     null,                                       // FileContentType
                     null,                                       // FileSizeInBytes
+                    null,                                       // FileUrl
+                    null,                                       // ThumbnailUrl
                     false,                                      // IsEdited
                     false,                                      // IsDeleted
                     false,                                      // IsPinned
@@ -206,11 +222,13 @@ public partial class Messages
                     null,                                       // EditedAtUtc
                     null,                                       // PinnedAtUtc
                     capturedReplyToMessageId,
-                    replyToContent,
-                    replyToSenderName,
-                    null,                                       // ReplyToFileId
-                    null,                                       // ReplyToFileName
-                    null,                                       // ReplyToFileContentType
+                    capturedReplyToContent,
+                    capturedReplyToSenderName,
+                    capturedReplyToFileId,                      // ReplyToFileId
+                    capturedReplyToFileName,                    // ReplyToFileName
+                    capturedReplyToFileContentType,             // ReplyToFileContentType
+                    null,                                       // ReplyToFileUrl
+                    null,                                       // ReplyToThumbnailUrl
                     false,                                      // IsForwarded
                     0,                                          // ReadByCount
                     totalMembers,                               // TotalMemberCount

@@ -101,6 +101,8 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMessages
                     FileName: null,
                     FileContentType: null,
                     FileSizeInBytes: null,
+                    FileUrl: null,
+                    ThumbnailUrl: null,
                     IsEdited: message.IsEdited,
                     IsDeleted: true, // Mark as deleted
                     IsPinned: message.IsPinned,
@@ -114,6 +116,8 @@ namespace ChatApp.Modules.Channels.Application.Commands.ChannelMessages
                     ReplyToFileId: null,
                     ReplyToFileName: null,
                     ReplyToFileContentType: null,
+                    ReplyToFileUrl: null,
+                    ReplyToThumbnailUrl: null,
                     IsForwarded: message.IsForwarded
                 );
 

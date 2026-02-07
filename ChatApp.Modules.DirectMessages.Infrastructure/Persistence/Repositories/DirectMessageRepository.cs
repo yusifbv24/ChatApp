@@ -4,6 +4,7 @@ using ChatApp.Modules.DirectMessages.Application.Interfaces;
 using ChatApp.Modules.DirectMessages.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using ChatApp.Shared.Kernel;
+using ChatApp.Shared.Kernel.Common;
 
 namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
 {
@@ -136,8 +137,8 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 result.FileName,
                 result.FileContentType,
                 result.FileSizeInBytes,
-                ConvertToFileUrl(result.FileStoragePath),      // FileUrl
-                ConvertToThumbnailUrl(result.FileThumbnailPath), // ThumbnailUrl
+                FileUrlHelper.ToUrl(result.FileStoragePath),      // FileUrl
+                FileUrlHelper.ToUrl(result.FileThumbnailPath), // ThumbnailUrl
                 result.IsEdited,
                 result.IsDeleted,
                 result.IsRead,
@@ -152,8 +153,8 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 result.ReplyToFileId,
                 result.ReplyToFileName,
                 result.ReplyToFileContentType,
-                ConvertToFileUrl(result.ReplyToFileStoragePath),      // ReplyToFileUrl
-                ConvertToThumbnailUrl(result.ReplyToFileThumbnailPath), // ReplyToThumbnailUrl
+                FileUrlHelper.ToUrl(result.ReplyToFileStoragePath),      // ReplyToFileUrl
+                FileUrlHelper.ToUrl(result.ReplyToFileThumbnailPath), // ReplyToThumbnailUrl
                 result.IsForwarded,
                 reactions.Count > 0 ? reactions : null,
                 mentions.Count > 0 ? mentions : null,
@@ -277,8 +278,8 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 r.FileName,
                 r.FileContentType,
                 r.FileSizeInBytes,
-                ConvertToFileUrl(r.FileStoragePath),      // FileUrl
-                ConvertToThumbnailUrl(r.FileThumbnailPath), // ThumbnailUrl
+                FileUrlHelper.ToUrl(r.FileStoragePath),      // FileUrl
+                FileUrlHelper.ToUrl(r.FileThumbnailPath), // ThumbnailUrl
                 r.IsEdited,
                 r.IsDeleted,
                 r.IsRead,
@@ -293,8 +294,8 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 r.ReplyToFileId,
                 r.ReplyToFileName,
                 r.ReplyToFileContentType,
-                ConvertToFileUrl(r.ReplyToFileStoragePath),      // ReplyToFileUrl
-                ConvertToThumbnailUrl(r.ReplyToFileThumbnailPath), // ReplyToThumbnailUrl
+                FileUrlHelper.ToUrl(r.ReplyToFileStoragePath),      // ReplyToFileUrl
+                FileUrlHelper.ToUrl(r.ReplyToFileThumbnailPath), // ReplyToThumbnailUrl
                 r.IsForwarded,
                 reactions.TryGetValue(r.Id, out List<DirectMessageReactionDto>? value) ? value : null,
                 mentions.TryGetValue(r.Id, out List<MessageMentionDto>? value1) ? value1 : null,
@@ -438,8 +439,8 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 r.FileName,
                 r.FileContentType,
                 r.FileSizeInBytes,
-                ConvertToFileUrl(r.FileStoragePath),      // FileUrl
-                ConvertToThumbnailUrl(r.FileThumbnailPath), // ThumbnailUrl
+                FileUrlHelper.ToUrl(r.FileStoragePath),      // FileUrl
+                FileUrlHelper.ToUrl(r.FileThumbnailPath), // ThumbnailUrl
                 r.IsEdited,
                 r.IsDeleted,
                 r.IsRead,
@@ -454,8 +455,8 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 r.ReplyToFileId,
                 r.ReplyToFileName,
                 r.ReplyToFileContentType,
-                ConvertToFileUrl(r.ReplyToFileStoragePath),      // ReplyToFileUrl
-                ConvertToThumbnailUrl(r.ReplyToFileThumbnailPath), // ReplyToThumbnailUrl
+                FileUrlHelper.ToUrl(r.ReplyToFileStoragePath),      // ReplyToFileUrl
+                FileUrlHelper.ToUrl(r.ReplyToFileThumbnailPath), // ReplyToThumbnailUrl
                 r.IsForwarded,
                 reactions.TryGetValue(r.Id, out List<DirectMessageReactionDto>? value) ? value : null,
                 mentions.TryGetValue(r.Id, out List<MessageMentionDto>? value1) ? value1 : null,
@@ -574,8 +575,8 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 r.FileName,
                 r.FileContentType,
                 r.FileSizeInBytes,
-                ConvertToFileUrl(r.FileStoragePath),      // FileUrl
-                ConvertToThumbnailUrl(r.FileThumbnailPath), // ThumbnailUrl
+                FileUrlHelper.ToUrl(r.FileStoragePath),      // FileUrl
+                FileUrlHelper.ToUrl(r.FileThumbnailPath), // ThumbnailUrl
                 r.IsEdited,
                 r.IsDeleted,
                 r.IsRead,
@@ -590,8 +591,8 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 r.ReplyToFileId,
                 r.ReplyToFileName,
                 r.ReplyToFileContentType,
-                ConvertToFileUrl(r.ReplyToFileStoragePath),      // ReplyToFileUrl
-                ConvertToThumbnailUrl(r.ReplyToFileThumbnailPath), // ReplyToThumbnailUrl
+                FileUrlHelper.ToUrl(r.ReplyToFileStoragePath),      // ReplyToFileUrl
+                FileUrlHelper.ToUrl(r.ReplyToFileThumbnailPath), // ReplyToThumbnailUrl
                 r.IsForwarded,
                 reactions.TryGetValue(r.Id, out List<DirectMessageReactionDto>? value) ? value : null,
                 mentions.TryGetValue(r.Id, out List<MessageMentionDto>? value1) ? value1 : null,
@@ -710,8 +711,8 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 r.FileName,
                 r.FileContentType,
                 r.FileSizeInBytes,
-                ConvertToFileUrl(r.FileStoragePath),      // FileUrl
-                ConvertToThumbnailUrl(r.FileThumbnailPath), // ThumbnailUrl
+                FileUrlHelper.ToUrl(r.FileStoragePath),      // FileUrl
+                FileUrlHelper.ToUrl(r.FileThumbnailPath), // ThumbnailUrl
                 r.IsEdited,
                 r.IsDeleted,
                 r.IsRead,
@@ -726,11 +727,11 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 r.ReplyToFileId,
                 r.ReplyToFileName,
                 r.ReplyToFileContentType,
-                ConvertToFileUrl(r.ReplyToFileStoragePath),      // ReplyToFileUrl
-                ConvertToThumbnailUrl(r.ReplyToFileThumbnailPath), // ReplyToThumbnailUrl
+                FileUrlHelper.ToUrl(r.ReplyToFileStoragePath),      // ReplyToFileUrl
+                FileUrlHelper.ToUrl(r.ReplyToFileThumbnailPath), // ReplyToThumbnailUrl
                 r.IsForwarded,
-                reactions.ContainsKey(r.Id) ? reactions[r.Id] : null,
-                mentions.ContainsKey(r.Id) ? mentions[r.Id] : null,
+                reactions.TryGetValue(r.Id, out var rxns) ? rxns : null,
+                mentions.TryGetValue(r.Id, out var mnts) ? mnts : null,
                 r.IsRead ? MessageStatus.Read : MessageStatus.Sent // Set Status based on IsRead
             )).ToList();
         }
@@ -889,8 +890,8 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 r.FileName,
                 r.FileContentType,
                 r.FileSizeInBytes,
-                ConvertToFileUrl(r.FileStoragePath),      // FileUrl
-                ConvertToThumbnailUrl(r.FileThumbnailPath), // ThumbnailUrl
+                FileUrlHelper.ToUrl(r.FileStoragePath),      // FileUrl
+                FileUrlHelper.ToUrl(r.FileThumbnailPath), // ThumbnailUrl
                 r.IsEdited,
                 r.IsDeleted,
                 r.IsRead,
@@ -905,8 +906,8 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 r.ReplyToFileId,
                 r.ReplyToFileName,
                 r.ReplyToFileContentType,
-                ConvertToFileUrl(r.ReplyToFileStoragePath),      // ReplyToFileUrl
-                ConvertToThumbnailUrl(r.ReplyToFileThumbnailPath), // ReplyToThumbnailUrl
+                FileUrlHelper.ToUrl(r.ReplyToFileStoragePath),      // ReplyToFileUrl
+                FileUrlHelper.ToUrl(r.ReplyToFileThumbnailPath), // ReplyToThumbnailUrl
                 r.IsForwarded,
                 reactions.TryGetValue(r.Id, out List<DirectMessageReactionDto>? value) ? value : null,
                 mentions.TryGetValue(r.Id, out List<MessageMentionDto>? value1) ? value1 : null,
@@ -914,33 +915,5 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
             )).ToList();
         }
 
-        #region File URL Helpers
-
-        /// <summary>
-        /// StoragePath-i statik URL-ə çevirir.
-        /// Məsələn: "files/userId/filename.jpg" → "/uploads/files/userId/filename.jpg"
-        /// </summary>
-        private static string? ConvertToFileUrl(string? storagePath)
-        {
-            if (string.IsNullOrEmpty(storagePath))
-                return null;
-
-            // StoragePath artıq relative path-dir, sadəcə /uploads/ prefix əlavə edirik
-            return $"/uploads/{storagePath}";
-        }
-
-        /// <summary>
-        /// ThumbnailPath-i statik URL-ə çevirir.
-        /// Məsələn: "files/userId/thumb_filename.jpg" → "/uploads/files/userId/thumb_filename.jpg"
-        /// </summary>
-        private static string? ConvertToThumbnailUrl(string? thumbnailPath)
-        {
-            if (string.IsNullOrEmpty(thumbnailPath))
-                return null;
-
-            return $"/uploads/{thumbnailPath}";
-        }
-
-        #endregion
     }
 }

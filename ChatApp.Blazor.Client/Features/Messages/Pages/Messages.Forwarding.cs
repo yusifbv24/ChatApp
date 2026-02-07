@@ -214,6 +214,8 @@ public partial class Messages
                         null,                   // FileName
                         null,                   // FileContentType
                         null,                   // FileSizeInBytes
+                        null,                   // FileUrl
+                        null,                   // ThumbnailUrl
                         false,                  // IsEdited
                         false,                  // IsDeleted
                         false,                  // IsRead
@@ -228,6 +230,8 @@ public partial class Messages
                         null,                   // ReplyToFileId
                         null,                   // ReplyToFileName
                         null,                   // ReplyToFileContentType
+                        null,                   // ReplyToFileUrl
+                        null,                   // ReplyToThumbnailUrl
                         true,                   // IsForwarded
                         null);                  // Reactions
 
@@ -311,23 +315,27 @@ public partial class Messages
                         null,                                       // FileName
                         null,                                       // FileContentType
                         null,                                       // FileSizeInBytes
-                        false,
-                        false,
-                        false,
-                        0,
-                        messageTime,
-                        null,
-                        null,
+                        null,                                       // FileUrl
+                        null,                                       // ThumbnailUrl
+                        false,                                      // IsEdited
+                        false,                                      // IsDeleted
+                        false,                                      // IsPinned
+                        0,                                          // ReactionCount
+                        messageTime,                                // CreatedAtUtc
+                        null,                                       // EditedAtUtc
+                        null,                                       // PinnedAtUtc
                         null,                                       // ReplyToMessageId
                         null,                                       // ReplyToContent
                         null,                                       // ReplyToSenderName
                         null,                                       // ReplyToFileId
                         null,                                       // ReplyToFileName
                         null,                                       // ReplyToFileContentType
+                        null,                                       // ReplyToFileUrl
+                        null,                                       // ReplyToThumbnailUrl
                         true,                                       // IsForwarded
                         0,                                          // ReadByCount
                         totalMembers,                               // TotalMemberCount
-                        [],                           // ReadBy
+                        [],                                         // ReadBy
                         []);
 
                     if (!channelMessages.Any(m => m.Id == messageId))

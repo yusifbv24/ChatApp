@@ -88,6 +88,8 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectMessages
                     FileName: null, // File metadata not needed for deleted messages
                     FileContentType: null, // File metadata not needed for deleted messages
                     FileSizeInBytes: null, // File metadata not needed for deleted messages
+                    FileUrl: null,
+                    ThumbnailUrl: null,
                     IsEdited: message.IsEdited,
                     IsDeleted: true, // Mark as deleted
                     IsRead: message.IsRead,
@@ -102,6 +104,8 @@ namespace ChatApp.Modules.DirectMessages.Application.Commands.DirectMessages
                     ReplyToFileId: null,
                     ReplyToFileName: null,
                     ReplyToFileContentType: null,
+                    ReplyToFileUrl: null,
+                    ReplyToThumbnailUrl: null,
                     IsForwarded: message.IsForwarded,
                     Reactions: new List<DirectMessageReactionDto>()
                 );

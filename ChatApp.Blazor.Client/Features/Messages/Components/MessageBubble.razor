@@ -161,7 +161,7 @@
                             else
                             {
                                 <!-- File icon + name + size with type-specific colors -->
-                                <a href="@FileDownloadUrl" target="_blank" class="file-download-link">
+                                <div class="file-download-link" @onclick="DownloadFileAsync" @onclick:stopPropagation="true" style="cursor: pointer;">
                                     <div class="file-icon @GetFileIconClass()">
                                         <MudIcon Icon="@GetFileIcon()" Size="Size.Large" />
                                     </div>
@@ -169,7 +169,7 @@
                                         <div class="file-name" title="@FileName">@TruncateFileName(FileName)</div>
                                         <div class="file-size">@FormatFileSize()</div>
                                     </div>
-                                </a>
+                                </div>
                             }
                         </div>
                     }
@@ -387,10 +387,10 @@
                         @* Download button - only for messages with files and user has permission *@
                         @if (!string.IsNullOrEmpty(FileId) && CanDownloadFile)
                         {
-                            <a href="@FileDownloadUrl" download="@FileName" class="menu-item menu-item-link" @onclick="CloseMoreMenu">
+                            <button class="menu-item" @onclick="async () => { CloseMoreMenu(); await DownloadFileAsync(); }">
                                 <span>Download</span>
                                 <MudIcon Icon="@Icons.Material.Outlined.Download" Size="Size.Small" />
-                            </a>
+                            </button>
                         }
                         @* More submenu with Pin, Favorites, Mark Later *@
                         <div class="menu-item-with-submenu"
@@ -479,9 +479,9 @@
             <img src="@FileDownloadUrl" alt="@FileName" class="lightbox-image" />
 
             <!-- Download button -->
-            <a href="@FileDownloadUrl" download="@FileName" class="lightbox-download-btn" title="Download">
+            <button class="lightbox-download-btn" title="Download" @onclick="DownloadFileAsync">
                 <MudIcon Icon="@Icons.Material.Filled.Download" Size="Size.Medium" />
-            </a>
+            </button>
 
             <!-- Filename overlay at bottom -->
             @if (!string.IsNullOrEmpty(FileName))

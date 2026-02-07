@@ -137,6 +137,8 @@ public partial class Messages
                 file.FileName,                                  // FileName
                 file.ContentType,                               // FileContentType
                 file.SizeInBytes,                               // FileSizeInBytes
+                null,                                           // FileUrl
+                null,                                           // ThumbnailUrl
                 false,                                          // IsEdited
                 false,                                          // IsDeleted
                 false,                                          // IsRead
@@ -146,6 +148,8 @@ public partial class Messages
                 null,                                           // EditedAtUtc
                 null,                                           // PinnedAtUtc
                 null, null, null, null, null, null,             // Reply fields
+                null,                                           // ReplyToFileUrl
+                null,                                           // ReplyToThumbnailUrl
                 false,                                          // IsForwarded
                 null,                                           // Reactions
                 null,                                           // Mentions
@@ -409,6 +413,8 @@ public partial class Messages
                 file.FileName,                                  // FileName
                 file.ContentType,                               // FileContentType
                 file.SizeInBytes,                               // FileSizeInBytes
+                null,                                           // FileUrl
+                null,                                           // ThumbnailUrl
                 false,                                          // IsEdited
                 false,                                          // IsDeleted
                 false,                                          // IsPinned
@@ -417,6 +423,8 @@ public partial class Messages
                 null,                                           // EditedAtUtc
                 null,                                           // PinnedAtUtc
                 null, null, null, null, null, null,             // Reply fields
+                null,                                           // ReplyToFileUrl
+                null,                                           // ReplyToThumbnailUrl
                 false,                                          // IsForwarded
                 0,                                              // ReadByCount
                 totalMembers,                                   // TotalMemberCount

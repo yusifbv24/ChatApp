@@ -481,6 +481,27 @@ window.chatAppUtils = {
         };
     },
 
+    // Trigger file download via API endpoint
+    // Fetch + Blob ilə faylı yükləyir (cookie auth ilə)
+    triggerFileDownload: async (url, fileName) => {
+        try {
+            const response = await fetch(url, { credentials: 'include' });
+            if (!response.ok) throw new Error(`Download failed: ${response.status}`);
+            const blob = await response.blob();
+            const blobUrl = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = fileName || 'download';
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(blobUrl);
+        } catch (e) {
+            console.error('File download error:', e);
+        }
+    },
+
     // Subscribe to Escape key events for closing panels
     subscribeToEscapeKey: (dotNetHelper) => {
         const handler = (e) => {

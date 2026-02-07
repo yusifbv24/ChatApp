@@ -3,6 +3,7 @@ using ChatApp.Modules.Channels.Application.Interfaces;
 using ChatApp.Modules.Channels.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using ChatApp.Shared.Kernel;
+using ChatApp.Shared.Kernel.Common;
 
 namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
 {
@@ -132,8 +133,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 result.FileName,
                 result.FileContentType,
                 result.FileSizeInBytes,
-                ConvertToFileUrl(result.FileStoragePath),      // FileUrl
-                ConvertToThumbnailUrl(result.FileThumbnailPath), // ThumbnailUrl
+                FileUrlHelper.ToUrl(result.FileStoragePath),      // FileUrl
+                FileUrlHelper.ToUrl(result.FileThumbnailPath), // ThumbnailUrl
                 result.IsEdited,
                 result.IsDeleted,
                 result.IsPinned,
@@ -147,8 +148,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 result.ReplyToFileId,
                 result.ReplyToFileName,
                 result.ReplyToFileContentType,
-                ConvertToFileUrl(result.ReplyToFileStoragePath),      // ReplyToFileUrl
-                ConvertToThumbnailUrl(result.ReplyToFileThumbnailPath), // ReplyToThumbnailUrl
+                FileUrlHelper.ToUrl(result.ReplyToFileStoragePath),      // ReplyToFileUrl
+                FileUrlHelper.ToUrl(result.ReplyToFileThumbnailPath), // ReplyToThumbnailUrl
                 result.IsForwarded,
                 result.ReadByCount,
                 result.TotalMemberCount,
@@ -303,8 +304,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                     r.FileName,
                     r.FileContentType,
                     r.FileSizeInBytes,
-                    ConvertToFileUrl(r.FileStoragePath),      // FileUrl
-                    ConvertToThumbnailUrl(r.FileThumbnailPath), // ThumbnailUrl
+                    FileUrlHelper.ToUrl(r.FileStoragePath),      // FileUrl
+                    FileUrlHelper.ToUrl(r.FileThumbnailPath), // ThumbnailUrl
                     r.IsEdited,
                     r.IsDeleted,
                     r.IsPinned,
@@ -318,8 +319,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                     r.ReplyToFileId,
                     r.ReplyToFileName,
                     r.ReplyToFileContentType,
-                    ConvertToFileUrl(r.ReplyToFileStoragePath),      // ReplyToFileUrl
-                    ConvertToThumbnailUrl(r.ReplyToFileThumbnailPath), // ReplyToThumbnailUrl
+                    FileUrlHelper.ToUrl(r.ReplyToFileStoragePath),      // ReplyToFileUrl
+                    FileUrlHelper.ToUrl(r.ReplyToFileThumbnailPath), // ReplyToThumbnailUrl
                     r.IsForwarded,
                     readByCount,
                     totalMemberCount,
@@ -493,8 +494,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                     r.FileName,
                     r.FileContentType,
                     r.FileSizeInBytes,
-                    ConvertToFileUrl(r.FileStoragePath),      // FileUrl
-                    ConvertToThumbnailUrl(r.FileThumbnailPath), // ThumbnailUrl
+                    FileUrlHelper.ToUrl(r.FileStoragePath),      // FileUrl
+                    FileUrlHelper.ToUrl(r.FileThumbnailPath), // ThumbnailUrl
                     r.IsEdited,
                     r.IsDeleted,
                     r.IsPinned,
@@ -508,8 +509,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                     r.ReplyToFileId,
                     r.ReplyToFileName,
                     r.ReplyToFileContentType,
-                    ConvertToFileUrl(r.ReplyToFileStoragePath),      // ReplyToFileUrl
-                    ConvertToThumbnailUrl(r.ReplyToFileThumbnailPath), // ReplyToThumbnailUrl
+                    FileUrlHelper.ToUrl(r.ReplyToFileStoragePath),      // ReplyToFileUrl
+                    FileUrlHelper.ToUrl(r.ReplyToFileThumbnailPath), // ReplyToThumbnailUrl
                     r.IsForwarded,
                     readByCount,
                     totalMemberCount,
@@ -659,8 +660,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                     r.FileName,
                     r.FileContentType,
                     r.FileSizeInBytes,
-                    ConvertToFileUrl(r.FileStoragePath),      // FileUrl
-                    ConvertToThumbnailUrl(r.FileThumbnailPath), // ThumbnailUrl
+                    FileUrlHelper.ToUrl(r.FileStoragePath),      // FileUrl
+                    FileUrlHelper.ToUrl(r.FileThumbnailPath), // ThumbnailUrl
                     r.IsEdited,
                     r.IsDeleted,
                     r.IsPinned,
@@ -674,8 +675,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                     r.ReplyToFileId,
                     r.ReplyToFileName,
                     r.ReplyToFileContentType,
-                    ConvertToFileUrl(r.ReplyToFileStoragePath),      // ReplyToFileUrl
-                    ConvertToThumbnailUrl(r.ReplyToFileThumbnailPath), // ReplyToThumbnailUrl
+                    FileUrlHelper.ToUrl(r.ReplyToFileStoragePath),      // ReplyToFileUrl
+                    FileUrlHelper.ToUrl(r.ReplyToFileThumbnailPath), // ReplyToThumbnailUrl
                     r.IsForwarded,
                     readByCount,
                     totalMemberCount,
@@ -825,8 +826,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                     r.FileName,
                     r.FileContentType,
                     r.FileSizeInBytes,
-                    ConvertToFileUrl(r.FileStoragePath),      // FileUrl
-                    ConvertToThumbnailUrl(r.FileThumbnailPath), // ThumbnailUrl
+                    FileUrlHelper.ToUrl(r.FileStoragePath),      // FileUrl
+                    FileUrlHelper.ToUrl(r.FileThumbnailPath), // ThumbnailUrl
                     r.IsEdited,
                     r.IsDeleted,
                     r.IsPinned,
@@ -840,8 +841,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                     r.ReplyToFileId,
                     r.ReplyToFileName,
                     r.ReplyToFileContentType,
-                    ConvertToFileUrl(r.ReplyToFileStoragePath),      // ReplyToFileUrl
-                    ConvertToThumbnailUrl(r.ReplyToFileThumbnailPath), // ReplyToThumbnailUrl
+                    FileUrlHelper.ToUrl(r.ReplyToFileStoragePath),      // ReplyToFileUrl
+                    FileUrlHelper.ToUrl(r.ReplyToFileThumbnailPath), // ReplyToThumbnailUrl
                     r.IsForwarded,
                     readByCount,
                     totalMemberCount,
@@ -978,14 +979,14 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                     r.Id, r.ChannelId, r.SenderId, r.Email, r.FullName, r.AvatarUrl,
                     r.Content,
                     r.FileId, r.FileName, r.FileContentType, r.FileSizeInBytes,
-                    ConvertToFileUrl(r.FileStoragePath),      // FileUrl
-                    ConvertToThumbnailUrl(r.FileThumbnailPath), // ThumbnailUrl
+                    FileUrlHelper.ToUrl(r.FileStoragePath),      // FileUrl
+                    FileUrlHelper.ToUrl(r.FileThumbnailPath), // ThumbnailUrl
                     r.IsEdited, r.IsDeleted, r.IsPinned,
                     reactionCount, r.CreatedAtUtc, r.EditedAtUtc, r.PinnedAtUtc,
                     r.ReplyToMessageId, r.ReplyToContent, r.ReplyToSenderName,
                     r.ReplyToFileId, r.ReplyToFileName, r.ReplyToFileContentType,
-                    ConvertToFileUrl(r.ReplyToFileStoragePath),      // ReplyToFileUrl
-                    ConvertToThumbnailUrl(r.ReplyToFileThumbnailPath), // ReplyToThumbnailUrl
+                    FileUrlHelper.ToUrl(r.ReplyToFileStoragePath),      // ReplyToFileUrl
+                    FileUrlHelper.ToUrl(r.ReplyToFileThumbnailPath), // ReplyToThumbnailUrl
                     r.IsForwarded, readByCount, totalMemberCount,
                     readByUsers.TryGetValue(r.Id, out var rbu) ? rbu : new List<Guid>(),
                     reactionsByMessage.TryGetValue(r.Id, out var rxns) ? rxns : null,
@@ -1063,30 +1064,5 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
             return Task.CompletedTask;
         }
 
-        #region File URL Helpers
-
-        /// <summary>
-        /// StoragePath-i statik URL-ə çevirir.
-        /// </summary>
-        private static string? ConvertToFileUrl(string? storagePath)
-        {
-            if (string.IsNullOrEmpty(storagePath))
-                return null;
-
-            return $"/uploads/{storagePath}";
-        }
-
-        /// <summary>
-        /// ThumbnailPath-i statik URL-ə çevirir.
-        /// </summary>
-        private static string? ConvertToThumbnailUrl(string? thumbnailPath)
-        {
-            if (string.IsNullOrEmpty(thumbnailPath))
-                return null;
-
-            return $"/uploads/{thumbnailPath}";
-        }
-
-        #endregion
     }
 }

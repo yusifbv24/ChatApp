@@ -480,6 +480,34 @@ public partial class MessageBubble : IAsyncDisposable
     }
 
     /// <summary>
+    /// Download üçün API endpoint URL-i.
+    /// Statik URL deyil - CORS + Content-Disposition: attachment dəstəyi üçün.
+    /// </summary>
+    private string ApiDownloadUrl
+    {
+        get
+        {
+            if (string.IsNullOrEmpty(FileId))
+                return string.Empty;
+
+            var baseAddress = Configuration["ApiBaseAddress"] ?? "http://localhost:7000";
+            return $"{baseAddress}/api/files/{FileId}/download";
+        }
+    }
+
+    /// <summary>
+    /// JS interop ilə faylı download edir.
+    /// </summary>
+    private async Task DownloadFileAsync()
+    {
+        var url = ApiDownloadUrl;
+        if (!string.IsNullOrEmpty(url))
+        {
+            await JS.InvokeVoidAsync("chatAppUtils.triggerFileDownload", url, FileName);
+        }
+    }
+
+    /// <summary>
     /// Relative URL-i full URL-ə çevirir (API base address ilə).
     /// </summary>
     private string GetFullUrl(string? relativeUrl)

@@ -49,7 +49,7 @@ namespace ChatApp.Modules.Files.Infrastructure.Services
                 using var stream = new FileStream(fullPath, FileMode.Create);
                 await file.CopyToAsync(stream, cancellationToken);
 
-                _logger?.LogInformation("File saved succesfully: {Path}", fullPath);
+                _logger?.LogInformation("File saved successfully: {Path}", fullPath);
                 return fullPath;
             }
             catch (Exception ex)
