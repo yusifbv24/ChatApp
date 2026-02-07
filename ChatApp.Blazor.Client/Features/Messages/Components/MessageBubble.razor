@@ -249,6 +249,15 @@
                             </div>
                         }
 
+                        @if (_linkPreview != null)
+                        {
+                            <LinkPreviewCard Url="@_linkPreview.Url"
+                                             Title="@_linkPreview.Title"
+                                             Description="@_linkPreview.Description"
+                                             ImageUrl="@_linkPreview.ImageUrl"
+                                             Domain="@_linkPreview.Domain" />
+                        }
+
                         <!-- Footer: Time and status -->
                         <div class="message-footer">
                             @if (IsEdited)

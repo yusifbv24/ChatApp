@@ -697,6 +697,20 @@
     }
 }
 
+@media (max-width: 480px) {
+    .sidebar-open {
+        width: 100%;
+    }
+
+    .top-header {
+        padding: 0 12px;
+    }
+
+    .page-content {
+        padding: 8px;
+    }
+}
+
 /* ===================================
    UTILITY ANIMATIONS
    =================================== */
@@ -721,4 +735,49 @@
         opacity: 0.8;
         transform: scale(1.05);
     }
+}
+
+/* Network Status Banner */
+.network-banner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    color: white;
+    animation: bannerSlideDown var(--transition-base) ease-out;
+}
+
+.network-banner.reconnecting {
+    background: var(--warning-color);
+}
+
+.network-banner.disconnected {
+    background: var(--error-color);
+}
+
+.network-banner.back-online {
+    background: var(--success-color);
+}
+
+.network-banner-icon.rotating {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes bannerSlideDown {
+    from {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }

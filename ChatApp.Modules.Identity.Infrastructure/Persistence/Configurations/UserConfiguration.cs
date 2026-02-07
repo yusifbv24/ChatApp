@@ -82,6 +82,9 @@ namespace ChatApp.Modules.Identity.Infrastructure.Persistence.Configurations
                 .IsUnique()
                 .HasDatabaseName("ix_users_email");
 
+            builder.HasIndex(u => u.IsActive)
+                .HasDatabaseName("ix_users_is_active");
+
             // Relationships
 
             // Employee (1:1 relationship, configured from Employee side)

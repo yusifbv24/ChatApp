@@ -296,6 +296,9 @@ namespace ChatApp.Modules.Channels.Infrastructure.Migrations
                     b.HasIndex("ChannelId", "IsPinned")
                         .HasDatabaseName("ix_channel_messages_channel_pinned");
 
+                    b.HasIndex("ChannelId", "IsDeleted", "CreatedAtUtc")
+                        .HasDatabaseName("ix_channel_messages_channel_deleted_created");
+
                     b.ToTable("channel_messages", (string)null);
                 });
 
@@ -314,15 +317,15 @@ namespace ChatApp.Modules.Channels.Infrastructure.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("is_all_mention");
 
-                    b.Property<Guid?>("MentionedUserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("mentioned_user_id");
-
-                    b.Property<string>("MentionedUserName")
+                    b.Property<string>("MentionedUserFullName")
                         .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)")
                         .HasColumnName("mentioned_user_name");
+
+                    b.Property<Guid?>("MentionedUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("mentioned_user_id");
 
                     b.Property<Guid>("MessageId")
                         .HasColumnType("uuid")
@@ -510,10 +513,12 @@ namespace ChatApp.Modules.Channels.Infrastructure.Migrations
 
                     b.Property<string>("StoragePath")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("storage_path");
 
                     b.Property<string>("ThumbnailPath")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("thumbnail_path");
 
                     b.Property<DateTime>("UpdatedAtUtc")
                         .HasColumnType("timestamp with time zone");

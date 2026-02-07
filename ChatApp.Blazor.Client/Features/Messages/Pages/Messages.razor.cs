@@ -37,6 +37,8 @@ public partial class Messages : IAsyncDisposable
 
     [Inject] private IFileService FileService { get; set; } = default!;
 
+    [Inject] private DraftManager DraftManager { get; set; } = default!;
+
     #endregion
 
     #region Core State - Əsas state dəyişənləri
@@ -736,21 +738,6 @@ public partial class Messages : IAsyncDisposable
     /// Forward dialog-da axtarış nəticəsi - channel-lar.
     /// </summary>
     private List<ChannelDto> forwardChannelSearchResults = [];
-
-    #endregion
-
-    #region Draft State - Draft state-i
-
-    /// <summary>
-    /// Qaralama mesajları.
-    /// key: "conv_{id}" / "chan_{id}" / "pending_{userId}"
-    /// </summary>
-    private readonly Dictionary<string, string> messageDrafts = [];
-
-    /// <summary>
-    /// Cari qaralama.
-    /// </summary>
-    private string currentDraft = string.Empty;
 
     #endregion
 

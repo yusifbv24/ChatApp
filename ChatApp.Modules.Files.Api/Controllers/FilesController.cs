@@ -27,17 +27,20 @@ namespace ChatApp.Modules.Files.Api.Controllers
         private readonly IFileStorageService _fileStorageService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<FilesController> _logger;
+        private readonly ILinkPreviewService _linkPreviewService;
 
         public FilesController(
             IMediator mediator,
             IFileStorageService fileStorageService,
             IUnitOfWork unitOfWork,
-            ILogger<FilesController> logger)
+            ILogger<FilesController> logger,
+            ILinkPreviewService linkPreviewService)
         {
             _mediator = mediator;
             _fileStorageService = fileStorageService;
             _unitOfWork = unitOfWork;
             _logger = logger;
+            _linkPreviewService = linkPreviewService;
         }
 
 
@@ -435,6 +438,25 @@ namespace ChatApp.Modules.Files.Api.Controllers
                 cancellationToken);
 
             return isInConversation;
+        }
+
+        /// <summary>
+        /// Get link preview metadata for a URL
+        /// </summary>
+        [HttpGet("link-preview")]
+        [RequirePermission("Messages.Read")]
+        public async Task<IActionResult> GetLinkPreview(
+            [FromQuery] string url,
+            CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(url))
+                return BadRequest("URL is required");
+
+            var preview = await _linkPreviewService.GetPreviewAsync(url, cancellationToken);
+            if (preview is null)
+                return NoContent();
+
+            return Ok(preview);
         }
     }
 }

@@ -37,6 +37,10 @@ namespace ChatApp.Modules.Files.Infrastructure
             services.AddScoped<IFileStorageService, LocalFileStorageService>();
             services.AddScoped<IVirusScanningService, ClamAVScanningService>();
 
+            // Link Preview
+            services.AddSingleton<ILinkPreviewService, LinkPreviewService>();
+            services.AddHttpClient("LinkPreview");
+
             return services;
         }
 

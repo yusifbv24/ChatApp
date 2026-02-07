@@ -32,6 +32,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IConversationService, ConversationService>();
         services.AddScoped<IChannelService, ChannelService>();
         services.AddScoped<ISearchService, SearchService>();
+        services.AddScoped<DraftManager>();
 
         return services;
     }

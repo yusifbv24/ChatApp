@@ -4,6 +4,7 @@ using Microsoft.JSInterop;
 using MudBlazor;
 using System.Globalization;
 using System.Net;
+using System.Net.Http.Json;
 using System.Text.RegularExpressions;
 using ChatApp.Shared.Kernel;
 
@@ -15,15 +16,22 @@ public partial class MessageBubble : IAsyncDisposable
 
     [Inject] private IJSRuntime JS { get; set; } = default!;
     [Inject] private IConfiguration Configuration { get; set; } = default!;
+    [Inject] private HttpClient Http { get; set; } = default!;
 
     #endregion
 
     #region Image Lightbox State
 
-    /// <summary>
-    /// Şəkil lightbox açıqdır?
-    /// </summary>
     private bool showImageLightbox = false;
+
+    #endregion
+
+    #region Link Preview State
+
+    private LinkPreviewData? _linkPreview;
+    private bool _linkPreviewLoaded;
+
+    private record LinkPreviewData(string? Url, string? Title, string? Description, string? ImageUrl, string? Domain);
 
     #endregion
 
@@ -1242,6 +1250,35 @@ public partial class MessageBubble : IAsyncDisposable
             {
                 // Silently handle initialization errors
             }
+
+            await LoadLinkPreviewAsync();
+        }
+    }
+
+    private async Task LoadLinkPreviewAsync()
+    {
+        if (_linkPreviewLoaded || IsDeleted || string.IsNullOrEmpty(Content))
+            return;
+
+        _linkPreviewLoaded = true;
+
+        var match = UrlRegex().Match(Content);
+        if (!match.Success)
+            return;
+
+        try
+        {
+            var url = match.Value;
+            var response = await Http.GetAsync($"api/files/link-preview?url={Uri.EscapeDataString(url)}");
+            if (response.IsSuccessStatusCode && response.StatusCode != System.Net.HttpStatusCode.NoContent)
+            {
+                _linkPreview = await response.Content.ReadFromJsonAsync<LinkPreviewData>();
+                StateHasChanged();
+            }
+        }
+        catch
+        {
+            // Link preview is non-critical
         }
     }
 

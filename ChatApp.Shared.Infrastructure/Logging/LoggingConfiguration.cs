@@ -15,11 +15,6 @@ namespace ChatApp.Shared.Infrastructure.Logging
                 .Enrich.WithProperty("Application","ChatApp")
                 .WriteTo.Console(
                     outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}")
-                .WriteTo.File(
-                    path: "logs/chatapp-.log",
-                    rollingInterval: RollingInterval.Day,
-                    outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}",
-                    retainedFileCountLimit: 30)
                 .CreateLogger();
         }
     }

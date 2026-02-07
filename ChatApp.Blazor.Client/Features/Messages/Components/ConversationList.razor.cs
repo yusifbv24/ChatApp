@@ -88,7 +88,7 @@ public partial class ConversationList : IAsyncDisposable
     /// Mesaj draft-ları.
     /// Key: "conv_{id}" və ya "chan_{id}", Value: draft text
     /// </summary>
-    [Parameter] public Dictionary<string, string> MessageDrafts { get; set; } = [];
+    [Parameter] public IReadOnlyDictionary<string, string> MessageDrafts { get; set; } = new Dictionary<string, string>();
 
     #endregion
 

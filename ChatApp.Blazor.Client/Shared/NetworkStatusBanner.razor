@@ -1,0 +1,102 @@
+@inject ISignalRService SignalRService
+@implements IDisposable
+
+@if (_visible)
+{
+    <div class="network-banner @_statusClass" role="alert" aria-live="assertive">
+        @switch (_status)
+        {
+            case NetStatus.Reconnecting:
+                <MudIcon Icon="@Icons.Material.Filled.Sync" Class="network-banner-icon rotating" Size="Size.Small" />
+                <span>Yenidən qoşulur...</span>
+                break;
+            case NetStatus.Disconnected:
+                <MudIcon Icon="@Icons.Material.Filled.WifiOff" Class="network-banner-icon" Size="Size.Small" />
+                <span>İnternet bağlantısı yoxdur</span>
+                break;
+            case NetStatus.BackOnline:
+                <MudIcon Icon="@Icons.Material.Filled.Wifi" Class="network-banner-icon" Size="Size.Small" />
+                <span>Bağlantı bərpa olundu</span>
+                break; 
+        }
+    </div>
+}
+
+@code {
+    private enum NetStatus { Connected, Reconnecting, Disconnected, BackOnline }
+
+    private NetStatus _status = NetStatus.Connected;
+    private bool _visible;
+    private string _statusClass = "";
+    private Timer? _dismissTimer;
+    private bool _wasDisconnected;
+
+    protected override void OnInitialized()
+    {
+        SignalRService.OnReconnecting += HandleReconnecting;
+        SignalRService.OnReconnected += HandleReconnected;
+        SignalRService.OnDisconnected += HandleDisconnected;
+        SignalRService.OnConnected += HandleConnected;
+    }
+
+    private void HandleReconnecting()
+    {
+        _wasDisconnected = true;
+        SetStatus(NetStatus.Reconnecting, "reconnecting", visible: true);
+    }
+
+    private void HandleDisconnected()
+    {
+        _wasDisconnected = true;
+        SetStatus(NetStatus.Disconnected, "disconnected", visible: true);
+    }
+
+    private void HandleReconnected()
+    {
+        if (_wasDisconnected)
+        {
+            _wasDisconnected = false;
+            SetStatus(NetStatus.BackOnline, "back-online", visible: true);
+            ScheduleDismiss();
+        }
+    }
+
+    private void HandleConnected()
+    {
+        if (_wasDisconnected)
+        {
+            _wasDisconnected = false;
+            SetStatus(NetStatus.BackOnline, "back-online", visible: true);
+            ScheduleDismiss();
+        }
+    }
+
+    private void SetStatus(NetStatus status, string cssClass, bool visible)
+    {
+        _dismissTimer?.Dispose();
+        _dismissTimer = null;
+        _status = status;
+        _statusClass = cssClass;
+        _visible = visible;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void ScheduleDismiss()
+    {
+        _dismissTimer?.Dispose();
+        _dismissTimer = new Timer(_ =>
+        {
+            _visible = false;
+            InvokeAsync(StateHasChanged);
+        }, null, 3000, Timeout.Infinite);
+    }
+
+    public void Dispose()
+    {
+        SignalRService.OnReconnecting -= HandleReconnecting;
+        SignalRService.OnReconnected -= HandleReconnected;
+        SignalRService.OnDisconnected -= HandleDisconnected;
+        SignalRService.OnConnected -= HandleConnected;
+        _dismissTimer?.Dispose();
+    }
+}

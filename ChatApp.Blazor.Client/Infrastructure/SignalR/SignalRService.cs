@@ -1,4 +1,5 @@
 using ChatApp.Blazor.Client.Models.Messages;
+using Microsoft.Extensions.Logging;
 using System.Text.Json;
 
 namespace ChatApp.Blazor.Client.Infrastructure.SignalR;
@@ -6,7 +7,7 @@ namespace ChatApp.Blazor.Client.Infrastructure.SignalR;
 /// <summary>
 /// Service for handling SignalR real-time events
 /// </summary>
-public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
+public class SignalRService(IChatHubConnection hubConnection, ILogger<SignalRService> logger) : ISignalRService
 {
     private readonly List<IDisposable> _subscriptions = [];
     private bool _isInitialized;
@@ -84,11 +85,44 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
         OnConnected?.Invoke();
     }
 
+    /// <summary>
+    /// Deserializes a SignalR payload from object to the target type.
+    /// SignalR sends complex objects as JsonElement which requires serialize→deserialize conversion.
+    /// </summary>
+    private T? DeserializePayload<T>(object data, string eventName)
+    {
+        try
+        {
+            var json = JsonSerializer.Serialize(data);
+            return JsonSerializer.Deserialize<T>(json, _jsonOptions);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "SignalR deserialization failed for event '{EventName}' to type {Type}", eventName, typeof(T).Name);
+            return default;
+        }
+    }
+
+    /// <summary>
+    /// Registers a SignalR event handler that deserializes the payload and invokes the callback.
+    /// Centralizes the object→serialize→deserialize pattern used by most handlers.
+    /// </summary>
+    private void RegisterTypedHandler<T>(string eventName, Action<T>? callback) where T : class
+    {
+        _subscriptions.Add(hubConnection.On<object>(eventName, data =>
+        {
+            var payload = DeserializePayload<T>(data, eventName);
+            if (payload != null)
+            {
+                callback?.Invoke(payload);
+            }
+        }));
+    }
+
     private void RegisterConnectionEvents()
     {
         // Register connection lifecycle events from the hub connection
         // Store handlers as fields for proper unsubscription in DisconnectAsync
-        // FIX: Removed Task.Run - direct invocation is safer for UI thread operations
         _reconnectingHandler = (error) =>
         {
             IsConnected = false;
@@ -129,113 +163,15 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
 
 
         // Direct message events
-        _subscriptions.Add(hubConnection.On<object>("NewDirectMessage", messageObj =>
-        {
-            try
-            {
-                var json = JsonSerializer.Serialize(messageObj);
-                var message = JsonSerializer.Deserialize<DirectMessageDto>(json, _jsonOptions);
-                if (message != null)
-                {
-                    OnNewDirectMessage?.Invoke(message);
-                }
-            }
-            catch
-            {
-                // Silently handle deserialization errors
-            }
-        }));
-
-        // Direct message edited event
-        _subscriptions.Add(hubConnection.On<object>("DirectMessageEdited", messageObj =>
-        {
-            try
-            {
-                var json = JsonSerializer.Serialize(messageObj);
-                var message = JsonSerializer.Deserialize<DirectMessageDto>(json, _jsonOptions);
-                if (message != null)
-                {
-                    OnDirectMessageEdited?.Invoke(message);
-                }
-            }
-            catch
-            {
-                // Silently handle deserialization errors
-            }
-        }));
-
-        // Direct message deleted event
-        _subscriptions.Add(hubConnection.On<object>("DirectMessageDeleted", messageObj =>
-        {
-            try
-            {
-                var json = JsonSerializer.Serialize(messageObj);
-                var message = JsonSerializer.Deserialize<DirectMessageDto>(json, _jsonOptions);
-                if (message != null)
-                {
-                    OnDirectMessageDeleted?.Invoke(message);
-                }
-            }
-            catch
-            {
-                // Silently handle deserialization errors
-            }
-        }));
+        RegisterTypedHandler<DirectMessageDto>("NewDirectMessage", msg => OnNewDirectMessage?.Invoke(msg));
+        RegisterTypedHandler<DirectMessageDto>("DirectMessageEdited", msg => OnDirectMessageEdited?.Invoke(msg));
+        RegisterTypedHandler<DirectMessageDto>("DirectMessageDeleted", msg => OnDirectMessageDeleted?.Invoke(msg));
 
 
         // Channel message events
-        _subscriptions.Add(hubConnection.On<object>("NewChannelMessage", messageObj =>
-        {
-            try
-            {
-                var json = JsonSerializer.Serialize(messageObj);
-                var message = JsonSerializer.Deserialize<ChannelMessageDto>(json, _jsonOptions);
-                if (message != null)
-                {
-                    OnNewChannelMessage?.Invoke(message);
-                }
-            }
-            catch
-            {
-                // Silently handle deserialization errors
-            }
-        }));
-
-        // Channel message edited event
-        _subscriptions.Add(hubConnection.On<object>("ChannelMessageEdited", messageObj =>
-        {
-            try
-            {
-                var json = JsonSerializer.Serialize(messageObj);
-                var message = JsonSerializer.Deserialize<ChannelMessageDto>(json, _jsonOptions);
-                if (message != null)
-                {
-                    OnChannelMessageEdited?.Invoke(message);
-                }
-            }
-            catch
-            {
-                // Silently handle deserialization errors
-            }
-        }));
-
-        // Channel message deleted event
-        _subscriptions.Add(hubConnection.On<object>("ChannelMessageDeleted", messageObj =>
-        {
-            try
-            {
-                var json = JsonSerializer.Serialize(messageObj);
-                var message = JsonSerializer.Deserialize<ChannelMessageDto>(json, _jsonOptions);
-                if (message != null)
-                {
-                    OnChannelMessageDeleted?.Invoke(message);
-                }
-            }
-            catch
-            {
-                // Silently handle deserialization errors
-            }
-        }));
+        RegisterTypedHandler<ChannelMessageDto>("NewChannelMessage", msg => OnNewChannelMessage?.Invoke(msg));
+        RegisterTypedHandler<ChannelMessageDto>("ChannelMessageEdited", msg => OnChannelMessageEdited?.Invoke(msg));
+        RegisterTypedHandler<ChannelMessageDto>("ChannelMessageDeleted", msg => OnChannelMessageDeleted?.Invoke(msg));
 
 
         // Message read events
@@ -257,9 +193,9 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
                     OnMessageRead?.Invoke(conversationId, messageId, readBy);
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // Silently handle message read processing errors
+                logger.LogWarning(ex, "SignalR deserialization failed for event 'MessageRead'");
             }
         }));
 
@@ -346,9 +282,9 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
                     OnDirectMessageReactionToggled?.Invoke(conversationId, messageId, reactions);
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // Silently handle reaction processing errors
+                logger.LogWarning(ex, "SignalR deserialization failed for event 'DirectMessageReactionToggled'");
             }
         }));
 
@@ -368,19 +304,10 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
         // Channel message reactions updated (simplified - replaces ReactionAdded/Removed)
         _subscriptions.Add(hubConnection.On<object>("ChannelMessageReactionsUpdated", data =>
         {
-            try
+            var payload = DeserializePayload<ChannelMessageReactionsUpdatedPayload>(data, "ChannelMessageReactionsUpdated");
+            if (payload != null && payload.MessageId != Guid.Empty)
             {
-                var json = JsonSerializer.Serialize(data);
-                var payload = JsonSerializer.Deserialize<ChannelMessageReactionsUpdatedPayload>(json, _jsonOptions);
-
-                if (payload != null && payload.MessageId != Guid.Empty)
-                {
-                    OnChannelMessageReactionsUpdated?.Invoke(payload.MessageId, payload.Reactions ?? new List<ChannelMessageReactionDto>());
-                }
-            }
-            catch
-            {
-                // Silently handle deserialization errors
+                OnChannelMessageReactionsUpdated?.Invoke(payload.MessageId, payload.Reactions ?? []);
             }
         }));
 
@@ -393,22 +320,7 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
 
 
         // Channel membership - when user is added to a channel
-        _subscriptions.Add(hubConnection.On<object>("AddedToChannel", channelObj =>
-        {
-            try
-            {
-                var json = JsonSerializer.Serialize(channelObj);
-                var channel = JsonSerializer.Deserialize<ChannelDto>(json, _jsonOptions);
-                if (channel != null)
-                {
-                    OnAddedToChannel?.Invoke(channel);
-                }
-            }
-            catch
-            {
-                // Silently handle deserialization errors
-            }
-        }));
+        RegisterTypedHandler<ChannelDto>("AddedToChannel", channel => OnAddedToChannel?.Invoke(channel));
 
         // Channel membership - when a member leaves a channel
         _subscriptions.Add(hubConnection.On<object>("MemberLeftChannel", notificationObj =>
@@ -425,82 +337,20 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
 
                 OnMemberLeftChannel?.Invoke(channelId, leftUserId, leftUserFullName);
             }
-            catch
+            catch (Exception ex)
             {
-                // Silently handle deserialization errors
+                logger.LogWarning(ex, "SignalR deserialization failed for event 'MemberLeftChannel'");
             }
         }));
 
 
         // Pin/Unpin events for direct messages
-        _subscriptions.Add(hubConnection.On<object>("DirectMessagePinned", messageObj =>
-        {
-            try
-            {
-                var json = JsonSerializer.Serialize(messageObj);
-                var message = JsonSerializer.Deserialize<DirectMessageDto>(json, _jsonOptions);
-                if (message != null)
-                {
-                    OnDirectMessagePinned?.Invoke(message);
-                }
-            }
-            catch
-            {
-                // Silently handle deserialization errors
-            }
-        }));
-
-        _subscriptions.Add(hubConnection.On<object>("DirectMessageUnpinned", messageObj =>
-        {
-            try
-            {
-                var json = JsonSerializer.Serialize(messageObj);
-                var message = JsonSerializer.Deserialize<DirectMessageDto>(json, _jsonOptions);
-                if (message != null)
-                {
-                    OnDirectMessageUnpinned?.Invoke(message);
-                }
-            }
-            catch
-            {
-                // Silently handle deserialization errors
-            }
-        }));
+        RegisterTypedHandler<DirectMessageDto>("DirectMessagePinned", msg => OnDirectMessagePinned?.Invoke(msg));
+        RegisterTypedHandler<DirectMessageDto>("DirectMessageUnpinned", msg => OnDirectMessageUnpinned?.Invoke(msg));
 
         // Pin/Unpin events for channel messages
-        _subscriptions.Add(hubConnection.On<object>("ChannelMessagePinned", messageObj =>
-        {
-            try
-            {
-                var json = JsonSerializer.Serialize(messageObj);
-                var message = JsonSerializer.Deserialize<ChannelMessageDto>(json, _jsonOptions);
-                if (message != null)
-                {
-                    OnChannelMessagePinned?.Invoke(message);
-                }
-            }
-            catch
-            {
-                // Silently handle deserialization errors
-            }
-        }));
-
-        _subscriptions.Add(hubConnection.On<object>("ChannelMessageUnpinned", messageObj =>
-        {
-            try
-            {
-                var json = JsonSerializer.Serialize(messageObj);
-                var message = JsonSerializer.Deserialize<ChannelMessageDto>(json, _jsonOptions);
-                if (message != null)
-                {
-                    OnChannelMessageUnpinned?.Invoke(message);
-                }
-            }
-            catch
-            {
-                // Silently handle deserialization errors
-            }
-        }));
+        RegisterTypedHandler<ChannelMessageDto>("ChannelMessagePinned", msg => OnChannelMessagePinned?.Invoke(msg));
+        RegisterTypedHandler<ChannelMessageDto>("ChannelMessageUnpinned", msg => OnChannelMessageUnpinned?.Invoke(msg));
     }
 
     public async Task DisconnectAsync()
@@ -553,9 +403,9 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
         if (_isInitialized)
         {
             await hubConnection.SendMessageAsync("LeaveChannel", channelId);
-        }    
+        }
     }
-    
+
     public async Task JoinConversationAsync(Guid conversationId)
     {
         if (_isInitialized)
@@ -601,8 +451,9 @@ public class SignalRService(IChatHubConnection hubConnection) : ISignalRService
             var result = await hubConnection.InvokeAsync<Dictionary<Guid, bool>>("GetOnlineStatus", new List<Guid> { userId });
             return result.TryGetValue(userId, out var isOnline) && isOnline;
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogWarning(ex, "Failed to get online status for user {UserId}", userId);
             return false;
         }
     }

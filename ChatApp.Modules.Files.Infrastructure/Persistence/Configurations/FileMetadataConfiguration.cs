@@ -100,6 +100,9 @@ namespace ChatApp.Modules.Files.Infrastructure.Persistence.Configurations
 
             builder.HasIndex(f => f.IsDeleted)
                 .HasDatabaseName("ix_file_metadata_is_deleted");
+
+            builder.HasIndex(f => new { f.UploadedBy, f.CreatedAtUtc })
+                .HasDatabaseName("ix_file_metadata_uploaded_by_created");
         }
     }
 }

@@ -1,0 +1,35 @@
+@inject IJSRuntime JS
+
+<div class="link-preview-card" @onclick="OpenLink">
+    @if (!string.IsNullOrEmpty(ImageUrl))
+    {
+        <img src="@ImageUrl" alt="@Title" class="link-preview-image" loading="lazy" @onerror="HandleImageError" />
+    }
+    <div class="link-preview-content">
+        <span class="link-preview-domain">@Domain</span>
+        @if (!string.IsNullOrEmpty(Title))
+        {
+            <span class="link-preview-title">@Title</span>
+        }
+        @if (!string.IsNullOrEmpty(Description))
+        {
+            <span class="link-preview-description">@Description</span>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public string? Url { get; set; }
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public string? Description { get; set; }
+    [Parameter] public string? ImageUrl { get; set; }
+    [Parameter] public string? Domain { get; set; }
+
+    private async Task OpenLink()
+    {
+        if (!string.IsNullOrEmpty(Url))
+            await JS.InvokeVoidAsync("open", Url, "_blank");
+    }
+
+    private void HandleImageError() => ImageUrl = null;
+}

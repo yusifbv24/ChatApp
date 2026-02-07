@@ -768,81 +768,20 @@ public partial class Messages
 
     #endregion
 
-    #region Draft Management - Qaralama idarəetməsi
+    #region Draft Management - DraftManager-ə delegasiya
 
-    /// <summary>
-    /// Cari draft-ı saxla.
-    /// Conversation/channel dəyişdikdə çağrılır.
-    ///
-    /// DRAFT KEY FORMAT:
-    /// - conv_{conversationId} - Conversation üçün
-    /// - chan_{channelId} - Channel üçün
-    /// - pending_{userId} - Pending conversation üçün
-    /// </summary>
     private void SaveCurrentDraft(string draft)
     {
-        string? key = null;
-
-        if (selectedConversationId.HasValue)
-        {
-            key = $"conv_{selectedConversationId.Value}";
-        }
-        else if (selectedChannelId.HasValue)
-        {
-            key = $"chan_{selectedChannelId.Value}";
-        }
-        else if (isPendingConversation && pendingUser != null)
-        {
-            key = $"pending_{pendingUser.Id}";
-        }
-
-        if (key == null) return;
-
-        if (string.IsNullOrWhiteSpace(draft))
-        {
-            // Boş draft - sil
-            messageDrafts.Remove(key);
-        }
-        else
-        {
-            // Draft saxla
-            messageDrafts[key] = draft;
-        }
+        var pendingUserId = isPendingConversation ? pendingUser?.Id : null;
+        DraftManager.Save(selectedConversationId, selectedChannelId, pendingUserId, draft);
     }
 
-    /// <summary>
-    /// Draft yüklə.
-    /// Conversation/channel seçildikdə çağrılır.
-    /// </summary>
     private string LoadDraft(Guid? conversationId, Guid? channelId, Guid? pendingUserId = null)
-    {
-        string? key = null;
+        => DraftManager.Load(conversationId, channelId, pendingUserId);
 
-        if (conversationId.HasValue)
-        {
-            key = $"conv_{conversationId.Value}";
-        }
-        else if (channelId.HasValue)
-        {
-            key = $"chan_{channelId.Value}";
-        }
-        else if (pendingUserId.HasValue)
-        {
-            key = $"pending_{pendingUserId.Value}";
-        }
-
-        if (key == null) return string.Empty;
-
-        return messageDrafts.TryGetValue(key, out var draft) ? draft : string.Empty;
-    }
-
-    /// <summary>
-    /// Draft dəyişdikdə çağrılır.
-    /// MessageInput component-dən.
-    /// </summary>
     private void HandleDraftChanged(string draft)
     {
-        currentDraft = draft;
+        DraftManager.CurrentDraft = draft;
         SaveCurrentDraft(draft);
     }
 

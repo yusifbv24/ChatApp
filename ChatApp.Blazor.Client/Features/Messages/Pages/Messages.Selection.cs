@@ -469,7 +469,7 @@ public partial class Messages
             isRecipientOnline = await SignalRService.IsUserOnlineAsync(conversation.OtherUserId);
 
             // Draft yüklə
-            currentDraft = LoadDraft(conversation.Id, null);
+            DraftManager.CurrentDraft = LoadDraft(conversation.Id, null);
 
             // SignalR group-a join
             await SignalRService.JoinConversationAsync(conversation.Id);
@@ -593,7 +593,7 @@ public partial class Messages
         pageSize = 30;
 
         // Draft yüklə (pending user üçün)
-        currentDraft = LoadDraft(null, null, user.Id);
+        DraftManager.CurrentDraft = LoadDraft(null, null, user.Id);
 
         CloseNewConversationDialog();
         StateHasChanged();
@@ -791,7 +791,7 @@ public partial class Messages
             selectedConversationIsMarkedReadLater = channel.IsMarkedReadLater;
 
             // Draft yüklə
-            currentDraft = LoadDraft(null, channel.Id);
+            DraftManager.CurrentDraft = LoadDraft(null, channel.Id);
 
             // ADMIN YOXLAMASI və MENTION DATA
             // Channel yaradıcısı avtomatik admin-dir

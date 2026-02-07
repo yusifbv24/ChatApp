@@ -85,6 +85,9 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Configurations
             builder.HasIndex(m => new { m.ChannelId, m.IsPinned })
                 .HasDatabaseName("ix_channel_messages_channel_pinned");
 
+            builder.HasIndex(m => new { m.ChannelId, m.IsDeleted, m.CreatedAtUtc })
+                .HasDatabaseName("ix_channel_messages_channel_deleted_created");
+
             // Relationships
             builder.HasMany(m => m.Reactions)
                 .WithOne(r => r.Message)
