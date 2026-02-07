@@ -16,6 +16,8 @@ namespace ChatApp.Blazor.Client.Models.Messages
         string? FileName,
         string? FileContentType,
         long? FileSizeInBytes,
+        string? FileUrl,           // Statik fayl URL-i (API call əvəzinə)
+        string? ThumbnailUrl,      // Şəkil thumbnail URL-i
         bool IsEdited,
         bool IsDeleted,
         bool IsRead,
@@ -30,6 +32,8 @@ namespace ChatApp.Blazor.Client.Models.Messages
         string? ReplyToFileId = null,
         string? ReplyToFileName = null,
         string? ReplyToFileContentType = null,
+        string? ReplyToFileUrl = null,        // Reply mesajının fayl URL-i
+        string? ReplyToThumbnailUrl = null,   // Reply mesajının thumbnail URL-i
         bool IsForwarded = false,
         List<MessageReactionDto>? Reactions = null,
         List<MessageMentionDto>? Mentions = null,

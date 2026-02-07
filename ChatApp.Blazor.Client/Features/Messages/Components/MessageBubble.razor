@@ -147,14 +147,15 @@
                             }
                             else if (IsFileImage)
                             {
-                                <!-- Image preview -->
+                                <!-- Image preview with lazy loading for performance -->
                                 <div class="file-image-container"
                                      @onclick="OpenImageLightbox"
                                      @onclick:stopPropagation="true">
-                                    <img src="@FileDownloadUrl"
+                                    <img src="@(ThumbnailUrl != null ? GetFullUrl(ThumbnailUrl) : FileDownloadUrl)"
                                          alt="@FileName"
                                          class="file-image-preview"
-                                         title="@FileName" />
+                                         title="@FileName"
+                                         loading="lazy" />
                                 </div>
                             }
                             else

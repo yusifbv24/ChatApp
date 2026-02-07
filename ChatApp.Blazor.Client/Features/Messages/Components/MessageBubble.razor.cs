@@ -60,6 +60,18 @@ public partial class MessageBubble : IAsyncDisposable
     [Parameter] public long? FileSizeInBytes { get; set; }
 
     /// <summary>
+    /// Statik fayl URL-i (API call əvəzinə birbaşa file server-dən).
+    /// DTO-dan gəlir: "/uploads/files/userId/filename.jpg"
+    /// </summary>
+    [Parameter] public string? FileUrl { get; set; }
+
+    /// <summary>
+    /// Thumbnail URL-i (şəkillər üçün).
+    /// DTO-dan gəlir: "/uploads/files/userId/thumb_filename.jpg"
+    /// </summary>
+    [Parameter] public string? ThumbnailUrl { get; set; }
+
+    /// <summary>
     /// Göndərənin adı.
     /// </summary>
     [Parameter] public string SenderName { get; set; } = string.Empty;
@@ -444,18 +456,39 @@ public partial class MessageBubble : IAsyncDisposable
         LastReadLaterMessageId.HasValue && LastReadLaterMessageId.Value == MessageId;
 
     /// <summary>
-    /// Fayl download URL-i (API base address ilə)
+    /// Fayl download URL-i.
+    /// Əgər FileUrl (statik URL) varsa onu istifadə edir (PERFORMANS).
+    /// Əks halda fallback olaraq API endpoint istifadə edir.
     /// </summary>
     private string FileDownloadUrl
     {
         get
         {
+            // Əvvəlcə statik URL-i yoxla (yeni performans yanaşması)
+            if (!string.IsNullOrEmpty(FileUrl))
+            {
+                return GetFullUrl(FileUrl);
+            }
+
+            // Fallback: köhnə API endpoint (legacy support)
             if (string.IsNullOrEmpty(FileId))
                 return string.Empty;
 
-            var apiBaseAddress = Configuration["ApiBaseAddress"] ?? "http://localhost:7000";
-            return $"{apiBaseAddress}/api/files/{FileId}/download";
+            var baseAddress = Configuration["ApiBaseAddress"] ?? "http://localhost:7000";
+            return $"{baseAddress}/api/files/{FileId}/download";
         }
+    }
+
+    /// <summary>
+    /// Relative URL-i full URL-ə çevirir (API base address ilə).
+    /// </summary>
+    private string GetFullUrl(string? relativeUrl)
+    {
+        if (string.IsNullOrEmpty(relativeUrl))
+            return string.Empty;
+
+        var apiBaseAddress = Configuration["ApiBaseAddress"] ?? "http://localhost:7000";
+        return $"{apiBaseAddress}{relativeUrl}";
     }
 
     #endregion

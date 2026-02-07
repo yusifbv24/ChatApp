@@ -55,6 +55,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                             FileName = file != null ? file.OriginalFileName : null,
                             FileContentType = file != null ? file.ContentType : null,
                             FileSizeInBytes = file != null ? (long?)file.FileSizeInBytes : null,
+                            FileStoragePath = file != null ? file.StoragePath : null,
+                            FileThumbnailPath = file != null ? file.ThumbnailPath : null,
                             message.IsEdited,
                             message.IsDeleted,
                             message.IsPinned,
@@ -69,6 +71,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                             ReplyToFileId = repliedMessage != null ? repliedMessage.FileId : null,
                             ReplyToFileName = repliedFile != null ? repliedFile.OriginalFileName : null,
                             ReplyToFileContentType = repliedFile != null ? repliedFile.ContentType : null,
+                            ReplyToFileStoragePath = repliedFile != null ? repliedFile.StoragePath : null,
+                            ReplyToFileThumbnailPath = repliedFile != null ? repliedFile.ThumbnailPath : null,
                             message.IsForwarded,
                             ReadByCount = _context.ChannelMessageReads.Count(r =>
                                 r.MessageId == message.Id &&
@@ -128,6 +132,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 result.FileName,
                 result.FileContentType,
                 result.FileSizeInBytes,
+                ConvertToFileUrl(result.FileStoragePath),      // FileUrl
+                ConvertToThumbnailUrl(result.FileThumbnailPath), // ThumbnailUrl
                 result.IsEdited,
                 result.IsDeleted,
                 result.IsPinned,
@@ -141,6 +147,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 result.ReplyToFileId,
                 result.ReplyToFileName,
                 result.ReplyToFileContentType,
+                ConvertToFileUrl(result.ReplyToFileStoragePath),      // ReplyToFileUrl
+                ConvertToThumbnailUrl(result.ReplyToFileThumbnailPath), // ReplyToThumbnailUrl
                 result.IsForwarded,
                 result.ReadByCount,
                 result.TotalMemberCount,
@@ -182,6 +190,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                             FileName = file != null ? file.OriginalFileName : null,
                             FileContentType = file != null ? file.ContentType : null,
                             FileSizeInBytes = file != null ? (long?)file.FileSizeInBytes : null,
+                            FileStoragePath = file != null ? file.StoragePath : null,
+                            FileThumbnailPath = file != null ? file.ThumbnailPath : null,
                             message.IsEdited,
                             message.IsDeleted,
                             message.IsPinned,
@@ -196,6 +206,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                             ReplyToFileId = repliedMessage != null ? repliedMessage.FileId : null,
                             ReplyToFileName = repliedFile != null ? repliedFile.OriginalFileName : null,
                             ReplyToFileContentType = repliedFile != null ? repliedFile.ContentType : null,
+                            ReplyToFileStoragePath = repliedFile != null ? repliedFile.StoragePath : null,
+                            ReplyToFileThumbnailPath = repliedFile != null ? repliedFile.ThumbnailPath : null,
                             message.IsForwarded,
                             // REMOVED: ReadByCount and TotalMemberCount N+1 queries - now batched
                             // Get list of users who have read this message from ChannelMessageRead table
@@ -291,6 +303,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                     r.FileName,
                     r.FileContentType,
                     r.FileSizeInBytes,
+                    ConvertToFileUrl(r.FileStoragePath),      // FileUrl
+                    ConvertToThumbnailUrl(r.FileThumbnailPath), // ThumbnailUrl
                     r.IsEdited,
                     r.IsDeleted,
                     r.IsPinned,
@@ -304,6 +318,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                     r.ReplyToFileId,
                     r.ReplyToFileName,
                     r.ReplyToFileContentType,
+                    ConvertToFileUrl(r.ReplyToFileStoragePath),      // ReplyToFileUrl
+                    ConvertToThumbnailUrl(r.ReplyToFileThumbnailPath), // ReplyToThumbnailUrl
                     r.IsForwarded,
                     readByCount,
                     totalMemberCount,
@@ -358,6 +374,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                                FileName = file != null ? file.OriginalFileName : null,
                                FileContentType = file != null ? file.ContentType : null,
                                FileSizeInBytes = file != null ? (long?)file.FileSizeInBytes : null,
+                               FileStoragePath = file != null ? file.StoragePath : null,
+                               FileThumbnailPath = file != null ? file.ThumbnailPath : null,
                                message.IsEdited,
                                message.IsDeleted,
                                message.IsPinned,
@@ -372,6 +390,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                                ReplyToFileId = repliedMessage != null ? repliedMessage.FileId : null,
                                ReplyToFileName = repliedFile != null ? repliedFile.OriginalFileName : null,
                                ReplyToFileContentType = repliedFile != null ? repliedFile.ContentType : null,
+                               ReplyToFileStoragePath = repliedFile != null ? repliedFile.StoragePath : null,
+                               ReplyToFileThumbnailPath = repliedFile != null ? repliedFile.ThumbnailPath : null,
                                message.IsForwarded,
                                // REMOVED: ReadByCount and TotalMemberCount N+1 queries - now batched
                                ReadBy = _context.ChannelMessageReads
@@ -473,6 +493,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                     r.FileName,
                     r.FileContentType,
                     r.FileSizeInBytes,
+                    ConvertToFileUrl(r.FileStoragePath),      // FileUrl
+                    ConvertToThumbnailUrl(r.FileThumbnailPath), // ThumbnailUrl
                     r.IsEdited,
                     r.IsDeleted,
                     r.IsPinned,
@@ -486,6 +508,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                     r.ReplyToFileId,
                     r.ReplyToFileName,
                     r.ReplyToFileContentType,
+                    ConvertToFileUrl(r.ReplyToFileStoragePath),      // ReplyToFileUrl
+                    ConvertToThumbnailUrl(r.ReplyToFileThumbnailPath), // ReplyToThumbnailUrl
                     r.IsForwarded,
                     readByCount,
                     totalMemberCount,
@@ -529,6 +553,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                             FileName = file != null ? file.OriginalFileName : null,
                             FileContentType = file != null ? file.ContentType : null,
                             FileSizeInBytes = file != null ? (long?)file.FileSizeInBytes : null,
+                            FileStoragePath = file != null ? file.StoragePath : null,
+                            FileThumbnailPath = file != null ? file.ThumbnailPath : null,
                             message.IsEdited,
                             message.IsDeleted,
                             message.IsPinned,
@@ -543,6 +569,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                             ReplyToFileId = repliedMessage != null ? repliedMessage.FileId : null,
                             ReplyToFileName = repliedFile != null ? repliedFile.OriginalFileName : null,
                             ReplyToFileContentType = repliedFile != null ? repliedFile.ContentType : null,
+                            ReplyToFileStoragePath = repliedFile != null ? repliedFile.StoragePath : null,
+                            ReplyToFileThumbnailPath = repliedFile != null ? repliedFile.ThumbnailPath : null,
                             message.IsForwarded,
                             // REMOVED: ReadByCount and TotalMemberCount N+1 queries - now batched
                             ReadBy = _context.ChannelMessageReads
@@ -631,6 +659,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                     r.FileName,
                     r.FileContentType,
                     r.FileSizeInBytes,
+                    ConvertToFileUrl(r.FileStoragePath),      // FileUrl
+                    ConvertToThumbnailUrl(r.FileThumbnailPath), // ThumbnailUrl
                     r.IsEdited,
                     r.IsDeleted,
                     r.IsPinned,
@@ -644,6 +674,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                     r.ReplyToFileId,
                     r.ReplyToFileName,
                     r.ReplyToFileContentType,
+                    ConvertToFileUrl(r.ReplyToFileStoragePath),      // ReplyToFileUrl
+                    ConvertToThumbnailUrl(r.ReplyToFileThumbnailPath), // ReplyToThumbnailUrl
                     r.IsForwarded,
                     readByCount,
                     totalMemberCount,
@@ -687,6 +719,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                             FileName = file != null ? file.OriginalFileName : null,
                             FileContentType = file != null ? file.ContentType : null,
                             FileSizeInBytes = file != null ? (long?)file.FileSizeInBytes : null,
+                            FileStoragePath = file != null ? file.StoragePath : null,
+                            FileThumbnailPath = file != null ? file.ThumbnailPath : null,
                             message.IsEdited,
                             message.IsDeleted,
                             message.IsPinned,
@@ -701,6 +735,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                             ReplyToFileId = repliedMessage != null ? repliedMessage.FileId : null,
                             ReplyToFileName = repliedFile != null ? repliedFile.OriginalFileName : null,
                             ReplyToFileContentType = repliedFile != null ? repliedFile.ContentType : null,
+                            ReplyToFileStoragePath = repliedFile != null ? repliedFile.StoragePath : null,
+                            ReplyToFileThumbnailPath = repliedFile != null ? repliedFile.ThumbnailPath : null,
                             message.IsForwarded,
                             // REMOVED: ReadByCount and TotalMemberCount N+1 queries - now batched
                             ReadBy = _context.ChannelMessageReads
@@ -789,6 +825,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                     r.FileName,
                     r.FileContentType,
                     r.FileSizeInBytes,
+                    ConvertToFileUrl(r.FileStoragePath),      // FileUrl
+                    ConvertToThumbnailUrl(r.FileThumbnailPath), // ThumbnailUrl
                     r.IsEdited,
                     r.IsDeleted,
                     r.IsPinned,
@@ -802,6 +840,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                     r.ReplyToFileId,
                     r.ReplyToFileName,
                     r.ReplyToFileContentType,
+                    ConvertToFileUrl(r.ReplyToFileStoragePath),      // ReplyToFileUrl
+                    ConvertToThumbnailUrl(r.ReplyToFileThumbnailPath), // ReplyToThumbnailUrl
                     r.IsForwarded,
                     readByCount,
                     totalMemberCount,
@@ -843,6 +883,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                               FileName = file != null ? file.OriginalFileName : null,
                               FileContentType = file != null ? file.ContentType : null,
                               FileSizeInBytes = file != null ? (long?)file.FileSizeInBytes : null,
+                              FileStoragePath = file != null ? file.StoragePath : null,
+                              FileThumbnailPath = file != null ? file.ThumbnailPath : null,
                               message.IsEdited,
                               message.IsDeleted,
                               message.IsPinned,
@@ -855,6 +897,8 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                               ReplyToFileId = repliedMessage != null ? repliedMessage.FileId : null,
                               ReplyToFileName = repliedFile != null ? repliedFile.OriginalFileName : null,
                               ReplyToFileContentType = repliedFile != null ? repliedFile.ContentType : null,
+                              ReplyToFileStoragePath = repliedFile != null ? repliedFile.StoragePath : null,
+                              ReplyToFileThumbnailPath = repliedFile != null ? repliedFile.ThumbnailPath : null,
                               message.IsForwarded
                           }).ToListAsync(cancellationToken);
 
@@ -934,10 +978,14 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                     r.Id, r.ChannelId, r.SenderId, r.Email, r.FullName, r.AvatarUrl,
                     r.Content,
                     r.FileId, r.FileName, r.FileContentType, r.FileSizeInBytes,
+                    ConvertToFileUrl(r.FileStoragePath),      // FileUrl
+                    ConvertToThumbnailUrl(r.FileThumbnailPath), // ThumbnailUrl
                     r.IsEdited, r.IsDeleted, r.IsPinned,
                     reactionCount, r.CreatedAtUtc, r.EditedAtUtc, r.PinnedAtUtc,
                     r.ReplyToMessageId, r.ReplyToContent, r.ReplyToSenderName,
                     r.ReplyToFileId, r.ReplyToFileName, r.ReplyToFileContentType,
+                    ConvertToFileUrl(r.ReplyToFileStoragePath),      // ReplyToFileUrl
+                    ConvertToThumbnailUrl(r.ReplyToFileThumbnailPath), // ReplyToThumbnailUrl
                     r.IsForwarded, readByCount, totalMemberCount,
                     readByUsers.TryGetValue(r.Id, out var rbu) ? rbu : new List<Guid>(),
                     reactionsByMessage.TryGetValue(r.Id, out var rxns) ? rxns : null,
@@ -1014,5 +1062,31 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
             _context.ChannelMessages.Remove(message);
             return Task.CompletedTask;
         }
+
+        #region File URL Helpers
+
+        /// <summary>
+        /// StoragePath-i statik URL-ə çevirir.
+        /// </summary>
+        private static string? ConvertToFileUrl(string? storagePath)
+        {
+            if (string.IsNullOrEmpty(storagePath))
+                return null;
+
+            return $"/uploads/{storagePath}";
+        }
+
+        /// <summary>
+        /// ThumbnailPath-i statik URL-ə çevirir.
+        /// </summary>
+        private static string? ConvertToThumbnailUrl(string? thumbnailPath)
+        {
+            if (string.IsNullOrEmpty(thumbnailPath))
+                return null;
+
+            return $"/uploads/{thumbnailPath}";
+        }
+
+        #endregion
     }
 }
