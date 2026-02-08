@@ -28,6 +28,17 @@ public partial class LinkPreviewService : ILinkPreviewService
         if (uri.Scheme != "http" && uri.Scheme != "https")
             return null;
 
+        // Etibarsız host-ları erkən filtrə et (166.a, localhost, IP kimi)
+        if (!uri.Host.Contains('.') || uri.Host.Length < 4 ||
+            uri.Host.EndsWith('.') || uri.HostNameType == UriHostNameType.IPv4 ||
+            uri.HostNameType == UriHostNameType.IPv6)
+            return null;
+
+        // TLD minimum 2 simvol olmalıdır (example.com, not example.a)
+        var lastDotIndex = uri.Host.LastIndexOf('.');
+        if (lastDotIndex >= 0 && uri.Host.Length - lastDotIndex - 1 < 2)
+            return null;
+
         // Check cache
         if (_cache.TryGetValue(url, out var cached) && cached.ExpiresAt > DateTime.UtcNow)
             return cached.Preview;
@@ -57,7 +68,8 @@ public partial class LinkPreviewService : ILinkPreviewService
         }
         catch (Exception ex) when (ex is TaskCanceledException or HttpRequestException or OperationCanceledException)
         {
-            _logger.LogWarning(ex, "Failed to fetch link preview for {Url}", url);
+            // Etibarsız və ya əlçatmaz URL-lər üçün debug log yetərlidir, warning lazım deyil
+            _logger.LogDebug("Link preview fetch failed for {Url}: {Message}", url, ex.Message);
             return null;
         }
     }

@@ -123,6 +123,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                                        msg.IsDeleted,
                                        msg.SenderId,
                                        sender.AvatarUrl,
+                                       SenderFullName = sender.FirstName + " " + sender.LastName,
                                        msg.CreatedAtUtc,
                                        msg.FileId,
                                        FileContentType = file != null ? file.ContentType : null
@@ -172,6 +173,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                     LastMessageId = lastMessage != null ? (Guid?)lastMessage.Id : null,
                     LastMessageSenderId = lastMessage != null ? (Guid?)lastMessage.SenderId : null,
                     LastMessageSenderAvatarUrl = lastMessage != null ? lastMessage.AvatarUrl : null,
+                    LastMessageSenderFullName = lastMessage != null ? lastMessage.SenderFullName : null,
                     UnreadCount = unreadCount,
                     FirstUnreadMessageId = firstUnreadMessage != null ? (Guid?)firstUnreadMessage.Id : null,
                     member.LastReadLaterMessageId,
@@ -282,6 +284,7 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                     c.LastMessageSenderId,
                     status,
                     c.LastMessageSenderAvatarUrl,
+                    c.LastMessageSenderFullName,
                     c.FirstUnreadMessageId,
                     c.IsPinned,
                     c.IsMuted,

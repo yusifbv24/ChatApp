@@ -57,6 +57,7 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
 
 
         Task<Result> DeleteMessageAsync(Guid channelId, Guid messageId);
+        Task<Result> BatchDeleteMessagesAsync(Guid channelId, List<Guid> messageIds);
 
 
         Task<Result> PinMessageAsync(Guid channelId, Guid messageId);

@@ -62,6 +62,18 @@ window.chatAppUtils = {
         }
     },
 
+    // Yalnız istifadəçi aşağıya yaxındırsa scroll et (link-preview yükləndikdə)
+    scrollToBottomIfNear: (elementOrId) => {
+        const element = typeof elementOrId === 'string'
+            ? document.getElementById(elementOrId) : elementOrId;
+        if (!element) return;
+        const threshold = 150;
+        const isNearBottom = element.scrollHeight - element.scrollTop - element.clientHeight < threshold;
+        if (isNearBottom) {
+            element.scrollTop = element.scrollHeight;
+        }
+    },
+
     // Scroll container to bottom by ID (used for Jump to Latest, file send)
     // OPTIMIZED: Uses rAF for stable scroll
     scrollToBottomById: (elementId) => {
@@ -86,6 +98,7 @@ window.chatAppUtils = {
 
     // Scroll to bottom and show element (called after render)
     // Şəkillərin yüklənməsini gözləyir, timeout ilə
+    // MutationObserver ilə asinxron yüklənən content-i (LinkPreview) izləyir
     scrollToBottomAndShow: (elementId, timeoutMs = 500) => {
         const element = document.getElementById(elementId);
         if (!element) return;
@@ -102,54 +115,85 @@ window.chatAppUtils = {
             requestAnimationFrame(() => {
                 requestAnimationFrame(() => performScroll());
             });
-            return;
+        } else {
+            let loadedCount = 0;
+            const totalCount = images.length;
+            let completed = false;
+
+            const checkComplete = () => {
+                if (completed) return;
+                if (loadedCount >= totalCount) {
+                    completed = true;
+                    requestAnimationFrame(() => {
+                        requestAnimationFrame(() => performScroll());
+                    });
+                }
+            };
+
+            // Timeout - şəkillər yüklənməsə belə scroll et
+            const timeout = setTimeout(() => {
+                if (!completed) {
+                    completed = true;
+                    requestAnimationFrame(() => {
+                        requestAnimationFrame(() => performScroll());
+                    });
+                }
+            }, timeoutMs);
+
+            images.forEach(img => {
+                // Artıq yüklənmiş (cache-dən)
+                if (img.complete && img.naturalHeight > 0) {
+                    loadedCount++;
+                    checkComplete();
+                } else {
+                    // Yüklənməyi gözlə
+                    const onLoad = () => {
+                        loadedCount++;
+                        if (loadedCount >= totalCount) {
+                            clearTimeout(timeout);
+                        }
+                        checkComplete();
+                    };
+                    img.addEventListener('load', onLoad, { once: true });
+                    img.addEventListener('error', onLoad, { once: true });
+                }
+            });
+
+            // Bütün şəkillər artıq cache-dən yükləniblər
+            checkComplete();
         }
 
-        let loadedCount = 0;
-        const totalCount = images.length;
-        let completed = false;
-
-        const checkComplete = () => {
-            if (completed) return;
-            if (loadedCount >= totalCount) {
-                completed = true;
-                requestAnimationFrame(() => {
-                    requestAnimationFrame(() => performScroll());
-                });
-            }
-        };
-
-        // Timeout - şəkillər yüklənməsə belə scroll et
-        const timeout = setTimeout(() => {
-            if (!completed) {
-                completed = true;
-                requestAnimationFrame(() => {
-                    requestAnimationFrame(() => performScroll());
-                });
-            }
-        }, timeoutMs);
-
-        images.forEach(img => {
-            // Artıq yüklənmiş (cache-dən)
-            if (img.complete && img.naturalHeight > 0) {
-                loadedCount++;
-                checkComplete();
-            } else {
-                // Yüklənməyi gözlə
-                const onLoad = () => {
-                    loadedCount++;
-                    if (loadedCount >= totalCount) {
-                        clearTimeout(timeout);
+        // MutationObserver: LinkPreview kimi asinxron yüklənən content üçün
+        // DOM-a yeni elementlər əlavə olunanda (img, link-preview-card) yenidən scroll et
+        const observer = new MutationObserver((mutations) => {
+            let hasNewContent = false;
+            for (const mutation of mutations) {
+                if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                    for (const node of mutation.addedNodes) {
+                        if (node.nodeType === Node.ELEMENT_NODE) {
+                            // LinkPreview card və ya yeni img əlavə olunub
+                            if (node.classList?.contains('link-preview-card') ||
+                                node.tagName === 'IMG' ||
+                                node.querySelector?.('img, .link-preview-card')) {
+                                hasNewContent = true;
+                                break;
+                            }
+                        }
                     }
-                    checkComplete();
-                };
-                img.addEventListener('load', onLoad, { once: true });
-                img.addEventListener('error', onLoad, { once: true });
+                }
+                if (hasNewContent) break;
+            }
+            if (hasNewContent) {
+                requestAnimationFrame(() => {
+                    element.scrollTop = element.scrollHeight;
+                });
             }
         });
 
-        // Bütün şəkillər artıq cache-dən yükləniblər
-        checkComplete();
+        observer.observe(element, { childList: true, subtree: true });
+
+        // Observer-i 5 saniyə sonra dayandır (LinkPreview-lar o zamana qədər yüklənmiş olmalıdır)
+        setTimeout(() => observer.disconnect(), 5000);
     },
 
     // Scroll to element by ID (used for unread separator)

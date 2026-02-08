@@ -301,7 +301,7 @@
                                                 }
                                                 else
                                                 {
-                                                    <div class="sender-avatar-placeholder">?</div>
+                                                    <div class="sender-avatar-placeholder" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(item.Channel?.LastMessageSenderId ?? item.Id)">@StringHelper.GetInitials(item.LastMessageSenderFullName)</div>
                                                 }
                                                 <span class="message-content">@item.LastMessage</span>
                                             </span>

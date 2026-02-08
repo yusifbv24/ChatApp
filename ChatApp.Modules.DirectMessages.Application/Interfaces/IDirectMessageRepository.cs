@@ -6,6 +6,7 @@ namespace ChatApp.Modules.DirectMessages.Application.Interfaces
     public interface IDirectMessageRepository
     {
         Task<DirectMessage?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+        Task<List<DirectMessage>> GetByIdsAsync(List<Guid> ids, CancellationToken cancellationToken = default);
         Task<DirectMessage?> GetByIdWithReactionsAsync(Guid id, CancellationToken cancellationToken = default);
         Task<DirectMessageDto?> GetByIdAsDtoAsync(Guid id, CancellationToken cancellationToken = default);
         Task<List<DirectMessageDto>> GetConversationMessagesAsync(

@@ -51,6 +51,7 @@ public record UnifiedChatItemDto(
     int? MemberCount,
     string? ChannelType,
     string? LastMessageSenderAvatarUrl,
+    string? LastMessageSenderFullName,
     Guid? CreatedBy,
     string? ChannelDescription,
     DateTime? CreatedAtUtc,

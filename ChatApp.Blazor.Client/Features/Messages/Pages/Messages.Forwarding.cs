@@ -9,6 +9,12 @@ public partial class Messages
     #region Forward - Mesaj yönləndirmə
 
     /// <summary>
+    /// Çoxlu forward üçün mesaj ID-ləri (tarix sırasına görə).
+    /// SelectionToolbar-dan forward edildikdə doldurulur.
+    /// </summary>
+    private List<Guid> forwardingMultipleMessageIds = [];
+
+    /// <summary>
     /// Forward dialog-unu açır.
     /// MessageBubble component-dən çağrılır.
     /// </summary>
@@ -47,6 +53,7 @@ public partial class Messages
         showForwardDialog = false;
         forwardingDirectMessage = null;
         forwardingChannelMessage = null;
+        forwardingMultipleMessageIds.Clear();
         forwardSearchQuery = string.Empty;
         isForwardSearchActive = false;
         isForwardSearching = false;
@@ -170,6 +177,45 @@ public partial class Messages
     }
 
     /// <summary>
+    /// Mesaj ID-lərindən content-ləri əldə et.
+    /// Çoxlu forward zamanı bütün mesajların content-lərini qaytarır.
+    /// </summary>
+    private List<string> GetForwardMessageContents()
+    {
+        var messageIds = forwardingMultipleMessageIds.Count > 0
+            ? forwardingMultipleMessageIds
+            : new List<Guid> { forwardingDirectMessage?.Id ?? forwardingChannelMessage?.Id ?? Guid.Empty };
+
+        var contents = new List<string>();
+        foreach (var id in messageIds)
+        {
+            string? content = null;
+            if (isDirectMessage)
+            {
+                content = directMessages.FirstOrDefault(m => m.Id == id)?.Content;
+            }
+            else
+            {
+                content = channelMessages.FirstOrDefault(m => m.Id == id)?.Content;
+            }
+            if (!string.IsNullOrEmpty(content))
+            {
+                contents.Add(content);
+            }
+        }
+
+        // Fallback: əgər heç bir content tapılmadısa, tək mesajdan al
+        if (contents.Count == 0)
+        {
+            var fallback = forwardingDirectMessage?.Content ?? forwardingChannelMessage?.Content;
+            if (!string.IsNullOrEmpty(fallback))
+                contents.Add(fallback);
+        }
+
+        return contents;
+    }
+
+    /// <summary>
     /// Mesajı conversation-a forward et.
     ///
     /// İŞ AXINI:
@@ -182,8 +228,11 @@ public partial class Messages
     {
         try
         {
-            var content = forwardingDirectMessage?.Content ?? forwardingChannelMessage?.Content;
-            if (string.IsNullOrEmpty(content)) return;
+            var contents = GetForwardMessageContents();
+            if (contents.Count == 0) return;
+
+            // İlk mesaj üçün əvvəlki davranış (son göndərilən mesaj conversation list-i yeniləyir)
+            var content = contents[0];
 
             var result = await ConversationService.SendMessageAsync(
                 conversationId,
@@ -256,6 +305,17 @@ public partial class Messages
                     c => c with { LastMessageStatus = "Sent", LastMessageId = messageId }
                 );
 
+                // Qalan mesajları ardıcıl forward et (əgər çoxlu seçim varsa)
+                for (int i = 1; i < contents.Count; i++)
+                {
+                    await ConversationService.SendMessageAsync(
+                        conversationId,
+                        contents[i],
+                        fileId: null,
+                        replyToMessageId: null,
+                        isForwarded: true);
+                }
+
                 // Seçim rejimindən çıx
                 if (isSelectingMessageBuble)
                 {
@@ -263,7 +323,6 @@ public partial class Messages
                 }
 
                 CancelForward();
-                StateHasChanged();
             }
             else
             {
@@ -283,8 +342,10 @@ public partial class Messages
     {
         try
         {
-            var content = forwardingDirectMessage?.Content ?? forwardingChannelMessage?.Content;
-            if (string.IsNullOrEmpty(content)) return;
+            var contents = GetForwardMessageContents();
+            if (contents.Count == 0) return;
+
+            var content = contents[0];
 
             var result = await ChannelService.SendMessageAsync(
                 channelId,
@@ -356,13 +417,23 @@ public partial class Messages
                     c => c with { LastMessageStatus = "Sent", LastMessageId = messageId }
                 );
 
+                // Qalan mesajları ardıcıl forward et (əgər çoxlu seçim varsa)
+                for (int i = 1; i < contents.Count; i++)
+                {
+                    await ChannelService.SendMessageAsync(
+                        channelId,
+                        contents[i],
+                        fileId: null,
+                        replyToMessageId: null,
+                        isForwarded: true);
+                }
+
                 if (isSelectingMessageBuble)
                 {
                     ToggleSelectMode();
                 }
 
                 CancelForward();
-                StateHasChanged();
             }
             else
             {
@@ -505,10 +576,10 @@ public partial class Messages
                 isReplying = true;
                 replyToMessageId = messageId;
                 replyToSenderName = message.SenderFullName;
-                replyToContent = message.Content;
-                replyToFileId = message.FileId;
-                replyToFileName = message.FileName;
-                replyToFileContentType = message.FileContentType;
+                replyToContent = message.IsDeleted ? "This message was deleted" : message.Content;
+                replyToFileId = message.IsDeleted ? null : message.FileId;
+                replyToFileName = message.IsDeleted ? null : message.FileName;
+                replyToFileContentType = message.IsDeleted ? null : message.FileContentType;
                 StateHasChanged();
             }
         }
@@ -520,10 +591,10 @@ public partial class Messages
                 isReplying = true;
                 replyToMessageId = messageId;
                 replyToSenderName = message.SenderFullName;
-                replyToContent = message.Content;
-                replyToFileId = message.FileId;
-                replyToFileName = message.FileName;
-                replyToFileContentType = message.FileContentType;
+                replyToContent = message.IsDeleted ? "This message was deleted" : message.Content;
+                replyToFileId = message.IsDeleted ? null : message.FileId;
+                replyToFileName = message.IsDeleted ? null : message.FileName;
+                replyToFileContentType = message.IsDeleted ? null : message.FileContentType;
                 StateHasChanged();
             }
         }

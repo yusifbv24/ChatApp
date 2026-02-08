@@ -6,6 +6,7 @@ namespace ChatApp.Modules.Channels.Application.Interfaces
     public interface IChannelMessageRepository
     {
         Task<ChannelMessage?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+        Task<List<ChannelMessage>> GetByIdsAsync(List<Guid> ids, CancellationToken cancellationToken = default);
         Task<ChannelMessage?> GetByIdWithReactionsAsync(Guid id, CancellationToken cancellationToken = default);
         Task<ChannelMessageDto?> GetByIdAsDtoAsync(Guid id, CancellationToken cancellationToken = default);
         Task<List<ChannelMessageDto>> GetChannelMessagesAsync(

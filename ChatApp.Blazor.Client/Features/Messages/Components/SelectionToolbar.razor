@@ -28,7 +28,7 @@
                 </div>
             }
 
-            <button class="forward-btn-full" @onclick="OnForward" @if(IsSelected) ? disabled>
+            <button class="forward-btn-full" @onclick="OnForward" disabled="@(!IsSelected)">
                 <MudIcon Icon="@Icons.Material.Outlined.Shortcut" Size="Size.Small" />
                 <span>Forward</span>
             </button>

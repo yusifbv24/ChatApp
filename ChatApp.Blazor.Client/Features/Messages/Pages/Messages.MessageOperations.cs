@@ -918,6 +918,28 @@ public partial class Messages
     }
 
     /// <summary>
+    /// selectedMessageIds-dəki TempId/Id-ləri real mesaj Id-lərinə çevir.
+    /// selectedMessageIds TempId ?? Id saxladığı üçün, əsl Id-ni tapmaq lazımdır.
+    /// </summary>
+    private List<Guid> ResolveSelectedMessageIds()
+    {
+        if (isDirectMessage)
+        {
+            return directMessages
+                .Where(m => selectedMessageIds.Contains(m.TempId ?? m.Id))
+                .Select(m => m.Id)
+                .ToList();
+        }
+        else
+        {
+            return channelMessages
+                .Where(m => selectedMessageIds.Contains(m.TempId ?? m.Id))
+                .Select(m => m.Id)
+                .ToList();
+        }
+    }
+
+    /// <summary>
     /// Seçilmiş mesajları silmək olur?
     /// Yalnız öz mesajlarını silmək olar.
     /// </summary>
@@ -928,15 +950,13 @@ public partial class Messages
 
         if (isDirectMessage)
         {
-            return directMessages
-                .Where(m => selectedMessageIds.Contains(m.Id))
-                .All(m => m.SenderId == currentUserId);
+            var selected = directMessages.Where(m => selectedMessageIds.Contains(m.TempId ?? m.Id)).ToList();
+            return selected.Count > 0 && selected.All(m => m.SenderId == currentUserId);
         }
         else
         {
-            return channelMessages
-                .Where(m => selectedMessageIds.Contains(m.Id))
-                .All(m => m.SenderId == currentUserId);
+            var selected = channelMessages.Where(m => selectedMessageIds.Contains(m.TempId ?? m.Id)).ToList();
+            return selected.Count > 0 && selected.All(m => m.SenderId == currentUserId);
         }
     }
 
@@ -948,11 +968,86 @@ public partial class Messages
         if (!CanDeleteSelected())
             return;
 
-        var messagesToDelete = selectedMessageIds.ToList();
+        // selectedMessageIds TempId və ya Id saxlayır — real Id-yə çevir
+        var realMessageIds = ResolveSelectedMessageIds();
 
-        foreach (var messageId in messagesToDelete)
+        if (realMessageIds.Count >= 5)
         {
-            await DeleteMessage(messageId);
+            // Batch delete: 1 API request
+            try
+            {
+                if (isDirectMessage && selectedConversationId.HasValue)
+                {
+                    var result = await ConversationService.BatchDeleteMessagesAsync(
+                        selectedConversationId.Value, realMessageIds);
+
+                    if (result.IsSuccess)
+                    {
+                        // Local UI update — SignalR-dan da gələcək, amma optimistic update
+                        foreach (var messageId in realMessageIds)
+                        {
+                            var message = directMessages.FirstOrDefault(m => m.Id == messageId);
+                            if (message != null)
+                            {
+                                var index = directMessages.IndexOf(message);
+                                directMessages[index] = message with { IsDeleted = true, Content = "" };
+
+                                // Son mesaj silinibsə, conversation list-i yenilə
+                                if (IsLastMessageInConversation(selectedConversationId.Value, messageId))
+                                {
+                                    UpdateConversationLastMessage(selectedConversationId.Value, "This message was deleted");
+                                }
+                            }
+                        }
+                        InvalidateMessageCache();
+                    }
+                    else
+                    {
+                        ShowError(result.Error ?? "Failed to batch delete messages");
+                    }
+                }
+                else if (!isDirectMessage && selectedChannelId.HasValue)
+                {
+                    var result = await ChannelService.BatchDeleteMessagesAsync(
+                        selectedChannelId.Value, realMessageIds);
+
+                    if (result.IsSuccess)
+                    {
+                        foreach (var messageId in realMessageIds)
+                        {
+                            var message = channelMessages.FirstOrDefault(m => m.Id == messageId);
+                            if (message != null)
+                            {
+                                var index = channelMessages.IndexOf(message);
+                                channelMessages[index] = message with { IsDeleted = true, Content = "" };
+
+                                // Son mesaj silinibsə, channel list-i yenilə
+                                if (IsLastMessageInChannel(selectedChannelId.Value, messageId))
+                                {
+                                    UpdateChannelLastMessage(selectedChannelId.Value, "This message was deleted", message.SenderFullName);
+                                }
+                            }
+                        }
+                        InvalidateMessageCache();
+                    }
+                    else
+                    {
+                        ShowError(result.Error ?? "Failed to batch delete messages");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowError("Failed to batch delete messages: " + ex.Message);
+            }
+        }
+        else
+        {
+            // Individual delete: N API requests (1-4 mesaj)
+            foreach (var messageId in realMessageIds)
+            {
+                await DeleteMessage(messageId);
+            }
         }
 
         ToggleSelectMode();
@@ -960,14 +1055,35 @@ public partial class Messages
 
     /// <summary>
     /// Seçilmiş mesajları forward et.
-    /// Hələlik yalnız ilk mesajı forward edir.
+    /// Bütün seçilmiş mesajları tarix sırasına görə forward edir.
     /// </summary>
     private void ForwardSelectedMessages()
     {
         if (selectedMessageIds.Count == 0)
             return;
 
-        var firstMessageId = selectedMessageIds.First();
+        // Seçilmiş mesajları tarix sırasına görə sırala
+        if (isDirectMessage)
+        {
+            forwardingMultipleMessageIds = directMessages
+                .Where(m => selectedMessageIds.Contains(m.TempId ?? m.Id))
+                .OrderBy(m => m.CreatedAtUtc)
+                .Select(m => m.Id)
+                .ToList();
+        }
+        else
+        {
+            forwardingMultipleMessageIds = channelMessages
+                .Where(m => selectedMessageIds.Contains(m.TempId ?? m.Id))
+                .OrderBy(m => m.CreatedAtUtc)
+                .Select(m => m.Id)
+                .ToList();
+        }
+
+        if (forwardingMultipleMessageIds.Count == 0) return;
+
+        // İlk mesajı dialog-da göstər, amma hamısı forward olunacaq
+        var firstMessageId = forwardingMultipleMessageIds.First();
         HandleForward(firstMessageId);
     }
 

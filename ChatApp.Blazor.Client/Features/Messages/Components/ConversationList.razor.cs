@@ -308,6 +308,8 @@ public partial class ConversationList : IAsyncDisposable
 
         public string? LastMessageSenderAvatarUrl { get; set; }
 
+        public string? LastMessageSenderFullName { get; set; }
+
         public bool IsPinned { get; set; }
 
         public bool IsMuted { get; set; }
@@ -511,6 +513,7 @@ public partial class ConversationList : IAsyncDisposable
             LastMessageStatus = channel.LastMessageStatus,
             LastMessageId = channel.LastMessageId,
             LastMessageSenderAvatarUrl = channel.LastMessageSenderAvatarUrl,
+            LastMessageSenderFullName = channel.LastMessageSenderFullName,
             IsPinned = channel.IsPinned,
             IsMuted = channel.IsMuted,
             IsMarkedReadLater = channel.IsMarkedReadLater,

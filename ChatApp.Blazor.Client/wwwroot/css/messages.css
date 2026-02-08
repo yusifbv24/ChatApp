@@ -729,7 +729,7 @@
         width: 18px;
         height: 18px;
         border-radius: 50%;
-        background: var(--gray-300);
+        /* background-color inline style ilə set olunur (AvatarHelper.GetAvatarBackgroundColor) */
         color: var(--white);
         display: flex;
         align-items: center;

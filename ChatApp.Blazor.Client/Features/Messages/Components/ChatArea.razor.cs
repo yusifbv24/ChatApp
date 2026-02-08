@@ -1071,6 +1071,22 @@ public partial class ChatArea : IAsyncDisposable
     }
 
     /// <summary>
+    /// Yalnız istifadəçi aşağıya yaxındırsa scroll edir.
+    /// Link-preview yükləndikdə çağrılır — yuxarıda olan istifadəçini narahat etmir.
+    /// </summary>
+    private async Task ScrollToBottomIfNearAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("chatAppUtils.scrollToBottomIfNear", messagesContainerRef);
+        }
+        catch
+        {
+            // Component disposed ola bilər - ignore
+        }
+    }
+
+    /// <summary>
     /// Aşağı scroll edir və input-a focus edir.
     /// Float button-a click olunduqda çağırılır.
     /// Parent-də clear+reload edir (conversation switch kimi).

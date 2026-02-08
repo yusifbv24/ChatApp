@@ -482,6 +482,7 @@ public partial class Messages
             try
             {
                 var needsStateUpdate = false;
+                var replyPreviewsUpdated = false;
 
                 // Aktiv conversation-dakı mesajı yenilə
                 if (editedMessage.ConversationId == selectedConversationId)
@@ -503,7 +504,6 @@ public partial class Messages
 
                     // Reply preview-ları yenilə
                     // Bu mesaja reply edilib idisə, o reply-ın preview-unu da dəyiş
-                    bool replyPreviewsUpdated = false;
                     for (int i = 0; i < directMessages.Count; i++)
                     {
                         var msg = directMessages[i];
@@ -531,7 +531,7 @@ public partial class Messages
                 }
 
                 // Yalnız dəyişiklik olubsa UI-ı yenilə (performance optimization)
-                if (needsStateUpdate && !_disposed)
+                if ((needsStateUpdate || replyPreviewsUpdated) && !_disposed)
                 {
                     StateHasChanged();
                 }
@@ -566,7 +566,16 @@ public partial class Messages
                     if (message != null)
                     {
                         var index = directMessages.IndexOf(message);
-                        directMessages[index] = deletedMessage;
+                        // Backend delete notification-da SenderFullName/Email/Avatar boş gəlir,
+                        // mövcud dəyərləri qoruyuruq ki reply və digər funksiyalar düzgün işləsin
+                        directMessages[index] = deletedMessage with
+                        {
+                            SenderFullName = !string.IsNullOrEmpty(deletedMessage.SenderFullName)
+                                ? deletedMessage.SenderFullName : message.SenderFullName,
+                            SenderEmail = !string.IsNullOrEmpty(deletedMessage.SenderEmail)
+                                ? deletedMessage.SenderEmail : message.SenderEmail,
+                            SenderAvatarUrl = deletedMessage.SenderAvatarUrl ?? message.SenderAvatarUrl
+                        };
                         needsStateUpdate = true;
 
                         // Reply preview-ları yenilə
@@ -617,6 +626,7 @@ public partial class Messages
             try
             {
                 var needsStateUpdate = false;
+                var replyPreviewsUpdated = false;
 
                 if (editedMessage.ChannelId == selectedChannelId)
                 {
@@ -644,7 +654,6 @@ public partial class Messages
                     }
 
                     // Reply preview-ları yenilə
-                    bool replyPreviewsUpdated = false;
                     for (int i = 0; i < channelMessages.Count; i++)
                     {
                         var msg = channelMessages[i];
@@ -670,7 +679,7 @@ public partial class Messages
                     needsStateUpdate = true;
                 }
 
-                if (needsStateUpdate && !_disposed)
+                if ((needsStateUpdate || replyPreviewsUpdated) && !_disposed)
                 {
                     StateHasChanged();
                 }
@@ -703,7 +712,16 @@ public partial class Messages
                     if (message != null)
                     {
                         var index = channelMessages.IndexOf(message);
-                        channelMessages[index] = deletedMessage;
+                        // Backend delete notification-da SenderFullName/Email/Avatar boş gəlir,
+                        // mövcud dəyərləri qoruyuruq ki reply və digər funksiyalar düzgün işləsin
+                        channelMessages[index] = deletedMessage with
+                        {
+                            SenderFullName = !string.IsNullOrEmpty(deletedMessage.SenderFullName)
+                                ? deletedMessage.SenderFullName : message.SenderFullName,
+                            SenderEmail = !string.IsNullOrEmpty(deletedMessage.SenderEmail)
+                                ? deletedMessage.SenderEmail : message.SenderEmail,
+                            SenderAvatarUrl = deletedMessage.SenderAvatarUrl ?? message.SenderAvatarUrl
+                        };
                         needsStateUpdate = true;
 
                         // Reply preview-ları yenilə

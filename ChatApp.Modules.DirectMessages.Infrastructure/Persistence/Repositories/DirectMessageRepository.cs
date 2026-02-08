@@ -43,6 +43,13 @@ namespace ChatApp.Modules.DirectMessages.Infrastructure.Persistence.Repositories
                 .FirstOrDefaultAsync(m => m.Id == id, cancellationToken);
         }
 
+        public async Task<List<DirectMessage>> GetByIdsAsync(List<Guid> ids, CancellationToken cancellationToken = default)
+        {
+            return await _context.DirectMessages
+                .Where(m => ids.Contains(m.Id))
+                .ToListAsync(cancellationToken);
+        }
+
 
         public async Task<DirectMessage?> GetByIdWithReactionsAsync(Guid id, CancellationToken cancellationToken = default)
         {

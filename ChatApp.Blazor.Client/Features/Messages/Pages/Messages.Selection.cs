@@ -165,6 +165,7 @@ public partial class Messages
         LastMessageSenderId: item.LastMessageSenderId,
         LastMessageStatus: item.LastMessageStatus,
         LastMessageSenderAvatarUrl: item.LastMessageSenderAvatarUrl,
+        LastMessageSenderFullName: item.LastMessageSenderFullName,
         FirstUnreadMessageId: item.FirstUnreadMessageId,
         IsPinned: item.IsPinned,
         IsMuted: item.IsMuted,
@@ -563,10 +564,14 @@ public partial class Messages
         selectedConversationId = null;
         selectedChannelId = null;
         isDirectMessage = true;
+        isNotesConversation = false;
 
         recipientUserId = user.Id;
         recipientName = user.FullName;
         recipientAvatarUrl = user.AvatarUrl;
+        recipientPosition = user.Position;
+        recipientRole = null;
+        recipientLastSeenAt = null;
         isRecipientOnline = await SignalRService.IsUserOnlineAsync(user.Id);
 
         // Mention data: Pending conversation üçün conversation partner
@@ -797,7 +802,9 @@ public partial class Messages
             // Channel yaradıcısı avtomatik admin-dir
             isChannelAdmin = channel.CreatedBy == currentUserId;
             currentUserChannelRole = isChannelAdmin ? MemberRole.Owner : MemberRole.Member;
-            isCurrentUserChannelMember = isChannelAdmin; // Yaradıcı həmişə üzvdür
+            // Default true: ConversationList-dəki channel-lar artıq join olunmuş channel-lardır
+            // API cavabında dəqiq yoxlanılacaq (line ~812)
+            isCurrentUserChannelMember = true;
 
             // Mention data: Channel üçün member-lər (@All MessageInput-da dinamik əlavə olunur)
             currentConversationPartner = null; // Channel-da conversation partner yoxdur

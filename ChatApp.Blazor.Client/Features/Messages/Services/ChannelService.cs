@@ -193,6 +193,13 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
                 $"/api/channels/{channelId}/messages/{messageId}");
         }
 
+        public async Task<Result> BatchDeleteMessagesAsync(Guid channelId, List<Guid> messageIds)
+        {
+            return await apiClient.PostAsync(
+                $"/api/channels/{channelId}/messages/batch-delete",
+                new { MessageIds = messageIds });
+        }
+
 
 
         public async Task<Result> PinMessageAsync(Guid channelId, Guid messageId)

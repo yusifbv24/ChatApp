@@ -22,6 +22,13 @@ namespace ChatApp.Modules.Channels.Infrastructure.Persistence.Repositories
                 .FirstOrDefaultAsync(m => m.Id == id, cancellationToken);
         }
 
+        public async Task<List<ChannelMessage>> GetByIdsAsync(List<Guid> ids, CancellationToken cancellationToken = default)
+        {
+            return await _context.ChannelMessages
+                .Where(m => ids.Contains(m.Id))
+                .ToListAsync(cancellationToken);
+        }
+
         public async Task<ChannelMessage?> GetByIdWithReactionsAsync(Guid id, CancellationToken cancellationToken = default)
         {
             return await _context.ChannelMessages

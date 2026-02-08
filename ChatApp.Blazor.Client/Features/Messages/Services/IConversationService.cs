@@ -43,6 +43,7 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
 
 
         Task<Result> DeleteMessageAsync(Guid conversationId,Guid messageId);
+        Task<Result> BatchDeleteMessagesAsync(Guid conversationId, List<Guid> messageIds);
 
 
         Task<Result> MarkAsReadAsync(Guid conversationId, Guid messageId);

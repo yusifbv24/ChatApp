@@ -19,6 +19,13 @@ namespace ChatApp.Blazor.Client.Features.Messages.Services
                 $"/api/conversations/{conversationId}/messages/{messageId}");
         }
 
+        public async Task<Result> BatchDeleteMessagesAsync(Guid conversationId, List<Guid> messageIds)
+        {
+            return await _apiClient.PostAsync(
+                $"/api/conversations/{conversationId}/messages/batch-delete",
+                new { MessageIds = messageIds });
+        }
+
 
 
         public async Task<Result> EditMessageAsync(Guid conversationId, Guid messageId, string newContent)

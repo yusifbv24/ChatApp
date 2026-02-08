@@ -30,6 +30,7 @@ public partial class MessageBubble : IAsyncDisposable
 
     private LinkPreviewData? _linkPreview;
     private bool _linkPreviewLoaded;
+    private string? _previousContent;
 
     private record LinkPreviewData(string? Url, string? Title, string? Description, string? ImageUrl, string? Domain);
 
@@ -437,6 +438,16 @@ public partial class MessageBubble : IAsyncDisposable
     /// </summary>
     [GeneratedRegex(@"(https?://[^\s<>""']+)", RegexOptions.IgnoreCase)]
     private static partial Regex UrlRegex();
+
+    /// <summary>
+    /// Content-dən ilk URL-i çıxar. Edit zamanı URL dəyişikliyini aşkarlamaq üçün.
+    /// </summary>
+    private static string? ExtractFirstUrl(string? content)
+    {
+        if (string.IsNullOrEmpty(content)) return null;
+        var match = UrlRegex().Match(content);
+        return match.Success ? match.Value : null;
+    }
 
     #endregion
 
@@ -994,6 +1005,21 @@ public partial class MessageBubble : IAsyncDisposable
                 showMoreSubmenu = false;
             }
         }
+
+        // Content dəyişdikdə (edit) link preview-u yenidən yoxla
+        if (_previousContent != null && _previousContent != Content)
+        {
+            var oldUrl = ExtractFirstUrl(_previousContent);
+            var newUrl = ExtractFirstUrl(Content);
+
+            if (oldUrl != newUrl)
+            {
+                // URL dəyişdi və ya silindi — link preview-u ləğv et və yenidən yüklə
+                _linkPreview = null;
+                _linkPreviewLoaded = false;
+            }
+        }
+        _previousContent = Content;
     }
 
     /// <summary>
@@ -1250,7 +1276,11 @@ public partial class MessageBubble : IAsyncDisposable
             {
                 // Silently handle initialization errors
             }
+        }
 
+        // Link preview yüklə (firstRender və ya edit sonrası _linkPreviewLoaded reset olduqda)
+        if (!_linkPreviewLoaded)
+        {
             await LoadLinkPreviewAsync();
         }
     }
@@ -1266,14 +1296,30 @@ public partial class MessageBubble : IAsyncDisposable
         if (!match.Success)
             return;
 
+        // Frontend URL validasiyası — etibarsız host-ları backend-ə göndərmə
+        var url = match.Value;
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
+            (uri.Scheme != "http" && uri.Scheme != "https") ||
+            !uri.Host.Contains('.') || uri.Host.Length < 4 ||
+            uri.Host.EndsWith('.'))
+            return;
+
+        // TLD minimum 2 simvol olmalıdır (example.com yox, 166.a yox)
+        var lastDot = uri.Host.LastIndexOf('.');
+        if (lastDot >= 0 && uri.Host.Length - lastDot - 1 < 2)
+            return;
+
         try
         {
-            var url = match.Value;
             var response = await Http.GetAsync($"api/files/link-preview?url={Uri.EscapeDataString(url)}");
             if (response.IsSuccessStatusCode && response.StatusCode != System.Net.HttpStatusCode.NoContent)
             {
                 _linkPreview = await response.Content.ReadFromJsonAsync<LinkPreviewData>();
                 StateHasChanged();
+
+                // Link preview yükləndikdə, yalnız istifadəçi aşağıdadırsa scroll et
+                try { await JS.InvokeVoidAsync("chatAppUtils.scrollToBottomIfNear", "chat-messages"); }
+                catch { /* non-critical */ }
             }
         }
         catch

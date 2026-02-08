@@ -413,6 +413,33 @@ namespace ChatApp.Modules.Channels.Api.Controllers
         }
 
 
+        /// <summary>
+        /// Batch deletes multiple messages (sender, admin, or owner can delete)
+        /// </summary>
+        [HttpPost("batch-delete")]
+        [RequirePermission("Messages.Delete")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<IActionResult> BatchDeleteMessages(
+            [FromRoute] Guid channelId,
+            [FromBody] BatchDeleteRequest request,
+            CancellationToken cancellationToken)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == Guid.Empty)
+                return Unauthorized();
+
+            var result = await _mediator.Send(
+                new BatchDeleteChannelMessagesCommand(channelId, request.MessageIds, userId),
+                cancellationToken);
+
+            if (result.IsFailure)
+                return BadRequest(new { error = result.Error });
+
+            return Ok(new { message = "Messages deleted successfully" });
+        }
 
 
         /// <summary>
