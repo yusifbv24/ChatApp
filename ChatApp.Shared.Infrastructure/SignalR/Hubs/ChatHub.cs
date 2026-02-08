@@ -209,7 +209,11 @@ namespace ChatApp.Shared.Infrastructure.SignalR.Hubs
 
         private string GetFullName()
         {
-            return Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Someone";
+            // JWT-da "name" claim key istifadə olunur (JwtRegisteredClaimNames.Name = "name"),
+            // ClaimTypes.Name isə fərqli key-dir ("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name")
+            return Context.User?.FindFirst("name")?.Value
+                ?? Context.User?.FindFirst(ClaimTypes.Name)?.Value
+                ?? "Someone";
         }
     }
 }

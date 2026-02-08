@@ -52,7 +52,8 @@
       "Bash(wc:*)",
       "Bash(tr:*)",
       "Bash(__NEW_LINE_11210cc517fd9361__ comm -23 /tmp/defined.txt /tmp/used.txt)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(dotnet clean:*)"
     ],
     "deny": [],
     "ask": []

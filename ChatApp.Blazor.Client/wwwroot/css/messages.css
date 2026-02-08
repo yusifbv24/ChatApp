@@ -1746,7 +1746,7 @@
         object-fit: cover;
     }
 
-    .message-avatar.avatar-spacer {
+    .message-avatar.avatar-hidden {
         visibility: hidden;
     }
 

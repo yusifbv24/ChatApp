@@ -85,6 +85,9 @@ public partial class MessageBubble : IAsyncDisposable
     /// </summary>
     [Parameter] public string SenderName { get; set; } = string.Empty;
 
+
+    [Parameter] public Guid SenderId { get; set; }
+
     /// <summary>
     /// Göndərənin avatar URL-i.
     /// </summary>

@@ -19,18 +19,15 @@
 
     @if (!IsOwn && !IsDirectMessage)
     {
-        <!-- Always show avatar space for group messages to maintain alignment -->
-        <div class="message-avatar @(!ShowAvatar ? "avatar-spacer" : "")">
-            @if (ShowAvatar)
+        <!-- Avatar həmişə render olunur (img yenidən yüklənməsin deyə), visibility ilə gizlədilir -->
+        <div class="message-avatar @(!ShowAvatar ? "avatar-hidden" : "")">
+            @if (!string.IsNullOrEmpty(AvatarUrl))
             {
-                @if (!string.IsNullOrEmpty(AvatarUrl))
-                {
-                    <img src="@AvatarUrl" alt="@SenderName" />
-                }
-                else
-                {
-                    <div class="avatar-placeholder">@StringHelper.GetInitials(SenderName)</div>
-                }
+                <img src="@AvatarUrl" alt="@SenderName" />
+            }
+            else
+            {
+                <div class="avatar-placeholder" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(SenderId);">@StringHelper.GetInitials(SenderName)</div>
             }
         </div>
     }
