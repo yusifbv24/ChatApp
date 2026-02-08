@@ -11,154 +11,45 @@
 
 <div class="main-layout">
     <!-- Sidebar -->
-    <aside class="sidebar @(isSidebarOpen ? "sidebar-open" : "sidebar-closed")">
-        <!-- Sidebar Header -->
-        <div class="sidebar-header">
-            @if (isSidebarOpen)
-            {
-                <div class="sidebar-brand">
-                    <svg width="32" height="32" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <rect width="48" height="48" rx="12" fill="url(#gradient-sidebar)"/>
-                        <path d="M12 18C12 16.3431 13.3431 15 15 15H33C34.6569 15 36 16.3431 36 18V28C36 29.6569 34.6569 31 33 31H20L14 35V31C12.8954 31 12 30.1046 12 29V18Z"
-                              fill="white" fill-opacity="0.9"/>
-                        <circle cx="18" cy="23" r="1.5" fill="#6366F1"/>
-                        <circle cx="24" cy="23" r="1.5" fill="#6366F1"/>
-                        <circle cx="30" cy="23" r="1.5" fill="#6366F1"/>
-                        <defs>
-                            <linearGradient id="gradient-sidebar" x1="0" y1="0" x2="48" y2="48">
-                                <stop offset="0%" stop-color="#6366F1"/>
-                                <stop offset="100%" stop-color="#8B5CF6"/>
-                            </linearGradient>
-                        </defs>
-                    </svg>
-                    <span class="brand-text">ChatApp</span>
-                </div>
-            }
-            else
-            {
-                <div class="sidebar-brand-collapsed">
-                    <svg width="32" height="32" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <rect width="48" height="48" rx="12" fill="url(#gradient-sidebar-collapsed)"/>
-                        <path d="M12 18C12 16.3431 13.3431 15 15 15H33C34.6569 15 36 16.3431 36 18V28C36 29.6569 34.6569 31 33 31H20L14 35V31C12.8954 31 12 30.1046 12 29V18Z"
-                              fill="white" fill-opacity="0.9"/>
-                        <circle cx="18" cy="23" r="1.5" fill="#6366F1"/>
-                        <circle cx="24" cy="23" r="1.5" fill="#6366F1"/>
-                        <circle cx="30" cy="23" r="1.5" fill="#6366F1"/>
-                        <defs>
-                            <linearGradient id="gradient-sidebar-collapsed" x1="0" y1="0" x2="48" y2="48">
-                                <stop offset="0%" stop-color="#6366F1"/>
-                                <stop offset="100%" stop-color="#8B5CF6"/>
-                            </linearGradient>
-                        </defs>
-                    </svg>  
-                </div>
-            }
-        </div>
-
-        <!-- User Info -->
-        @if (UserState.CurrentUser != null)
-        {
-            <div class="sidebar-user">
-                @if (isSidebarOpen)
-                {
-                    <div class="user-avatar">
-                        @if (!string.IsNullOrEmpty(UserState.CurrentUser.AvatarUrl))
-                        {
-                            <img src="@UserState.CurrentUser.AvatarUrl" alt="@UserState.CurrentUser.FullName" />
-                        }
-                        else
-                        {
-                            <div class="user-avatar-placeholder" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(UserState.CurrentUser.Id);">
-                                @StringHelper.GetInitials(UserState.CurrentUser.FullName)
-                            </div>
-                        }
-                        <span class="user-status @(UserState.CurrentUser.IsActive ? "status-active" : "status-inactive")"></span>
-                    </div>
-                    <div class="user-info">
-                        <div class="user-display-name">@UserState.CurrentUser.FullName</div>
-                        <div class="user-username">@("@" + UserState.CurrentUser.Email)</div>
-                    </div>
-                }
-                else
-                {
-                    <div class="user-avatar-small">
-                        @if (!string.IsNullOrEmpty(UserState.CurrentUser.AvatarUrl))
-                        {
-                            <img src="@UserState.CurrentUser.AvatarUrl" alt="@UserState.CurrentUser.FullName" />
-                        }
-                        else
-                        {
-                            <div class="user-avatar-placeholder" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(UserState.CurrentUser.Id);">
-                                @StringHelper.GetInitials(UserState.CurrentUser.FullName)
-                            </div>
-                        }
-                        <span class="user-status @(UserState.CurrentUser.IsActive ? "status-active" : "status-inactive")"></span>
-                    </div>
-                }
-            </div>
-        }
-
-        <!-- Navigation -->
+    <aside class="sidebar @(isSidebarOpen ? "sidebar-expanded" : "")">
         <nav class="sidebar-nav">
-            <a href="/messages" class="nav-item @(IsActive("/messages"))">
+            <!-- Toggle + Brand -->
+            <div class="sidebar-header-row">
+                <button class="nav-item sidebar-toggle-btn" @onclick="ToggleSidebar" title="@(isSidebarOpen ? "Collapse" : "Expand")">
+                    <MudIcon Icon="@(isSidebarOpen ? Icons.Material.Filled.MenuOpen : Icons.Material.Filled.Menu)" />
+                </button>
+                @if (isSidebarOpen) { <span class="nav-brand">ChatApp</span> }
+            </div>
+            <div class="nav-divider"></div>
+
+            <a href="/" class="nav-item @(IsActive("/", true))" title="Feed">
+                <MudIcon Icon="@Icons.Material.Filled.DynamicFeed" />
+                @if (isSidebarOpen) { <span class="nav-label">Feed</span> }
+            </a>
+            <a href="/messages" class="nav-item @(IsActive("/messages"))" title="Messages">
                 <MudBadge Content="@AppState.UnreadMessageCount" Color="Color.Error" Overlap="true" Visible="@(AppState.UnreadMessageCount > 0)">
                     <MudIcon Icon="@Icons.Material.Filled.Chat" />
                 </MudBadge>
-                @if (isSidebarOpen)
-                {
-                    <span>Messages</span>
-                }
+                @if (isSidebarOpen) { <span class="nav-label">Messages</span> }
             </a>
-            <button class="nav-item" @onclick="OpenProfilePanel">
+            <button class="nav-item" @onclick="OpenProfilePanel" title="Profile">
                 <MudIcon Icon="@Icons.Material.Filled.Person" />
-                @if (isSidebarOpen)
-                {
-                    <span>Profile</span>
-                }
+                @if (isSidebarOpen) { <span class="nav-label">Profile</span> }
             </button>
-            <a href="/settings" class="nav-item @(IsActive("/settings"))">
+            <a href="/settings" class="nav-item @(IsActive("/settings"))" title="Settings">
                 <MudIcon Icon="@Icons.Material.Filled.Settings" />
-                @if (isSidebarOpen)
-                {
-                    <span>Settings</span>
-                }
+                @if (isSidebarOpen) { <span class="nav-label">Settings</span> }
             </a>
 
             @if (UserState.IsAdmin)
             {
                 <div class="nav-divider"></div>
-                <div class="nav-section-title">
-                    @if (isSidebarOpen)
-                    {
-                        <span>Admin Panel</span>
-                    }
-                </div>
-                <a href="/admin/organization" class="nav-item @(IsActive("/admin/organization"))">
+                <a href="/admin/organization" class="nav-item @(IsActive("/admin/organization"))" title="Organization">
                     <MudIcon Icon="@Icons.Material.Filled.AccountTree" />
-                    @if (isSidebarOpen)
-                    {
-                        <span>Organization</span>
-                    }
+                    @if (isSidebarOpen) { <span class="nav-label">Organization</span> }
                 </a>
             }
         </nav>
-
-        <!-- Clock/Date at Bottom -->
-        <div class="sidebar-footer">
-            @if (isSidebarOpen)
-            {
-                <div class="clock-detailed">
-                    <div class="clock-time">@currentTime.ToString("HH:mm:ss")</div>
-                    <div class="clock-date">@currentTime.ToString("dddd, MMMM dd, yyyy")</div>
-                </div>
-            }
-            else
-            {
-                <div class="clock-compact">
-                    <MudIcon Icon="@Icons.Material.Filled.AccessTime" Size="Size.Small" />
-                </div>
-            }
-        </div>
     </aside>
 
     <!-- Main Content Area -->
@@ -166,27 +57,20 @@
         <!-- Top Header -->
         <header class="top-header">
             <!-- Left Side -->
-            <div class="header-left">
-                <button class="sidebar-toggle" @onclick="ToggleSidebar">
-                    <MudIcon Icon="@Icons.Material.Filled.Menu" />
-                </button>
-            </div>
+            <div class="header-left"></div>
 
             <!-- Right Side -->
             <div class="header-right">
-                <!-- Notifications (placeholder for future use) -->
                 <button class="header-icon-btn" @onclick="OpenNotifications">
                     <MudBadge Content="@AppState.UnreadNotificationCount" Color="Color.Error" Overlap="true" Visible="@(AppState.UnreadNotificationCount > 0)">
                         <MudIcon Icon="@Icons.Material.Filled.Notifications" />
                     </MudBadge>
                 </button>
 
-                <!-- Clock -->
                 <div class="header-clock">
                     @currentTime.ToString("HH:mm")
                 </div>
 
-                <!-- User Menu -->
                 <div class="user-menu-wrapper">
                     <button class="user-menu-trigger" @onclick="ToggleUserMenu">
                         @if (UserState.CurrentUser != null)
@@ -256,11 +140,6 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // NOTE: User is already loaded in App.razor - no need to fetch again here
-        // This prevents duplicate /api/users/me calls
-
-        // Initialize SignalR connection immediately after user is loaded
-        // This fixes Problem 1: User appears online to others immediately after login
         if (UserState.CurrentUser != null && !signalRInitialized)
         {
             try
@@ -273,7 +152,6 @@
             catch (Exception ex)
             {
                 Console.WriteLine($"[MainLayout] SignalR initialization error: {ex.Message}");
-                // Don't silently fail - retry after a delay
                 _ = Task.Run(async () =>
                 {
                     await Task.Delay(5000);
@@ -294,12 +172,11 @@
         UserState.OnChange += StateHasChanged;
         AppState.OnChange += StateHasChanged;
 
-        // Update clock every second
         timer = new System.Threading.Timer(async _ =>
         {
             currentTime = DateTime.Now;
             await InvokeAsync(StateHasChanged);
-        }, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
+        }, null, TimeSpan.Zero, TimeSpan.FromMinutes(1));
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -356,7 +233,6 @@
     {
         CloseUserMenu();
 
-        // Disconnect SignalR before logout
         if (signalRInitialized)
         {
             try
@@ -371,9 +247,11 @@
         Navigation.NavigateTo("/login", forceLoad: true);
     }
 
-    private string IsActive(string path)
+    private string IsActive(string path, bool exact = false)
     {
         var currentPath = new Uri(Navigation.Uri).AbsolutePath;
+        if (exact)
+            return currentPath == path ? "active" : "";
         return currentPath == path || currentPath.StartsWith(path + "/") ? "active" : "";
     }
 
@@ -384,7 +262,6 @@
         UserState.OnChange -= StateHasChanged;
         AppState.OnChange -= StateHasChanged;
 
-        // Disconnect SignalR on dispose
         if (signalRInitialized)
         {
             try
