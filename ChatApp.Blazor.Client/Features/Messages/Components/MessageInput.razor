@@ -48,48 +48,56 @@
     else
     {
         <div class="input-bubble">
-            @if (UserState.HasPermission(Permissions.FilesUpload))
-            {
-                <button class="input-icon-btn attach-btn" title="Attach file" @onclick="OnAttachClick" disabled="@IsSending">
-                    <MudIcon Icon="@Icons.Material.Filled.AttachFile" Size="Size.Small" />
-                </button>
-            }
-
             <!-- Hidden file input -->
             <InputFile @ref="fileInputRef" OnChange="HandleFileSelection" multiple style="display: none;" />
 
-            <textarea @ref="textAreaRef"
-                      class="message-textarea"
-                      placeholder="@Placeholder"
-                      value="@MessageText"
-                      @oninput="HandleInput"
-                      @onkeydown="HandleKeyDown"
-                      @onblur="HandleBlur"
-                      disabled="@IsSending"
-                      maxlength="4000"
-                      rows="1"></textarea>
-
-            <span class="char-counter @(IsNearLimit ? "near-limit" : "") @(IsAtLimit ? "at-limit" : "")">
-                @MessageText.Length/@MaxLength
-            </span>
-
-            <button class="input-icon-btn emoji-btn" title="Emoji" @onclick="ToggleEmojiPicker" disabled="@IsSending">
-                <MudIcon Icon="@Icons.Material.Filled.EmojiEmotions" Size="Size.Small" />
-            </button>
-
-            <button class="send-btn @(CanSend ? "active" : "")"
-                    title="@(IsEditing ? "Save" : "Send")"
-                    @onclick="SendMessage"
-                    disabled="@SendButtonDisabled">
-                @if (IsSending)
+            <!-- Top row: attach icon + textarea -->
+            <div class="input-top-row">
+                @if (UserState.HasPermission(Permissions.FilesUpload))
                 {
-                    <div class="send-spinner"></div>
+                    <button class="input-icon-btn attach-btn" title="Attach file" @onclick="OnAttachClick" disabled="@IsSending">
+                        <MudIcon Icon="@Icons.Material.Filled.AttachFile" Size="Size.Small" />
+                    </button>
                 }
-                else
-                {
-                    <MudIcon Icon="@(IsEditing ? Icons.Material.Filled.Check : Icons.Material.Filled.Send)" Size="Size.Small" />
-                }
-            </button>
+
+                <textarea @ref="textAreaRef"
+                          class="message-textarea"
+                          placeholder="@Placeholder"
+                          value="@MessageText"
+                          @oninput="HandleInput"
+                          @onkeydown="HandleKeyDown"
+                          @onblur="HandleBlur"
+                          disabled="@IsSending"
+                          maxlength="4000"
+                          rows="1"></textarea>
+            </div>
+
+            <!-- Bottom row: icons + send -->
+            <div class="input-bottom-row">
+                <div class="input-actions">
+                    <span class="char-counter @(IsNearLimit ? "near-limit" : "") @(IsAtLimit ? "at-limit" : "")">
+                        @MessageText.Length/@MaxLength
+                    </span>
+
+                    <button class="input-icon-btn emoji-btn" title="Emoji" @onclick="ToggleEmojiPicker" disabled="@IsSending">
+                        <MudIcon Icon="@Icons.Material.Filled.EmojiEmotions" Size="Size.Small" />
+                    </button>
+
+                    <button class="send-btn @(CanSend ? "active" : "")"
+                            title="@(IsEditing ? "Save" : "Send")"
+                            @onclick="SendMessage"
+                            disabled="@SendButtonDisabled">
+                        @if (IsSending)
+                        {
+                            <div class="send-spinner"></div>
+                        }
+                        else
+                        {
+                            <MudIcon Icon="@(IsEditing ? Icons.Material.Filled.Check : Icons.Material.Filled.Send)" Size="Size.Small" />
+                        }
+                    </button>
+                </div>
+            </div>
         </div>
     }
 

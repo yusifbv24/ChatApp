@@ -459,8 +459,12 @@ public partial class MessageInput : IAsyncDisposable
         // Typing indicator göndər
         await StartTyping();
 
-        // Textarea auto-resize (skip if empty - already reset)
-        if (!string.IsNullOrEmpty(newValue))
+        // Textarea auto-resize
+        if (string.IsNullOrEmpty(newValue))
+        {
+            await JS.InvokeVoidAsync("chatAppUtils.resetTextareaHeight", textAreaRef);
+        }
+        else
         {
             await JS.InvokeVoidAsync("chatAppUtils.autoResizeTextarea", textAreaRef);
         }

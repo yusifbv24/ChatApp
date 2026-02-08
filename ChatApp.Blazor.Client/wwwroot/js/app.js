@@ -1,5 +1,28 @@
 // ChatApp JavaScript utilities
 
+// Remove injected scrollbar styles from extensions
+(function removeExtensionScrollbarStyles() {
+    const remove = () => {
+        document.querySelectorAll('style').forEach(style => {
+            if (style.textContent && style.textContent.includes('#c4c4c4') && style.textContent.includes('scrollbar')) {
+                style.remove();
+            }
+        });
+    };
+    remove();
+    // Also watch for late-injected styles
+    new MutationObserver((mutations) => {
+        for (const m of mutations) {
+            for (const node of m.addedNodes) {
+                if (node.tagName === 'STYLE' && node.textContent &&
+                    node.textContent.includes('#c4c4c4') && node.textContent.includes('scrollbar')) {
+                    node.remove();
+                }
+            }
+        }
+    }).observe(document.documentElement, { childList: true, subtree: true });
+})();
+
 // Dismiss error UI
 window.addEventListener('DOMContentLoaded', () => {
     const errorUI = document.getElementById('blazor-error-ui');
@@ -221,13 +244,21 @@ window.chatAppUtils = {
         } else {
             element.classList.remove('has-scroll');
         }
+
+        // Textarea böyüdükdə mesajları aşağı scroll et
+        const chatMessages = document.getElementById('chat-messages');
+        if (chatMessages) {
+            requestAnimationFrame(() => {
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            });
+        }
     },
 
     // Reset textarea height to default
     resetTextareaHeight: (element) => {
         if (!element) return;
-        // Reset height to default
-        element.style.height = '24px';
+        // Reset height to auto (CSS min-height ilə idarə olunur)
+        element.style.height = 'auto';
         element.classList.remove('has-scroll');
 
         // Force clear any lingering content (including newlines)
