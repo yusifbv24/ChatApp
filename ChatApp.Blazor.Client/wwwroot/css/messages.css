@@ -507,9 +507,20 @@
     }
 
     .conversation-item.selected {
-        background: linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%);
-        border-left: 3px solid var(--primary-color);
-        box-shadow: 0 1px 4px rgba(99, 102, 241, 0.12);
+        background: #00ACE3;
+        color: #ffffff;
+        box-shadow: 0 1px 4px rgba(0, 172, 227, 0.2);
+    }
+
+    .conversation-item.selected .conversation-name,
+    .conversation-item.selected .conversation-time,
+    .conversation-item.selected .preview-text,
+    .conversation-item.selected .conv-status-icon,
+    .conversation-item.selected .conv-mute-icon,
+    .conversation-item.selected .status-icon,
+    .conversation-item.selected .reply-icon,
+    .conversation-item.selected .preview-sender {
+        color: #ffffff !important;
     }
 
 .conversation-avatar {
