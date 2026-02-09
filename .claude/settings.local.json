@@ -61,7 +61,8 @@
       "Bash(docker exec:*)",
       "Bash(docker network create:*)",
       "Bash(docker network connect:*)",
-      "Bash(docker network ls:*)"
+      "Bash(docker network ls:*)",
+      "Bash(wmic:*)"
     ],
     "deny": [],
     "ask": []

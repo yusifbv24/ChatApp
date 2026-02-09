@@ -61,16 +61,40 @@
 
             <!-- Right Side -->
             <div class="header-right">
-                <button class="header-icon-btn" @onclick="OpenNotifications">
-                    <MudBadge Content="@AppState.UnreadNotificationCount" Color="Color.Error" Overlap="true" Visible="@(AppState.UnreadNotificationCount > 0)">
+                <!-- Notification Button -->
+                <div class="notification-wrapper">
+                    <button class="header-icon-btn" @onclick="ToggleNotifications">
                         <MudIcon Icon="@Icons.Material.Filled.Notifications" />
-                    </MudBadge>
-                </button>
+                        @if (AppState.UnreadNotificationCount > 0)
+                        {
+                            <span class="notification-badge">@(AppState.UnreadNotificationCount > 99 ? "99+" : AppState.UnreadNotificationCount.ToString())</span>
+                        }
+                    </button>
+
+                    @if (isNotificationPanelOpen)
+                    {
+                        <div class="notification-panel" @onclick:stopPropagation="true">
+                            <div class="notification-panel-header">
+                                <span class="notification-panel-title">Notifications</span>
+                                <button class="notification-panel-action" @onclick="ToggleNotifications">
+                                    <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" />
+                                </button>
+                            </div>
+                            <div class="notification-panel-body">
+                                <div class="notification-empty">
+                                    <MudIcon Icon="@Icons.Material.Outlined.NotificationsNone" Style="font-size: 48px; color: rgba(0,0,0,0.15);" />
+                                    <span>No new notifications</span>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
 
                 <div class="header-clock">
                     @currentTime.ToString("HH:mm")
                 </div>
 
+                <!-- User Menu -->
                 <div class="user-menu-wrapper">
                     <button class="user-menu-trigger" @onclick="ToggleUserMenu">
                         @if (UserState.CurrentUser != null)
@@ -93,23 +117,51 @@
                     {
                         <div class="user-menu-dropdown" @onclick:stopPropagation="true">
                             <div class="user-menu-header">
-                                <div class="user-menu-name">@UserState.CurrentUser?.FullName</div>
-                                <div class="user-menu-email">@UserState.CurrentUser?.Email</div>
+                                <div class="user-menu-avatar-lg">
+                                    @if (UserState.CurrentUser != null)
+                                    {
+                                        @if (!string.IsNullOrEmpty(UserState.CurrentUser.AvatarUrl))
+                                        {
+                                            <img src="@UserState.CurrentUser.AvatarUrl" alt="@UserState.CurrentUser.FullName" />
+                                        }
+                                        else
+                                        {
+                                            <div class="avatar-placeholder-lg" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(UserState.CurrentUser.Id);">
+                                                @StringHelper.GetInitials(UserState.CurrentUser.FullName)
+                                            </div>
+                                        }
+                                    }
+                                    <span class="user-status-dot"></span>
+                                </div>
+                                <div class="user-menu-info">
+                                    <div class="user-menu-name">@UserState.CurrentUser?.FullName</div>
+                                    <div class="user-menu-email">@UserState.CurrentUser?.Email</div>
+                                </div>
                             </div>
-                            <div class="user-menu-divider"></div>
-                            <button class="user-menu-item" @onclick="OpenProfilePanelFromMenu">
-                                <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" />
-                                <span>Profile</span>
-                            </button>
-                            <a href="/settings" class="user-menu-item" @onclick="CloseUserMenu">
-                                <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small" />
-                                <span>Settings</span>
-                            </a>
-                            <div class="user-menu-divider"></div>
-                            <button class="user-menu-item user-menu-logout" @onclick="HandleLogout">
-                                <MudIcon Icon="@Icons.Material.Filled.Logout" Size="Size.Small" />
-                                <span>Logout</span>
-                            </button>
+                            <div class="user-menu-body">
+                                <button class="user-menu-item" @onclick="OpenProfilePanelFromMenu">
+                                    <div class="user-menu-item-icon">
+                                        <MudIcon Icon="@Icons.Material.Outlined.Person" Size="Size.Small" />
+                                    </div>
+                                    <span>Profile</span>
+                                    <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Class="user-menu-item-arrow" />
+                                </button>
+                                <a href="/settings" class="user-menu-item" @onclick="CloseUserMenu">
+                                    <div class="user-menu-item-icon">
+                                        <MudIcon Icon="@Icons.Material.Outlined.Settings" Size="Size.Small" />
+                                    </div>
+                                    <span>Settings</span>
+                                    <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Class="user-menu-item-arrow" />
+                                </a>
+                            </div>
+                            <div class="user-menu-footer">
+                                <button class="user-menu-item user-menu-logout" @onclick="HandleLogout">
+                                    <div class="user-menu-item-icon logout-icon">
+                                        <MudIcon Icon="@Icons.Material.Outlined.Logout" Size="Size.Small" />
+                                    </div>
+                                    <span>Logout</span>
+                                </button>
+                            </div>
                         </div>
                     }
                 </div>
@@ -132,6 +184,7 @@
 @code {
     private bool isSidebarOpen = false;
     private bool isUserMenuOpen = false;
+    private bool isNotificationPanelOpen = false;
     private bool isProfilePanelOpen = false;
     private DateTime currentTime = DateTime.Now;
     private System.Threading.Timer? timer;
@@ -215,9 +268,10 @@
     [JSInvokable]
     public void CloseUserMenuFromJS()
     {
-        if (isUserMenuOpen)
+        if (isUserMenuOpen || isNotificationPanelOpen)
         {
             isUserMenuOpen = false;
+            isNotificationPanelOpen = false;
             StateHasChanged();
         }
     }
@@ -230,6 +284,8 @@
     private void ToggleUserMenu()
     {
         isUserMenuOpen = !isUserMenuOpen;
+        if (isUserMenuOpen)
+            isNotificationPanelOpen = false;
     }
 
     private void CloseUserMenu()
@@ -237,9 +293,11 @@
         isUserMenuOpen = false;
     }
 
-    private void OpenNotifications()
+    private void ToggleNotifications()
     {
-        // TODO: Implement notifications panel
+        isNotificationPanelOpen = !isNotificationPanelOpen;
+        if (isNotificationPanelOpen)
+            isUserMenuOpen = false;
     }
 
     private void OpenProfilePanel()
