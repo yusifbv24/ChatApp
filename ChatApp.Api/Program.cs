@@ -166,7 +166,7 @@ builder.Services.AddAuthentication(options =>
             var sessionId = context.Request.Cookies["_sid"];
             if (!string.IsNullOrEmpty(sessionId))
             {
-                var sessionStore = context.HttpContext.RequestServices.GetRequiredService<ChatApp.Shared.Kernel.Interfaces.ISessionStore>();
+                var sessionStore = context.HttpContext.RequestServices.GetRequiredService<ISessionStore>();
                 accessToken = sessionStore.GetAccessToken(sessionId);
             }
 

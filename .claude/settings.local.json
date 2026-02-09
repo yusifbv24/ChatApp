@@ -60,7 +60,8 @@
       "Bash(docker ps:*)",
       "Bash(docker exec:*)",
       "Bash(docker network create:*)",
-      "Bash(docker network connect:*)"
+      "Bash(docker network connect:*)",
+      "Bash(docker network ls:*)"
     ],
     "deny": [],
     "ask": []
