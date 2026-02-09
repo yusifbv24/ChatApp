@@ -25,14 +25,13 @@ using ChatApp.Modules.Search.Infrastructure;
 using ChatApp.Modules.Settings.Api.Controllers;
 using ChatApp.Modules.Settings.Infrastructure;
 using ChatApp.Modules.Settings.Infrastructure.Persistence;
+using ChatApp.Shared.Infrastructure;
 using ChatApp.Shared.Infrastructure.Authorization;
-using ChatApp.Shared.Infrastructure.EventBus;
+using ChatApp.Shared.Kernel.Interfaces;
 using ChatApp.Shared.Infrastructure.Logging;
 using ChatApp.Shared.Infrastructure.Middleware;
 using ChatApp.Shared.Infrastructure.SignalR.Hubs;
 using ChatApp.Shared.Infrastructure.SignalR.Services;
-using ChatApp.Shared.Infrastructure.Session;
-using ChatApp.Shared.Kernel.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -108,14 +107,8 @@ builder.Services.AddSettingsApplication();
 builder.Services.AddSettingsInfrastructure(builder.Configuration);
 
 
-// Register event bus for inter-module communication
-builder.Services.AddSingleton<IEventBus, InMemoryEventBus>();
-
-// Register Memory Cache (required for ChannelMemberCache and SessionStore)
-builder.Services.AddMemoryCache();
-
-// Register BFF Session Store (opaque session ID → JWT mapping)
-builder.Services.AddSingleton<ISessionStore, InMemorySessionStore>();
+// Register shared infrastructure (Redis, cache, session store, event bus)
+builder.Services.AddSharedInfrastructure(builder.Configuration);
 
 // Register SignalR services
 builder.Services.AddSingleton<IConnectionManager,ConnectionManager>();

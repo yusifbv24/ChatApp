@@ -1,0 +1,21 @@
+# Authentication
+requirepass YourStrongPassword123!
+
+# Network
+bind 127.0.0.1
+protected-mode yes
+port 6379
+
+# Memory
+maxmemory 256mb
+maxmemory-policy allkeys-lru
+
+# Persistence (crash-dan sonra data qalsın)
+save 900 1
+save 300 10
+appendonly yes
+
+# Security
+rename-command FLUSHALL ""
+rename-command FLUSHDB ""
+rename-command CONFIG ""

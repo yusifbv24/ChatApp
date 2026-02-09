@@ -1,25 +1,22 @@
-using Microsoft.JSInterop;
-
 namespace ChatApp.Blazor.Client.Infrastructure.Http;
 
 /// <summary>
 /// Centralized token refresh service that prevents concurrent refresh attempts.
 /// All handlers share this service so only one refresh call happens at a time.
 /// When multiple 401s occur simultaneously, only ONE refresh request is made.
+/// Refresh is session-based (cookie) — no localStorage dependency.
 /// </summary>
 public class TokenRefreshService
 {
     private readonly IHttpClientFactory _httpClientFactory;
-    private readonly IJSRuntime _jsRuntime;
     private readonly SemaphoreSlim _refreshLock = new(1, 1);
     private Task<bool>? _activeRefreshTask;
     private DateTime _lastRefreshUtc = DateTime.MinValue;
     private const int RefreshWindowSeconds = 5; // Increased from 2 to handle slow networks
 
-    public TokenRefreshService(IHttpClientFactory httpClientFactory, IJSRuntime jsRuntime)
+    public TokenRefreshService(IHttpClientFactory httpClientFactory)
     {
         _httpClientFactory = httpClientFactory;
-        _jsRuntime = jsRuntime;
     }
 
     /// <summary>
@@ -53,10 +50,6 @@ public class TokenRefreshService
             if ((DateTime.UtcNow - _lastRefreshUtc).TotalSeconds < RefreshWindowSeconds)
                 return true;
 
-            // Check RememberMe preference
-            if (!await GetRememberMePreference())
-                return false;
-
             _activeRefreshTask = ExecuteRefreshAsync();
             return await _activeRefreshTask;
         }
@@ -81,19 +74,6 @@ public class TokenRefreshService
             }
 
             return false;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    private async Task<bool> GetRememberMePreference()
-    {
-        try
-        {
-            var value = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", "rememberMe");
-            return value == "true";
         }
         catch
         {

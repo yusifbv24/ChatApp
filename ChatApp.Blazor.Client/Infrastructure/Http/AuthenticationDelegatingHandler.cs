@@ -32,7 +32,7 @@ public class AuthenticationDelegatingHandler : DelegatingHandler
 
         var response = await base.SendAsync(request, cancellationToken);
 
-        if (response.StatusCode == HttpStatusCode.Unauthorized || response.StatusCode == HttpStatusCode.Forbidden)
+        if (response.StatusCode == HttpStatusCode.Unauthorized)
         {
             var refreshService = _serviceProvider.GetRequiredService<TokenRefreshService>();
             var refreshed = await refreshService.TryRefreshAsync();

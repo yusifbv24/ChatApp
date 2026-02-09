@@ -132,16 +132,14 @@
 
             if (result.IsSuccess)
             {
-                // Save or clear email and rememberMe preference based on RememberMe checkbox
+                // Save or clear remembered email based on RememberMe checkbox
                 if (loginModel.RememberMe)
                 {
                     await JSRuntime.InvokeVoidAsync("localStorage.setItem", "rememberedEmail", loginModel.Email);
-                    await JSRuntime.InvokeVoidAsync("localStorage.setItem", "rememberMe", "true");
                 }
                 else
                 {
                     await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "rememberedEmail");
-                    await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "rememberMe");
                 }
 
                 Navigation.NavigateTo("/", forceLoad: false);

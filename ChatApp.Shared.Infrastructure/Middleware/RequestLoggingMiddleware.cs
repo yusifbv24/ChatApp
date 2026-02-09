@@ -17,11 +17,18 @@ namespace ChatApp.Shared.Infrastructure.Middleware
 
         public async Task InvokeAsync(HttpContext context)
         {
-            var stopWatch=Stopwatch.StartNew();
-            var requestPath= context.Request.Path;
-            var requestMethod= context.Request.Method;
+            var stopWatch = Stopwatch.StartNew();
+            var requestPath = context.Request.Path;
+            var requestMethod = context.Request.Method;
 
-            _logger?.LogInformation("Incoming request: {Method} {Path}",requestMethod, requestPath);
+            // Redact query string for hub paths to prevent token exposure in logs
+            var logPath = requestPath.Value ?? "";
+            if (logPath.StartsWith("/hubs/", StringComparison.OrdinalIgnoreCase) && context.Request.QueryString.HasValue)
+            {
+                logPath += " [query redacted]";
+            }
+
+            _logger?.LogInformation("Incoming request: {Method} {Path}", requestMethod, logPath);
 
             try
             {
@@ -30,13 +37,13 @@ namespace ChatApp.Shared.Infrastructure.Middleware
             finally
             {
                 stopWatch.Stop();
-                var statusCode=context.Response.StatusCode;
-                var elapsedMs=stopWatch.ElapsedMilliseconds;
+                var statusCode = context.Response.StatusCode;
+                var elapsedMs = stopWatch.ElapsedMilliseconds;
 
                 _logger?.LogInformation(
-                    "Completed request: {Method} {Path} - Status: {StatusCode} - Duration: {ElapsedMs}",
+                    "Completed request: {Method} {Path} - Status: {StatusCode} - Duration: {ElapsedMs}ms",
                     requestMethod,
-                    requestPath,
+                    logPath,
                     statusCode,
                     elapsedMs);
             }

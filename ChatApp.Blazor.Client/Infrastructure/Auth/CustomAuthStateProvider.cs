@@ -2,7 +2,6 @@ using ChatApp.Blazor.Client.Infrastructure.Http;
 using ChatApp.Blazor.Client.Models.Auth;
 using ChatApp.Blazor.Client.State;
 using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.JSInterop;
 using System.Net;
 using System.Net.Http.Json;
 using System.Security.Claims;
@@ -15,15 +14,16 @@ namespace ChatApp.Blazor.Client.Infrastructure.Auth;
 public class CustomAuthStateProvider : AuthenticationStateProvider
 {
     private readonly HttpClient _httpClient;
-    private readonly IJSRuntime _jsRuntime;
     private readonly TokenRefreshService _tokenRefreshService;
     private readonly UserState _userState;
     private UserDetailDto? _cachedUser;
 
-    public CustomAuthStateProvider(HttpClient httpClient, IJSRuntime jsRuntime, TokenRefreshService tokenRefreshService, UserState userState)
+    public CustomAuthStateProvider(
+        HttpClient httpClient, 
+        TokenRefreshService tokenRefreshService, 
+        UserState userState)
     {
         _httpClient = httpClient;
-        _jsRuntime = jsRuntime;
         _tokenRefreshService = tokenRefreshService;
         _userState = userState;
     }
@@ -38,7 +38,7 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
                 return CreateAuthenticatedState(_cachedUser);
             }
 
-            // Call /api/auth/me to get current user (cookie sent automatically)
+            // Call /api/users/me to get current user (cookie sent automatically)
             var user = await TryGetCurrentUserAsync();
 
             if (user != null)
@@ -56,7 +56,7 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
     }
 
     /// <summary>
-    /// Tries to get current user, auto-refreshing token if RememberMe was set
+    /// Tries to get current user, auto-refreshing token via session cookie
     /// </summary>
     private async Task<UserDetailDto?> TryGetCurrentUserAsync()
     {
@@ -131,16 +131,9 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
     /// <summary>
     /// Marks user as logged out (cookies are cleared by backend)
     /// </summary>
-    public async Task MarkUserAsLoggedOut()
+    public void MarkUserAsLoggedOut()
     {
         _cachedUser = null;
-
-        // Clear RememberMe preference on logout
-        try
-        {
-            await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "rememberMe");
-        }
-        catch { }
 
         var anonymousUser = new ClaimsPrincipal(new ClaimsIdentity());
         var authState = Task.FromResult(new AuthenticationState(anonymousUser));

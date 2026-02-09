@@ -54,7 +54,13 @@
       "Bash(__NEW_LINE_11210cc517fd9361__ comm -23 /tmp/defined.txt /tmp/used.txt)",
       "Bash(git push:*)",
       "Bash(dotnet clean:*)",
-      "WebFetch(domain:www.bitrix24.com)"
+      "WebFetch(domain:www.bitrix24.com)",
+      "Bash(dotnet restore:*)",
+      "Bash(docker --version:*)",
+      "Bash(docker ps:*)",
+      "Bash(docker exec:*)",
+      "Bash(docker network create:*)",
+      "Bash(docker network connect:*)"
     ],
     "deny": [],
     "ask": []

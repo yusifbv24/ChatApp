@@ -83,7 +83,7 @@ public class AuthService : IAuthService
     {
         var result = await _apiClient.PostAsync("/api/auth/logout");
 
-        await _authStateProvider.MarkUserAsLoggedOut();
+        _authStateProvider.MarkUserAsLoggedOut();
         _userState.CurrentUser = null;
 
         return result;

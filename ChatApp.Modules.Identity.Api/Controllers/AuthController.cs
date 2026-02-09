@@ -2,13 +2,14 @@
 using ChatApp.Modules.Identity.Application.Commands.RefreshToken;
 using ChatApp.Modules.Identity.Application.DTOs.Requests;
 using ChatApp.Modules.Identity.Application.DTOs.Responses;
-using ChatApp.Modules.Identity.Application.Queries.GetUser;
 using ChatApp.Shared.Kernel.Interfaces;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Security.Claims;
 
@@ -20,7 +21,7 @@ namespace ChatApp.Modules.Identity.Api.Controllers
     {
         private readonly IMediator _mediator;
         private readonly ILogger<AuthController> _logger;
-        private readonly bool _isDevelopment;
+        private readonly IWebHostEnvironment _environment;
         private readonly IConfiguration _configuration;
         private readonly ISessionStore _sessionStore;
 
@@ -30,13 +31,14 @@ namespace ChatApp.Modules.Identity.Api.Controllers
             IMediator mediator,
             ILogger<AuthController> logger,
             IConfiguration configuration,
-            ISessionStore sessionStore)
+            ISessionStore sessionStore,
+            IWebHostEnvironment environment)
         {
             _mediator = mediator;
             _logger = logger;
             _configuration = configuration;
             _sessionStore = sessionStore;
-            _isDevelopment = configuration["ASPNETCORE_ENVIRONMENT"] == "Development";
+            _environment = environment;
         }
 
 
@@ -120,28 +122,6 @@ namespace ChatApp.Modules.Identity.Api.Controllers
 
             return Ok(new { message = "Token refreshed successfully" });
         }
-
-
-
-        [HttpGet("me")]
-        [Authorize]
-        [ProducesResponseType(typeof(UserDetailDto), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        public async Task<IActionResult> GetCurrentUser(CancellationToken cancellationToken)
-        {
-            var userId = GetCurrentUserId();
-
-            if (userId == Guid.Empty)
-                return BadRequest(new { error = "Invalid user session" });
-
-            var result = await _mediator.Send(new GetCurrentUserQuery(userId), cancellationToken);
-
-            if (result.IsFailure || result.Value == null)
-                return BadRequest(new { error = "User not found" });
-
-            return Ok(result.Value);
-        }
-
 
 
         /// <summary>
@@ -249,7 +229,7 @@ namespace ChatApp.Modules.Identity.Api.Controllers
         /// </summary>
         private void SetSessionCookie(string sessionId, bool rememberMe, TimeSpan refreshTokenLifetime)
         {
-            var isProduction = !_isDevelopment;
+            var isProduction = !_environment.IsDevelopment();
 
             var cookieOptions = new CookieOptions
             {
@@ -268,7 +248,7 @@ namespace ChatApp.Modules.Identity.Api.Controllers
         /// </summary>
         private void ClearSessionCookie()
         {
-            var isProduction = !_isDevelopment;
+            var isProduction = !_environment.IsDevelopment();
 
             Response.Cookies.Delete(SessionCookieName, new CookieOptions
             {
