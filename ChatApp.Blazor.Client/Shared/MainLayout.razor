@@ -169,7 +169,7 @@
             }
         }
 
-        UserState.OnChange += StateHasChanged;
+        UserState.OnChange += HandleUserStateChanged;
         AppState.OnChange += StateHasChanged;
 
         timer = new System.Threading.Timer(async _ =>
@@ -186,6 +186,30 @@
             _dotNetRef = DotNetObjectReference.Create(this);
             await JS.InvokeVoidAsync("chatAppUtils.subscribeToOutsideClick", _dotNetRef);
         }
+    }
+
+    /// <summary>
+    /// UserState dəyişdikdə çağrılır.
+    /// Browser refresh zamanı App.razor ilə MainLayout arasında race condition olur:
+    /// MainLayout.OnInitializedAsync çağrılanda UserState.CurrentUser hələ null olur.
+    /// Bu handler App.razor UserState-i doldurduqdan sonra SignalR-ı initialize edir.
+    /// </summary>
+    private async void HandleUserStateChanged()
+    {
+        if (UserState.CurrentUser != null && !signalRInitialized)
+        {
+            try
+            {
+                await SignalRService.InitializeAsync();
+                signalRInitialized = true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[MainLayout] SignalR init error: {ex.Message}");
+            }
+        }
+
+        await InvokeAsync(StateHasChanged);
     }
 
     [JSInvokable]
@@ -259,7 +283,7 @@
     {
         timer?.Dispose();
         _dotNetRef?.Dispose();
-        UserState.OnChange -= StateHasChanged;
+        UserState.OnChange -= HandleUserStateChanged;
         AppState.OnChange -= StateHasChanged;
 
         if (signalRInitialized)
