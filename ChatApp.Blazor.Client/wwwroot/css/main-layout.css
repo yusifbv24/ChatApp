@@ -37,7 +37,10 @@
     top: 0;
     height: 100vh;
     width: var(--sidebar-width-collapsed);
-    background: transparent;
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-right: 1px solid rgba(255, 255, 255, 0.06);
     display: flex;
     flex-direction: column;
     z-index: 1000;
@@ -54,10 +57,10 @@
 
 .sidebar-nav {
     flex: 1;
-    padding: 8px 0;
+    padding: 8px;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: stretch;
     gap: 2px;
     overflow-y: auto;
     overflow-x: hidden;
@@ -70,8 +73,8 @@
 .nav-item {
     display: flex;
     align-items: center;
-    justify-content: center;
-    width: 44px;
+    justify-content: flex-start;
+    width: auto;
     height: 44px;
     border: none;
     background: transparent;
@@ -84,17 +87,21 @@
     flex-shrink: 0;
     white-space: nowrap;
     overflow: hidden;
+    padding: 0 12px;
+    gap: 12px;
 }
 
 .nav-item:hover {
     color: var(--sidebar-text-hover);
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 0 15px rgba(26, 146, 195, 0.15);
+    transform: scale(1.05);
 }
 
 .nav-item.active {
     color: var(--sidebar-text-active);
-    background: rgba(255, 255, 255, 0.18);
-    border-left: 3px solid #ffffff;
+    background: rgba(255, 255, 255, 0.15);
+    box-shadow: inset 3px 0 0 rgba(255, 255, 255, 0.8), 0 0 20px rgba(26, 146, 195, 0.25), inset 0 0 15px rgba(255, 255, 255, 0.05);
 }
 
 .nav-item .mud-icon-root {
@@ -114,44 +121,25 @@
 .sidebar-header-row {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 0;
-    padding: 4px 0;
-}
-
-.sidebar-expanded .sidebar-header-row {
     justify-content: flex-start;
     gap: 10px;
-    padding: 4px 4px 4px 8px;
+    padding: 4px 0 4px 0;
 }
 
 .nav-brand {
-    font-size: 16px;
-    font-weight: 700;
+    font-size: 18px;
+    font-weight: 600;
     color: var(--sidebar-text-active);
     white-space: nowrap;
-    letter-spacing: 0.3px;
+    letter-spacing: -0.03em;
+    line-height: 1.2;
+    text-decoration: none;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 /* Expanded state styles */
-.sidebar-expanded .sidebar-nav {
-    align-items: stretch;
-    padding: 8px;
-}
-
-.sidebar-expanded .nav-item {
-    width: auto;
-    justify-content: flex-start;
-    padding: 0 12px;
-    gap: 12px;
-}
-
 .sidebar-expanded .nav-label {
     opacity: 1;
-}
-
-.sidebar-expanded .nav-divider {
-    width: 100%;
 }
 
 /* Toggle button specific */
@@ -165,11 +153,10 @@
 }
 
 .nav-divider {
-    width: 28px;
+    width: 100%;
     height: 1px;
-    background: rgba(255, 255, 255, 0.1);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
     margin: 6px 0;
-    transition: width 0.3s ease;
 }
 
 /* ===================================
@@ -233,18 +220,22 @@
 }
 
 .header-icon-btn:hover {
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.12);
     color: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 0 12px rgba(26, 146, 195, 0.2);
+    transform: scale(1.08);
 }
 
 .header-clock {
     font-size: 14px;
     font-weight: 500;
-    color: rgba(255, 255, 255, 0.8);
+    color: rgba(255, 255, 255, 0.9);
     padding: 6px 14px;
     background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 100px;
     font-variant-numeric: tabular-nums;
+    box-shadow: 0 0 10px rgba(26, 146, 195, 0.1);
 }
 
 /* ===================================
@@ -260,17 +251,20 @@
     align-items: center;
     gap: 6px;
     padding: 4px 10px 4px 4px;
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     background: rgba(255, 255, 255, 0.06);
     border-radius: 100px;
     cursor: pointer;
     transition: all var(--transition-base);
     color: rgba(255, 255, 255, 0.7);
+    box-shadow: 0 0 8px rgba(26, 146, 195, 0.08);
 }
 
 .user-menu-trigger:hover {
     border-color: rgba(255, 255, 255, 0.3);
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 0 15px rgba(26, 146, 195, 0.2);
+    transform: scale(1.03);
 }
 
 .user-menu-avatar,

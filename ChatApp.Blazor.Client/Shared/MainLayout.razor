@@ -18,7 +18,7 @@
                 <button class="nav-item sidebar-toggle-btn" @onclick="ToggleSidebar" title="@(isSidebarOpen ? "Collapse" : "Expand")">
                     <MudIcon Icon="@(isSidebarOpen ? Icons.Material.Filled.MenuOpen : Icons.Material.Filled.Menu)" />
                 </button>
-                @if (isSidebarOpen) { <span class="nav-brand">ChatApp</span> }
+                @if (isSidebarOpen) { <a href="/" class="nav-brand">ChatApp</a> }
             </div>
             <div class="nav-divider"></div>
 
