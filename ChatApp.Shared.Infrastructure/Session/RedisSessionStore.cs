@@ -97,6 +97,9 @@ public class RedisSessionStore : ISessionStore
                 };
 
                 _cache.SetString(SessionKey(sessionId), JsonSerializer.Serialize(data, _jsonOptions), options);
+
+                // Sliding expiration: user_sessions TTL-ini də yenilə
+                RefreshUserSessionsTtl(data.UserId, refreshTokenLifetime);
             }
         }
         catch (Exception ex)
@@ -192,6 +195,19 @@ public class RedisSessionStore : ISessionStore
         };
 
         _cache.SetString(UserSessionsKey(userId), JsonSerializer.Serialize(sessions, _jsonOptions), options);
+    }
+
+    private void RefreshUserSessionsTtl(Guid userId, TimeSpan lifetime)
+    {
+        var sessions = GetUserSessions(userId);
+        if (sessions != null && sessions.Count > 0)
+        {
+            var options = new DistributedCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = lifetime
+            };
+            _cache.SetString(UserSessionsKey(userId), JsonSerializer.Serialize(sessions, _jsonOptions), options);
+        }
     }
 
     private void RemoveSessionFromUser(Guid userId, string sessionId)

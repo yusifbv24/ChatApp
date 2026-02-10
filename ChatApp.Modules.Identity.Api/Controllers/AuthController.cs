@@ -120,6 +120,9 @@ namespace ChatApp.Modules.Identity.Api.Controllers
 
             _sessionStore.UpdateTokens(sessionId, refreshResponse.AccessToken, refreshResponse.RefreshToken, accessTokenLifetime, refreshTokenLifetime);
 
+            // Sliding cookie expiration — refresh zamanı cookie müddəti yenilənir
+            SetSessionCookie(sessionId, true, refreshTokenLifetime);
+
             return Ok(new { message = "Token refreshed successfully" });
         }
 
