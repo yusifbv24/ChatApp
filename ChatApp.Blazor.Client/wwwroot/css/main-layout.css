@@ -555,6 +555,7 @@
 .page-content {
     flex: 1;
     overflow-y: auto;
+    border-radius: 12px 12px 0 0;
 }
 
 .page-content::-webkit-scrollbar {

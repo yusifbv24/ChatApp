@@ -153,7 +153,10 @@
     <div class="admin-dialog-overlay" @onclick="CloseCreateDialog">
         <div class="admin-dialog" @onclick:stopPropagation>
             <div class="admin-dialog-header">
-                <h2>Create New Position</h2>
+                <div class="admin-dialog-header-info">
+                    <h2><MudIcon Icon="@Icons.Material.Filled.WorkOutline" /> New Position</h2>
+                    <span class="admin-dialog-subtitle">Define a new role for your team</span>
+                </div>
                 <button class="admin-dialog-close" @onclick="CloseCreateDialog">
                     <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" />
                 </button>
@@ -189,14 +192,13 @@
                             <span>@dialogMessage</span>
                         </div>
                     }
-
-                    <div class="admin-dialog-actions">
-                        <button type="button" class="admin-btn admin-btn-secondary" @onclick="CloseCreateDialog" disabled="@isSaving">Cancel</button>
-                        <button type="submit" class="admin-btn admin-btn-primary" disabled="@isSaving">
-                            @if (isSaving) { <span class="admin-loading-spinner small"></span> }
-                            Create Position
-                        </button>
-                    </div>
+                </div>
+                <div class="admin-dialog-actions">
+                    <button type="button" class="admin-btn admin-btn-secondary" @onclick="CloseCreateDialog" disabled="@isSaving">Cancel</button>
+                    <button type="submit" class="admin-btn admin-btn-primary" disabled="@isSaving">
+                        @if (isSaving) { <span class="admin-btn-spinner"></span> }
+                        <span>Create Position</span>
+                    </button>
                 </div>
             </EditForm>
         </div>
@@ -209,7 +211,10 @@
     <div class="admin-dialog-overlay" @onclick="CloseEditDialog">
         <div class="admin-dialog" @onclick:stopPropagation>
             <div class="admin-dialog-header">
-                <h2>Edit Position</h2>
+                <div class="admin-dialog-header-info">
+                    <h2><MudIcon Icon="@Icons.Material.Filled.Edit" /> Edit Position</h2>
+                    <span class="admin-dialog-subtitle">Update position details</span>
+                </div>
                 <button class="admin-dialog-close" @onclick="CloseEditDialog">
                     <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" />
                 </button>
@@ -219,7 +224,7 @@
                 <div class="admin-dialog-content">
                     <div class="admin-form-group">
                         <label class="admin-label">Position Name <span class="admin-required">*</span></label>
-                        <InputText @bind-Value="editModel.Name" class="admin-input" />
+                        <InputText @bind-Value="editModel.Name" class="admin-input" placeholder="e.g. Senior Developer" />
                         <ValidationMessage For="@(() => editModel.Name)" />
                     </div>
                     <div class="admin-form-group">
@@ -234,7 +239,7 @@
                     </div>
                     <div class="admin-form-group">
                         <label class="admin-label">Description</label>
-                        <InputTextArea @bind-Value="editModel.Description" class="admin-input admin-textarea" rows="3" />
+                        <InputTextArea @bind-Value="editModel.Description" class="admin-input admin-textarea" rows="3" placeholder="Describe the responsibilities..." />
                         <ValidationMessage For="@(() => editModel.Description)" />
                     </div>
 
@@ -245,14 +250,13 @@
                             <span>@dialogMessage</span>
                         </div>
                     }
-
-                    <div class="admin-dialog-actions">
-                        <button type="button" class="admin-btn admin-btn-secondary" @onclick="CloseEditDialog" disabled="@isSaving">Cancel</button>
-                        <button type="submit" class="admin-btn admin-btn-primary" disabled="@isSaving">
-                            @if (isSaving) { <span class="admin-loading-spinner small"></span> }
-                            Save Changes
-                        </button>
-                    </div>
+                </div>
+                <div class="admin-dialog-actions">
+                    <button type="button" class="admin-btn admin-btn-secondary" @onclick="CloseEditDialog" disabled="@isSaving">Cancel</button>
+                    <button type="submit" class="admin-btn admin-btn-primary" disabled="@isSaving">
+                        @if (isSaving) { <span class="admin-btn-spinner"></span> }
+                        <span>Save Changes</span>
+                    </button>
                 </div>
             </EditForm>
         </div>
@@ -265,7 +269,7 @@
     <div class="admin-dialog-overlay" @onclick="CloseDeleteDialog">
         <div class="admin-dialog admin-dialog-small" @onclick:stopPropagation>
             <div class="admin-dialog-header">
-                <h2>Delete Position</h2>
+                <h2><MudIcon Icon="@Icons.Material.Filled.DeleteForever" /> Delete Position</h2>
                 <button class="admin-dialog-close" @onclick="CloseDeleteDialog">
                     <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" />
                 </button>
@@ -286,14 +290,13 @@
                         <span>@dialogMessage</span>
                     </div>
                 }
-
-                <div class="admin-dialog-actions">
-                    <button class="admin-btn admin-btn-secondary" @onclick="CloseDeleteDialog" disabled="@isSaving">Cancel</button>
-                    <button class="admin-btn admin-btn-danger" @onclick="HandleDelete" disabled="@isSaving">
-                        @if (isSaving) { <span class="admin-loading-spinner small"></span> }
-                        Delete
-                    </button>
-                </div>
+            </div>
+            <div class="admin-dialog-actions">
+                <button class="admin-btn admin-btn-secondary" @onclick="CloseDeleteDialog" disabled="@isSaving">Cancel</button>
+                <button class="admin-btn admin-btn-danger" @onclick="HandleDelete" disabled="@isSaving">
+                    @if (isSaving) { <span class="admin-btn-spinner"></span> }
+                    <span>Delete</span>
+                </button>
             </div>
         </div>
     </div>

@@ -1,49 +1,72 @@
 @page "/"
 @attribute [Authorize]
 
-<PageTitle>Messages - ChatApp</PageTitle>
+@using ChatApp.Blazor.Client.Features.Auth.Services
+@using ChatApp.Blazor.Client.Helpers
 
-<div class="messages-page">
-    <div class="page-header">
-        <h1 class="page-title">Messages</h1>
-        <p class="page-subtitle">Stay connected with your team</p>
-    </div>
+@inject UserState UserState
 
-    <div class="messages-container">
-        <div class="welcome-card">
-            <div class="welcome-icon">
-                <MudIcon Icon="@Icons.Material.Filled.Message" Style="font-size: 64px; color: var(--primary-color);" />
+<PageTitle>Feed - ChatApp</PageTitle>
+
+<div class="admin-page">
+
+    @* ===== WELCOME HEADER ===== *@
+    <div class="dash-welcome">
+        <div class="dash-welcome-left">
+            <div class="dash-welcome-avatar-wrapper">
+                @if (!string.IsNullOrEmpty(UserState.CurrentUser?.AvatarUrl))
+                {
+                    <img src="@UserState.CurrentUser.AvatarUrl" alt="@UserState.CurrentUser.FullName" class="dash-welcome-avatar" />
+                }
+                else if (UserState.CurrentUser != null)
+                {
+                    <div class="dash-welcome-avatar-placeholder" style="background-color: @AvatarHelper.GetAvatarBackgroundColor(UserState.CurrentUser.Id);">
+                        @StringHelper.GetInitials(UserState.CurrentUser.FullName)
+                    </div>
+                }
             </div>
-            <h2>Welcome to ChatApp!</h2>
-            <p>Your modern team communication platform is ready to use.</p>
-            <div class="feature-grid">
-                <div class="feature-item">
-                    <MudIcon Icon="@Icons.Material.Filled.Speed" Color="Color.Primary" />
-                    <div class="feature-text">
-                        <h4>Fast & Responsive</h4>
-                        <p>Lightning-fast messaging experience</p>
-                    </div>
-                </div>
-                <div class="feature-item">
-                    <MudIcon Icon="@Icons.Material.Filled.Security" Color="Color.Success" />
-                    <div class="feature-text">
-                        <h4>Secure & Private</h4>
-                        <p>Your data is protected</p>
-                    </div>
-                </div>
-                <div class="feature-item">
-                    <MudIcon Icon="@Icons.Material.Filled.Groups" Color="Color.Info" />
-                    <div class="feature-text">
-                        <h4>Team Collaboration</h4>
-                        <p>Work together seamlessly</p>
-                    </div>
-                </div>
+            <div class="dash-welcome-info">
+                <h1 class="dash-welcome-title">@GetGreeting(), @UserState.CurrentUser?.FirstName!</h1>
+                <p class="dash-welcome-subtitle">
+                    @if (!string.IsNullOrEmpty(UserState.CurrentUser?.Position))
+                    {
+                        <span>@UserState.CurrentUser.Position</span>
+                    }
+                    @if (!string.IsNullOrEmpty(UserState.CurrentUser?.DepartmentName))
+                    {
+                        <span> &bull; @UserState.CurrentUser.DepartmentName</span>
+                    }
+                </p>
             </div>
         </div>
+        <div class="dash-welcome-right">
+            <div class="dash-welcome-date">@DateTime.Now.ToString("dddd")</div>
+            <div class="dash-welcome-date-full">@DateTime.Now.ToString("dd MMMM yyyy")</div>
+        </div>
     </div>
+
+    @* ===== COMING SOON ===== *@
+    <div class="feed-coming-soon">
+        <div class="feed-coming-soon-icon">
+            <MudIcon Icon="@Icons.Material.Outlined.RocketLaunch" Style="font-size: 3.5rem; color: #667eea;" />
+        </div>
+        <h2 class="feed-coming-soon-title">We will implement soon</h2>
+        <p class="feed-coming-soon-desc">The Feed is currently under development. Stay tuned for updates, announcements, and team activity right here.</p>
+        <div class="feed-coming-soon-dots">
+            <span class="feed-dot"></span>
+            <span class="feed-dot"></span>
+            <span class="feed-dot"></span>
+        </div>
+    </div>
+
 </div>
 
-
 @code {
-    // Home page with welcome message
+    private string GetGreeting()
+    {
+        var hour = DateTime.Now.Hour;
+        if (hour < 12) return "Good morning";
+        if (hour < 17) return "Good afternoon";
+        return "Good evening";
+    }
 }

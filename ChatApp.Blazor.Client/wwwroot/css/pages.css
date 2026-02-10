@@ -1,105 +1,192 @@
 /* ===================================
-   MESSAGES PAGE
+   FEED PAGE
    =================================== */
 
-.messages-page {
-    margin: 0 auto;
-}
-
-.page-header {
-    margin-bottom: 32px;
-    animation: fadeInDown 0.5s ease-out;
-}
-
-.page-title {
-    font-size: 32px;
-    font-weight: 600;
-    color: var(--gray-900);
-    margin-bottom: 8px;
-}
-
-.page-subtitle {
-    font-size: 16px;
-    color: var(--gray-600);
-}
-
-.messages-container {
-    animation: fadeInUp 0.5s ease-out 0.1s backwards;
-}
-
-.welcome-card {
-    background: var(--white);
-    border-radius: var(--radius-xl);
-    padding: 48px;
-    text-align: center;
-    box-shadow: var(--shadow-lg);
-    border: 1px solid var(--gray-200);
-}
-
-.welcome-icon {
-    margin-bottom: 24px;
-    animation: bounceIn 0.8s ease-out 0.3s backwards;
-}
-
-.welcome-card h2 {
-    font-size: 28px;
-    font-weight: 600;
-    color: var(--gray-900);
-    margin-bottom: 12px;
-}
-
-.welcome-card > p {
-    font-size: 16px;
-    color: var(--gray-600);
-    margin-bottom: 48px;
-}
-
-.feature-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 24px;
-    text-align: left;
-}
-
-.feature-item {
+/* Welcome Banner */
+.dash-welcome {
     display: flex;
-    gap: 16px;
-    padding: 20px;
-    background: var(--gray-50);
-    border-radius: var(--radius-lg);
-    transition: all var(--transition-base);
-    animation: fadeInUp 0.5s ease-out backwards;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.75rem 2rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 16px;
+    margin-bottom: 1.5rem;
+    color: white;
+    position: relative;
+    overflow: hidden;
 }
 
-.feature-item:nth-child(1) {
-    animation-delay: 0.4s;
+.dash-welcome::before {
+    content: '';
+    position: absolute;
+    top: -30px;
+    right: -30px;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
 }
 
-.feature-item:nth-child(2) {
-    animation-delay: 0.5s;
+.dash-welcome::after {
+    content: '';
+    position: absolute;
+    bottom: -40px;
+    right: 60px;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.05);
 }
 
-.feature-item:nth-child(3) {
+.dash-welcome-left {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    z-index: 1;
+}
+
+.dash-welcome-avatar,
+.dash-welcome-avatar-placeholder {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.dash-welcome-avatar-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: white;
+}
+
+.dash-welcome-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.dash-welcome-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: -0.01em;
+}
+
+.dash-welcome-subtitle {
+    font-size: 0.875rem;
+    opacity: 0.85;
+    margin: 0;
+}
+
+.dash-welcome-right {
+    text-align: right;
+    z-index: 1;
+}
+
+.dash-welcome-date {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+
+.dash-welcome-date-full {
+    font-size: 0.8125rem;
+    opacity: 0.8;
+}
+
+/* ===================================
+   COMING SOON SECTION
+   =================================== */
+
+.feed-coming-soon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 5rem 2rem;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    text-align: center;
+}
+
+.feed-coming-soon-icon {
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+    animation: feedIconFloat 3s ease-in-out infinite;
+}
+
+.feed-coming-soon-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin: 0 0 0.75rem 0;
+    letter-spacing: -0.01em;
+}
+
+.feed-coming-soon-desc {
+    font-size: 0.9375rem;
+    color: #6b7280;
+    margin: 0;
+    max-width: 420px;
+    line-height: 1.6;
+}
+
+.feed-coming-soon-dots {
+    display: flex;
+    gap: 8px;
+    margin-top: 2rem;
+}
+
+.feed-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    opacity: 0.3;
+    animation: feedDotPulse 1.5s ease-in-out infinite;
+}
+
+.feed-dot:nth-child(2) {
+    animation-delay: 0.3s;
+}
+
+.feed-dot:nth-child(3) {
     animation-delay: 0.6s;
 }
 
-.feature-item:hover {
-    background: var(--white);
-    box-shadow: var(--shadow-md);
-    transform: translateY(-4px);
+@keyframes feedIconFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
 }
 
-.feature-text h4 {
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--gray-900);
-    margin-bottom: 4px;
+@keyframes feedDotPulse {
+    0%, 100% { opacity: 0.3; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.3); }
 }
 
-.feature-text p {
-    font-size: 14px;
-    color: var(--gray-600);
-    margin: 0;
+/* ===================================
+   404 / UNAUTHORIZED / LOADING PAGES
+   =================================== */
+
+.not-found-container,
+.unauthorized-container,
+.loading-container {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 20px;
+    margin: 2rem;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
 }
 
 /* ===================================
@@ -107,15 +194,22 @@
    =================================== */
 
 @media (max-width: 768px) {
-    .welcome-card {
-        padding: 32px 24px;
+    .dash-welcome {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
+        padding: 1.5rem;
     }
 
-    .page-title {
-        font-size: 28px;
+    .dash-welcome-left {
+        flex-direction: column;
     }
 
-    .feature-grid {
-        grid-template-columns: 1fr;
+    .dash-welcome-right {
+        text-align: center;
+    }
+
+    .dash-welcome-title {
+        font-size: 1.25rem;
     }
 }

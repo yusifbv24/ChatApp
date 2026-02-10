@@ -62,7 +62,13 @@
       "Bash(docker network create:*)",
       "Bash(docker network connect:*)",
       "Bash(docker network ls:*)",
-      "Bash(wmic:*)"
+      "Bash(wmic:*)",
+      "Bash(MSYS_NO_PATHCONV=1 tasklist:*)",
+      "Bash(netstat:*)",
+      "Bash(MSYS_NO_PATHCONV=1 taskkill:*)",
+      "Bash(kill:*)",
+      "Bash(curl:*)",
+      "Bash(timeout /t 8 /nobreak)"
     ],
     "deny": [],
     "ask": []
