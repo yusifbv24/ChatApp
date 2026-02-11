@@ -1,4 +1,3 @@
-@using ChatApp.Blazor.Client.Infrastructure.SignalR
 @inherits LayoutComponentBase
 @inject UserState UserState
 @inject AppState AppState
@@ -178,7 +177,7 @@
     </div>
 
     <!-- Profile Panel -->
-    <ProfilePanel @bind-IsOpen="isProfilePanelOpen" />
+    <ProfilePanel @bind-IsOpen="isProfilePanelOpen" UserId="@profileUserId" />
 </div>
 
 @code {
@@ -186,6 +185,7 @@
     private bool isUserMenuOpen = false;
     private bool isNotificationPanelOpen = false;
     private bool isProfilePanelOpen = false;
+    private Guid? profileUserId;
     private DateTime currentTime = DateTime.Now;
     private System.Threading.Timer? timer;
     private bool signalRInitialized = false;
@@ -302,12 +302,14 @@
 
     private void OpenProfilePanel()
     {
+        profileUserId = null;
         isProfilePanelOpen = true;
     }
 
     private void OpenProfilePanelFromMenu()
     {
         CloseUserMenu();
+        profileUserId = null;
         isProfilePanelOpen = true;
     }
 

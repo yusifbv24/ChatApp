@@ -23,6 +23,8 @@ public record UserDetailDto(
     string? DepartmentName,
     Guid? SupervisorId,
     string? SupervisorName,
+    string? SupervisorAvatarUrl,
+    string? SupervisorPosition,
     bool IsHeadOfDepartment,
     List<SubordinateDto> Subordinates,
     List<string> Permissions,

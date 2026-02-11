@@ -522,7 +522,7 @@
 </div>
 
 <!-- Profile Panel (Global Overlay) -->
-<ProfilePanel @bind-IsOpen="showProfilePanel" />
+<ProfilePanel @bind-IsOpen="showProfilePanel" UserId="@profileUserId" />
 
     <!-- New Conversation Dialog-->
 @if (showNewConversationDialog)

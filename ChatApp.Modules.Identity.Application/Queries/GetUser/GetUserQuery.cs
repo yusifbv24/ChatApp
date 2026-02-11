@@ -1,5 +1,6 @@
 using ChatApp.Modules.Identity.Application.DTOs.Responses;
 using ChatApp.Modules.Identity.Application.Interfaces;
+using ChatApp.Modules.Identity.Domain.Entities;
 using ChatApp.Shared.Kernel.Common;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -24,6 +25,7 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetUser
                     .Include(u => u.Employee!.Position)
                     .Include(u => u.Employee!.Department)
                     .Include(u => u.Employee!.Supervisor!.User)
+                    .Include(u => u.Employee!.Supervisor!.Position)
                     .Include(u => u.Employee!.Subordinates).ThenInclude(s => s.User)
                     .Include(u => u.Employee!.Subordinates).ThenInclude(s => s.Position)
                     .AsNoTracking()
@@ -46,7 +48,7 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetUser
             }
         }
 
-        private static UserDetailDto MapToDetailDto(Domain.Entities.User user)
+        private static UserDetailDto MapToDetailDto(User user)
         {
             var permissions = user.UserPermissions
                 .Select(up => up.PermissionName)
@@ -81,8 +83,10 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetUser
                 user.IsActive,
                 user.Employee?.DepartmentId,
                 user.Employee?.Department?.Name,
-                user.Employee?.SupervisorId,
+                user.Employee?.Supervisor?.UserId,
                 user.Employee?.Supervisor?.User?.FullName,
+                user.Employee?.Supervisor?.User?.AvatarUrl,
+                user.Employee?.Supervisor?.Position?.Name,
                 isHeadOfDepartment,
                 subordinates,
                 permissions,

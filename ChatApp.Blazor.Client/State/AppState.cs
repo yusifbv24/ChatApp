@@ -9,8 +9,30 @@ public class AppState
     private List<Guid> _onlineUsers = new();
     private int _unreadNotificationCount;
     private int _unreadMessageCount;
+    private Guid? _pendingChatUserId;
 
     public event Action? OnChange;
+
+    /// <summary>
+    /// ProfilePanel-dən chat başlatmaq üçün istifadə olunur.
+    /// Messages səhifəsi açıldıqda bir dəfə oxunur və sıfırlanır.
+    /// Conversation yaratmadan istifadəçi ilə chat açmağı təmin edir.
+    /// </summary>
+    public Guid? PendingChatUserId
+    {
+        get => _pendingChatUserId;
+        set => _pendingChatUserId = value;
+    }
+
+    /// <summary>
+    /// PendingChatUserId-ni oxuyub sıfırlayır (bir dəfəlik istifadə).
+    /// </summary>
+    public Guid? ConsumePendingChatUserId()
+    {
+        var userId = _pendingChatUserId;
+        _pendingChatUserId = null;
+        return userId;
+    }
 
     public bool IsDarkMode
     {

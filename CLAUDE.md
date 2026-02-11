@@ -8,7 +8,7 @@
 ## Modullar
 Identity | Channels | DirectMessages | Files | Notifications | Search | Settings
 
-- İşləyən funksiyaya toxunma
+- İstifadə olunan funksiyanın optimizasiyaya ehtiyacı varsa, optimizasiya et.
 - Yeni bir method əlavə edərkən, əgər köhnə və ya ona oxşar method varsa optimallaşdırmağa çalış.
 - Lazımsız kodları silməyi unutma
 - Həmişə kodları optimizasiya etmək, code refactor etmək və performansı yüksəltmək lazımdır.

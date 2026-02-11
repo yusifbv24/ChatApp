@@ -163,7 +163,8 @@ public partial class Messages
         // Search panel bağla (profile panel ilə sidebar eyni anda açıq ola bilər)
         showSearchPanel = false;
 
-        // Profile panel aç
+        // Profile panel aç (öz profil)
+        profileUserId = null;
         showProfilePanel = true;
     }
 

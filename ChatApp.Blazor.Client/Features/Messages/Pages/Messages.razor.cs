@@ -811,6 +811,11 @@ public partial class Messages : IAsyncDisposable
     private bool showProfilePanel = false;
 
     /// <summary>
+    /// Profile panel-da göstərilən istifadəçi (null = öz profil).
+    /// </summary>
+    private Guid? profileUserId;
+
+    /// <summary>
     /// Sidebar DM favori mesajları.
     /// </summary>
     private List<FavoriteDirectMessageDto>? sidebarFavoriteDirectMessages;
@@ -863,6 +868,9 @@ public partial class Messages : IAsyncDisposable
 
         // Conversation və channel-ları yüklə
         await LoadConversationsAndChannels();
+
+        // ProfilePanel-dən chat başlatma tələbi varsa, işlə
+        await HandlePendingChatUserAsync();
     }
 
     /// <summary>
@@ -871,6 +879,13 @@ public partial class Messages : IAsyncDisposable
     /// </summary>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        // ProfilePanel bağlandıqdan sonra pending chat user yoxla
+        // (Messages səhifəsində olarkən ProfilePanel-dən chat başladıldıqda)
+        if (!firstRender && AppState.PendingChatUserId.HasValue)
+        {
+            await HandlePendingChatUserAsync();
+        }
+
         if (firstRender)
         {
             // Calculate viewport-based page size (Bitrix pattern)

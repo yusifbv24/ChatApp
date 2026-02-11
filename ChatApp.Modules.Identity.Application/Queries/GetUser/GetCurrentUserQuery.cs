@@ -24,6 +24,7 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetUser
                     .Include(u => u.Employee!.Position)
                     .Include(u => u.Employee!.Department)
                     .Include(u => u.Employee!.Supervisor!.User)
+                    .Include(u => u.Employee!.Supervisor!.Position)
                     .AsNoTracking()
                     .FirstOrDefaultAsync(u => u.Id == request.UserId, cancellationToken);
 
@@ -70,10 +71,12 @@ namespace ChatApp.Modules.Identity.Application.Queries.GetUser
                 user.IsActive,
                 user.Employee?.DepartmentId,
                 user.Employee?.Department?.Name,
-                user.Employee?.SupervisorId,
+                user.Employee?.Supervisor?.UserId,
                 user.Employee?.Supervisor?.User?.FullName,
+                user.Employee?.Supervisor?.User?.AvatarUrl,
+                user.Employee?.Supervisor?.Position?.Name,
                 isHeadOfDepartment,
-                new List<SubordinateDto>(), // Current user doesn't need subordinates
+                [], // Current user doesn't need subordinates
                 permissions,
                 user.IsSuperAdmin,
                 user.CreatedAtUtc,

@@ -23,6 +23,8 @@ namespace ChatApp.Modules.Identity.Application.DTOs.Responses
         string? DepartmentName,
         Guid? SupervisorId,
         string? SupervisorName,
+        string? SupervisorAvatarUrl,
+        string? SupervisorPosition,
         bool IsHeadOfDepartment,
         List<SubordinateDto> Subordinates,
         List<string> Permissions,

@@ -185,6 +185,53 @@ public partial class Messages
     #endregion
 
     /// <summary>
+    /// ProfilePanel-dən chat başlatma tələbini emal edir.
+    /// AppState.PendingChatUserId-ni oxuyub sıfırlayır.
+    /// Mövcud conversation varsa seçir, yoxdursa pending mode-da açır.
+    /// </summary>
+    private async Task HandlePendingChatUserAsync()
+    {
+        var pendingUserId = AppState.ConsumePendingChatUserId();
+        if (pendingUserId == null) return;
+
+        // Öz profilimiz üçün chat açmağa ehtiyac yoxdur
+        if (pendingUserId.Value == currentUserId) return;
+
+        // Mövcud conversation varsa, birbaşa onu seç
+        var existingConversation = directConversations.FirstOrDefault(c => c.OtherUserId == pendingUserId.Value);
+        if (existingConversation != null)
+        {
+            await SelectDirectConversation(existingConversation);
+            return;
+        }
+
+        // Mövcud conversation yoxdur - user məlumatını al və pending mode-da aç
+        try
+        {
+            var userResult = await UserService.GetUserByIdAsync(pendingUserId.Value);
+            if (userResult.IsSuccess && userResult.Value != null)
+            {
+                var user = userResult.Value;
+                var searchUser = new UserSearchResultDto(
+                    Id: user.Id,
+                    FirstName: user.FirstName,
+                    LastName: user.LastName,
+                    Email: user.Email,
+                    AvatarUrl: user.AvatarUrl,
+                    Position: user.Position
+                );
+
+                userSearchResults = [searchUser];
+                await StartConversationWithUser(user.Id);
+            }
+        }
+        catch
+        {
+            // Silently handle - user mövcud deyilsə heç nə etmə
+        }
+    }
+
+    /// <summary>
     /// Department istifadəçisi ilə conversation yarat.
     /// StartConversationWithUser ilə eyni pending conversation pattern istifadə edir.
     /// Full reload yoxdur - yalnız UI state hazırlanır, ilk mesajda conversation yaranır.
