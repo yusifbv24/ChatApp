@@ -983,23 +983,83 @@
 }
 
 /* ===================================
-   LOADING
+   SKELETON LOADER
    =================================== */
 
-.pp-loading {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    gap: 16px;
-    color: rgba(255, 255, 255, 0.6);
-    font-size: 14px;
+.pp-skeleton {
+    position: relative;
+    overflow: hidden;
+    border-radius: 4px;
 }
 
-.pp-loading p {
-    margin: 0;
+/* Panel gradient fonu üzərindəki skeleton-lar (header, tabs) */
+.pp-header .pp-skeleton,
+.pp-tabs .pp-skeleton {
+    background: rgba(255, 255, 255, 0.1);
 }
+
+.pp-header .pp-skeleton::after,
+.pp-tabs .pp-skeleton::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+    animation: pp-shimmer 1.5s ease-in-out infinite;
+}
+
+/* Card (ağ fon) daxilindəki skeleton-lar */
+.pp-card .pp-skeleton,
+.pp-avatar-card .pp-skeleton {
+    background: rgba(0, 0, 0, 0.06);
+}
+
+.pp-card .pp-skeleton::after,
+.pp-avatar-card .pp-skeleton::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.04), transparent);
+    animation: pp-shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes pp-shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+/* Avatar dairəsi */
+.pp-skeleton-avatar {
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+}
+
+/* Kiçik avatar dairəsi (supervisor/subordinate) */
+.pp-skeleton-sm-circle {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+/* Badge skeleton */
+.pp-skeleton-badge {
+    height: 22px;
+    border-radius: 20px;
+}
+
+/* Supervisor/subordinate relation row */
+.pp-skeleton-relation {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Skeleton card animation delay-ləri (mövcud pp-card-in ilə uyğun) */
+.pp-left-col .pp-avatar-card { animation-delay: 0s; }
+.pp-left-col .pp-card { animation-delay: 0.08s; }
+.pp-right-col .pp-card:nth-child(1) { animation-delay: 0.04s; }
+.pp-right-col .pp-card:nth-child(2) { animation-delay: 0.12s; }
 
 /* ===================================
    RESPONSIVE
