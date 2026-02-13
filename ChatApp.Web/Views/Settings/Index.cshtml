@@ -1,0 +1,211 @@
+@{
+    ViewData["Title"] = "Settings";
+}
+
+<div class="settings-page" id="settingsPage">
+    <div class="settings-header-bar">
+        <h2 class="settings-title">Settings</h2>
+    </div>
+
+    <div class="settings-sections">
+        <!-- Appearance -->
+        <div class="settings-section">
+            <div class="settings-section-header">
+                <span class="material-icons-outlined" style="font-size:20px;">palette</span>
+                <h4>Appearance</h4>
+            </div>
+            <div class="settings-section-body">
+                <div class="settings-row">
+                    <div class="settings-row-info">
+                        <span class="settings-row-label">Dark Mode</span>
+                        <span class="settings-row-desc">Switch between light and dark theme</span>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="darkModeToggle" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notifications -->
+        <div class="settings-section">
+            <div class="settings-section-header">
+                <span class="material-icons-outlined" style="font-size:20px;">notifications</span>
+                <h4>Notifications</h4>
+            </div>
+            <div class="settings-section-body">
+                <div class="settings-row">
+                    <div class="settings-row-info">
+                        <span class="settings-row-label">Desktop Notifications</span>
+                        <span class="settings-row-desc">Show notifications on your desktop</span>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="desktopNotifToggle" checked />
+                    </div>
+                </div>
+                <div class="settings-row">
+                    <div class="settings-row-info">
+                        <span class="settings-row-label">Sound</span>
+                        <span class="settings-row-desc">Play a sound for new messages</span>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="soundToggle" checked />
+                    </div>
+                </div>
+                <div class="settings-row">
+                    <div class="settings-row-info">
+                        <span class="settings-row-label">Message Preview</span>
+                        <span class="settings-row-desc">Show message content in notifications</span>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="previewToggle" checked />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Language -->
+        <div class="settings-section">
+            <div class="settings-section-header">
+                <span class="material-icons-outlined" style="font-size:20px;">language</span>
+                <h4>Language</h4>
+            </div>
+            <div class="settings-section-body">
+                <div class="settings-row">
+                    <div class="settings-row-info">
+                        <span class="settings-row-label">Interface Language</span>
+                        <span class="settings-row-desc">Choose your preferred language</span>
+                    </div>
+                    <select class="form-select form-select-sm" id="languageSelect" style="width:auto;">
+                        <option value="en" selected>English</option>
+                        <option value="az">Azerbaijani</option>
+                        <option value="ru">Russian</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Account -->
+        <div class="settings-section">
+            <div class="settings-section-header">
+                <span class="material-icons-outlined" style="font-size:20px;">manage_accounts</span>
+                <h4>Account</h4>
+            </div>
+            <div class="settings-section-body">
+                <div class="settings-row">
+                    <div class="settings-row-info">
+                        <span class="settings-row-label">Change Password</span>
+                        <span class="settings-row-desc">Update your account password</span>
+                    </div>
+                    <button class="btn btn-sm btn-outline-primary" id="changePasswordBtn">Change</button>
+                </div>
+                <div class="settings-row">
+                    <div class="settings-row-info">
+                        <span class="settings-row-label">Active Sessions</span>
+                        <span class="settings-row-desc">Manage your active login sessions</span>
+                    </div>
+                    <button class="btn btn-sm btn-outline-secondary" id="activeSessionsBtn">View</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        .settings-page {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+
+        .settings-header-bar {
+            margin-bottom: 1.5rem;
+        }
+
+        .settings-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1f2937;
+            margin: 0;
+        }
+
+        .settings-sections {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .settings-section {
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .settings-section-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 20px;
+            border-bottom: 1px solid #f3f4f6;
+            background: #fafbfc;
+        }
+
+        .settings-section-header h4 {
+            font-size: 0.9375rem;
+            font-weight: 600;
+            color: #374151;
+            margin: 0;
+        }
+
+        .settings-section-body {
+            padding: 0;
+        }
+
+        .settings-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 20px;
+            border-bottom: 1px solid #f3f4f6;
+            transition: background 0.15s;
+        }
+
+        .settings-row:last-child {
+            border-bottom: none;
+        }
+
+        .settings-row:hover {
+            background: #fafbfc;
+        }
+
+        .settings-row-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .settings-row-label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #1f2937;
+        }
+
+        .settings-row-desc {
+            font-size: 0.75rem;
+            color: #9ca3af;
+        }
+
+        .form-check-input:checked {
+            background-color: #1976d2;
+            border-color: #1976d2;
+        }
+
+        @@media (max-width: 768px) {
+            .settings-page {
+                padding: 1rem;
+            }
+        }
+    </style>
+}

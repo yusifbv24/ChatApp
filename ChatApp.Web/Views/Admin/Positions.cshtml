@@ -1,0 +1,64 @@
+@{
+    ViewData["Title"] = "Positions";
+}
+
+<div class="admin-page" id="positionsPage">
+    <div class="admin-page-header">
+        <div class="d-flex align-items-center gap-2">
+            <a href="/admin/organizationhierarchy" class="btn btn-sm btn-outline-secondary">
+                <span class="material-icons" style="font-size:16px;">arrow_back</span>
+            </a>
+            <h1 class="admin-page-title mb-0">Positions</h1>
+        </div>
+        <button class="btn btn-sm btn-primary" id="newPositionBtn">
+            <span class="material-icons" style="font-size:16px;">add</span> New Position
+        </button>
+    </div>
+
+    <!-- Stats -->
+    <div class="org-statistics" style="margin-bottom:1rem;">
+        <div class="stat-card">
+            <div class="stat-icon" style="background:linear-gradient(135deg,#667eea,#764ba2);"><span class="material-icons">work</span></div>
+            <div class="stat-info"><div class="stat-value" id="posStatTotal">0</div><div class="stat-label">Total Positions</div></div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="background:linear-gradient(135deg,#4facfe,#00f2fe);"><span class="material-icons">apartment</span></div>
+            <div class="stat-info"><div class="stat-value" id="posStatDepts">0</div><div class="stat-label">Departments</div></div>
+        </div>
+    </div>
+
+    <!-- Search -->
+    <div class="org-search-bar" style="margin-bottom:1rem;">
+        <span class="material-icons" style="color:rgba(0,0,0,0.3);">search</span>
+        <input type="text" id="posSearchInput" class="form-control form-control-sm" placeholder="Search positions..." />
+    </div>
+
+    <!-- Position groups -->
+    <div id="positionGroups">
+        <div class="text-center py-4"><div class="spinner-border spinner-border-sm text-secondary"></div></div>
+    </div>
+</div>
+
+<!-- Create/Edit Position Modal -->
+<div class="modal fade" id="positionModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title" id="posModalTitle">Create Position</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <div class="mb-3"><label class="form-label">Name*</label><input type="text" class="form-control form-control-sm" id="posName" required /></div>
+                <div class="mb-3"><label class="form-label">Department</label><select class="form-select form-select-sm" id="posDepartment"><option value="">No Department</option></select></div>
+                <div class="mb-3"><label class="form-label">Description</label><textarea class="form-control form-control-sm" id="posDescription" rows="2"></textarea></div>
+                <div id="posError" class="text-danger small"></div>
+                <div id="posSuccess" class="text-success small"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary btn-sm" id="posSubmit">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/admin/positions.js" asp-append-version="true"></script>
+}

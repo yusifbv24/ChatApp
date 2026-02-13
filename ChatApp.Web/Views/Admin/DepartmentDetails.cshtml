@@ -1,0 +1,163 @@
+@{
+    ViewData["Title"] = "Department Details";
+}
+
+<div class="admin-page" id="deptDetailsPage">
+    <div class="admin-page-header">
+        <a href="/admin/organizationhierarchy" class="btn btn-sm btn-outline-secondary">
+            <span class="material-icons" style="font-size:16px;">arrow_back</span> Back
+        </a>
+    </div>
+
+    <div id="deptDetailsContent">
+        <div class="text-center py-4"><div class="spinner-border spinner-border-sm text-secondary"></div></div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function() {
+            const deptId = '@ViewBag.DepartmentId';
+            if (!deptId || deptId === '') return;
+
+            async function load() {
+                const content = document.getElementById('deptDetailsContent');
+                const result = await ChatApp.api.get('/api/identity/departments/' + deptId);
+                if (!result.isSuccess || !result.value) {
+                    content.innerHTML = '<div class="alert alert-warning">Department not found.</div>';
+                    return;
+                }
+
+                const dept = result.value;
+                var canUpdate = !ChatApp.state.hasPermission || ChatApp.state.hasPermission('Users.Update');
+
+                let html = '<div class="dept-header-card">';
+                html += '<div class="dept-header-icon" style="background-color:' + ChatApp.utils.getAvatarColor(dept.id) + ';">' +
+                    '<span class="material-icons" style="font-size:28px;color:#fff;">apartment</span></div>';
+                html += '<div class="dept-header-info"><h2>' + ChatApp.utils.escapeHtml(dept.name || '') + '</h2>';
+                if (dept.parentDepartmentName) html += '<p>Parent: ' + ChatApp.utils.escapeHtml(dept.parentDepartmentName) + '</p>';
+                if (dept.headOfDepartmentName) html += '<p>Head: ' + ChatApp.utils.escapeHtml(dept.headOfDepartmentName) + '</p>';
+                html += '<p class="text-muted small">Created: ' + (dept.createdAtUtc ? new Date(dept.createdAtUtc).toLocaleDateString() : 'N/A') + '</p>';
+                if (canUpdate) {
+                    html += '<button class="btn btn-sm btn-outline-primary mt-2" id="editDeptBtn"><span class="material-icons" style="font-size:14px;vertical-align:middle;">edit</span> Edit</button>';
+                }
+                html += '</div></div>';
+
+                // Sub-departments section
+                html += '<div class="admin-section"><h3>Sub-departments</h3><div id="deptSubDepts">' +
+                    '<div class="text-center py-2"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div></div>';
+
+                // Users section
+                html += '<div class="admin-section"><h3>Users</h3><div id="deptUsers">' +
+                    '<div class="text-center py-2"><div class="spinner-border spinner-border-sm text-secondary"></div></div></div></div>';
+
+                content.innerHTML = html;
+
+                // Edit department button handler
+                document.getElementById('editDeptBtn')?.addEventListener('click', function() {
+                    openEditDeptDialog(dept);
+                });
+
+                // Load sub-departments
+                const allDeptsResult = await ChatApp.api.get('/api/identity/departments');
+                const subDeptsEl = document.getElementById('deptSubDepts');
+                if (allDeptsResult.isSuccess && allDeptsResult.value) {
+                    const subDepts = allDeptsResult.value.filter(function(d) { return d.parentDepartmentId === deptId; });
+                    if (subDepts.length > 0) {
+                        subDeptsEl.innerHTML = '';
+                        subDepts.forEach(function(sub) {
+                            const el = document.createElement('div');
+                            el.className = 'admin-list-item';
+                            el.style.cursor = 'pointer';
+                            el.innerHTML = '<div class="admin-list-avatar"><div style="width:36px;height:36px;border-radius:50%;background:' + ChatApp.utils.getAvatarColor(sub.id) + ';display:flex;align-items:center;justify-content:center;">' +
+                                '<span class="material-icons" style="font-size:18px;color:#fff;">apartment</span></div></div>' +
+                                '<div class="admin-list-info"><span class="admin-list-name">' + ChatApp.utils.escapeHtml(sub.name) + '</span>' +
+                                '<span class="admin-list-meta">' + (sub.headOfDepartmentName ? 'Head: ' + ChatApp.utils.escapeHtml(sub.headOfDepartmentName) : '') + '</span></div>';
+                            el.addEventListener('click', function() {
+                                window.location.href = '/admin/departmentdetails/' + sub.id;
+                            });
+                            subDeptsEl.appendChild(el);
+                        });
+                    } else {
+                        subDeptsEl.innerHTML = '<p class="text-muted">No sub-departments.</p>';
+                    }
+                }
+
+                // Load users
+                const usersResult = await ChatApp.api.get('/api/identity/departments/' + deptId + '/users');
+                const usersEl = document.getElementById('deptUsers');
+                if (usersResult.isSuccess && usersResult.value && usersResult.value.length > 0) {
+                    usersEl.innerHTML = '';
+                    usersResult.value.forEach(function(user) {
+                        const fullName = ((user.firstName || '') + ' ' + (user.lastName || '')).trim();
+                        const el = document.createElement('div');
+                        el.className = 'admin-list-item';
+                        el.innerHTML = '<div class="admin-list-avatar">' +
+                            ChatApp.utils.renderAvatar({ id: user.id, avatarUrl: user.avatarUrl, fullName: fullName }, 'admin-avatar-img') +
+                            '</div><div class="admin-list-info"><span class="admin-list-name">' +
+                            ChatApp.utils.escapeHtml(fullName) + '</span><span class="admin-list-meta">' +
+                            ChatApp.utils.escapeHtml(user.position || user.email || '') + '</span></div>';
+                        el.style.cursor = 'pointer';
+                        el.addEventListener('click', function() {
+                            window.location.href = '/admin/userdetails/' + user.id;
+                        });
+                        usersEl.appendChild(el);
+                    });
+                } else {
+                    usersEl.innerHTML = '<p class="text-muted">No users in this department.</p>';
+                }
+            }
+
+            function openEditDeptDialog(dept) {
+                var existing = document.getElementById('editDeptModal');
+                if (existing) existing.remove();
+
+                var modal = document.createElement('div');
+                modal.className = 'modal fade';
+                modal.id = 'editDeptModal';
+                modal.tabIndex = -1;
+                modal.innerHTML =
+                    '<div class="modal-dialog modal-dialog-centered">' +
+                    '<div class="modal-content">' +
+                    '<div class="modal-header"><h5 class="modal-title">Edit Department</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>' +
+                    '<div class="modal-body">' +
+                    '<div class="mb-3"><label class="form-label">Department Name*</label><input type="text" class="form-control form-control-sm" id="edName" value="' + ChatApp.utils.escapeHtml(dept.name || '') + '" /></div>' +
+                    '<div class="mb-3"><label class="form-label">Description</label><textarea class="form-control form-control-sm" id="edDescription" rows="2">' + ChatApp.utils.escapeHtml(dept.description || '') + '</textarea></div>' +
+                    '<div id="edError" class="text-danger small"></div>' +
+                    '<div id="edSuccess" class="text-success small"></div>' +
+                    '</div>' +
+                    '<div class="modal-footer">' +
+                    '<button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>' +
+                    '<button class="btn btn-primary btn-sm" id="edSubmit">Save</button>' +
+                    '</div>' +
+                    '</div></div>';
+
+                document.body.appendChild(modal);
+                var bsModal = new bootstrap.Modal(modal);
+                bsModal.show();
+
+                modal.querySelector('#edSubmit').addEventListener('click', async function () {
+                    var name = modal.querySelector('#edName').value.trim();
+                    if (!name) {
+                        modal.querySelector('#edError').textContent = 'Name is required.';
+                        return;
+                    }
+                    var result = await ChatApp.api.put('/api/identity/departments/' + deptId, {
+                        name: name,
+                        parentDepartmentId: dept.parentDepartmentId || null
+                    });
+                    if (result.isSuccess) {
+                        modal.querySelector('#edSuccess').textContent = 'Updated.';
+                        setTimeout(function () { bsModal.hide(); load(); }, 800);
+                    } else {
+                        modal.querySelector('#edError').textContent = result.error || 'Failed to update.';
+                    }
+                });
+
+                modal.addEventListener('hidden.bs.modal', function () { modal.remove(); });
+            }
+
+            load();
+        })();
+    </script>
+}

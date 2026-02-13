@@ -1,0 +1,23 @@
+@{
+    ViewData["Title"] = "User Details";
+}
+
+<div class="admin-page" id="userDetailsPage">
+    <div class="admin-page-header">
+        <a href="/admin/organizationhierarchy" class="btn btn-sm btn-outline-secondary">
+            <span class="material-icons" style="font-size:16px;">arrow_back</span> Back
+        </a>
+    </div>
+    <div id="userDetailsContent">
+        <div class="text-center py-4"><div class="spinner-border spinner-border-sm text-secondary"></div></div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/admin/user-details.js" asp-append-version="true"></script>
+    <script>
+        if (typeof ChatApp.adminUserDetails !== 'undefined') {
+            ChatApp.adminUserDetails.init('@ViewBag.UserId');
+        }
+    </script>
+}
