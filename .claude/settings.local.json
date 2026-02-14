@@ -68,19 +68,7 @@
       "Bash(MSYS_NO_PATHCONV=1 taskkill:*)",
       "Bash(kill:*)",
       "Bash(curl:*)",
-      "Bash(timeout /t 8 /nobreak)",
-      "Bash(dotnet new:*)",
-      "Bash(dotnet sln:*)",
-      "Bash(dotnet add:*)",
-      "Bash(npm init:*)",
-      "Bash(npm install:*)",
-      "Bash(TASKKILL:*)",
-      "Bash(for f in core/utils.js core/layout.js core/signalr-service.js core/api-client.js core/app-state.js core/auth.js features/chat-area.js features/conversation-list.js features/message-input.js features/messages.js features/sidebar.js features/search.js features/mention.js features/forwarding.js features/selection.js features/file-upload.js features/create-group.js components/profile-panel.js)",
-      "Bash(do node -c \"$f\")",
-      "Bash(echo:*)",
-      "Bash(node -c:*)",
-      "Bash(for f in admin/organization.js admin/positions.js admin/user-details.js)",
-      "Bash(xargs:*)"
+      "Bash(timeout /t 8 /nobreak)"
     ],
     "deny": [],
     "ask": []
