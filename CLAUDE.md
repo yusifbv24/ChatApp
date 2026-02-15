@@ -3,7 +3,19 @@
 ## Arxitektura
 - **Pattern**: Modular Monolith + Clean Architecture + DDD
 - **Backend**: ASP.NET Core API, CQRS (MediatR), SignalR
-- **Frontend**: Blazor WASM, WhatsApp Web style UI
+- **Frontend**: React (Vite + JavaScript) — migrated from Blazor WASM due to UI freezing
+- **UI Style**: WhatsApp Web style
+
+## React Migration Context
+- User is learning React from scratch. Teach step by step, one concept at a time.
+- User types all code manually to learn. Explain every line before writing.
+- Compare React concepts to .NET equivalents when helpful.
+- User works on 2 PCs. Always keep `tasks/todo.md` updated so progress syncs via GitHub.
+- Progress tracker: `tasks/todo.md` — read this first when resuming.
+- Lessons file: `tasks/lessons.md` — read this at session start.
+- When user says "Continue React migration", read `tasks/todo.md` and continue from next unchecked step.
+- Backend is COMPLETE. Do NOT modify backend code.
+- React project location: `C:\Users\Joseph\Desktop\ChatApp\chatapp-frontend\`
 
 ## Modullar
 Identity | Channels | DirectMessages | Files | Notifications | Search | Settings
